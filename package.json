@@ -36,7 +36,6 @@
     "dependencies": {
         "@lbgm/phone-number-input": "^1.1.6",
         "@primeuix/themes": "^1.0.3",
-        "libphonenumber-js": "^1.12.6",
-        "primevue": "^4.3.3"
+        "libphonenumber-js": "^1.12.6"
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ListModel;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +12,7 @@ use Illuminate\Database\Query\Builder; // Import the Query Builder
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Str;
 
 class ListController extends Controller
 {
@@ -46,10 +47,7 @@ class ListController extends Controller
      */
     public function create()
     {
-        $dbtables = DB::connection()->getDoctrineSchemaManager()->listTableNames();
-        $dbviews = DB::select('SHOW FULL TABLES WHERE Table_type = "VIEW"');
-        // dump($dbtables, $dbviews);
-        $tables = array_merge($dbtables, $dbviews);
+        $tables = $this->getTablesAndViews();
         return Inertia::render('List/Create', compact('tables'));
     }
 
@@ -57,28 +55,20 @@ class ListController extends Controller
      * Store a newly created resource in storage.
      *
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request)
     {
-        $viewExists = DB::table('information_schema.views')->where('TABLE_NAME', $request->input('view_name'))->exists();
+        $tableNames = implode(',', $this->getTablesAndViews()['all']);
 
-        if ($viewExists) {
-            return redirect()
-                ->back()
-                ->withErrors(['view_name' => ['The view name is already taken.']])
-                ->withInput();
-        }
-
-        $tableNames = implode(',', DB::connection()->getDoctrineSchemaManager()->listTableNames());
         $validator = Validator::make($request->all(), [
-            'view_name' => 'required|string',
+            'view_name' => 'nullable|required_if:is_test,false|string',
             'table_name' => 'required|string|in:' . $tableNames,
             'columns' => 'nullable|array',
             'columns.*.name' => 'required|string', // Changed to handle column objects
             'columns.*.alias' => 'nullable|string', // New field for aliases
             'where_conditions' => 'nullable|array',
-            'where_conditions.*.column' => 'required|string',
-            'where_conditions.*.operator' => 'required|string|in:==,!=,<,>,<=,>=,LIKE,NOT LIKE,IN,NOT IN',
-            'where_conditions.*.value' => 'required',
+            'where_conditions.*.column' => 'required|string|max:255',
+            'where_conditions.*.operator' => 'required|string|in:=,!=,<,>,<=,>=,LIKE,NOT LIKE,IN,NOT IN,IS NULL,IS NOT NULL,BETWEEN',
+            'where_conditions.*.value' => 'nullable|string|max:255',
             'order_by_column' => 'nullable|string',
             'order_by_direction' => 'nullable|string|in:asc,desc',
             'limit' => 'nullable|integer|min:1',
@@ -88,6 +78,7 @@ class ListController extends Controller
             'joins.*.operator' => 'required|string|in:=,>,<,>=,<=',
             'joins.*.second_column' => 'required|string',
             'joins.*.type' => 'nullable|string|in:inner,left,right,cross',
+            'is_test' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -96,7 +87,7 @@ class ListController extends Controller
 
         $viewName = $request->input('view_name');
         $tableName = $request->input('table_name');
-        $columns = $request->input('columns', [['name' => '*']]);
+        $columns = count($request->input('columns')) > 0 ? $request->input('columns') :  [['name' => '*']];
         $whereConditions = $request->input('where_conditions', []);
         $orderByColumn = $request->input('order_by_column');
         $orderByDirection = $request->input('order_by_direction', 'asc');
@@ -105,7 +96,7 @@ class ListController extends Controller
 
         // Build the SELECT query string with column aliases
         $selectColumns = array_map(function ($column) {
-            return $column['alias'] ? "{$column['name']} as {$column['alias']}" : $column['name'];
+            return isset($column['alias']) && $column['alias'] !== '' ? "{$column['name']} as {$column['alias']}" : $column['name'];
         }, $columns);
 
         $selectQuery = DB::table($tableName)->selectRaw(implode(', ', $selectColumns));
@@ -118,9 +109,7 @@ class ListController extends Controller
         }
 
         // Handle where conditions
-        foreach ($whereConditions as $condition) {
-            $selectQuery->where($condition['column'], $condition['operator'], $condition['value']);
-        }
+        $this->applyWhereConditions($selectQuery, $whereConditions);
 
         // Handle order by
         if ($orderByColumn) {
@@ -132,8 +121,37 @@ class ListController extends Controller
             $selectQuery->limit($limit);
         }
 
+        // dd($this->validateSelectOnly($selectQuery->toSql()));
+
+        if (!$this->validateSelectOnly($selectQuery->toSql())) {
+            return redirect()->back()->withErrors([
+                'view_name' => 'Only SELECT queries are allowed.',
+                'table_name' => 'Only SELECT queries are allowed.',
+            ])->withInput();
+        }
+
+        if ($request->is_test) {
+            // For test queries, just return metadata
+            $start = microtime(true);
+            $count = $selectQuery->count();
+            $time = round((microtime(true) - $start) * 1000, 2);
+
+            $sql = Str::replaceArray('?', $selectQuery->getBindings(), Str::replace('?', "'?'", $selectQuery->toSql()));
+
+            return Inertia::render('List/Create', [
+                'tables' => $this->getTablesAndViews(),
+                'testResult' => [
+                    'count' => $count,
+                    'time' => $time,
+                    'sql' => $this->formatSql($sql),
+                    'bindings' => $selectQuery->getBindings(),
+                ]
+            ]);
+        }
+
+        // dump($selectQuery->toSql());
         // Create the view
-        DB::statement("CREATE VIEW {$viewName} AS {$selectQuery->toSql()}");
+        DB::statement("CREATE OR REPLACE VIEW {$viewName} AS {$selectQuery->toSql()}");
 
         return redirect()->route('admin.lists.index')->with('success', 'List view created successfully!');
     }
@@ -216,7 +234,7 @@ class ListController extends Controller
         try {
             // Use the database connection to get the column names.
             // This method uses the database schema to get the column information.
-            $columns = DB::connection()->getSchemaBuilder()->getColumnListing($tableName);
+            $columns = DB::connection()->getSchemaBuilder()->getColumns($tableName);
 
             if (empty($columns)) {
                 // return response()->json(['error' => 'Table not found or has no columns.'], 404);
@@ -225,6 +243,9 @@ class ListController extends Controller
 
             // Return the column names as a JSON response.
             // return Inertia::json(['availableColumns' => $columns]); // Add this line
+            $columns = collect($columns)->map(function ($col) use ($tableName) {
+                return ['name' => $col['name'], 'type' => $this->convertDatabaseTypes($col['type_name'])];
+            })->all();
 
             return response()->json(['availableColumns' => $columns]);
         } catch (\Exception $e) {
@@ -232,6 +253,171 @@ class ListController extends Controller
             // Log the error message for debugging.
             \Log::error('Error fetching columns for table ' . $tableName . ': ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch columns: ' . $e->getMessage()], 500);
+        }
+    }
+
+    protected function applyWhereConditions($query, array $whereConditions)
+    {
+        foreach ($whereConditions as $condition) {
+            if (empty($condition['column'])) {
+                continue; // Skip invalid conditions
+            }
+
+            $column = $this->sanitizeColumnName($condition['column']);
+            $operator = strtoupper($condition['operator'] ?? '=');
+            $value = $condition['value'] ?? null;
+
+            switch ($operator) {
+                case 'IN':
+                case 'NOT IN':
+                    $values = is_array($value) ? $value : array_map('trim', explode(',', $value));
+                    if ($operator === 'IN') {
+                        $query->whereIn($column, $values);
+                    } else {
+                        $query->whereNotIn($column, $values);
+                    }
+                    break;
+
+                case 'IS NULL':
+                case 'IS NOT NULL':
+                    if ($operator === 'IS NULL') {
+                        $query->whereNull($column);
+                    } else {
+                        $query->whereNotNull($column);
+                    }
+                    break;
+
+                case 'BETWEEN':
+                    $values = is_array($value) ? $value : array_map('trim', explode(',', $value, 2));
+                    if (count($values) === 2) {
+                        $query->whereBetween($column, $values);
+                    }
+                    break;
+
+                case 'LIKE':
+                case 'NOT LIKE':
+                    $query->where($column, $operator, '%' . $value . '%');
+                    break;
+
+                default:
+                    // Standard operators: =, !=, <, >, <=, >=
+                    $query->where($column, $operator, $value);
+                    break;
+            }
+        }
+    }
+
+    protected function sanitizeColumnName(string $column): string
+    {
+        // Implement your column name sanitization logic here
+        return preg_replace('/[^a-zA-Z0-9_\.]/', '', $column);
+    }
+
+    private function getTablesAndViews()
+    {
+        $dbtables = DB::connection()->getDoctrineSchemaManager()->listTableNames();
+        $dbviews = collect(DB::connection()->getDoctrineSchemaManager()->listViews())->keys()->toArray();
+        $tables = array_merge($dbtables, $dbviews);
+        return ["tables" => $dbtables, "views" => $dbviews, "all" => $tables];
+    }
+
+    protected function formatSql($sql)
+    {
+        $keywords = [
+            'select',
+            'from',
+            'where',
+            'join',
+            'inner',
+            'left',
+            'right',
+            'outer',
+            'on',
+            'group by',
+            'having',
+            'order by',
+            'limit'
+        ];
+
+        foreach ($keywords as $keyword) {
+            $sql = preg_replace("/\b$keyword\b/i", "\n" . strtoupper($keyword), $sql);
+        }
+
+        return trim($sql);
+    }
+
+    /**
+     * Validate that the SQL query is a SELECT statement
+     *
+     * @param string $sql
+     * @return bool
+     * @throws \Exception If query is not a SELECT
+     */
+    private function validateSelectOnly(string $sql): bool
+    {
+        $isSelectOnly = true;
+        // Remove comments to prevent bypass attempts
+        $sanitized = preg_replace('/\/\*.*?\*\/|--.*?$/s', '', $sql);
+
+        // Trim whitespace and semicolons
+        $sanitized = trim($sanitized, " \t\n\r\0\x0B;");
+
+        // Check if query starts with SELECT (case insensitive)
+        if (!preg_match('/^SELECT\s+/i', $sanitized)) {
+            return  false;
+        }
+
+        // Additional checks for forbidden clauses
+        $forbiddenPatterns = [
+            '/\bINSERT\b/i',
+            '/\bUPDATE\b/i',
+            '/\bDELETE\b/i',
+            '/\bTRUNCATE\b/i',
+            '/\bDROP\b/i',
+            '/\bCREATE\b/i',
+            '/\bALTER\b/i',
+            '/\bEXEC(UTE)?\b/i',
+            '/\bSHUTDOWN\b/i',
+            '/\bGRANT\b/i',
+            '/\bREVOKE\b/i',
+            '/;\s*$/'
+        ];
+
+        foreach ($forbiddenPatterns as $pattern) {
+            if (preg_match($pattern, $sanitized)) {
+                $isSelectOnly =  false;
+                break;
+            }
+        }
+
+        return $isSelectOnly;
+    }
+
+    private function convertDatabaseTypes($dbType)
+    {
+        switch ($dbType) {
+            case 'int':
+            case 'tinyint':
+            case 'smallint':
+            case 'mediumint':
+            case 'bigint':
+                return 'integer';
+            case 'float':
+            case 'double':
+            case 'decimal':
+                return 'float';
+            case 'char':
+            case 'varchar':
+            case 'text':
+            case 'longtext':
+            case 'mediumtext':
+            case 'tinytext':
+            case 'enum':
+                return 'string';
+            case 'date':
+            case 'datetime':
+            case 'timestamp':
+                return 'datetime';
         }
     }
 }
