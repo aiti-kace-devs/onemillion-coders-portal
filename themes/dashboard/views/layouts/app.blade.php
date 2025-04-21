@@ -218,14 +218,14 @@
                         @endcan
 
                         {{-- @can('student.read') --}}
-                            <li class="nav-item">
-                                <a href="{{ url('admin/manage_students') }}"
-                                    class="nav-link @if (request()->is('admin/manage_students')) active @endif">
+                        <li class="nav-item">
+                            <a href="{{ url('admin/manage_students') }}"
+                                class="nav-link @if (request()->is('admin/manage_students')) active @endif">
 
-                                    <i class="fas fa-user nav-icon"></i>
-                                    <p>Students</p>
-                                </a>
-                            </li>
+                                <i class="fas fa-user nav-icon"></i>
+                                <p>Students</p>
+                            </a>
+                        </li>
                         {{-- @endcan --}}
 
                         @can('student.admit')
@@ -318,20 +318,20 @@
                             </li>
                         @endcan
 
-                        @can('manage.config')
+                        {{-- @can('manage.config')
                             <li class="nav-item">
                                 <a href="{{ route(config('env-editor.route.name')) }}" class="nav-link">
                                     <i class="fas fa-external-link-square-alt nav-icon"></i>
                                     <p>Logs</p>
                                 </a>
                             </li>
-                        @endcan
+                        @endcan --}}
 
                         @can('manage.monitor')
                             <li class="nav-item">
                                 <a href="{{ url(config('horizon.path', 'horizon')) }}" class="nav-link">
                                     <i class="fas fa-external-link-square-alt nav-icon"></i>
-                                    <p>Monitor</p>
+                                    <p>Monitor Queues</p>
                                 </a>
                             </li>
                         @endcan
