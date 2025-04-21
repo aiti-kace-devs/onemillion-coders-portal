@@ -22,7 +22,7 @@ class CreateStudentAdmissionJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public User $student, public ?Course $course = null, public ?CourseSession $session = null)
+    public function __construct(public ?User $student, public ?Course $course = null, public ?CourseSession $session = null)
     {
         //
     }
@@ -36,6 +36,8 @@ class CreateStudentAdmissionJob implements ShouldQueue
 
         $course = $this->course ?? Course::find($this->student->registered_course);
         if (!$course) return;
+
+        $changingAdmission = false;
 
 
         $existingAdmission = UserAdmission::where('user_id', $this->student->userId)->first();
@@ -52,6 +54,10 @@ class CreateStudentAdmissionJob implements ShouldQueue
             'course_id' => $course->id,
             'email_sent' => now(),
         ];
+
+        if ($existingAdmission?->session) {
+            $changingAdmission = true; // TODO: use this to determine if an email should be sent
+        }
 
         if ($this->session) {
 

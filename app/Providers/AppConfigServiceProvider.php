@@ -39,22 +39,28 @@ class AppConfigServiceProvider extends ServiceProvider
 
     private function loadDatabaseConfig()
     {
-        $configs = AppConfig::all(); // Fetch all configurations
+        try {
+            //code...
+            $configs = AppConfig::all(); // Fetch all configurations
+            foreach ($configs as $config) {
+                $value = $config->value;
 
-        foreach ($configs as $config) {
-            $value = $config->value;
-
-            // Apply caching logic.
-            if ($config->is_cached) {
-                $value = Cache::rememberForever($config->key, function () use ($config) {
-                    return AppConfig::castValue($config);
-                });
-            } else {
-                $value = AppConfig::castValue($config);
+                // Apply caching logic.
+                if ($config->is_cached) {
+                    $value = Cache::rememberForever($config->key, function () use ($config) {
+                        return AppConfig::castValue($config);
+                    });
+                } else {
+                    $value = AppConfig::castValue($config);
+                }
+                Config::set($config->key, $value);
+                // dump($config->key, $value);
             }
-            Config::set($config->key, $value);
-            // dump($config->key, $value);
+        } catch (\Throwable $th) {
+            //throw $th;
         }
+
+
         // dd(Config::all());
     }
 }

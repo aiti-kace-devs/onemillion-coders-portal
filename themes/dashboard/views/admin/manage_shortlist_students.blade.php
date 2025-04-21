@@ -382,6 +382,8 @@
                     <form action="{{ url('/admin/admit') }}" name="admit_form" method="POST">
                         {{ csrf_field() }}
                         <input id="user_id" name="user_id" type="hidden" class="form-control" required>
+                        {{-- <input name="user_ids[]" type="hidden" class="form-control"> --}}
+
                         <input id="change" name="change" value="false" type="hidden" class="form-control"
                             required>
                         <div class="form-group">
@@ -464,7 +466,7 @@
 
             });
 
-            window.openAdmitModal = function(user_id, course_id = null, session_id = null) {
+            window.openAdmitModal = function(user_id, course_id = null, session_id = null, callback = null) {
                 // console.log('Opening admit modal with:', { id, course_id, session_id });
                 try {
                     $('#admitModal #user_id').val(user_id);
@@ -477,6 +479,22 @@
                         $('#admitModal button[type="submit"]').text('Admit');
                         $('#admitModal #change').val('false');
                     }
+
+                    // Move the event listener setup *outside* the 'if (callback)' block.
+                    $('[name="admit_form"]').off('submit').on('submit', function(
+                        e) { // Use .off() first to prevent duplicates
+                        if (!this.formSubmitted) { // Check if preventDefault has already been called
+                            e.preventDefault();
+                            e.stopImmediatePropagation();
+                            this.formSubmitted = true; // Set a flag to indicate that it has been called
+                            //  alert('Form submission prevented!'); //  For debugging
+                            if (callback) {
+                                callback(); // Call the callback function
+                            }
+
+                        }
+                    });
+
                     $('#admitModal').modal('show');
                 } catch (e) {
                     console.error('Error opening modal:', e);
@@ -749,7 +767,7 @@
 
                     var btn = $(this);
                     btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
-                    console.log('Student IDs: ', selectedIds)
+                    // console.log('Student IDs: ', selectedIds)
 
 
                     Swal.fire({
@@ -758,7 +776,13 @@
                         icon: 'question',
                         showCancelButton: true,
                         confirmButtonText: 'Yes, admit them',
-                        cancelButtonText: 'Cancel'
+                        cancelButtonText: 'Cancel',
+                        showDenyButton: true,
+                        denyButtonText: 'Yes, but change admission',
+                        customClass: {
+                            denyButton: 'btn btn-primary',
+                            confirmButton: 'btn btn-success'
+                        }
                     }).then((result) => {
                         if (result.isConfirmed) {
                             $.ajax({
@@ -784,6 +808,28 @@
                                 complete: function() {
                                     btn.prop('disabled', false).html('Admit Students');
                                 }
+                            });
+                        } else if (result.isDenied) {
+                            openAdmitModal('', null, null, function() {
+                                // $('#user_ids').val(JSON.stringify(selectedIds));
+                                // Clear any existing input elements with the same name
+                                const arrayInputName = 'user_ids';
+                                $(`input[name="${arrayInputName}[]"]`).remove();
+
+                                // Create multiple hidden input elements, one for each value in the array
+                                selectedIds.forEach(function(id) {
+                                    if (id)
+                                        $('<input>')
+                                        .attr('type', 'hidden')
+                                        .attr('name', arrayInputName +
+                                            '[]') // Append '[]' to the name
+                                        .attr('value', id)
+                                        .appendTo(
+                                            'form[name="admit_form"]'
+                                        ); // Append to the form
+                                });
+
+                                $('[name="admit_form"]').submit();
                             });
                         } else {
                             btn.prop('disabled', false).html('Admit Students');
@@ -1009,8 +1055,28 @@
 
                 if (emailList.length === 0) {
                     toastr.error('Please paste at least one valid email address/ phonenumber.');
+                    toastr.error('Please paste at least one valid email address/ phonenumber.');
                     return;
                 }
+                // determine if emails or phonenumbers
+                const sendingEmails = emailList[0].includes('@');
+                const sendingPhones = emailList[0].includes('+');
+
+                let dataToSend;
+
+                if (sendingEmails) {
+                    dataToSend = {
+                        emails: emailList,
+                    }
+                } else if (sendingPhones) {
+                    dataToSend = {
+                        phone_numbers: emailList,
+                    }
+                } else {
+                    toastr.error('Please paste at least one valid email address/ phonenumber.');
+                    return;
+                }
+
                 // determine if emails or phonenumbers
                 const sendingEmails = emailList[0].includes('@');
                 const sendingPhones = emailList[0].includes('+');
@@ -1037,6 +1103,7 @@
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
                     },
+                    data: dataToSend,
                     data: dataToSend,
                     success: function(response) {
                         toastr.success(response.message || 'Users updated successfully.');

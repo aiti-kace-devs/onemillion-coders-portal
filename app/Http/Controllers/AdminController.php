@@ -973,15 +973,16 @@ class AdminController extends Controller
         $validated = $request->validate([
             'course_id' => 'required|exists:courses,id',
             'session_id' => 'sometimes|exists:course_sessions,id',
-            'user_id' => 'required|exists:users,userId',
+            'user_id' => 'sometimes|nullable|required_if:user_ids,null|exists:users,userId',
             'change' => 'sometimes',
+            'user_ids' => 'sometimes|nullable|required_if:user_id,null|array',
+            'user_ids.*' => 'exists:users,userId',
         ]);
+
 
         $course = Course::find($validated['course_id']);
         $session = CourseSession::find($validated['session_id'] ?? '');
-        $user_id = $validated['user_id'];
         $change = $validated['change'] == 'true';
-        $user = User::where('userId', $user_id)->first();
 
         if ($session && $session->course_id != $course->id) {
             return redirect()->back()->with([
@@ -989,16 +990,23 @@ class AdminController extends Controller
                 'key' => 'error',
             ]);
         }
+        $message = 'Student(s) admitted successfully';
 
-        CreateStudentAdmissionJob::dispatch($user, $course, $session);
-
-        $message = 'Student admitted successfully';
-
-        $oldAdmission = UserAdmission::where('user_id', $user_id)->first();
-        if ($oldAdmission && $change) {
-            $message = 'Student admission changed successfully';
+        if ($validated['user_id'] ?? false) {
+            $user_id = $validated['user_id'];
+            $user = User::where('userId', $user_id)->first();
+            CreateStudentAdmissionJob::dispatch($user, $course, $session);
+            $oldAdmission = UserAdmission::where('user_id', $user_id)->first();
+            if ($oldAdmission && $change) {
+                $message = 'Student admission changed successfully';
+            }
+        } else if (count($validated['user_ids'] ?? []) > 0) {
+            $user_ids = $validated['user_ids'];
+            foreach ($user_ids as $user_id) {
+                $user = User::where('userId', $user_id)->first();
+                CreateStudentAdmissionJob::dispatch($user, $course, $session);
+            }
         }
-
         return redirect()->back()->with([
             'flash' => $message,
             'key' => 'success',
