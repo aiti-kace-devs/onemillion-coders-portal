@@ -78,6 +78,11 @@ class BasePolicy extends Basic
             ])
             ->addNonceForDirective(Directive::SCRIPT)
             ->addNonceForDirective(Directive::STYLE);
+
+        if (str(request()->path())->startsWith(config('horizon.path', 'horizon'))) {
+            $this->reportOnly();
+        }
+
         // ->reportOnly();
     }
 
