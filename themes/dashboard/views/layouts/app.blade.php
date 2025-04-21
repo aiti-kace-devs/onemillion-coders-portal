@@ -38,6 +38,7 @@
     <!-- summernote -->
     <link rel="stylesheet" href="{{ url('assets/plugins/summernote/summernote-bs4.min.css') }}">
     {{-- <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.21/css/dataTables.bootstrap4.min.css"> --}}
+    <link rel="stylesheet" href="{{ url('assets/js/jquery-multiselect.min.css') }}">
 
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/dataTables.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/responsive.bootstrap4.min.css') }}">
@@ -456,6 +457,7 @@
     <script src="{{ url('assets/plugins/datatables-new/buttons.html5.min.js') }}"></script>
     <script src="{{ url('assets/plugins/datatables-new/buttons.print.min.js') }}"></script>
     <script src="{{ url('assets/plugins/datatables-new/buttons.colVis.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url('assets/js/jquery-multiselect.min.js') }}"></script>
 
     {{-- end datatables  --}}
     <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>

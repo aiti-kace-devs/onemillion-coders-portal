@@ -40,10 +40,8 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     protected function authorization()
     {
         Horizon::auth(function ($request) {
-            // TODO remove
-            // return true;
             if (auth('admin')->check()) {
-                return auth('admin')->user()->isSuper();
+                return auth('admin')->user()->can('manage.monitor');
             }
             return false;
         });

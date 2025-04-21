@@ -21,7 +21,7 @@ class SuperAdmin
         if (Auth::guard('admin')->user() == null) {
             return redirect(route('admin.login'));
         }
-        if (Auth::guard('admin')->user()?->isSuper() || Auth::user()?->isSuper()) {
+        if (Auth::guard('admin')->user()->hasRole('super-admin', 'admin')) {
             return $next($request);
         }
         return redirect()->back()->with([

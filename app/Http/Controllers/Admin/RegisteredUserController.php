@@ -11,6 +11,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+
 // class RegisteredUserController extends Controller
 // {
 //     /**
@@ -62,7 +65,7 @@ class RegisteredUserController extends Controller
      */
     public function index()
     {
-        $admins =  $admins = Admin::all(); 
+        $admins =  $admins = Admin::all();
         return view('admin.index', compact('admins'));
     }
 
@@ -102,7 +105,7 @@ class RegisteredUserController extends Controller
         $admin->save();
 
         // $redirectPath = $admin->is_super ? 'admin.dashboard' : 'admin.dashboard';
-    
+
         // return redirect()->route($redirectPath)->with([
         //     'flash' => 'Admin created successfully!',
         //     'key' => 'success'
@@ -119,8 +122,12 @@ class RegisteredUserController extends Controller
     public function edit($id)
     {
         //dd($id, Admin::find($id));
+        $roles = Role::all();
+        $permissions = Permission::all();
+
         $admin = Admin::findOrFail($id);
-        return view('admin.edit', compact('admin'));
+        return view('admin.edit', compact('admin', 'roles', 'permissions'));
+        // return view('admin.edit', compact('admin'));
     }
 
     /**
@@ -153,12 +160,29 @@ class RegisteredUserController extends Controller
         $admin->name = $request->name;
         $admin->email = $request->email;
         //$admin->is_super = $request->has('is_super') ? true : false;
-        
+
         if ($request->filled('password')) {
             $admin->password = Hash::make($request->password);
         }
-        
+
         $admin->save();
+
+        if (auth()->user()->hasRole('super-admin', 'admin')) {
+
+            if ($request->has('roles')) {
+                $admin->syncRoles($request->roles);
+            } else {
+                $admin->syncRoles([]);
+            }
+
+            // Sync direct permissions (optional)
+            if ($request->has('permissions')) {
+                $admin->syncPermissions($request->permissions);
+            } else {
+                $admin->syncPermissions([]);
+            }
+        }
+        // Sync roles
         // echo json_encode(['status' => 'true', 'message' => 'Admin updated successfully!', 'reload' => url('admin/manage_admins')]);
 
         $redirectPath = $admin->is_super ? 'admin.manage_admins' : 'admin.manage_admins';
