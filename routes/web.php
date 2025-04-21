@@ -239,7 +239,9 @@ Route::prefix('admin')->middleware('theme:dashboard')->name('admin.')->group(fun
         Route::put('/app-config', [AppConfigController::class, 'update'])->name('config.update')->middleware('admin.super');
 
         // Route::get('/manage-lists', [ListController::class, 'index'])->name('lists.index')->middleware('admin.super');
+        Route::get('/lists/fetch', [ListController::class, 'fetch'])->name('lists.fetch')->middleware('admin.super');
         Route::get('/lists/get-table-columns', [ListController::class, 'getTableColumns'])->middleware('admin.super')->name('lists.get-table-columns');
+        Route::get('/lists/view-data', [ListController::class, 'viewData'])->name('lists.view-data')->middleware('admin.super');
         Route::resource('/lists', ListController::class)->middleware('admin.super');
     });
 });

@@ -9,10 +9,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Database\Query\Builder; // Import the Query Builder
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Str;
+use Yajra\DataTables\Facades\DataTables;
 
 class ListController extends Controller
 {
@@ -38,6 +40,58 @@ class ListController extends Controller
         return Inertia::render('List/Index', [
             'views' => $formattedViews,
         ]);
+    }
+
+    public function fetch()
+    {
+        $tables = $this->getTablesAndViews()['views'];
+        $tables = collect($tables)->map(function ($t) {
+            return [
+                'name' => $t,
+                'count' => DB::table($t)->count()
+            ];
+        });
+
+
+        return DataTables::of($tables)
+            ->addIndexColumn()
+            // ->editColumn('duration', function ($row) {
+            //     return $row->course_time;
+            // })
+            ->addColumn('action', function ($row) {
+                $linkClass = 'inline-flex items-center w-full px-4 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-25 hover:text-gray-50 hover:bg-gray-100';
+
+                $action =
+                    '<div class="relative inline-block text-left">
+                        <div class="flex justify-end">
+                          <button type="button" class="dropdown-toggle py-2 rounded-md">
+                          <span class="material-symbols-outlined dropdown-span" dropdown-log="' . $row['name'] . '">
+                            more_vert
+                          </span>
+                          </button>
+                        </div>
+
+                        <div id="dropdown-menu-' . $row['name'] . '" class="hidden dropdown-menu fixed right-0 z-50 mt-2 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="menu-button" tabindex="-1">
+                            <button type="button" data-id="' . $row['name'] . '" class="sms ' . $linkClass . '">
+                                Send SMS
+                            </button>
+                            <button type="button" data-id="' . $row['name'] . '" class="email ' . $linkClass . '">
+                                Send Email
+                            </button>
+                            <button type="button" data-id="' . $row['name'] . '" class="view ' . $linkClass . '">
+                                View List
+                            </button>
+                        <button type="button" data-id="' . $row['name'] . '" class="delete ' . $linkClass . '">
+                             Delete
+                        </button>
+                        </div>
+                      </div>
+                      ';
+
+                return $action;
+            })
+            ->rawColumns(['action'])
+            ->make(true);
     }
 
     /**
@@ -66,8 +120,8 @@ class ListController extends Controller
             'columns.*.name' => 'required|string', // Changed to handle column objects
             'columns.*.alias' => 'nullable|string', // New field for aliases
             'where_conditions' => 'nullable|array',
-            'where_conditions.*.column' => 'required|string|max:255',
-            'where_conditions.*.operator' => 'required|string|in:=,!=,<,>,<=,>=,LIKE,NOT LIKE,IN,NOT IN,IS NULL,IS NOT NULL,BETWEEN',
+            'where_conditions.*.column' => 'required_unless:where_conditions.*.operator,RAW|nullable|string|max:255',
+            'where_conditions.*.operator' => 'required|string|in:=,!=,<,>,<=,>=,LIKE,NOT LIKE,IN,NOT IN,IS NULL,IS NOT NULL,BETWEEN,RAW',
             'where_conditions.*.value' => 'nullable|string|max:255',
             'order_by_column' => 'nullable|string',
             'order_by_direction' => 'nullable|string|in:asc,desc',
@@ -79,6 +133,12 @@ class ListController extends Controller
             'joins.*.second_column' => 'required|string',
             'joins.*.type' => 'nullable|string|in:inner,left,right,cross',
             'is_test' => 'sometimes|boolean',
+        ], [
+            'where_conditions.*.column.required_unless' => 'If the condition operator is not RAW, then column is required'
+        ], [
+            'where_conditions.*.column' => 'where condition column',
+            'where_conditions.*.operator' => 'where condition operator',
+            'where_conditions.*.value' => 'where condition value'
         ]);
 
         if ($validator->fails()) {
@@ -133,7 +193,18 @@ class ListController extends Controller
         if ($request->is_test) {
             // For test queries, just return metadata
             $start = microtime(true);
-            $count = $selectQuery->count();
+            try {
+                //code...
+                $count = $selectQuery->count();
+            } catch (\Illuminate\Database\QueryException $th) {
+                //throw $th;
+                $message = $th->getMessage() ?? $th->sql;
+
+                return redirect()->back()->withErrors([
+                    'view_name' => "Error running query: ' . $message",
+                    'table_name' => "Error running query: ' . $message",
+                ]);
+            }
             $time = round((microtime(true) - $start) * 1000, 2);
 
             $sql = Str::replaceArray('?', $selectQuery->getBindings(), Str::replace('?', "'?'", $selectQuery->toSql()));
@@ -151,9 +222,19 @@ class ListController extends Controller
 
         // dump($selectQuery->toSql());
         // Create the view
-        DB::statement("CREATE OR REPLACE VIEW {$viewName} AS {$selectQuery->toSql()}");
+        try {
+            $name = Str::lower(Str::camel($viewName));
+            DB::statement("CREATE OR REPLACE VIEW {$name} AS {$selectQuery->toSql()}");
+            return redirect()->route('admin.lists.index')->with('success', 'List view created successfully!');
+            //code...
+        } catch (\Illuminate\Database\QueryException $th) {
+            $message = $th->getMessage() ?? "";
 
-        return redirect()->route('admin.lists.index')->with('success', 'List view created successfully!');
+            return redirect()->back()->withErrors([
+                'view_name' => "Error running query: $message",
+                'table_name' => "Error running query: $message",
+            ]);
+        }
     }
     /**
      * Display the specified resource.
@@ -173,6 +254,34 @@ class ListController extends Controller
         $results = DB::table($viewName)->get();
 
         return view('lists.show', compact('results', 'viewName'));
+    }
+
+    public function viewData(Request $request)
+    {
+        $request->validate([
+            'list' => 'required|string', // Adjust table name
+            'page' => 'sometimes|integer|min:1',
+            'per_page' => 'sometimes|integer|min:1|max:100'
+        ]);
+
+        $listId = $request->input('list');
+        $perPage = $request->input('per_page', 15); // Default to 15 items per page
+        $currentPage = $request->input('page', 1);
+
+        // Example query - adjust based on your needs
+        $paginatedData = DB::table($listId)->paginate($perPage, ['*'], 'page', $currentPage);
+
+
+        // Get dynamic columns if needed (adjust based on your implementation)
+        $columns = $this->getColumnsByName($listId);
+
+        return response()->json([
+            'data' => $paginatedData->items(),
+            'columns' => $columns,
+            'current_page' => $paginatedData->currentPage(),
+            'last_page' => $paginatedData->lastPage(),
+            'total' => $paginatedData->total(),
+        ]);
     }
 
     /**
@@ -206,13 +315,14 @@ class ListController extends Controller
      * @param  string  $viewName
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function destroy(string $viewName): RedirectResponse
+    public function destroy(string $viewName)
     {
         try {
             DB::statement("DROP VIEW IF EXISTS `{$viewName}`");
-            return redirect()->back()->with('success', 'View deleted successfully');
+            // return redirect()->route('admin.lists.index')->with('success', 'View deleted successfully');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to delete view: ' . $e->getMessage());
+            Log::error('Error deleting view: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to delete view: ');
         }
     }
 
@@ -234,18 +344,7 @@ class ListController extends Controller
         try {
             // Use the database connection to get the column names.
             // This method uses the database schema to get the column information.
-            $columns = DB::connection()->getSchemaBuilder()->getColumns($tableName);
-
-            if (empty($columns)) {
-                // return response()->json(['error' => 'Table not found or has no columns.'], 404);
-                return Inertia::json(['error' => 'Table not found or has no columns.']); // Add this line
-            }
-
-            // Return the column names as a JSON response.
-            // return Inertia::json(['availableColumns' => $columns]); // Add this line
-            $columns = collect($columns)->map(function ($col) use ($tableName) {
-                return ['name' => $col['name'], 'type' => $this->convertDatabaseTypes($col['type_name'])];
-            })->all();
+            $columns = $this->getColumnsByName($tableName);
 
             return response()->json(['availableColumns' => $columns]);
         } catch (\Exception $e) {
@@ -254,6 +353,24 @@ class ListController extends Controller
             \Log::error('Error fetching columns for table ' . $tableName . ': ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch columns: ' . $e->getMessage()], 500);
         }
+    }
+
+    private function getColumnsByName(string $tableName)
+    {
+        $columns = DB::connection()->getSchemaBuilder()->getColumns($tableName);
+
+        if (empty($columns)) {
+            // return response()->json(['error' => 'Table not found or has no columns.'], 404);
+            return Inertia::json(['error' => 'Table not found or has no columns.']); // Add this line
+        }
+
+        // Return the column names as a JSON response.
+        // return Inertia::json(['availableColumns' => $columns]); // Add this line
+        $columns = collect($columns)->map(function ($col) use ($tableName) {
+            return ['name' => $col['name'], 'type' => $this->convertDatabaseTypes($col['type_name'])];
+        })->all();
+
+        return $columns;
     }
 
     protected function applyWhereConditions($query, array $whereConditions)
@@ -266,6 +383,21 @@ class ListController extends Controller
             $column = $this->sanitizeColumnName($condition['column']);
             $operator = strtoupper($condition['operator'] ?? '=');
             $value = $condition['value'] ?? null;
+
+            if ($condition['operator'] === 'RAW') {
+                // if (!auth()->user()->can('use-raw-sql')) {
+                //     throw new \Exception('Raw SQL not allowed');
+                // }
+
+                // Basic check for dangerous keywords
+                $disallowed = ['delete', 'update', 'insert', 'drop', 'truncate', ';'];
+                foreach ($disallowed as $keyword) {
+                    if (stripos($condition['value'], $keyword) !== false) {
+                        throw new \Exception('Potentially dangerous raw SQL detected');
+                    }
+                }
+            }
+
 
             switch ($operator) {
                 case 'IN':
@@ -297,6 +429,10 @@ class ListController extends Controller
                 case 'LIKE':
                 case 'NOT LIKE':
                     $query->where($column, $operator, '%' . $value . '%');
+                    break;
+
+                case 'RAW':
+                    $query->whereRaw($value);
                     break;
 
                 default:

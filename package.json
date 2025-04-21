@@ -14,7 +14,6 @@
     },
     "devDependencies": {
         "@inertiajs/vue3": "^1.0.0",
-        "@primevue/auto-import-resolver": "^4.3.3",
         "@tailwindcss/forms": "^0.5.3",
         "@vitejs/plugin-vue": "^5.0.0",
         "autoprefixer": "^10.4.12",
@@ -34,8 +33,9 @@
         "vue": "^3.4.0"
     },
     "dependencies": {
+        "@highlightjs/cdn-assets": "^11.11.1",
         "@lbgm/phone-number-input": "^1.1.6",
-        "@primeuix/themes": "^1.0.3",
+        "easymde": "^2.20.0",
         "libphonenumber-js": "^1.12.6"
     }
 }

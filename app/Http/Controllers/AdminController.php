@@ -1187,11 +1187,20 @@ class AdminController extends Controller
             'subject' => 'required',
             'message' => 'sometimes',
             'template' => 'required_if:message,null',
-            'student_ids' => 'required|array',
+            'student_ids' => 'required_if:list,null|nullable|array',
             'student_ids.*' => 'exists:users,id',
+            'list' => 'required_if:student_ids,null|nullable|string'
         ], [], [
             'student_ids.*' => 'student'
         ]);
+
+        // if no list_name or students_id
+        if (empty($validated['list']) && empty($validated['student_ids'])) {
+            return redirect()->back()->with([
+                'flash' => 'No students/ list selected.',
+                'key' => 'error',
+            ]);
+        }
 
         SendBulkEmailJob::dispatch($validated);
 

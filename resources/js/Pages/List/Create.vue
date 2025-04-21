@@ -36,18 +36,12 @@
                                             @change="fetchColumns" required
                                             :class="{ 'border-red-600': form.errors.table_name }">
                                             <option value="">Select a table</option>
-                                            <!-- <option v-for="table in tables" :key="table" :value="table">
-                                                {{ table }}
-                                            </option> -->
-
                                             <optgroup label="Tables">
                                                 <option v-for="table in tables.tables" :key="'table-' + table"
                                                     :value="table">
                                                     {{ table }}
                                                 </option>
                                             </optgroup>
-
-                                            <!-- Views Group -->
                                             <optgroup label="Views">
                                                 <option v-for="view in tables.views" :key="'view-' + view"
                                                     :value="view">
@@ -107,7 +101,7 @@
                                                     :key="groupName" :label="groupName">
                                                     <option v-for="col in group" :key="col.name" :value="col.name"
                                                         :disabled="isColumnSelected(col.name)">
-                                                        {{ col.name }} ({{ col.type }})
+                                                        {{ col.name.split('.')[1] }} ({{ col.type }})
                                                     </option>
                                                 </optgroup>
                                             </SelectInput>
@@ -152,15 +146,12 @@
                                                             {{ table }}
                                                         </option>
                                                     </optgroup>
-
-                                                    <!-- Views Group -->
                                                     <optgroup label="Views">
                                                         <option v-for="view in tables.views" :key="'view-' + view"
-                                                            :value="view" :disabled="table === form.table_name">
+                                                            :value="view" :disabled="view === form.table_name">
                                                             {{ view }}
                                                         </option>
                                                     </optgroup>
-
                                                 </SelectInput>
                                             </div>
                                             <div>
@@ -174,9 +165,9 @@
                                             <div>
                                                 <SelectInput v-model="join.first_column" class="w-full">
                                                     <option value="">Select Column</option>
-                                                    <option v-for="col in join.availableColumns" :key="col"
-                                                        :value="join.table + '.' + col">
-                                                        {{ join.table }}.{{ col }}
+                                                    <option v-for="col in join.availableColumns" :key="col.name"
+                                                        :value="`${join.table}.${col.name}`">
+                                                        {{ join.table }}.{{ col.name }} ({{ col.type }})
                                                     </option>
                                                 </SelectInput>
                                             </div>
@@ -192,16 +183,14 @@
                                             <div>
                                                 <SelectInput v-model="join.second_column" class="w-full">
                                                     <option value="">Select Column</option>
-                                                    <option
-                                                        v-for="col in availableColumns.filter(c => !join.availableColumns.includes(c.split('.')[1]))"
-                                                        :key="col" :value="col">
-                                                        {{ col }}
-                                                    </option>
+                                                    <template v-for="col in availableColumns" :key="col.name">
+                                                        <option v-if="col.name.split('.')[0] != join.table"
+                                                            :value="col.name">
+                                                            {{ col.name }} ({{ col.type }})
+                                                        </option>
+                                                    </template>
                                                 </SelectInput>
                                             </div>
-                                        </div>
-                                        <div v-if="join.availableColumnsText" class="mt-2 text-sm text-gray-500">
-                                            Available Columns: {{ join.availableColumnsText }}
                                         </div>
                                         <div class="flex justify-end mt-2">
                                             <button type="button" @click="removeJoin(index)"
@@ -231,20 +220,22 @@
                                         <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
                                             <div>
                                                 <SelectInput v-model="condition.column" class="w-full"
-                                                    :class="{ 'border-red-600': conditionErrors[index]?.column }">
+                                                    :class="{ 'border-red-600': form.errors[`where_conditions.${index}.column`] }">
                                                     <option value="">Select Column</option>
-                                                    <option v-for="col in allAvailableColumns" :key="col" :value="col">
-                                                        {{ col.split('.').pop() }} <!-- Show just the column name -->
-                                                        <template v-if="col.includes('.')">
-                                                            (from {{ col.split('.')[0] }})
+                                                    <option v-for="col in allAvailableColumns" :key="col.name"
+                                                        :value="col.name">
+                                                        {{ col.name.split('.')[1] }}
+                                                        <template v-if="col.name.includes('.')">
+                                                            (from {{ col.name.split('.')[0] }})
                                                         </template>
                                                     </option>
                                                 </SelectInput>
-                                                <InputError :message="where_conditions?.[index]?.column" />
+                                                <InputError
+                                                    :message="form.errors[`where_conditions.${index}.column`]" />
                                             </div>
                                             <div>
                                                 <SelectInput v-model="condition.operator" class="w-full"
-                                                    :class="{ 'border-red-600': conditionErrors[index]?.operator }">
+                                                    :class="{ 'border-red-600': form.errors.where_conditions?.[index]?.operator }">
                                                     <option value="=">=</option>
                                                     <option value="!=">!=</option>
                                                     <option value="<">&lt;</option>
@@ -258,8 +249,10 @@
                                                     <option value="IS NULL">IS NULL</option>
                                                     <option value="IS NOT NULL">IS NOT NULL</option>
                                                     <option value="BETWEEN">BETWEEN</option>
+                                                    <option value="RAW">RAW SQL</option>
                                                 </SelectInput>
-                                                <InputError :message="where_conditions?.[index]?.operator" />
+                                                <InputError
+                                                    :message="form.errors[`where_conditions.${index}.operator`]" />
                                             </div>
                                             <div class="md:col-span-2">
                                                 <template
@@ -273,7 +266,43 @@
                                                     <TextInput type="text" v-model="condition.value"
                                                         placeholder="No value needed" class="w-full" disabled />
                                                 </template>
+                                                <template v-else-if="condition.operator === 'RAW'">
 
+                                                    <div class="relative">
+                                                        <textarea v-model="condition.value"
+                                                            @change="condition.value = sanitizeRawInput(condition.value)"
+                                                            placeholder="e.g. DATE(created_at) = CURDATE()"
+                                                            class="w-full font-mono text-sm p-2 border rounded"
+                                                            rows="2"></textarea>
+                                                        <div class="absolute bottom-2 right-2 flex space-x-2">
+                                                            <button type="button"
+                                                                @click="condition.isRaw = !condition.isRaw"
+                                                                class="p-1 rounded" :class="{
+                                                                    'bg-green-100 text-green-800': condition.isRaw,
+                                                                    'bg-gray-100 text-gray-800': !condition.isRaw
+                                                                }" title="Toggle raw SQL">
+                                                                <span
+                                                                    class="material-symbols-outlined text-sm">code</span>
+                                                            </button>
+                                                            <button type="button" @click="showRawHelp = true"
+                                                                class="p-1 text-blue-500" title="Help with raw SQL">
+                                                                <span
+                                                                    class="material-symbols-outlined text-sm">help</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div v-if="showRawHelp" class="mt-2 p-2 bg-blue-50 rounded text-sm">
+                                                        <p class="font-medium">Raw SQL Tips:</p>
+                                                        <ul class="list-disc pl-5">
+                                                            <li>Use database functions like DATE(), YEAR()</li>
+                                                            <li>Reference columns with backticks: `column_name`
+                                                            </li>
+                                                            <li>No semicolons or multiple statements</li>
+                                                        </ul>
+                                                    </div>
+
+                                                </template>
                                                 <template v-else>
                                                     <div>
                                                         <template v-if="getColumnType(condition.column) === 'datetime'">
@@ -281,12 +310,12 @@
                                                                 class="w-full border rounded px-2 py-1">
                                                         </template>
                                                         <template
-                                                            v-else-if="getColumnType(condition.column) === 'integer'">
+                                                            v-else-if="['bigint', 'integer'].includes(getColumnType(condition.column))">
                                                             <input type="number" v-model="condition.value"
                                                                 class="w-full border rounded px-2 py-1" step="1">
                                                         </template>
                                                         <template
-                                                            v-else-if="getColumnType(condition.column) === 'float'">
+                                                            v-else-if="['decimal', 'float'].includes(getColumnType(condition.column))">
                                                             <input type="number" v-model="condition.value"
                                                                 class="w-full border rounded px-2 py-1" step="0.01">
                                                         </template>
@@ -296,7 +325,7 @@
                                                         </template>
                                                     </div>
                                                 </template>
-                                                <InputError :message="where_conditions?.[index]?.value" />
+                                                <InputError :message="form.errors[`where_conditions.${index}.value`]" />
                                             </div>
                                         </div>
                                         <div class="flex justify-end mt-2">
@@ -314,7 +343,6 @@
 
                             <!-- Sorting and Limits Section -->
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-
                                 <div>
                                     <InputLabel for="order_by_column" value="Order By Column" />
                                     <SelectInput v-model="form.order_by_column" id="order_by_column" class="w-full"
@@ -322,12 +350,11 @@
                                         <option value="">Select Column</option>
                                         <option v-for="column in selectedColumnsForOrderBy" :key="column.name"
                                             :value="column.name">
-                                            {{ column.alias || column.name.split('.').pop() }}
+                                            {{ column.alias || column.name.split('.')[1] }}
                                         </option>
                                     </SelectInput>
                                     <InputError :message="form.errors.order_by_column" />
                                 </div>
-
                                 <div>
                                     <InputLabel for="order_by_direction" value="Order Direction" />
                                     <SelectInput v-model="form.order_by_direction" id="order_by_direction"
@@ -336,7 +363,6 @@
                                         <option value="desc">Descending</option>
                                     </SelectInput>
                                 </div>
-
                                 <div>
                                     <InputLabel for="limit" value="Row Limit" />
                                     <TextInput type="number" v-model="form.limit" id="limit" class="w-full" min="1"
@@ -346,75 +372,71 @@
 
                             <!-- Form Actions -->
                             <div class="flex justify-end space-x-4 pt-6">
-                                <div class="mt-6 flex items-center space-x-4">
-                                    <SecondaryButton type="button" @click="resetForm" :disabled="form.processing">
-                                        Reset
-                                    </SecondaryButton>
-                                    <SecondaryButton type="button" @click="submitForm(true)"
-                                        :disabled="form.processing || !form.table_name" class="bg-green-300">
-                                        <span v-if="form.processing && isTesting">
-                                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline"
-                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                                    stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                                </path>
-                                            </svg>
-                                            Testing...
-                                        </span>
-                                        <span v-else>Test Query</span>
-                                    </SecondaryButton>
+                                <SecondaryButton type="button" @click="resetForm" :disabled="form.processing">
+                                    Reset
+                                </SecondaryButton>
+                                <SecondaryButton type="button" @click="submitForm(true)"
+                                    :disabled="form.processing || !form.table_name" class="bg-green-300">
+                                    <span v-if="form.processing && isTesting">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4">
+                                            </circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                        Testing...
+                                    </span>
+                                    <span v-else>Test Query</span>
+                                </SecondaryButton>
+                                <PrimaryButton type="button" @click="submitForm(false)" :disabled="form.processing">
+                                    <span v-if="form.processing && !isTesting">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4">
+                                            </circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                        Saving...
+                                    </span>
+                                    <span v-else>Save List</span>
+                                </PrimaryButton>
+                            </div>
 
-                                    <PrimaryButton type="button" @click="submitForm(false)" :disabled="form.processing">
-                                        <span v-if="form.processing && !isTesting">
-                                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline"
-                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                                    stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                                </path>
-                                            </svg>
-                                            Saving...
-                                        </span>
-                                        <span v-else>Save List</span>
-                                    </PrimaryButton>
-
-                                    <div v-if="testResult" class="text-sm">
-                                        <span class="font-medium">Test Results:</span>
-                                        {{ testResult.count }} rows
+                            <!-- Test Results Display -->
+                            <div v-if="testResult" class="bg-gray-50 p-4 rounded-lg">
+                                <div class="flex items-center justify-between">
+                                    <div class="text-sm font-medium">
+                                        Test Results: {{ testResult.count }} rows
                                         <span v-if="testResult.time" class="text-gray-500">({{ testResult.time
-                                            }}ms)</span>
+                                        }}ms)</span>
                                     </div>
+                                    <button type="button" @click="showQueryDetails = !showQueryDetails"
+                                        class="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900">
+                                        <span class="material-symbols-outlined mr-1 text-base">
+                                            {{ showQueryDetails ? 'expand_less' : 'expand_more' }}
+                                        </span>
+                                        {{ showQueryDetails ? 'Hide' : 'Show' }} Query Details
+                                    </button>
                                 </div>
 
-                                <!-- Query Details Accordion (same as before) -->
-                                <!-- Query Details Accordion -->
-
-                            </div>
-                            <div v-if="testResult" class="bg-gray-50 p-4 rounded-lg">
-                                <button type="button" @click="showQueryDetails = !showQueryDetails"
-                                    class="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900">
-                                    <span class="material-symbols-outlined mr-1 text-base">
-                                        {{ showQueryDetails ? 'expand_less' : 'expand_more' }}
-                                    </span>
-                                    {{ showQueryDetails ? 'Hide' : 'Show' }} Query Details
-                                </button>
-
-
-                            </div>
-                            <div v-if="showQueryDetails" class="mt-2">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <h4 class="text-sm font-medium text-gray-700 mb-1">SQL Query</h4>
-                                        <pre class="bg-white p-3 rounded text-xs font-mono overflow-x-auto">{{
-                            testResult.sql }}</pre>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-sm font-medium text-gray-700 mb-1">Bindings</h4>
-                                        <pre class="bg-white p-3 rounded text-xs font-mono overflow-x-auto">{{
-                            testResult.bindings }}</pre>
+                                <div v-if="showQueryDetails" class="mt-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <h4 class="text-sm font-medium text-gray-700 mb-1">SQL Query</h4>
+                                            <pre class="bg-white p-3 rounded text-xs font-mono overflow-x-auto">{{ testResult.sql }}
+                            </pre>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-sm font-medium text-gray-700 mb-1">Bindings</h4>
+                                            <pre class="bg-white p-3 rounded text-xs font-mono overflow-x-auto">{{ testResult.bindings
+                                            }}</pre>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -453,7 +475,7 @@ export default {
         SecondaryButton,
     },
     props: {
-        tables: Array,
+        tables: Object, // Now expects { tables: [], views: [] }
     },
     data() {
         return {
@@ -474,19 +496,21 @@ export default {
             testingQuery: false,
             testResult: null,
             showQueryDetails: false,
+            isTesting: false,
         };
     },
     computed: {
         allAvailableColumns() {
-            // Combine base table columns and all join table columns
             const baseColumns = this.availableColumns;
             const joinColumns = this.form.joins.flatMap(join =>
-                join.availableColumns.map(col => ({ name: `${join.table}.${col.name}`, type: col.type }))
+                join.availableColumns.map(col => ({
+                    name: `${join.table}.${col.name}`,
+                    type: col.type
+                }))
             );
             return [...new Set([...baseColumns, ...joinColumns])];
         },
         selectedColumnsForOrderBy() {
-            // Return only columns that have been selected in the form
             return this.form.columns.map(col => ({
                 name: col.name,
                 alias: col.alias || null
@@ -495,126 +519,47 @@ export default {
         allColumnsSelected() {
             return this.form.columns.length === this.availableColumns.length;
         },
-
-        columnDisplayName() {
-            return (column) => {
-                const name = column.name.split('.').pop();
-                return column.alias ? `${name} (as ${column.alias})` : name;
+        groupedAvailableColumns() {
+            const groups = {
+                'Date/Time': [],
+                'Numbers': [],
+                'Text': [],
+                'Other': []
             };
+
+            this.availableColumns.forEach(col => {
+                if (['datetime', 'timestamp', 'date', 'time'].includes(col.type.toLowerCase())) {
+                    groups['Date/Time'].push(col);
+                } else if (['bigint', 'integer', 'decimal', 'float', 'double'].includes(col.type.toLowerCase())) {
+                    groups['Numbers'].push(col);
+                } else if (['string', 'text', 'varchar', 'char'].includes(col.type.toLowerCase())) {
+                    groups['Text'].push(col);
+                } else {
+                    groups['Other'].push(col);
+                }
+            });
+
+            return Object.fromEntries(
+                Object.entries(groups).filter(([_, cols]) => cols.length > 0)
+            );
         }
     },
     methods: {
         isColumnSelected(columnName) {
-            return this.form.columns.some(col => col.name.startsWith(columnName));
+            return this.form.columns.some(col => col.name === columnName);
         },
         getColumnType(columnName) {
-            // Handle table.column format
+            if (!columnName) return 'string';
+
             const simpleName = columnName.includes('.')
                 ? columnName.split('.')[1]
                 : columnName;
 
-            const column = this.availableColumns.find(c => c.name === simpleName);
+            const column = this.availableColumns.find(c => c.name.endsWith(simpleName)) ||
+                this.allAvailableColumns.find(c => c.name === columnName);
+
             return column ? column.type.toLowerCase() : 'string';
         },
-        selectAllColumns() {
-            // Clear existing selections
-            this.form.columns = [];
-
-            // Add all available columns
-            this.availableColumns.forEach(col => {
-                this.form.columns.push({
-                    name: col,
-                    alias: '' // No alias by default
-                });
-            });
-            // If you want to automatically add join table columns too:
-            this.form.joins.forEach(join => {
-                join.availableColumns.forEach(col => {
-                    const fullName = `${join.table}.${col}`;
-                    if (!this.form.columns.some(c => c.name === fullName)) {
-                        this.form.columns.push({
-                            name: fullName,
-                            alias: ''
-                        });
-                    }
-                });
-            });
-        },
-
-        addColumnToSelected() {
-            if (!this.newColumn.name) return;
-
-            const columnName = this.newColumn.name;
-            const columnAlias = this.newColumn.alias;
-
-            // Check if column already exists
-            if (this.form.columns.some(col => col.name === columnName)) {
-                this.form.setError('newColumn.name', 'This column is already selected');
-                return;
-            }
-
-            // Add to columns array
-            this.form.columns.push({
-                name: columnName,
-                alias: columnAlias
-            });
-
-            // Reset the new column form
-            this.newColumn = { name: '', alias: '' };
-        },
-
-        removeColumn(index) {
-            this.form.columns.splice(index, 1);
-        },
-
-        addWhereCondition() {
-            this.form.where_conditions.push({
-                column: '',
-                operator: '==',
-                value: ''
-            });
-        },
-
-        removeWhereCondition(index) {
-            this.form.where_conditions.splice(index, 1);
-        },
-
-        addJoin() {
-            this.form.joins.push({
-                table: '',
-                type: 'inner',
-                first_column: '',
-                operator: '=',
-                second_column: '',
-                availableColumns: [],
-                availableColumnsText: '',
-                _prevTable: '' // Track previous table name
-            });
-        },
-
-        removeJoin(index) {
-            const join = this.form.joins[index];
-            const table = join.table;
-            if (table &&
-                this.form.columns.some(c => c.name.startsWith(`${table}.`))) {
-                if (!confirm('Removing this join table will remove any columns selected from it. Continue?')) {
-                    return;
-                }
-            }
-            const removedJoin = this.form.joins.splice(index, 1)[0];
-            if (removedJoin?.table) {
-                // Remove any columns from this join table in availableColumns
-                this.availableColumns = this.availableColumns.filter(
-                    col => !col.startsWith(`${removedJoin.table}.`)
-                );
-
-                // Also clean up any selected columns that might reference this table
-                this.form.columns = this.form.columns.filter(
-                    col => !col.name.startsWith(`${removedJoin.table}.`)
-                );
-            }
-        },
-
         async fetchColumns() {
             if (!this.form.table_name) {
                 this.availableColumns = [];
@@ -627,11 +572,11 @@ export default {
                     params: { table_name: this.form.table_name },
                 });
 
-                this.availableColumns = response.data.availableColumns.map(
-                    col => `${this.form.table_name}.${col}`
-                );
+                this.availableColumns = response.data.availableColumns.map(col => ({
+                    name: `${this.form.table_name}.${col.name}`,
+                    type: col.type
+                }));
 
-                // Reset columns when table changes
                 this.form.columns = [];
             } catch (error) {
                 console.error('Error fetching columns:', error);
@@ -640,32 +585,24 @@ export default {
                 this.isLoadingColumns = false;
             }
         },
-
         async fetchJoinColumns(index) {
             const join = this.form.joins[index];
-            const oldTable = join._prevTable; // Store the previous table name
+            const oldTable = join._prevTable;
 
-            // Check if there are selected columns from this table
-            if (oldTable && oldTable !== join.table &&
-                this.form.columns.some(c => c.name.startsWith(`${oldTable}.`))) {
-                if (!confirm('Changing this join table will remove any columns selected from it. Continue?')) {
-                    join.table = oldTable; // Revert the change
-                    return;
-                }
-            }
-
-            join._prevTable = join.table; // Update the previous table reference
-
-            // Clean up columns from the old table if it changed
+            // Cleanup if table changed
             if (oldTable && oldTable !== join.table) {
                 this.availableColumns = this.availableColumns.filter(
-                    col => !col.startsWith(`${oldTable}.`)
+                    col => !col.name.startsWith(`${oldTable}.`)
+                );
+                this.form.columns = this.form.columns.filter(
+                    col => !col.name.startsWith(`${oldTable}.`)
                 );
             }
 
+            join._prevTable = join.table;
+
             if (!join.table) {
                 join.availableColumns = [];
-                join.availableColumnsText = '';
                 return;
             }
 
@@ -674,26 +611,53 @@ export default {
                     params: { table_name: join.table },
                 });
 
-                const columns = response.data.availableColumns;
-                join.availableColumns = columns;
-                join.availableColumnsText = columns.join(', ');
+                join.availableColumns = response.data.availableColumns;
 
-                // Add these columns to the main available columns list if not already present
-                const newColumns = columns.map(col => `${join.table}.${col}`);
-                this.availableColumns = [...new Set([...this.availableColumns, ...newColumns])];
+                // Add to availableColumns without duplicates
+                const newColumns = response.data.availableColumns.map(col => ({
+                    name: `${join.table}.${col.name}`,
+                    type: col.type
+                }));
+
+                newColumns.forEach(newCol => {
+                    if (!this.availableColumns.some(c => c.name === newCol.name)) {
+                        this.availableColumns.push(newCol);
+                    }
+                });
+
             } catch (error) {
                 console.error('Error fetching join columns:', error);
                 join.availableColumns = [];
-                join.availableColumnsText = '';
             }
         },
+        selectAllColumns() {
+            this.form.columns = this.availableColumns.map(col => ({
+                name: col.name,
+                alias: '',
+                type: col.type
+            }));
+        },
+        addColumnToSelected() {
+            if (!this.newColumn.name) return;
 
-        resetForm() {
-            if (confirm('Are you sure you want to reset the form? All changes will be lost.')) {
-                this.form.reset();
-                this.availableColumns = [];
-                this.newColumn = { name: '', alias: '' };
+            const column = this.availableColumns.find(c => c.name === this.newColumn.name);
+            if (!column) return;
+
+            if (this.isColumnSelected(column.name)) {
+                this.form.setError('newColumn.name', 'This column is already selected');
+                return;
             }
+
+            this.form.columns.push({
+                name: column.name,
+                alias: this.newColumn.alias,
+                type: column.type
+            });
+
+            this.newColumn = { name: '', alias: '' };
+        },
+        removeColumn(index) {
+            this.form.columns.splice(index, 1);
         },
         addWhereCondition() {
             this.form.where_conditions.push({
@@ -706,6 +670,72 @@ export default {
         removeWhereCondition(index) {
             this.form.where_conditions.splice(index, 1);
             this.conditionErrors.splice(index, 1);
+        },
+        addJoin() {
+            this.form.joins.push({
+                table: '',
+                type: 'inner',
+                first_column: '',
+                operator: '=',
+                second_column: '',
+                availableColumns: [],
+                _prevTable: ''
+            });
+        },
+        removeJoin(index) {
+            const join = this.form.joins[index];
+            if (join.table &&
+                this.form.columns.some(c => c.name.startsWith(`${join.table}.`))) {
+                if (!confirm('Removing this join will also remove any columns selected from it. Continue?')) {
+                    return;
+                }
+            }
+
+            const removedJoin = this.form.joins.splice(index, 1)[0];
+            if (removedJoin?.table) {
+                this.availableColumns = this.availableColumns.filter(
+                    col => !col.name.startsWith(`${removedJoin.table}.`)
+                );
+                this.form.columns = this.form.columns.filter(
+                    col => !col.name.startsWith(`${removedJoin.table}.`)
+                );
+            }
+        },
+        resetForm() {
+            if (confirm('Are you sure you want to reset the form? All changes will be lost.')) {
+                this.form.reset();
+                this.availableColumns = [];
+                this.form.columns = [];
+                this.form.joins = [];
+                this.form.where_conditions = [];
+                this.newColumn = { name: '', alias: '' };
+                this.testResult = null;
+            }
+        },
+        submitForm(isTest) {
+            this.isTesting = isTest;
+            this.form.transform(data => ({
+                ...data,
+                is_test: isTest,
+            })).post(route('admin.lists.store'), {
+                onSuccess: (response) => {
+                    if (isTest) {
+                        this.testResult = response.props.testResult;
+                        toastr.success("Test Successful");
+                    } else {
+                        toastr.success('List saved successfully');
+                    }
+                },
+                onError: (errors) => {
+                    if (isTest && errors.response?.data?.testResult) {
+                        this.testResult = errors.response.data.testResult;
+                    }
+                    toastr.success("An error occurred, check and retest the query");
+                },
+                onFinish: () => {
+                    this.isTesting = false;
+                }
+            });
         },
         validateConditions() {
             let isValid = true;
@@ -725,40 +755,38 @@ export default {
                 }
 
                 if (condition.value === undefined || condition.value === '') {
-                    this.conditionErrors[index].value = 'Value is required';
-                    isValid = false;
+                    if (!['IS NULL', 'IS NOT NULL'].includes(condition.operator)) {
+                        this.conditionErrors[index].value = 'Value is required';
+                        isValid = false;
+                    }
                 }
             });
 
             return isValid;
         },
-        submitForm(isTest) {
-            this.isTesting = isTest;
-            this.form.transform(data => ({
-                ...data,
-                is_test: isTest, // Add test flag to form data
-            })).post(route('admin.lists.store'), {
-                onSuccess: (response) => {
-                    if (isTest) {
-                        this.testResult = response.props.testResult;
-                    } else {
-                        // Handle actual save success
-                        this.$toast.success('List saved successfully');
-                    }
-                },
-                onError: (errors) => {
-                    if (isTest && errors.response?.data?.testResult) {
-                        this.testResult = errors.response.data.testResult;
-                    }
-                },
-                onFinish: () => {
-                    this.isTesting = false;
+        applyWhereCondition(query, condition) {
+            if (condition.operator === 'RAW' && condition.isRaw) {
+                // Only allow raw expressions for trusted users
+                if (this.$page.props.user.is_super) {
+                    return query.whereRaw(condition.value);
                 }
-            });
+                throw new Error('Raw SQL access denied');
+            }
+
+            // Existing condition handling
+            return query.where(condition.column, condition.operator, condition.value);
         },
-    },
+        sanitizeRawInput(value) {
+            // Basic frontend validation
+            const blocked = [';', '--', '/*', '*/', 'delete', 'drop', 'truncate'];
+            return blocked.some(word => value.toLowerCase().includes(word))
+                ? null
+                : value;
+        }
+    }
 };
 </script>
+
 <style scoped>
 /* In your CSS file */
 select optgroup {
