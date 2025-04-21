@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Protection Course Details</title>
     <link rel="stylesheet" href="{{ asset('assets/home/css/style.css') }}">
-    <style>
+    <style @nonce>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -62,12 +62,13 @@
     <div class="container">
         <div class="text-content">
             <div class="detail-item">
-                <h1> <span class="detail-label">Certified Data Protection Manager  (CDPM ) – Advance Level</span></h1>
+                <h1> <span class="detail-label">Certified Data Protection Manager (CDPM ) – Advance Level</span></h1>
                 <!-- <span class="detail-value">Cybersecurity Specialist</span> -->
             </div>
             <div class="detail-item">
                 <span class="detail-label">Objective:</span>
-                <span class="detail-value">Develop practical skills in data governance, risk management, and compliance enforcement.</span>
+                <span class="detail-value">Develop practical skills in data governance, risk management, and compliance
+                    enforcement.</span>
             </div>
             <!-- <div class="detail-item">
         <span class="detail-label">No. of People to Train:</span>
@@ -96,7 +97,7 @@
             </div>
             <div class="detail-item">
                 <span class="detail-label">Outcome:</span>
-                <span class="detail-value"><b>CDPM  Certification</b></span>
+                <span class="detail-value"><b>CDPM Certification</b></span>
             </div>
             <a href="{{ url('/forms/register') }}" class="register-button">Register</a>
         </div>

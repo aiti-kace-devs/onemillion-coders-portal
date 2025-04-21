@@ -1,8 +1,10 @@
 @extends('layouts.app')
 @section('title', 'Dashboard')
 @section('content')
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <style>
+    {{-- <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" /> --}}
+    {{-- <link rel="stylesheet" type="text/css" href="{{ url('/assets/plugins/daterangepicker/daterangepicker.css') }}" /> --}}
+
+    <style @nonce>
         .multi-select-container {
             display: inline-block;
             position: relative;
@@ -110,8 +112,8 @@
         }
     </style>
 
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <style>
+    {{-- <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" /> --}}
+    <style @nonce>
         .multi-select-container {
             display: inline-block;
             position: relative;
@@ -246,7 +248,7 @@
                         <div class="card">
                             <div class="card-header" id="headingOne">
                                 <span class="d-flex flex-column flex-md-row justify-content-between">
-                                    <div class="mb-0 dropdown-toggle" style="cursor: pointer;" data-toggle="collapse"
+                                    <div class="mb-0 dropdown-toggle cursor-pointer" data-toggle="collapse"
                                         data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
                                         FILTER DATA
                                     </div>
@@ -274,7 +276,7 @@
                             </div>
 
                             <div id="collapseOne" class="collapse show" aria-labelledby="headingOne"
-                                data-parent="#accordion" style="">
+                                data-parent="#accordion">
                                 {{-- <div class="card-body"> --}}
                                 <div class="card-body">
                                     <div class="row mb-3">
@@ -356,7 +358,7 @@
 
     <x-modal id="shortlisted_students" title="Copy and Paste Shortlisted Student Emails" size="modal-lg">
         <label for="email_list">Paste Emails/Phonenumbers Here</label>
-        <textarea class="form-control mb-3" name="email_list" id="email_list" rows="10" style="min-height: 250px;"
+        <textarea class="form-control mb-3" name="email_list" id="email_list" rows="10"
             placeholder="Paste emails/numbers, one per line..."></textarea>
 
         <x-slot name="footer">
@@ -453,7 +455,7 @@
 
     @push('scripts')
         <script type="text/javascript" src="{{ url('assets/js/jquery-multiselect.min.js') }}"></script>
-        <script>
+        <script @nonce>
             $(document).on('click', '.admit-btn', function() {
                 const user_id = $(this).data('id');
                 const course_id = $(this).data('course_id');
@@ -1043,11 +1045,7 @@
 
 
             });
-        </script>
 
-
-
-        <script>
             $(document).on('click', '#shortlist-modal-submit', function() {
                 const rawEmails = $('#email_list').val();
                 const emailList = rawEmails
@@ -1057,8 +1055,28 @@
 
                 if (emailList.length === 0) {
                     toastr.error('Please paste at least one valid email address/ phonenumber.');
+                    toastr.error('Please paste at least one valid email address/ phonenumber.');
                     return;
                 }
+                // determine if emails or phonenumbers
+                const sendingEmails = emailList[0].includes('@');
+                const sendingPhones = emailList[0].includes('+');
+
+                let dataToSend;
+
+                if (sendingEmails) {
+                    dataToSend = {
+                        emails: emailList,
+                    }
+                } else if (sendingPhones) {
+                    dataToSend = {
+                        phone_numbers: emailList,
+                    }
+                } else {
+                    toastr.error('Please paste at least one valid email address/ phonenumber.');
+                    return;
+                }
+
                 // determine if emails or phonenumbers
                 const sendingEmails = emailList[0].includes('@');
                 const sendingPhones = emailList[0].includes('+');
@@ -1085,6 +1103,7 @@
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
                     },
+                    data: dataToSend,
                     data: dataToSend,
                     success: function(response) {
                         toastr.success(response.message || 'Users updated successfully.');

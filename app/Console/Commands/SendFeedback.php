@@ -21,6 +21,7 @@ class SendFeedback extends Command
 
     public function handle()
     {
+        if (!config(SEND_EMAIL_AFTER_EXAM_SUBMISSION, true)) return;
 
         $completedExams = user_exam::whereNotNull('submitted')
             ->whereNull('user_feedback')->limit(300)
@@ -30,7 +31,12 @@ class SendFeedback extends Command
             return;
         }
 
-        $userEmails = User::select('email')->whereIn('id', $completedExams->pluck('user_id')->all())->get()->pluck('email')->all();
+        $userEmails = User::select('email')
+            ->whereIn(
+                'id',
+                $completedExams->pluck('user_id')->all()
+            )
+            ->get()->pluck('email')->all();
 
         if (count($userEmails) > 0) {
             Mail::to(env('MAIL_FROM_ADDRESS'))->bcc($userEmails)->send(new SendStudentFeedback());

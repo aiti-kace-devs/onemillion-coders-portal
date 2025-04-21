@@ -105,7 +105,7 @@
     <!-- /.content-header -->
 @endsection
 @push('scripts')
-    <script>
+    <script @nonce>
         $('#course_id').on('change', function(e) {
             const course_id = $('#course_id').val()
             window.location.href = `{{ route('admin.verification') }}?course_id=${course_id}`;

@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'View Attendance')
 @section('content')
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <style>
+    {{-- <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" /> --}}
+    <style @nonce>
         .multi-select-container {
             display: inline-block;
             position: relative;
@@ -110,7 +110,6 @@
             font-size: inherit !important;
             padding: 6px 12px;
         }
-
     </style>
     <!-- /.content-header -->
     <!-- Content Wrapper. Contains page content -->
@@ -160,7 +159,7 @@
                                             </option>
                                         </select>
                                     </div>
-                                    <div id="course_dropdown" class="col-md-4 col-12 mb-3" style="display: none;">
+                                    <div id="course_dropdown" class="col-md-4 col-12 mb-3 none">
                                         <label for="course" class="form-label">Select Course</label>
                                         <select multiple name="course_id[]" id="course_id" class="form-control"
                                             aria-hidden="true">
@@ -339,11 +338,11 @@
     <!-- /.content-header -->
 @endsection
 @push('scripts')
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    {{-- <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-    <script type="text/javascript" src="{{ url('assets/js/jquery-multiselect.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url('assets/js/jquery-multiselect.min.js') }}"></script> --}}
 
-    <script>
+    <script @nonce>
         $(document).ready(function() {
             $('input[name="dates"]').daterangepicker({
                 showWeekNumbers: true,

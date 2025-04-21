@@ -1,11 +1,15 @@
 @extends('layouts.app')
 @section('title', 'Scan QR Code')
 @section('content')
-    <style>
+    <style @nonce>
         canvas {
             height: 400px;
             width: 400px;
             margin: 0 auto 0 auto;
+        }
+
+        #qrcode {
+            height: 85vh
         }
     </style>
     <div class="content-wrapper">
@@ -78,7 +82,7 @@
             </div>
 
             <div class="row g-3 flex justify-content-center align-tems-center">
-                <div class="d-flex flex-column" id="qrcode" style="height: 85vh"></div>
+                <div class="d-flex flex-column" id="qrcode"></div>
                 <video class="col-12" id="scanner"></video>
             </div>
 
@@ -97,7 +101,7 @@
 @push('scripts')
     <script src="{{ asset('assets/js/qr-scanner.min.js') }}"></script>
     <script src="{{ asset('assets/js/easy.qrcode.min.js') }}"></script>
-    <script>
+    <script @nonce>
         let codeIinterval = null;
 
         let qrCode = null;

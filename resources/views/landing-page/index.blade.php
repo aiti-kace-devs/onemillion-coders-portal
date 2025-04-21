@@ -7,7 +7,7 @@
     <link rel="apple-touch-icon" sizes="76x76" href="{{ asset('assets') }}/images/logo.png">
     <link rel="icon" type="image/png" href="{{ asset('assets') }}/images/logo.png">
     <title>One Million Coders - Ghana</title>
-    <style>
+    <style @nonce>
         * {
             margin: 0;
             padding: 0;
@@ -190,7 +190,7 @@
                 <img src="{{ url('assets/images/logo.png') }}" alt="One Million Coders Ghana Logo">
             </div>
             <h1>The One Million Coders Program - Ghana</h1>
-            <p style="font-size: 18px;">Empowering Ghanaian youth with coding skills for the future.</p>
+            <p @nonce style="font-size: 18px;">Empowering Ghanaian youth with coding skills for the future.</p>
             <p>
             <h2>Are you ready to unlock your digital potential?</h2>
 

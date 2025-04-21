@@ -68,12 +68,11 @@
     </div>
     @push('styles')
         {{-- <link rel="stylesheet" href="{{ url('/assets/plugins/bootstrap-switch/css/bootstrap3/bootstrap-switch.min.css') }}"> --}}
-        <link href="https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/css/bootstrap4-toggle.min.css"
-            rel="stylesheet">
+        <link href="{{ url('assets/plugins/bootstrap4-toogle/bootstrap4-toggle.min.css') }}" rel="stylesheet">
     @endpush
 
     @push('scripts')
-        <script src="{{ url('/assets/plugins/bootstrap-switch/js/bootstrap-switch.min.js') }}"></script>
-        <script src="https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/js/bootstrap4-toggle.min.js"></script>
+        <script src="{{ url('/assets/plugins/bootstrap4-toggle/bootstrap4-toggle.min.js') }}"></script>
+        {{-- <script src="https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/js/bootstrap4-toggle.min.js"></script> --}}
     @endpush
 @endsection

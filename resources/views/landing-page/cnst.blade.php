@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cybersecurity Course Details</title>
     <link rel="stylesheet" href="{{ asset('assets/home/css/style.css') }}">
-    <style>
+    <style @nonce>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
