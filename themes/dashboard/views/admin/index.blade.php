@@ -51,11 +51,10 @@
                                                     <td>{{ $key + 1 }}</td>
                                                     <td>{{ $admin->name }}</td>
                                                     <td>{{ $admin->email }}</td>
-                                                    <td>{{ $admin->created_at->format('Y-m-d') }}</td>
+                                                    <td>{{ $admin->created_at->format('Y-m-d') ?? 'N/A' }}</td>
                                                     <td><input class="is_super_admin_status" data-id="<?php echo $admin['id']; ?>"
-                                                            <?php if ($admin['is_super'] == 1) {
-                                                                echo 'checked';
-                                                            } ?> type="checkbox" name="is_super"></td>
+                                                            @if ($admin['is_super'] == 1) checked @endif type="checkbox"
+                                                            name="is_super"></td>
                                                     <td>
                                                         <a href="{{ route('admin.admins.edit', $admin->id) }}"
                                                             class="btn btn-sm btn-info">

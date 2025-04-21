@@ -252,23 +252,24 @@
                                     </div>
                                     <div class="row">
                                         <div class="col-md-12 d-flex justify-content-end pr-3 mb-2">
-                                            {{-- <a class="btn btn-info mr-2" href="javascript:;" data-toggle="modal"
-                                                data-target="#myModal">Add new student</a> --}}
-                                            <button class="btn btn-warning mr-2" data-toggle="modal"
-                                                data-target="#bulk-email-modal">Send Emails
-                                                <i class="fas fa-envelope"></i>
-                                            </button>
-
-                                            <button class="btn btn-success mr-2" data-toggle="modal"
-                                                data-target="#bulk">Send SMS
-                                                <i class="fas fa-sms"></i>
-                                            </button>
-
-
-
-                                            </button>
-                                            <button class="btn btn-primary mr-2" id="shortlist-selected">Shortlist
-                                                Students</button>
+                                            @can('student.create')
+                                                {{-- <a class="btn btn-info mr-2" href="javascript:;" data-toggle="modal"
+                                                    data-target="#myModal">Add new student</a> --}}
+                                            @endcan
+                                            @can('student.bulk-sms')
+                                                <button class="btn btn-warning mr-2" data-toggle="modal"
+                                                    data-target="#bulk-email-modal">Send Emails
+                                                    <i class="fas fa-envelope"></i>
+                                                </button>
+                                                <button class="btn btn-success mr-2" data-toggle="modal"
+                                                    data-target="#bulk">Send SMS
+                                                    <i class="fas fa-sms"></i>
+                                                </button>
+                                            @endcan
+                                            @can('student.admit')
+                                                <button class="btn btn-primary mr-2" id="shortlist-selected">Shortlist
+                                                    Students</button>
+                                            @endcan
                                         </div>
                                     </div>
                                 </span>
@@ -468,20 +469,19 @@
 
                     var table = $('#studentsTable').DataTable({
                         dom: 'Bfrtip',
-                        buttons: [{
-                            extend: 'csv',
-                            text: '<i class="fas fa-file-csv"></i> Export CSV',
-                            className: 'btn btn-success',
-                            title: 'Students_Export_' + new Date().toISOString().slice(0, 10),
-                            exportOptions: {
-                                columns: [1, 2, 3, 4, 5, 6, 7, 9],
-                                // format: {
-                                //     body: function(data, row, column, node) {
-                                //         return data.replace(/<[^>]*>/g, '');
-                                //     }
-                                // }
-                            }
-                        }],
+                        buttons: [
+                            @can('student.admit')
+                                {
+                                    extend: 'csv',
+                                    text: '<i class="fas fa-file-csv"></i> Export CSV',
+                                    className: 'btn btn-success',
+                                    title: 'Students_Export_' + new Date().toISOString().slice(0, 10),
+                                    exportOptions: {
+                                        columns: [1, 2, 3, 4, 5, 6, 7, 9],
+                                    }
+                                }
+                            @endcan
+                        ],
                         processing: true,
                         serverSide: true,
                         ajax: {
