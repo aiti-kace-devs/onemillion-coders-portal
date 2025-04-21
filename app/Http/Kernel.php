@@ -70,5 +70,9 @@ class Kernel extends HttpKernel
         'apikey.check' => \App\Http\Middleware\CheckAPIKey::class,
         'admin.super' => \App\Http\Middleware\SuperAdmin::class,
         'page.builder' => \App\Http\Middleware\PageBuilderMiddleware::class,
+        'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+        'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+        'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+
     ];
 }

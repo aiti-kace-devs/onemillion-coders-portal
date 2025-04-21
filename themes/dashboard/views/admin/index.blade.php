@@ -50,7 +50,7 @@
                                     <td>{{ $key + 1 }}</td>
                                     <td>{{ $admin->name }}</td>
                                     <td>{{ $admin->email }}</td>
-                                    <td>{{ $admin->created_at->format('Y-m-d') }}</td>
+                                    <td>{{ $admin->created_at ? $admin->created_at->format('Y-m-d') : 'N/A' }}</td>
                                     <td><input class="is_super_admin_status" data-id="<?php echo $admin['id'] ?>" <?php if($admin['is_super']==1){ echo "checked";} ?> type="checkbox" name="is_super"></td>
                                     <td>
                                         <a href="{{ route('admin.admins.edit', $admin->id) }}" class="btn btn-sm btn-info">
@@ -104,16 +104,16 @@
 
                                         <div class="form-group">
                                             <label for="email" >Email Address</label>
-                                            
+
                                                 <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email"  placeholder="Enter Email" value="{{ old('email') }}" required autocomplete="email">
-                                            
+
                                         </div>
 
                                         <div class="form-group">
                                             <label for="password" >Password</label>
-                                            
+
                                             <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" placeholder="Enter Password"  required autocomplete="new-password">
-                                            
+
                                         </div>
 
                                         <div class="form-group ">
@@ -123,7 +123,7 @@
                                             </div>
                                         </div>
 
-                                        
+
                     </div>
                     <div class="col-sm-12">
                         <div class="form-group">
