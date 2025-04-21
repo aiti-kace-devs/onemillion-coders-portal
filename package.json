@@ -33,6 +33,7 @@
     },
     "dependencies": {
         "@lbgm/phone-number-input": "^1.1.6",
+        "bootstrap4-toggle": "^3.6.1",
         "libphonenumber-js": "^1.12.6"
     }
 }

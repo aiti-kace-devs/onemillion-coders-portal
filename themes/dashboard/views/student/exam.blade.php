@@ -53,7 +53,9 @@
                                                         );
 
                                                         $studentTimeAllowed = Carbon\Carbon::now()->diffInHours(
-                                                            (new Carbon\Carbon($std_info['registered']))->addDays(2),
+                                                            (new Carbon\Carbon($std_info['registered']))->addDays(
+                                                                config(EXAM_DEADLINE_AFTER_REGISTRATION, 2),
+                                                            ),
                                                         );
 
                                                         // ->diffInHours(new Carbon\Carbon($std_info['exam_date']));

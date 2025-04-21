@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\StudentOperation;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\RegisteredUserController;
+use App\Http\Controllers\AppConfigController;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BranchController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\FormController;
 use App\Http\Controllers\FormResponseController;
 use App\Http\Controllers\LandingPageController;
+use App\Http\Controllers\ListController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProgrammeController;
@@ -182,7 +184,7 @@ Route::prefix('admin')
             });
 
             Route::get('/manage_students', [AdminController::class, 'manage_students'])
-                    ->name('manage_students');
+                ->name('manage_students');
 
             Route::middleware('permission:student.read')->group(function () {
                 Route::get('/student_status/{id}', [AdminController::class, 'student_status'])
@@ -214,13 +216,13 @@ Route::prefix('admin')
                 Route::post('/generate_qrcode', [AttendanceController::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
                 Route::get('/scan_qrcode', [AdminController::class, 'scan_qrcode_page'])->middleware('permission:attendance.create');
                 Route::get('/verification', [AdminController::class, 'verification_page'])
-                ->name('verification');
+                    ->name('verification');
                 Route::get('/verify_details', [AdminController::class, 'verifyDetails'])
-                ->name('verify-details');
+                    ->name('verify-details');
                 Route::get('/reset-verify/{id}', [AdminController::class, 'reset_verify'])
-                ->name('reset-verify');
+                    ->name('reset-verify');
                 Route::post('/verify-student/{id}', [AdminController::class, 'verifyStudent'])
-                ->name('verify-student');
+                    ->name('verify-student');
             });
 
             Route::middleware('permission:report.read')->group(function () {
@@ -409,9 +411,17 @@ Route::prefix('admin')
                         ->middleware('permission:student.bulk-sms');
                 });
             // end of manage sms_template routes
-                Route::middleware('permission:manage.monitor')->group(function () {
-                    Route::get('app-logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index'])->middleware('permission:manage.cofig');
-                });
+            Route::middleware('permission:manage.monitor')->group(function () {
+                Route::get('app-logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index'])->middleware('permission:manage.cofig');
+                Route::get('/app-config', [AppConfigController::class, 'index'])->name('config.index')->middleware('admin.super');
+                Route::put('/app-config', [AppConfigController::class, 'update'])->name('config.update')->middleware('admin.super');
+            });
+        });
+
+        Route::middleware('permission:manage.manger')->group(function () {
+            // Route::get('/manage-lists', [ListController::class, 'index'])->name('lists.index')->middleware('admin.super');
+            Route::get('/lists/get-table-columns', [ListController::class, 'getTableColumns'])->name('lists.get-table-columns');
+            Route::resource('/lists', ListController::class);
         });
     });
 

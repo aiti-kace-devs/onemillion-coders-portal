@@ -135,15 +135,15 @@
 
 
                         <div class="col-12">
-                            <p class="alert alert-info">You'll be given the opportunity to change your details later.</p>
+                            {{-- <p class="alert alert-info">You'll be given the opportunity to change your details later.</p> --}}
                             @if (detailsUpdated($user) && null !== $user->gender && null !== $user->network_type && null !== $user->contact)
                                 <p class="text-sm text-danger">You have already updated your details</p>
                             @else
-                                {{-- <button onclick="confirmUpdateDetails()" type="button"
-                            class="btn btn-primary">Update</button> --}}
-                                {{-- <p class="text-sm text-danger">You can only update your details once, make sure you verify
+                                 <button onclick="confirmUpdateDetails()" type="button"
+                            class="btn btn-primary">Update</button>
+                                 <p class="text-sm text-danger">You can only update your details once, make sure you verify
                             all
-                            details before submitting.</p> --}}
+                            details before submitting.</p>
                             @endif
                         </div>
                     </div>

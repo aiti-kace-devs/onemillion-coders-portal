@@ -11,5 +11,5 @@ class UserAdmission extends Model
 
     protected $table = 'user_admission';
 
-    protected $fillable = ['user_id', 'course_id', 'email_sent'];
+    protected $fillable = ['user_id', 'course_id', 'email_sent', 'session', 'location', 'confirmed'];
 }

@@ -41,7 +41,7 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     {
         Horizon::auth(function ($request) {
             // TODO remove
-            return true;
+            // return true;
             if (auth('admin')->check()) {
                 return auth('admin')->user()->isSuper();
             }

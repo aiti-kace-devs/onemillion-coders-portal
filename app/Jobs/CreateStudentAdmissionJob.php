@@ -22,7 +22,7 @@ class CreateStudentAdmissionJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public User $student, public ?Course $course = null, public ?CourseSession $session = null)
+    public function __construct(public ?User $student, public ?Course $course = null, public ?CourseSession $session = null)
     {
         //
     }
@@ -36,6 +36,8 @@ class CreateStudentAdmissionJob implements ShouldQueue
 
         $course = $this->course ?? Course::find($this->student->registered_course);
         if (!$course) return;
+
+        $changingAdmission = false;
 
 
         $existingAdmission = UserAdmission::where('user_id', $this->student->userId)->first();
@@ -53,20 +55,27 @@ class CreateStudentAdmissionJob implements ShouldQueue
             'email_sent' => now(),
         ];
 
-        if (isset($this->session)) {
+        if ($existingAdmission?->session) {
+            $changingAdmission = true; // TODO: use this to determine if an email should be sent
+        }
+
+        if ($this->session) {
+
             $admissionData['session'] = $this->session->id;
             $admissionData['location'] = $this->course->centre->title;
             $admissionData['confirmed'] = now();
         }
 
-        if (isset($existingAdmission)) {
-            $admission = $existingAdmission->update($admissionData);
+        if ($existingAdmission) {
+            $existingAdmission->update($admissionData);
+            $existingAdmission->refresh();
+            $admission = $existingAdmission;
         } else {
             $admission = UserAdmission::create($admissionData);
         }
 
 
-        if (isset($this->session)) {
+        if ($this->session) {
             AdmitStudentJob::dispatch($admission);
         } else {
             $this->sendAdmissionEmail();
@@ -76,17 +85,21 @@ class CreateStudentAdmissionJob implements ShouldQueue
 
     private function sendAdmissionEmail()
     {
-        Mail::to($this->student->email)->bcc(env('MAIL_FROM_ADDRESS', 'no-reply@example.com'))
-            ->send(new StudentAdmitted(
-                $this->student
-            ));
+        if (config(SEND_EMAIL_AFTER_ADMISSION_CREATION, true)) {
+            Mail::to($this->student->email)->bcc(env('MAIL_FROM_ADDRESS', 'no-reply@example.com'))
+                ->send(new StudentAdmitted(
+                    $this->student
+                ));
+        }
 
-        $smsContent = SmsHelper::getTemplate(AFTER_ADMISSION_SMS, [
-            'name' => $this->student->name,
-        ]) ?? '';;
-        $details['message'] = $smsContent;
-        $details['phonenumber'] = $this->student->mobile_no;
+        if (config(SEND_SMS_AFTER_ADMISSION_CREATION, true)) {
+            $smsContent = SmsHelper::getTemplate(AFTER_ADMISSION_SMS, [
+                'name' => $this->student->name,
+            ]) ?? '';;
+            $details['message'] = $smsContent;
+            $details['phonenumber'] = $this->student->mobile_no;
 
-        SendSMSAfterRegistrationJob::dispatch($details);
+            SendSMSAfterRegistrationJob::dispatch($details);
+        }
     }
 }

@@ -26,6 +26,7 @@ class TestSubmittedJob implements ShouldQueue
      */
     public function handle(): void
     {
+        if (!config(SEND_SMS_AFTER_EXAM_SUBMISSION, true)) return;
         $smsContent = SmsHelper::getTemplate(AFTER_EXAM_SUBMISSION_SMS, [
             'name' => $this->student['name'],
         ]) ?? '';

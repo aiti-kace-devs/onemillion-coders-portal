@@ -65,14 +65,18 @@ class SendExamLoginCredentialsJob implements ShouldQueue
         $deadline = $date;
         $hoursLeft = $leftToDeadline;
 
-        $studentDeadline = (new Carbon($registered))->addDays(2);
+        $studentDeadline = (new Carbon($registered))->addDays(config(EXAM_DEADLINE_AFTER_REGISTRATION, 2));
         $studentHoursLeft = $now->diffInHours($studentDeadline);
+        $studentDaysLeft = $now->diffInDays($studentDeadline);
+
 
         if ($studentHoursLeft < $leftToDeadline) {
             $deadline = $studentDeadline->toDateString();
             $hoursLeft = $studentHoursLeft;
         }
 
-        return "$deadline in $hoursLeft hour(s)";
+        $dealineText = $studentDaysLeft > 3 ? " $studentDaysLeft days" : "$hoursLeft hour(s)";
+
+        return "$deadline in $dealineText";
     }
 }
