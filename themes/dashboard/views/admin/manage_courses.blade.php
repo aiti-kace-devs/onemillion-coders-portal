@@ -57,10 +57,13 @@
                                                     <td>{{ $key + 1 }}</td>
                                                     <td>{{ $course->programme?->title }}</td>
                                                     <td>{{ $course->centre?->title }}, {{ $course->centre?->branch->title }}
-                                                    <td>{{ $course['duration']}}</td>
-                                                    <td>{{ $course['start_date']}}</td>
-                                                    <td>{{ $course['end_date']}}</td>
-                                                    <td><input class="course_status" data-id="<?php echo $course['id'] ?>" <?php if($course['status']==1){ echo "checked";} ?> type="checkbox" name="status"></td>
+                                                    <td>{{ $course['duration'] }}</td>
+                                                    <td>{{ $course['start_date'] }}</td>
+                                                    <td>{{ $course['end_date'] }}</td>
+                                                    <td><input class="course_status" data-id="<?php echo $course['id']; ?>"
+                                                            <?php if ($course['status'] == 1) {
+                                                                echo 'checked';
+                                                            } ?> type="checkbox" name="status"></td>
                                                     </td>
                                                     <td class="d-flex">
                                                         <a href="{{ route('admin.course.edit', $course->id) }}"
@@ -110,8 +113,8 @@
                                                 <option value="{{ $branch->id }}">{{ $branch->title }}</option>
                                             @endforeach
                                         </select>
-                                        <span class="branch_id_error font-weight-bold invalid-feedback"
-                                            style="display: block;" role="alert"></span>
+                                        <span class="branch_id_error font-weight-bold invalid-feedback block"
+                                            role="alert"></span>
                                     </div>
                                 </div>
 
@@ -121,8 +124,8 @@
                                         <select name="centre_id" class="form-control" id="centre_id">
                                             <option value="" disabled selected>-- Select Centre --</option>
                                         </select>
-                                        <span class="centre_id_error font-weight-bold invalid-feedback"
-                                            style="display: block;" role="alert"></span>
+                                        <span class="centre_id_error font-weight-bold invalid-feedback block"
+                                            role="alert"></span>
                                     </div>
                                 </div>
 
@@ -135,8 +138,8 @@
                                                 <option value="{{ $programme->id }}">{{ $programme->title }}</option>
                                             @endforeach
                                         </select>
-                                        <span class="programme_id_error font-weight-bold invalid-feedback"
-                                            style="display: block;" role="alert"></span>
+                                        <span class="programme_id_error font-weight-bold invalid-feedback block"
+                                            role="alert"></span>
                                     </div>
                                 </div>
 
@@ -144,23 +147,29 @@
 
                                 <div class="col-sm-12">
                                     <div class="form-group">
-                                    <label for="">Duration</label>
-                                    <input type="text" name="duration" placeholder="Enter duration" class="form-control" id="duration">
-                                    <span class="duration_error font-weight-bold invalid-feedback" style="display: block;" role="alert"></span>
+                                        <label for="">Duration</label>
+                                        <input type="text" name="duration" placeholder="Enter duration"
+                                            class="form-control" id="duration">
+                                        <span class="duration_error font-weight-bold invalid-feedback block"
+                                            role="alert"></span>
                                     </div>
                                 </div>
                                 <div class="col-sm-12">
                                     <div class="form-group">
-                                    <label for="">Start Date</label>
-                                    <input type="date" name="start_date" placeholder="Enter start_date" class="form-control" id="start_date">
-                                    <span class="start_date_error font-weight-bold invalid-feedback" style="display: block;" role="alert"></span>
+                                        <label for="">Start Date</label>
+                                        <input type="date" name="start_date" placeholder="Enter start_date"
+                                            class="form-control" id="start_date">
+                                        <span class="start_date_error font-weight-bold invalid-feedback block"
+                                            role="alert"></span>
                                     </div>
                                 </div>
                                 <div class="col-sm-12">
                                     <div class="form-group">
-                                    <label for="">End Date</label>
-                                    <input type="date" name="end_date" placeholder="Enter end_date" class="form-control" id="end_date">
-                                    <span class="end_date_error font-weight-bold invalid-feedback" style="display: block;" role="alert"></span>
+                                        <label for="">End Date</label>
+                                        <input type="date" name="end_date" placeholder="Enter end_date"
+                                            class="form-control" id="end_date">
+                                        <span class="end_date_error font-weight-bold invalid-feedback block"
+                                            role="alert"></span>
                                     </div>
                                 </div>
 
@@ -180,7 +189,7 @@
             </div>
 
 
-            <script>
+            <script @nonce>
                 $(document).ready(function() {
                     $(document).on('change', '#branch_id', function(e) {
                         e.preventDefault();
@@ -197,13 +206,13 @@
                                 $('#centre_id').empty(); // Clear existing options
                                 $('#centre_id').append(
                                     '<option value="" disabled selected>-- Select Centre --</option>'
-                                    );
+                                );
 
                                 // Loop through response data and append options
                                 response.centres.forEach(function(centre) {
                                     $('#centre_id').append(
                                         `<option value="${centre.id}">${centre.title}</option>`
-                                        );
+                                    );
                                 });
                             },
                             error: function(xhr) {
@@ -221,31 +230,32 @@
 
 
 
-            <script>
+            <script @nonce>
+                $(document).ready(function() {
+                    $(document).on('change', '#programme_id', function() {
+                        const programmeId = $(this).val();
 
-            $(document).ready(function() {
-                $(document).on('change', '#programme_id', function() {
-                    const programmeId = $(this).val();
-
-                    if (programmeId) {
-                        $.ajax({
-                            type: 'GET',
-                            url: "{{ route('admin.course.fetch.programme') }}",
-                            data: { programme_id: programmeId },
-                            success: function(response) {
-                                // Populate the form fields
-                                $('#duration').val(response.duration);
-                                $('#start_date').val(response.start_date);
-                                $('#end_date').val(response.end_date);
-                            },
-                            error: function(xhr) {
-                                console.error("An error occurred: ", xhr.responseText);
-                                alert("Failed to fetch programme details. Please try again.");
-                            }
-                        });
-                    }
+                        if (programmeId) {
+                            $.ajax({
+                                type: 'GET',
+                                url: "{{ route('admin.course.fetch.programme') }}",
+                                data: {
+                                    programme_id: programmeId
+                                },
+                                success: function(response) {
+                                    // Populate the form fields
+                                    $('#duration').val(response.duration);
+                                    $('#start_date').val(response.start_date);
+                                    $('#end_date').val(response.end_date);
+                                },
+                                error: function(xhr) {
+                                    console.error("An error occurred: ", xhr.responseText);
+                                    alert("Failed to fetch programme details. Please try again.");
+                                }
+                            });
+                        }
+                    });
                 });
-            });
             </script>
 
 

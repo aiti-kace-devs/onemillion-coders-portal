@@ -1,7 +1,7 @@
 @extends('layouts.student')
 @section('title', 'Exams')
 @section('content')
-    <style type="text/css">
+    <style @nonce type="text/css">
         .question_options>li {
             list-style: none;
             height: auto;
@@ -174,9 +174,8 @@
                                                                     {{ $options['option4'] }}
                                                                 </li>
 
-                                                                <li style="display: none;"><input value="null"
-                                                                        type="radio" checked="checked"
-                                                                        name="ans{{ $key + 1 }}">
+                                                                <li class="none"><input value="null" type="radio"
+                                                                        checked="checked" name="ans{{ $key + 1 }}">
                                                                     {{ $options['option4'] }}</li>
                                                             </ul>
                                                         </div>
@@ -207,7 +206,7 @@
     @endsection
 
     @push('scripts')
-        <script>
+        <script @nonce>
             var warn = 0;
             var timeLeft = 10;
             let timeUp = false;

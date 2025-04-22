@@ -1,10 +1,10 @@
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
-<script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+<link rel="stylesheet" href="{{ url('/assets/plugins/simplemde/simplemde.min.css') }}">
+<script src="{{ url('/assets/plugins/simplemde/simplemde.min.js') }}"></script>
 
 
 <textarea id="template_editor" cols="30" rows="10"></textarea>
 
-<script>
+<script @nonce>
     var simplemde = new SimpleMDE({
         element: $("#template_editor")[0],
         toolbar: [{

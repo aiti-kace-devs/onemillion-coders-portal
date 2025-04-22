@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Protection Course Details</title>
     <link rel="stylesheet" href="{{ asset('assets/home/css/style.css') }}">
-    <style>
+    <style @nonce>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -68,7 +68,9 @@
             </div>
             <div class="detail-item">
                 <span class="detail-label">Objective:</span>
-                <span class="detail-value">Recognize and validate mastery in strategic data protection management, regulatory engagement, and cross-border compliance through demonstrated real-world experience and industry contribution.</span>
+                <span class="detail-value">Recognize and validate mastery in strategic data protection management,
+                    regulatory engagement, and cross-border compliance through demonstrated real-world experience and
+                    industry contribution.</span>
             </div>
             <!-- <div class="detail-item">
         <span class="detail-label">No. of People to Train:</span>
@@ -80,14 +82,21 @@
       </div> -->
             <div class="detail-item">
                 <span class="detail-label">Qualification Criteria:</span>
-                <span class="detail-value">Candidates must demonstrate expertise through a combination of the following:</span>
+                <span class="detail-value">Candidates must demonstrate expertise through a combination of the
+                    following:</span>
                 <ul class="detail-value">
-                    <li><b>Proof of Practice:</b> Documented experience managing complex data protection programs or initiatives.</li>
-                    <li><b>Board Assessment:</b> Evaluation by an expert panel based on submitted work, achievements, and impact.</li>
-                    <li><b>Continuous Professional Development (CPD):</b> Participation in CPD activities with points accrued over time.</li>
-                    <li><b>Publications:</b> Authorship of articles, research papers, or thought leadership pieces in reputable journals or platforms</li>
-                    <li><b>Industry Engagement:</b> Active participation in data protection conferences, forums, and advisory roles.</li>
-                    <li><b>Sector-Specific Training & Contributions:</b> Delivery or participation in specialized trainings within industries such as health, finance, education, telecommunications, etc.</li>
+                    <li><b>Proof of Practice:</b> Documented experience managing complex data protection programs or
+                        initiatives.</li>
+                    <li><b>Board Assessment:</b> Evaluation by an expert panel based on submitted work, achievements,
+                        and impact.</li>
+                    <li><b>Continuous Professional Development (CPD):</b> Participation in CPD activities with points
+                        accrued over time.</li>
+                    <li><b>Publications:</b> Authorship of articles, research papers, or thought leadership pieces in
+                        reputable journals or platforms</li>
+                    <li><b>Industry Engagement:</b> Active participation in data protection conferences, forums, and
+                        advisory roles.</li>
+                    <li><b>Sector-Specific Training & Contributions:</b> Delivery or participation in specialized
+                        trainings within industries such as health, finance, education, telecommunications, etc.</li>
                 </ul>
             </div>
             <div class="detail-item">

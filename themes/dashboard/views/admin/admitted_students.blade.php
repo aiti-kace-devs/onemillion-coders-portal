@@ -63,7 +63,8 @@
                                             <td>{{ $student->admission_confirmed }}</td>
                                             <td>
                                                 @if (is_null($student->admission_email_sent))
-                                                    <button type="submit" class="btn btn-success btn-sm">Admit Student</button>
+                                                    <button type="submit" class="btn btn-success btn-sm">Admit
+                                                        Student</button>
                                                 @endif
                                             </td>
                                         </tr>
@@ -85,7 +86,7 @@
     <!-- /.content-header -->
 @endsection
 @push('scripts')
-    <script>
+    <script @nonce>
         $('#session_id').on('change', function(e) {
             const session_id = $('#session_id').val()
             window.location.href = `{{ route('admin.admittedStudents') }}?session_id=${session_id}`;

@@ -181,6 +181,12 @@ Route::prefix('admin')
                 Route::post('/admit', [AdminController::class, 'admit_student'])
                     ->name('admit_user_ui')
                     ->middleware('permission:student.admit');
+                Route::get('/shortlisted_students', [AdminController::class, 'shortlisted_students'])
+                    ->middleware('permission:student.admit')
+                    ->name('shortlisted_students');
+                Route::post('/save_shortlisted_students', [AdminController::class, 'saveShortlistedStudents'])
+                    ->name('save_shortlisted_students')
+                    ->middleware('permission:student.admit');
             });
 
             Route::get('/manage_students', [AdminController::class, 'manage_students'])
@@ -418,8 +424,10 @@ Route::prefix('admin')
             });
         });
 
-        Route::middleware('permission:manage.manger')->group(function () {
+        Route::middleware('permission:student.bulk-email')->group(function () {
             // Route::get('/manage-lists', [ListController::class, 'index'])->name('lists.index')->middleware('admin.super');
+            Route::get('/lists/fetch', [ListController::class, 'fetch'])->name('lists.fetch');
+            Route::get('/lists/view-data', [ListController::class, 'viewData'])->name('lists.view-data');
             Route::get('/lists/get-table-columns', [ListController::class, 'getTableColumns'])->name('lists.get-table-columns');
             Route::resource('/lists', ListController::class);
         });

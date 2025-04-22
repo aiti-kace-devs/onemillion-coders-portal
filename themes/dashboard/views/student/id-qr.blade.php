@@ -71,7 +71,7 @@
                         <div class="input-group col-12 mb-2">
                             <label class="form-label col-12">Card ID</label>
                             @if ($user->card_type === 'ghcard' || $user->card_type == null)
-                                <div id="ghana-card-prefix" class="input-group-prepend" style="display: none;">
+                                <div id="ghana-card-prefix" class="input-group-prepend none">
                                     <span class="input-group-text" id="basic-addon1">GHA-</span>
                                 </div>
                             @endif
@@ -139,11 +139,11 @@
                             @if (detailsUpdated($user) && null !== $user->gender && null !== $user->network_type && null !== $user->contact)
                                 <p class="text-sm text-danger">You have already updated your details</p>
                             @else
-                                 <button onclick="confirmUpdateDetails()" type="button"
-                            class="btn btn-primary">Update</button>
-                                 <p class="text-sm text-danger">You can only update your details once, make sure you verify
-                            all
-                            details before submitting.</p>
+                                <button onclick="confirmUpdateDetails()" type="button"
+                                    class="btn btn-primary">Update</button>
+                                <p class="text-sm text-danger">You can only update your details once, make sure you verify
+                                    all
+                                    details before submitting.</p>
                             @endif
                         </div>
                     </div>
@@ -170,7 +170,7 @@
 @push('scripts')
     <script src="{{ asset('assets/js/jquery.inputmask.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/js/easy.qrcode.min.js') }}"></script>
-    <script>
+    <script @nonce>
         const logoCanvas = document.createElement('canvas');
         logoCanvas.width = 200;
         logoCanvas.height = 100;

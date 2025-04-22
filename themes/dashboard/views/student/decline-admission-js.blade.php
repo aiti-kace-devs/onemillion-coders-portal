@@ -1,4 +1,4 @@
- <script>
+ <script @nonce>
      $(document).ready(function() {
          $('#revoke-admission-button').click(function() {
              Swal.fire({

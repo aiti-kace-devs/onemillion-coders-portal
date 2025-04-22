@@ -84,7 +84,7 @@
                                             @endforeach
                                         </tbody>
                                         <tfoot>
-
+                                            {{ $users->links() }}
                                         </tfoot>
                                     </table>
                                 </div>
@@ -160,7 +160,7 @@
         @endsection
 
         @push('scripts')
-            <script>
+            <script @nonce>
                 const form = $('[name="admit_form"]')
                 let selectedUser = null;
 

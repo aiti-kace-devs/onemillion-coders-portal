@@ -18,7 +18,7 @@
     </x-slot>
 </x-modal>
 
-<script>
+<script @nonce>
     // const modal = document.getElementById('bulk-email-modal');
     const modalSubmit = document.getElementById('modal-submit');
 

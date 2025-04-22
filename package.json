@@ -29,11 +29,13 @@
         "sass": "^1.32.1",
         "sass-loader": "^10.1.1",
         "tailwindcss": "^3.2.1",
+        "unplugin-vue-components": "^28.5.0",
         "vue": "^3.4.0"
     },
     "dependencies": {
+        "@highlightjs/cdn-assets": "^11.11.1",
         "@lbgm/phone-number-input": "^1.1.6",
-        "bootstrap4-toggle": "^3.6.1",
+        "easymde": "^2.20.0",
         "libphonenumber-js": "^1.12.6"
     }
 }
