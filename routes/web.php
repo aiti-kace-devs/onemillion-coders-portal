@@ -424,8 +424,10 @@ Route::prefix('admin')
             });
         });
 
-        Route::middleware('permission:manage.manger')->group(function () {
+        Route::middleware('permission:student.bulk-email')->group(function () {
             // Route::get('/manage-lists', [ListController::class, 'index'])->name('lists.index')->middleware('admin.super');
+            Route::get('/lists/fetch', [ListController::class, 'fetch'])->name('lists.fetch');
+            Route::get('/lists/view-data', [ListController::class, 'viewData'])->name('lists.view-data');
             Route::get('/lists/get-table-columns', [ListController::class, 'getTableColumns'])->name('lists.get-table-columns');
             Route::resource('/lists', ListController::class);
         });
