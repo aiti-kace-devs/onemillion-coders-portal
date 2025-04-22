@@ -125,7 +125,7 @@
             generateCode();
         });
         stopCodeGenerationBtn.on('click', function() {
-            startScanner();
+            stopCodeGeneration();
         });
 
 

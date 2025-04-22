@@ -31,159 +31,162 @@
         <!-- /.content-header -->
 
         <!-- Main content -->
-        <section class="content">
-            <div class="container-fluid">
-                <!-- Small boxes (Stat box) -->
+        @can('student.admit')
+            <section class="content">
+                <div class="container-fluid">
+                    <!-- Small boxes (Stat box) -->
+                    <div class="row">
+                        <div class="col-lg-3 col-6">
+                            <!-- small box -->
+                            <div class="small-box bg-info">
+                                <div class="inner">
+                                    <h3>{{ $student }}</h3>
+
+                                    <p>Total students</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="ion ion-person-add"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- ./col -->
+
+                        <div class="col-lg-3 col-6">
+                            <!-- small box -->
+                            <div class="small-box bg-warning">
+                                <div class="inner">
+                                    <h3>{{ $shortlist }}</h3>
+
+                                    <p>Shortlisted Students</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="ion ion-stats-bars"></i>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        <div class="col-lg-3 col-6">
+                            <!-- small box -->
+                            <div class="small-box bg-success">
+                                <div class="inner">
+                                    <h3>{{ $admission }}</h3>
+
+                                    <p>Total admissions</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="ion ion-person-add"></i>
+
+                                </div>
+                            </div>
+                        </div>
+                        <!-- ./col -->
+
+                        <div class="col-lg-3 col-6">
+                            <!-- small box -->
+                            <div class="small-box bg-primary">
+                                <div class="inner">
+                                    <h3>{{ $course }}</h3>
+                                    <p>Total Courses</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="ion ion-ios-book"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- ./col -->
+                        <!-- ./col -->
+                    </div>
+                    <!-- /.content -->
+                </div>
+                <!-- /.content-wrapper -->
+                <!-- /.row -->
+
+                <!-- Chart dashboard -->
                 <div class="row">
-                    <div class="col-lg-3 col-6">
-                        <!-- small box -->
-                        <div class="small-box bg-info">
-                            <div class="inner">
-                                <h3>{{ $student }}</h3>
-
-                                <p>Total students</p>
+                    <!-- Left Column -->
+                    <div class="col-md-6">
+                        <!-- Registrations per Day -->
+                        <div class="card mb-3">
+                            <div class="card-header p-2">
+                                <h3 class="card-title">Registrations per Day</h3>
                             </div>
-                            <div class="icon">
-                                <i class="ion ion-person-add"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- ./col -->
-
-                    <div class="col-lg-3 col-6">
-                        <!-- small box -->
-                        <div class="small-box bg-warning">
-                            <div class="inner">
-                                <h3>{{ $shortlist }}</h3>
-
-                                <p>Shortlisted Students</p>
-                            </div>
-                            <div class="icon">
-                                <i class="ion ion-stats-bars"></i>
+                            <div class="card-body p-2">
+                                <div class="chart-height">
+                                    <canvas id="registrationsPerDayChart"></canvas>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-
-
-                    <div class="col-lg-3 col-6">
-                        <!-- small box -->
-                        <div class="small-box bg-success">
-                            <div class="inner">
-                                <h3>{{ $admission }}</h3>
-
-                                <p>Total admissions</p>
+                        <!-- Students per Region -->
+                        <div class="card mb-3">
+                            <div class="card-header p-2">
+                                <h3 class="card-title">Students per Region</h3>
                             </div>
-                            <div class="icon">
-                                <i class="ion ion-person-add"></i>
-
+                            <div class="card-body p-2">
+                                <div class="chart-height">
+                                    <canvas id="studentsPerRegionChart"></canvas>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- ./col -->
 
-                    <div class="col-lg-3 col-6">
-                        <!-- small box -->
-                        <div class="small-box bg-primary">
-                            <div class="inner">
-                                <h3>{{ $course }}</h3>
-                                <p>Total Courses</p>
+                        <!-- Age Groups Chart -->
+                        <div class="card">
+                            <div class="card-header p-2">
+                                <h3 class="card-title">Age Group Distribution</h3>
                             </div>
-                            <div class="icon">
-                                <i class="ion ion-ios-book"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- ./col -->
-                    <!-- ./col -->
-                </div>
-                <!-- /.content -->
-            </div>
-            <!-- /.content-wrapper -->
-            <!-- /.row -->
-
-            <!-- Chart dashboard -->
-            <div class="row">
-                <!-- Left Column -->
-                <div class="col-md-6">
-                    <!-- Registrations per Day -->
-                    <div class="card mb-3">
-                        <div class="card-header p-2">
-                            <h3 class="card-title">Registrations per Day</h3>
-                        </div>
-                        <div class="card-body p-2">
-                            <div class="chart-height">
-                                <canvas id="registrationsPerDayChart"></canvas>
+                            <div class="card-body p-2">
+                                <div class="chart-height">
+                                    <canvas id="ageGroupsChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Students per Region -->
-                    <div class="card mb-3">
-                        <div class="card-header p-2">
-                            <h3 class="card-title">Students per Region</h3>
-                        </div>
-                        <div class="card-body p-2">
-                            <div class="chart-height">
-                                <canvas id="studentsPerRegionChart"></canvas>
+                    <!-- Right Column -->
+                    <div class="col-md-6">
+                        <!-- Gender Distribution -->
+                        <div class="card mb-3">
+                            <div class="card-header p-2">
+                                <h3 class="card-title">Gender Distribution</h3>
+                            </div>
+                            <div class="card-body p-2">
+                                {{-- <div style="height: 180px; display: flex; align-items: center; justify-content: center;"> --}}
+                                <div class="chart-height">
+                                    <canvas id="genderDistributionChart"></canvas>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Age Groups Chart -->
-                    <div class="card">
-                        <div class="card-header p-2">
-                            <h3 class="card-title">Age Group Distribution</h3>
+                        <!-- Students per Course -->
+                        <div class="card">
+                            <div class="card-header p-2">
+                                <h3 class="card-title">Students per Course</h3>
+                            </div>
+                            <div class="card-body p-2">
+                                <div class="chart-height">
+                                    <canvas id="studentsPerCourseChart"></canvas>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body p-2">
-                            <div class="chart-height">
-                                <canvas id="ageGroupsChart"></canvas>
+
+                        <div class="card mb-3">
+                            <div class="card-header p-2">
+                                <h3 class="card-title"> Admitted Students per Region</h3>
+                            </div>
+                            <div class="card-body p-2">
+                                <div class="chart-height">
+                                    <canvas id="admitedstudentsPerRegionChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+        </div>
+        </section>
+    @endcan
 
-                <!-- Right Column -->
-                <div class="col-md-6">
-                    <!-- Gender Distribution -->
-                    <div class="card mb-3">
-                        <div class="card-header p-2">
-                            <h3 class="card-title">Gender Distribution</h3>
-                        </div>
-                        <div class="card-body p-2">
-                            {{-- <div style="height: 180px; display: flex; align-items: center; justify-content: center;"> --}}
-                            <div class="chart-height">
-                                <canvas id="genderDistributionChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Students per Course -->
-                    <div class="card">
-                        <div class="card-header p-2">
-                            <h3 class="card-title">Students per Course</h3>
-                        </div>
-                        <div class="card-body p-2">
-                            <div class="chart-height">
-                                <canvas id="studentsPerCourseChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card mb-3">
-                        <div class="card-header p-2">
-                            <h3 class="card-title"> Admitted Students per Region</h3>
-                        </div>
-                        <div class="card-body p-2">
-                            <div class="chart-height">
-                                <canvas id="admitedstudentsPerRegionChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-    </div>
-    </section>
     <!-- /.content -->
     </div>
     <!-- /.content-wrapper -->
