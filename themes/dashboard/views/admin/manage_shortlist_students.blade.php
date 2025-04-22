@@ -1058,24 +1058,6 @@
                     toastr.error('Please paste at least one valid email address/ phonenumber.');
                     return;
                 }
-                // determine if emails or phonenumbers
-                const sendingEmails = emailList[0].includes('@');
-                const sendingPhones = emailList[0].includes('+');
-
-                let dataToSend;
-
-                if (sendingEmails) {
-                    dataToSend = {
-                        emails: emailList,
-                    }
-                } else if (sendingPhones) {
-                    dataToSend = {
-                        phone_numbers: emailList,
-                    }
-                } else {
-                    toastr.error('Please paste at least one valid email address/ phonenumber.');
-                    return;
-                }
 
                 // determine if emails or phonenumbers
                 const sendingEmails = emailList[0].includes('@');

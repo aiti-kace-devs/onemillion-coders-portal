@@ -181,6 +181,12 @@ Route::prefix('admin')
                 Route::post('/admit', [AdminController::class, 'admit_student'])
                     ->name('admit_user_ui')
                     ->middleware('permission:student.admit');
+                Route::get('/shortlisted_students', [AdminController::class, 'shortlisted_students'])
+                    ->middleware('permission:student.admit')
+                    ->name('shortlisted_students');
+                Route::post('/save_shortlisted_students', [AdminController::class, 'saveShortlistedStudents'])
+                    ->name('save_shortlisted_students')
+                    ->middleware('permission:student.admit');
             });
 
             Route::get('/manage_students', [AdminController::class, 'manage_students'])
