@@ -72,11 +72,11 @@
                 </form>
             </div>
             <div class="row g-3 d-flex justify-content-center align-tems-center mb-4">
-                <button type="button" class="btn btn-primary col-auto" onclick="startScanner()">Start
+                <button type="button" class="btn btn-primary col-auto" id="startScanner">Start
                     QR Code Scanner</button>
-                <button type="button" class="btn btn-danger ml-4" onclick="stopScanner()">Stop QR Code Scanner</button>
-                <button type="button" class="btn btn-success ml-4" onclick="generateCode()">Generate QR Code</button>
-                <button type="button" class="btn btn-danger ml-4" onclick="stopCodeGeneration()">Stop QR Code
+                <button type="button" class="btn btn-danger ml-4" id="stopScanner">Stop QR Code Scanner</button>
+                <button type="button" class="btn btn-success ml-4" id="generateCode">Generate QR Code</button>
+                <button type="button" class="btn btn-danger ml-4" id="stopCodeGeneration">Stop QR Code
                     Generation</button>
 
             </div>
@@ -108,6 +108,27 @@
 
         const scannerElem = $('#scanner');
         const qrcodeElem = $('#qrcode');
+
+        const startScannerBtn = $('#startScanner');
+        const stopScannerBtn = $('#stopScanner');
+
+        const generateCodeBtn = $('#generateCode');
+        const stopCodeGenerationBtn = $('#stopCodeGeneration');
+
+        startScannerBtn.on('click', function() {
+            startScanner();
+        });
+        stopScannerBtn.on('click', function() {
+            stopScanner();
+        });
+        generateCodeBtn.on('click', function() {
+            generateCode();
+        });
+        stopCodeGenerationBtn.on('click', function() {
+            startScanner();
+        });
+
+
 
 
         function getFormValues() {
