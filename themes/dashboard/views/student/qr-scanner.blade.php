@@ -41,7 +41,7 @@
 
 @push('scripts')
     <script src="{{ asset('assets/js/qr-scanner.min.js') }}"></script>
-    <script>
+    <script @nonce>
         const qrScanner = new QrScanner(
             document.getElementById('scanner'),
             result => {

@@ -98,7 +98,7 @@
                                         <label for="name">Enter Name</label>
                                         <input type="text" name="name" placeholder="Enter name" class="form-control"
                                             id="name">
-                                        <span class="name_error font-weight-bold invalid-feedback" style="display: block;"
+                                        <span class="name_error font-weight-bold invalid-feedback block"
                                             role="alert"></span>
                                     </div>
                                 </div>
@@ -110,8 +110,8 @@
                                         <small class="form-text text-muted">
                                             Use placeholders like {name}, {date} etc. that can be replaced when sending.
                                         </small>
-                                        <span class="content_error font-weight-bold invalid-feedback"
-                                            style="display: block;" role="alert"></span>
+                                        <span class="content_error font-weight-bold invalid-feedback block"
+                                            role="alert"></span>
                                     </div>
                                 </div>
 
@@ -128,7 +128,7 @@
             </div>
 
 
-            <script>
+            <script @nonce>
                 const manageAction = "{{ route('admin.sms.template.store') }}";
                 const method = 'POST';
             </script>

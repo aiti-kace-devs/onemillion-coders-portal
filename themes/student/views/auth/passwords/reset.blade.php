@@ -68,7 +68,7 @@
             </div>
         </div>
     </div>
-    <script>
+    <script @nonce>
         const email = "{{ request()->query('email') }}";
         setTimeout(function() {
             if (email) {

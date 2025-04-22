@@ -4,7 +4,7 @@
     $noSide = true;
 @endphp
 @section('content')
-    <style>
+    <style @nonce>
         body {
             background-color: #f8f9fa;
             font-family: sans-serif;

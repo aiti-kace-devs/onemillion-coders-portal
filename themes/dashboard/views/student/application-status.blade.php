@@ -1,7 +1,7 @@
 @extends('layouts.student')
 @section('title', 'Application Status')
 @section('content')
-    <style>
+    <style @nonce>
         .status-container {
             max-width: 600px;
             margin: 20px auto;
@@ -157,13 +157,13 @@
 
                     <div class="status-item" data-toggle="collapse" data-target="#collapse2" aria-expanded="true"
                         aria-controls="collapse2">
-                        <div class="status-number  @if ($user_exam->submitted) active @else pending @endif"
+                        <div class="status-number  @if ($user_exam?->submitted) active @else pending @endif"
                             data-step="2">2</div>
                         <div class="status-details">
                             <span class="text-row">
 
                                 <h5
-                                    class="@if ($user_exam->submitted) passed
+                                    class="@if ($user_exam?->submitted) passed
                                 @else
                                 not-passed @endif">
                                     Aptitude Test
@@ -181,7 +181,7 @@
                         <div class="status-line"></div>
                     </div>
                     <div class="collapse-content " id="collapse2">
-                        @if ($user_exam->submitted)
+                        @if ($user_exam?->submitted)
                             <p> Test submitted on {{ Carbon\Carbon::parse($user_exam->submitted)->toDateTimeString() }}</p>
                         @else
                             <p>You must complete the aptitude test to proceed to the next stage. Click “Take Test Now” to

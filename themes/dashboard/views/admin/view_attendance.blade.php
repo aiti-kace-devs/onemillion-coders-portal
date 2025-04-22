@@ -94,7 +94,7 @@
     <!-- /.content-header -->
 @endsection
 @push('scripts')
-    <script>
+    <script @nonce>
         $(document).ready(function() {
             function reloadPage() {
                 const course_id = $('#course_id').val();

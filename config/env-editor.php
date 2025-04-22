@@ -23,7 +23,7 @@ return [
         // Routes base name
         'name' => 'env-editor',
         // Middleware(s) applied on route Group
-        'middleware' => ['web', 'auth:admin', 'admin.super'],
+        'middleware' => ['auth:admin'],
     ],
 
     /* ------------------------------------------------------------------------------------------------

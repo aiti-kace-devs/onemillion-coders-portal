@@ -2,9 +2,10 @@
 <html lang="en">
 
 <head>
-    <script type="text/javascript">
+    <script @nonce type="text/javascript">
         BASE_URL = "<?php echo url(''); ?>"
     </script>
+    {{-- @cspMetaTag(\App\Helpers\BasePolicy::class) --}}
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title> @yield('title')</title>
@@ -12,6 +13,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="apple-touch-icon" sizes="76x76" href="{{ asset('assets') }}/images/logo.png">
     <link rel="icon" type="image/png" href="{{ asset('assets') }}/images/logo.png">
+    @cspMetaTag(\App\Helpers\BasePolicy::class)
 
 
     <link href="{{ asset('assets') }}/toastr/toastr.min.css" rel="stylesheet" />
@@ -42,12 +44,13 @@
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/dataTables.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/responsive.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/buttons.bootstrap4.min.css') }}">
-    <link rel="stylesheet" href="//unpkg.com/@highlightjs/cdn-assets@11.4.0/styles/default.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.4.0/styles/default.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"
+
+    {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"
         integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script> --}}
     @stack('styles')
 </head>
 
@@ -56,8 +59,8 @@
 
         <!-- Preloader -->
         <div class="preloader flex-column justify-content-center align-items-center">
-            <img class="animation__shake" src="{{ url('assets/dist/img/AdminLTELogo.png') }}" alt="AdminLTELogo"
-                height="60" width="60">
+            <img class="animation__shake" src="{{ url('assets/images/logo-bt.png') }}" alt="OneMillionCodersLogo"
+                height="70">
         </div>
 
         <!-- Navbar -->
@@ -125,17 +128,17 @@
                         data-accordion="false">
                         <!-- Add icons to the links using the .nav-icon class
                with font-awesome or any other icon font library -->
-                        @if (Auth::user()->isSuper())
-                            <li class="nav-item">
-                                <a href="{{ url('admin/dashboard') }}"
-                                    class="nav-link @if (request()->is('admin/dashboard')) active @endif">
-                                    <i class="nav-icon fas fa-tachometer-alt"></i>
-                                    <p>
-                                        Dashboard
-                                    </p>
-                                </a>
-                            </li>
+                        <li class="nav-item">
+                            <a href="{{ url('admin/dashboard') }}"
+                                class="nav-link @if (request()->is('admin/dashboard')) active @endif">
+                                <i class="nav-icon fas fa-tachometer-alt"></i>
+                                <p>
+                                    Dashboard
+                                </p>
+                            </a>
+                        </li>
 
+                        @can('category.read')
                             <li class="nav-item">
                                 <a href="{{ url('admin/exam_category') }}"
                                     class="nav-link @if (request()->is('admin/exam_category')) active @endif">
@@ -143,7 +146,9 @@
                                     <p>Category</p>
                                 </a>
                             </li>
+                        @endcan
 
+                        @can('branch.read')
                             <li class="nav-item">
                                 <a href="{{ route('admin.branch.index') }}"
                                     class="nav-link @if (isset($activePage) && $activePage == 'manageBranch') active @endif">
@@ -151,7 +156,9 @@
                                     <p>Manage Branch</p>
                                 </a>
                             </li>
+                        @endcan
 
+                        @can('centre.read')
                             <li class="nav-item">
                                 <a href="{{ route('admin.centre.index') }}"
                                     class="nav-link @if (isset($activePage) && $activePage == 'manageCentre') active @endif">
@@ -159,7 +166,9 @@
                                     <p>Manage Centre</p>
                                 </a>
                             </li>
+                        @endcan
 
+                        @can('course.read')
                             <li class="nav-item">
                                 <a href="{{ route('admin.programme.index') }}"
                                     class="nav-link @if (isset($activePage) && $activePage == 'manageProgramme') active @endif">
@@ -167,7 +176,9 @@
                                     <p>Manage Programme</p>
                                 </a>
                             </li>
+                        @endcan
 
+                        @can('course.read')
                             <li class="nav-item">
                                 <a href="{{ route('admin.course.index') }}"
                                     class="nav-link @if (isset($activePage) && $activePage == 'manageCourse') active @endif">
@@ -175,8 +186,8 @@
                                     <p>Manage Course</p>
                                 </a>
                             </li>
-
-                            {{-- <li class="nav-item">
+                        @endcan
+                        {{-- <li class="nav-item">
                             <a href="{{ route('admin.period.index')}}" class="nav-link @if (isset($activePage) && $activePage == 'managePeriod') active @endif">
                         <i class="far fa-circle nav-icon"></i>
                         <p>Manage Period</p>
@@ -189,7 +200,7 @@
                                 <p>Manage Class Schedule</p>
                             </a>
                         </li> --}}
-
+                        @can('exam.read')
                             <li class="nav-item">
                                 <a href="{{ url('admin/manage_exam') }}"
                                     class="nav-link @if (request()->is('admin/manage_exam')) active @endif">
@@ -197,8 +208,9 @@
                                     <p>Manage Exam</p>
                                 </a>
                             </li>
+                        @endcan
 
-
+                        @can('admin.read')
                             <li class="nav-item">
                                 <a href="{{ url('admin/manage_admins') }}"
                                     class="nav-link @if (request()->is('admin/manage_admins')) active @endif">
@@ -206,22 +218,26 @@
                                     <p>Manage Admin</p>
                                 </a>
                             </li>
+                        @endcan
 
-                            <li class="nav-item">
-                                <a href="{{ url('admin/manage_students') }}"
-                                    class="nav-link @if (request()->is('admin/manage_students')) active @endif">
+                        {{-- @can('student.read') --}}
+                        <li class="nav-item">
+                            <a href="{{ url('admin/manage_students') }}"
+                                class="nav-link @if (request()->is('admin/manage_students')) active @endif">
 
-                                    <i class="fas fa-user nav-icon"></i>
-                                    <p>Students</p>
-                                </a>
-                            </li>
+                                <i class="fas fa-user nav-icon"></i>
+                                <p>Students</p>
+                            </a>
+                        </li>
+                        {{-- @endcan --}}
 
-
+                        @can('student.admit')
                             <li class="nav-item">
                                 <a href="{{ url('admin/shortlisted_students') }}"
                                     class="nav-link @if (request()->is('admin/shortlisted_students')) active @endif">
                                     <i class="fas fa-user-check nav-icon"></i>
                                     <p>Shortlisted students</p>
+
                                 </a>
                             </li>
 
@@ -233,7 +249,9 @@
                                     <p>Registered students</p>
                                 </a>
                             </li>
+                        @endcan
 
+                        @can('sms-template.read')
                             <li class="nav-item">
                                 <a href="{{ url('admin/manage-sms-template') }}"
                                     class="nav-link @if (request()->is('admin/manage-sms-template')) active @endif">
@@ -241,54 +259,85 @@
                                     <p>SMS Templates</p>
                                 </a>
                             </li>
-                        @endif
+                        @endcan
                         {{-- <li class="nav-item">
                             <a href="{{ url('admin/generate_qrcode') }}" class="nav-link">
                         <i class="fas fa-qrcode nav-icon"></i>
                         <p>Generate QR Code</p>
                         </a>
                         </li> --}}
+                        @can('attendance.read')
+                            <li class="nav-item">
+                                <a href="{{ url('admin/scan_qrcode') }}"
+                                    class="nav-link @if (request()->is('admin/scan_qrcode')) active @endif">
+                                    <i class="fas fa-camera nav-icon"></i>
+                                    <p>Scan/Generate QR Code</p>
+                                </a>
+                            </li>
 
-                        <li class="nav-item">
-                            <a href="{{ url('admin/scan_qrcode') }}"
-                                class="nav-link @if (request()->is('admin/scan_qrcode')) active @endif">
-                                <i class="fas fa-camera nav-icon"></i>
-                                <p>Scan/Generate QR Code</p>
-                            </a>
-                        </li>
+                            <li class="nav-item">
+                                <a href="{{ url('admin/verification') }}"
+                                    class="nav-link @if (request()->is('admin/verification')) active @endif">
+                                    <i class="fas fa-id-card nav-icon"></i>
+                                    <p>Student Verification</p>
+                                </a>
+                            </li>
 
-                        <li class="nav-item">
-                            <a href="{{ url('admin/verification') }}"
-                                class="nav-link @if (request()->is('admin/verification')) active @endif">
-                                <i class="fas fa-id-card nav-icon"></i>
-                                <p>Student Verification</p>
-                            </a>
-                        </li>
+                            <li class="nav-item">
+                                <a href="{{ url('admin/view_attendance') }}"
+                                    class="nav-link @if (request()->is('admin/view_attendance')) active @endif">
+                                    <i class="fas fa-clipboard-list nav-icon"></i>
+                                    <p>View Attendance</p>
+                                </a>
+                            </li>
+                        @endcan
 
-                        <li class="nav-item">
-                            <a href="{{ url('admin/view_attendance') }}"
-                                class="nav-link @if (request()->is('admin/view_attendance')) active @endif">
-                                <i class="fas fa-clipboard-list nav-icon"></i>
-                                <p>View Attendance</p>
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a href="{{ url('admin/reports') }}"
-                                class="nav-link @if (request()->is('admin/reports')) active @endif">
-                                <i class="fas fa-file-alt nav-icon"></i>
-                                <p>Generate Report</p>
-                            </a>
-                        </li>
+                        @can('report.view')
+                            <li class="nav-item">
+                                <a href="{{ url('admin/reports') }}"
+                                    class="nav-link @if (request()->is('admin/reports')) active @endif">
+                                    <i class="fas fa-file-alt nav-icon"></i>
+                                    <p>Generate Report</p>
+                                </a>
+                            </li>
+                        @endcan
 
 
+                        @canany(['session.read', 'form.read', 'form-response.read'])
+                            <li class="nav-item">
+                                <a href="{{ route('admin.form.index') }}" class="nav-link">
+                                    <i class="fas fa-external-link-square-alt nav-icon"></i>
+                                    <p>Go To RVMP Portal</p>
+                                </a>
+                            </li>
+                        @endcanany
 
-                        <li class="nav-item">
-                            <a href="{{ route('admin.form.index') }}" class="nav-link">
-                                <i class="fas fa-external-link-square-alt nav-icon"></i>
-                                <p>Go To RVMP Portal</p>
-                            </a>
-                        </li>
+                        @can('manage.page-editor')
+                            <li class="nav-item">
+                                <a href="{{ url('/admin/builder/manage') }}" class="nav-link">
+                                    <i class="fas fa-external-link-square-alt nav-icon"></i>
+                                    <p>Manage Pages</p>
+                                </a>
+                            </li>
+                        @endcan
+
+                        {{-- @can('manage.config')
+                            <li class="nav-item">
+                                <a href="{{ route(config('env-editor.route.name')) }}" class="nav-link">
+                                    <i class="fas fa-external-link-square-alt nav-icon"></i>
+                                    <p>Logs</p>
+                                </a>
+                            </li>
+                        @endcan --}}
+
+                        @can('manage.monitor')
+                            <li class="nav-item">
+                                <a href="{{ url(config('horizon.path', 'horizon')) }}" class="nav-link">
+                                    <i class="fas fa-external-link-square-alt nav-icon"></i>
+                                    <p>Monitor Queues</p>
+                                </a>
+                            </li>
+                        @endcan
 
 
                         <li class="nav-item">
@@ -363,10 +412,12 @@
     <!-- ./wrapper -->
 
     <!-- jQuery -->
+    <script src="{{ url('assets/plugins/jquery/jquery.min.js') }}"></script>
+
     <!-- jQuery UI 1.11.4 -->
     <script src="{{ url('assets/plugins/jquery-ui/jquery-ui.min.js') }}"></script>
     <!-- Resolve conflict in jQuery UI tooltip with Bootstrap tooltip -->
-    <script>
+    <script @nonce>
         $.widget.bridge('uibutton', $.ui.button)
     </script>
     <!-- Bootstrap 4 -->
@@ -392,8 +443,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script> --}}
     {{-- --}}
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
-    <script type="text/javascript" src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.24/build/pdfmake.min.js"></script>
+    {{-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script> --}}
+    {{-- <script type="text/javascript" src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.24/build/pdfmake.min.js"></script> --}}
+
+
+    <script type="text/javascript" src="{{ url('assets/plugins/moment/moment.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url('assets/plugins/daterangepicker/daterangepicker.js') }}"></script>
+    <script type="text/javascript" src="{{ url('assets/js/jquery-multiselect.min.js') }}"></script>
 
     {{-- <script type="text/javascript" src="https://cdn.datatables.net/1.10.13/js/jquery.dataTables.min.js"></script> --}}
 
@@ -412,11 +468,11 @@
     <script src="{{ url('assets/plugins/datatables-new/buttons.colVis.min.js') }}"></script>
 
     {{-- end datatables  --}}
-    <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+    {{-- <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script> --}}
     <script src="{{ url('assets/plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js') }}"></script>
     <!-- Summernote -->
     <script src="{{ url('assets/plugins/summernote/summernote-bs4.min.js') }}"></script>
@@ -430,8 +486,12 @@
     <script src="{{ url('assets/dist/js/pages/dashboard.js') }}"></script>
     <script src="{{ url('assets/js/custom.js') }}"></script>
     <script src="{{ asset('assets/toastr/toastr.min.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script type="text/javascript">
+    <link rel="stylesheet" href="{{ url('assets/plugins/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css') }}">
+    <script src="{{ url('assets/plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+
+    {{-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> --}}
+
+    <script @nonce type="text/javascript">
         $(document).ready(function() {
             if ($.fn.DataTable.isDataTable('.datatable')) {
                 $('.datatable').DataTable().destroy();
@@ -457,7 +517,7 @@
             }
         });
     </script>
-    <script>
+    <script @nonce>
         const flashMessage = "{{ session('flash') }}";
         const key = "{{ session('key') }}";
 
