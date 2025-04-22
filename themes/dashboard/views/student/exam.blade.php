@@ -30,8 +30,7 @@
                             <div class="card">
 
                                 <div class="card-body">
-                                    <table class="table table-striped table-bordered table-hover datatable"
-                                        style="width: max-100%">
+                                    <table class="table table-striped table-bordered table-hover datatable mw-100">
                                         <thead>
                                             <tr>
                                                 <th>#</th>

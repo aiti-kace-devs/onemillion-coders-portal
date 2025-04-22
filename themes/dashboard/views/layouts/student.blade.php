@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <script type="text/javascript">
+    <script @nonce type="text/javascript">
         BASE_URL = "<?php echo url(''); ?>"
     </script>
     <meta charset="utf-8">
@@ -40,6 +40,9 @@
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/dataTables.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/responsive.bootstrap4.min.css') }}">
     <link href="{{ asset('themes/student/css/app.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url('assets/plugins/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url('/assets/plugins/daterangepicker/daterangepicker.css') }}" />
+
 
 
 
@@ -52,8 +55,8 @@
 
         <!-- Preloader -->
         <div class="preloader flex-column justify-content-center align-items-center">
-            <img class="animation__shake" src="{{ url('assets/dist/img/AdminLTELogo.png') }}" alt="AdminLTELogo"
-                height="60" width="60">
+            <img class="animation__shake" src="{{ url('assets/images/logo-bt.png') }}" alt="OneMillionCodersLogo"
+                height="70">
         </div>
 
         <!-- Navbar -->
@@ -134,7 +137,7 @@
                         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"
                             data-accordion="false">
                             <!-- Add icons to the links using the .nav-icon class
-                                                                                                                                                                                                               with font-awesome or any other icon font library -->
+                                                                                                                                                                                                                                                                   with font-awesome or any other icon font library -->
                             @if (!Auth::user()->isAdmitted())
                                 <li class="nav-item">
                                     <a href="{{ url('student/dashboard') }}"
@@ -227,9 +230,9 @@
                             <!--
 
 
-                                                                                                                                                                                                        </ul>
-                                                                                                                                                                                                      </nav>
-                                                                                                                                                                                                      <! /.sidebar-menu -->
+                                                                                                                                                                                                                                                            </ul>
+                                                                                                                                                                                                                                                          </nav>
+                                                                                                                                                                                                                                                          <! /.sidebar-menu -->
                 </div>
                 <!-- /.sidebar -->
             </aside>
@@ -256,7 +259,7 @@
     <!-- jQuery UI 1.11.4 -->
     <script src="{{ url('assets/plugins/jquery-ui/jquery-ui.min.js') }}"></script>
     <!-- Resolve conflict in jQuery UI tooltip with Bootstrap tooltip -->
-    <script>
+    <script @nonce>
         $.widget.bridge('uibutton', $.ui.button)
     </script>
     <!-- Bootstrap 4 -->
@@ -300,7 +303,8 @@
     <!-- AdminLTE dashboard demo (This is only for demo purposes) -->
     <script src="{{ url('assets/dist/js/pages/dashboard.js') }}"></script>
     <script src="{{ url('assets/js/custom.js') }}"></script>
-    <script type="text/javascript">
+
+    <script @nonce type="text/javascript">
         $(document).ready(function() {
             if ($.fn.DataTable.isDataTable('.datatable')) {
                 $('.datatable').DataTable().destroy();
@@ -333,8 +337,11 @@
             }
         });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
+    {{-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> --}}
+    <script src="{{ url('assets/plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+    <link rel="stylesheet" href=>
+
+    <script @nonce>
         const flashMessage = "{{ session('flash') }}";
         const key = "{{ session('key') }}";
 

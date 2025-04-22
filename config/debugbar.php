@@ -62,7 +62,7 @@ return [
     |
     */
 
-    'editor' => env('DEBUGBAR_EDITOR') ?: env('IGNITION_EDITOR', 'phpstorm'),
+    'editor' => env('DEBUGBAR_EDITOR') ?: env('IGNITION_EDITOR', 'vscode'),
 
     /*
     |--------------------------------------------------------------------------
@@ -215,7 +215,7 @@ return [
         'db' => [
             'with_params'       => true,   // Render SQL with the parameters substituted
             'exclude_paths'     => [       // Paths to exclude entirely from the collector
-//                'vendor/laravel/framework/src/Illuminate/Session', // Exclude sessions queries
+                //                'vendor/laravel/framework/src/Illuminate/Session', // Exclude sessions queries
             ],
             'backtrace'         => true,   // Use a backtrace to find the origin of the query in your files.
             'backtrace_exclude_paths' => [],   // Paths to exclude from backtrace. (in addition to defaults)
@@ -274,7 +274,7 @@ return [
      |
      */
 
-    'inject' => true,
+    'inject' => false,
 
     /*
      |--------------------------------------------------------------------------

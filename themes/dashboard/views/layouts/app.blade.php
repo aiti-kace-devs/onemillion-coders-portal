@@ -2,9 +2,10 @@
 <html lang="en">
 
 <head>
-    <script type="text/javascript">
+    <script @nonce type="text/javascript">
         BASE_URL = "<?php echo url(''); ?>"
     </script>
+    {{-- @cspMetaTag(\App\Helpers\BasePolicy::class) --}}
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title> @yield('title')</title>
@@ -12,6 +13,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="apple-touch-icon" sizes="76x76" href="{{ asset('assets') }}/images/logo.png">
     <link rel="icon" type="image/png" href="{{ asset('assets') }}/images/logo.png">
+    @cspMetaTag(\App\Helpers\BasePolicy::class)
 
 
     <link href="{{ asset('assets') }}/toastr/toastr.min.css" rel="stylesheet" />
@@ -42,12 +44,13 @@
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/dataTables.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/responsive.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/buttons.bootstrap4.min.css') }}">
-    <link rel="stylesheet" href="//unpkg.com/@highlightjs/cdn-assets@11.4.0/styles/default.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.4.0/styles/default.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"
+
+    {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"
         integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script> --}}
     @stack('styles')
 </head>
 
@@ -56,8 +59,8 @@
 
         <!-- Preloader -->
         <div class="preloader flex-column justify-content-center align-items-center">
-            <img class="animation__shake" src="{{ url('assets/dist/img/AdminLTELogo.png') }}" alt="AdminLTELogo"
-                height="60" width="60">
+            <img class="animation__shake" src="{{ url('assets/images/logo-bt.png') }}" alt="OneMillionCodersLogo"
+                height="70">
         </div>
 
         <!-- Navbar -->
@@ -409,10 +412,12 @@
     <!-- ./wrapper -->
 
     <!-- jQuery -->
+    <script src="{{ url('assets/plugins/jquery/jquery.min.js') }}"></script>
+
     <!-- jQuery UI 1.11.4 -->
     <script src="{{ url('assets/plugins/jquery-ui/jquery-ui.min.js') }}"></script>
     <!-- Resolve conflict in jQuery UI tooltip with Bootstrap tooltip -->
-    <script>
+    <script @nonce>
         $.widget.bridge('uibutton', $.ui.button)
     </script>
     <!-- Bootstrap 4 -->
@@ -438,8 +443,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script> --}}
     {{-- --}}
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
-    <script type="text/javascript" src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.24/build/pdfmake.min.js"></script>
+    {{-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script> --}}
+    {{-- <script type="text/javascript" src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.24/build/pdfmake.min.js"></script> --}}
+
+
+    <script type="text/javascript" src="{{ url('assets/plugins/moment/moment.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url('assets/plugins/daterangepicker/daterangepicker.js') }}"></script>
+    <script type="text/javascript" src="{{ url('assets/js/jquery-multiselect.min.js') }}"></script>
 
     {{-- <script type="text/javascript" src="https://cdn.datatables.net/1.10.13/js/jquery.dataTables.min.js"></script> --}}
 
@@ -458,11 +468,11 @@
     <script src="{{ url('assets/plugins/datatables-new/buttons.colVis.min.js') }}"></script>
 
     {{-- end datatables  --}}
-    <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+    {{-- <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script> --}}
     <script src="{{ url('assets/plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js') }}"></script>
     <!-- Summernote -->
     <script src="{{ url('assets/plugins/summernote/summernote-bs4.min.js') }}"></script>
@@ -476,8 +486,12 @@
     <script src="{{ url('assets/dist/js/pages/dashboard.js') }}"></script>
     <script src="{{ url('assets/js/custom.js') }}"></script>
     <script src="{{ asset('assets/toastr/toastr.min.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script type="text/javascript">
+    <link rel="stylesheet" href="{{ url('assets/plugins/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css') }}">
+    <script src="{{ url('assets/plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+
+    {{-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> --}}
+
+    <script @nonce type="text/javascript">
         $(document).ready(function() {
             if ($.fn.DataTable.isDataTable('.datatable')) {
                 $('.datatable').DataTable().destroy();
@@ -503,7 +517,7 @@
             }
         });
     </script>
-    <script>
+    <script @nonce>
         const flashMessage = "{{ session('flash') }}";
         const key = "{{ session('key') }}";
 

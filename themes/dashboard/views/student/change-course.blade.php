@@ -26,14 +26,14 @@
         <section class="content">
             <div class="container-fluid">
 
-                @if(session('success'))
+                @if (session('success'))
                     <div class="alert alert-success alert-dismissible">
                         <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
                         {{ session('success') }}
                     </div>
                 @endif
 
-                @if(session('error'))
+                @if (session('error'))
                     <div class="alert alert-danger alert-dismissible">
                         <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
                         {{ session('error') }}
@@ -49,14 +49,16 @@
                             <div class="card-body">
                                 <form action="{{ route('student.update-course') }}" method="POST" id="courseForm">
                                     @csrf
-                                    
+
                                     <!-- Course Selection -->
                                     <div class="form-group">
                                         <label for="course_id">Course <span class="text-danger">*</span></label>
-                                        <select class="form-control @error('course_id') is-invalid @enderror" id="course_id" name="course_id" required>
+                                        <select class="form-control @error('course_id') is-invalid @enderror" id="course_id"
+                                            name="course_id" required>
                                             <option value="">-- Select Course --</option>
-                                            @foreach($courses as $course)
-                                                <option value="{{ $course->id }}" {{ ($user->exam == $course->id) ? 'selected' : '' }}>
+                                            @foreach ($courses as $course)
+                                                <option value="{{ $course->id }}"
+                                                    {{ $user->exam == $course->id ? 'selected' : '' }}>
                                                     {{ $course->course_name }}
                                                 </option>
                                             @endforeach
@@ -67,15 +69,16 @@
                                             </span>
                                         @enderror
                                     </div>
-              
-                                    
+
+
                                     <div class="form-group">
                                         <div class="alert alert-warning">
-                                            <i class="fas fa-exclamation-triangle"></i> 
-                                            <strong>Please Note:</strong> Changing your course may affect your exam schedule and progress. Make sure this is the right decision.
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <strong>Please Note:</strong> Changing your course may affect your exam schedule
+                                            and progress. Make sure this is the right decision.
                                         </div>
                                     </div>
-                                    
+
                                     <div class="form-group text-center">
                                         <a href="{{ url('student/dashboard') }}" class="btn btn-secondary mr-2">
                                             <i class="fas fa-times"></i> Cancel
@@ -95,31 +98,23 @@
     </div>
     <!-- /.content-wrapper -->
 
-    <script>
+    <script @nonce>
         $(document).ready(function() {
             $('#courseForm').submit(function(e) {
                 var courseId = $('#course_id').val();
-                var session = $('#session').val();
-                
-                if (!courseId || !session) {
+
+                if (!courseId) {
                     e.preventDefault();
-                    
-                    if (!courseId) {
-                        $('#course_id').addClass('is-invalid');
-                        $('#course_id').after('<span class="invalid-feedback d-block">Please select a course.</span>');
-                    }
-                    
-                    if (!session) {
-                        $('#session').addClass('is-invalid');
-                        $('#session').after('<span class="invalid-feedback d-block">Please select a session.</span>');
-                    }
-                    
+                    $('#course_id').addClass('is-invalid');
+                    $('#course_id').after(
+                        '<span class="invalid-feedback d-block">Please select a course.</span>');
+
                     return false;
                 }
-                
+
                 return true;
             });
-            
+
             $('.form-control').on('change keyup', function() {
                 $(this).removeClass('is-invalid');
                 $(this).next('.invalid-feedback').remove();

@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Dashboard')
 @section('content')
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <style>
+    {{-- <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" /> --}}
+    <style @nonce>
         .multi-select-container {
             display: inline-block;
             position: relative;
@@ -110,8 +110,8 @@
         }
     </style>
 
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <style>
+    {{-- <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" /> --}}
+    <style @nonce>
         .multi-select-container {
             display: inline-block;
             position: relative;
@@ -246,7 +246,7 @@
                         <div class="card">
                             <div class="card-header" id="headingOne">
                                 <span class="d-flex flex-column flex-md-row justify-content-between">
-                                    <div class="mb-0 dropdown-toggle" style="cursor: pointer;" data-toggle="collapse"
+                                    <div class="mb-0 dropdown-toggle cursor-pointer" data-toggle="collapse"
                                         data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
                                         FILTER DATA
                                     </div>
@@ -276,7 +276,7 @@
                             </div>
 
                             <div id="collapseOne" class="collapse show" aria-labelledby="headingOne"
-                                data-parent="#accordion" style="">
+                                data-parent="#accordion">
                                 {{-- <div class="card-body"> --}}
                                 <div class="card-body">
                                     <div class="row mb-3">
@@ -448,7 +448,7 @@
         @push('scripts')
             <script type="text/javascript" src="{{ url('assets/js/jquery-multiselect.min.js') }}"></script>
 
-            <script>
+            <script @nonce>
                 var allFilteredIds = [];
                 var manuallySelectedIds = [];
                 var isFilterApplied = false;

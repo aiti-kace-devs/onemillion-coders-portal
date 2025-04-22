@@ -1,7 +1,7 @@
 @extends('layouts.student')
 @section('title', 'Application Status')
 @section('content')
-    <style>
+    <style @nonce>
         .status-container {
             max-width: 600px;
             margin: 20px auto;

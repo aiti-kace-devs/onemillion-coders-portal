@@ -28,6 +28,7 @@
         "qoraiche/laravel-mail-editor": "^4.1@beta",
         "rap2hpoutre/laravel-log-viewer": "^2.5",
         "rbdwllr/reallysimplejwt": "^5.0",
+        "spatie/laravel-csp": "^2.10",
         "spatie/laravel-permission": "^6.16",
         "spatie/laravel-query-builder": "^6.3",
         "tightenco/ziggy": "^2.0",
