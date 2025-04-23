@@ -103,6 +103,21 @@
                                             </div>
                                         </div>
 
+                                        <div class="form-group row">
+                                            <label class="col-md-4 col-form-label text-md-right">Courses</label>
+                                            <div class="col-md-8">
+                                                <select name="courses[]" class="form-control select2" multiple
+                                                        data-placeholder="Select courses to assign">
+                                                    @foreach ($courses as $course)
+                                                        <option value="{{ $course->id }}"
+                                                            {{ $admin->assignedCourses->contains($course->id) ? 'selected' : '' }}>
+                                                            {{ $course->course_name }} ({{ $course->location }})
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+
                                         <!-- Permissions Section - Grouped by Resource -->
                                         <div class="form-group row">
                                             <label class="col-md-4 col-form-label text-md-right">Permissions</label>

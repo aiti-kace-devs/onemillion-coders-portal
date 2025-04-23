@@ -848,8 +848,7 @@ class AdminController extends Controller
 
     public function scan_qrcode_page()
     {
-        $courses = Course::all();
-
+        $courses = auth('admin')->user()->assignedCourses()->get();
         return view('admin.qr-scanner', [
             // "locations" => $locations,
             'courses' => $courses,

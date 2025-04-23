@@ -189,8 +189,7 @@ Route::prefix('admin')
                     ->middleware('permission:student.admit');
             });
 
-            Route::get('/manage_students', [AdminController::class, 'manage_students'])
-                ->name('manage_students');
+            Route::get('/manage_students', [AdminController::class, 'manage_students'])->name('manage_students');
 
             Route::middleware('permission:student.read')->group(function () {
                 Route::get('/student_status/{id}', [AdminController::class, 'student_status'])
@@ -213,22 +212,17 @@ Route::prefix('admin')
 
             Route::middleware('permission:attendance.read')->group(function () {
                 Route::post('/confirm_attendance', [AttendanceController::class, 'confirmAttendance'])->middleware('permission:attendance.create');
-                Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])
-                    ->name('viewAttendanceByDate');
+                Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])->name('viewAttendanceByDate');
                 Route::get('/remove-attendance/{id}', [AttendanceController::class, 'removeAttendance'])
                     ->name('remove-attendance')
                     ->middleware('permission:attendance.delete');
                 Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page'])->middleware('permission:attendance.create');
                 Route::post('/generate_qrcode', [AttendanceController::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
                 Route::get('/scan_qrcode', [AdminController::class, 'scan_qrcode_page'])->middleware('permission:attendance.create');
-                Route::get('/verification', [AdminController::class, 'verification_page'])
-                    ->name('verification');
-                Route::get('/verify_details', [AdminController::class, 'verifyDetails'])
-                    ->name('verify-details');
-                Route::get('/reset-verify/{id}', [AdminController::class, 'reset_verify'])
-                    ->name('reset-verify');
-                Route::post('/verify-student/{id}', [AdminController::class, 'verifyStudent'])
-                    ->name('verify-student');
+                Route::get('/verification', [AdminController::class, 'verification_page'])->name('verification');
+                Route::get('/verify_details', [AdminController::class, 'verifyDetails'])->name('verify-details');
+                Route::get('/reset-verify/{id}', [AdminController::class, 'reset_verify'])->name('reset-verify');
+                Route::post('/verify-student/{id}', [AdminController::class, 'verifyStudent'])->name('verify-student');
             });
 
             Route::middleware('permission:report.read')->group(function () {
@@ -245,6 +239,8 @@ Route::prefix('admin')
             });
 
             Route::middleware('permission:admin.read')->group(function () {
+                Route::get('/get-admin-courses/{admin}', [RegisteredUserController::class, 'getAdminCourses'])->name('admin.get-admin-courses');
+                Route::post('/update-admin-courses', [RegisteredUserController::class, 'updateAdminCourses'])->name('admin.update-admin-courses');
                 Route::get('/manage_admins', [RegisteredUserController::class, 'index'])->name('manage_admins');
                 Route::get('/create', [RegisteredUserController::class, 'create'])
                     ->name('admins.create')
@@ -419,8 +415,12 @@ Route::prefix('admin')
             // end of manage sms_template routes
             Route::middleware('permission:manage.monitor')->group(function () {
                 Route::get('app-logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index'])->middleware('permission:manage.cofig');
-                Route::get('/app-config', [AppConfigController::class, 'index'])->name('config.index')->middleware('admin.super');
-                Route::put('/app-config', [AppConfigController::class, 'update'])->name('config.update')->middleware('admin.super');
+                Route::get('/app-config', [AppConfigController::class, 'index'])
+                    ->name('config.index')
+                    ->middleware('admin.super');
+                Route::put('/app-config', [AppConfigController::class, 'update'])
+                    ->name('config.update')
+                    ->middleware('admin.super');
             });
         });
 
@@ -436,11 +436,15 @@ Route::prefix('admin')
 /* Student section routes */
 Route::prefix('student')
     ->middleware('theme:dashboard')
-    ->name('student.')->group(function () {
-
+    ->name('student.')
+    ->group(function () {
         Route::get('/select-session/{user_id}', [StudentOperation::class, 'select_session_view'])->middleware('auth');
-        Route::post('/select-session/{user_id}', [StudentOperation::class, 'confirm_session'])->name('select-session')->middleware('auth');
-        Route::delete('/delete-student-admission/{user_id}', [StudentOperation::class, 'delete_admission'])->name('delete-student-admission')->middleware('auth');
+        Route::post('/select-session/{user_id}', [StudentOperation::class, 'confirm_session'])
+            ->name('select-session')
+            ->middleware('auth');
+        Route::delete('/delete-student-admission/{user_id}', [StudentOperation::class, 'delete_admission'])
+            ->name('delete-student-admission')
+            ->middleware('auth');
 
         Route::middleware(['auth:web'])->group(function () {
             Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');

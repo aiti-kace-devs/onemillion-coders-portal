@@ -85,8 +85,15 @@
                         </div>
                         <div class="mb-4 col-md-4">
                             <label for="date" class="form-label">Select Date</label>
-                            <input class="form-control" type="date" name="date" id=""
-                                max="{{ now()->toDateString() }}" value="{{ now()->toDateString() }}">
+                            @can('attendance.status')
+                                <input class="form-control" type="date" name="date" id=""
+                                    max="{{ now()->toDateString() }}" value="{{ now()->toDateString() }}">
+                            @else
+                                <input class="form-control" type="date" name="date" id="dateInput"
+                                    min="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}"
+                                    value="{{ now()->toDateString() }}">
+                                {{-- <small class="text-muted">You can only take attendance for today</small> --}}
+                            @endcan
                         </div>
                 </form>
             </div>
@@ -94,9 +101,11 @@
                 <button type="button" class="btn btn-primary col-auto" id="startScanner">Start
                     QR Code Scanner</button>
                 <button type="button" class="btn btn-danger ml-4" id="stopScanner">Stop QR Code Scanner</button>
-                <button type="button" class="btn btn-success ml-4" id="generateCode">Generate QR Code</button>
-                <button type="button" class="btn btn-danger ml-4" id="stopCodeGeneration">Stop QR Code
-                    Generation</button>
+                @can('attendance.status')
+                    <button type="button" class="btn btn-success ml-4" id="generateCode">Generate QR Code</button>
+                    <button type="button" class="btn btn-danger ml-4" id="stopCodeGeneration">Stop QR Code
+                        Generation</button>
+                @endcan
 
             </div>
 
@@ -148,7 +157,17 @@
         });
 
 
-
+        $(document).ready(function() {
+            $('#dateInput').on('keydown', function(e) {
+                e.preventDefault();
+                return false;
+            }).on('change', function() {
+                if (this.value !== new Date().toISOString().split('T')[0]) {
+                    this.value = new Date().toISOString().split('T')[0];
+                    alert('You can only select today\'s date');
+                }
+            });
+        });
 
         function getFormValues() {
             // const values = $('').serializeArray();
