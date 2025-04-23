@@ -21,6 +21,7 @@ use App\Http\Controllers\SessionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\SmsTemplateController;
+use App\Http\Controllers\EmailTemplateController;
 use Illuminate\Support\Str;
 
 /*
@@ -417,6 +418,27 @@ Route::prefix('admin')
                         ->middleware('permission:student.bulk-sms');
                 });
             // end of manage sms_template routes
+
+            // manage email_template routes
+            Route::prefix('manage-email-template')
+                ->middleware('permission:email-template.read')
+                ->group(function () {
+                    Route::get('/', [EmailTemplateController::class, 'index'])->name('email.template.index');
+                    Route::post('/', [EmailTemplateController::class, 'store'])
+                        ->name('email.template.store')
+                        ->middleware('permission:email-template.create');
+                    Route::get('/{id}/edit', [EmailTemplateController::class, 'edit'])
+                        ->name('email.template.edit')
+                        ->middleware('permission:email-template.update');
+                    Route::put('/{template}/update', [EmailTemplateController::class, 'update'])
+                        ->name('email.template.update')
+                        ->middleware('permission:email-template.update');
+                    Route::get('/{template}/delete', [EmailTemplateController::class, 'destroy'])
+                        ->name('email.template.destroy')
+                        ->middleware('permission:email-template.delete');
+                    // Route::get('/fetch_email_template', [AdminController::class, 'fetch_email_template'])->name('fetch.email.template');
+                });
+            // end of manage emai_template routes
             Route::middleware('permission:manage.monitor')->group(function () {
                 Route::get('app-logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index'])->middleware('permission:manage.cofig');
                 Route::get('/app-config', [AppConfigController::class, 'index'])->name('config.index')->middleware('admin.super');
