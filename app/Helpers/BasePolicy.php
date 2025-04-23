@@ -76,6 +76,9 @@ class BasePolicy extends Basic
                 Keyword::UNSAFE_INLINE,
 
             ])
+            ->addDirective(Directive::WORKER, [
+                'blob:',
+            ])
             ->addNonceForDirective(Directive::SCRIPT)
             ->addNonceForDirective(Directive::STYLE);
 
