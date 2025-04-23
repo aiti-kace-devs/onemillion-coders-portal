@@ -72,7 +72,7 @@ $notificationOfficerRole->syncPermissions($allPermissions);
         // }
 
         // give permissions
-        $attendanceOfficerPermissions = $this->findResourcePermissions(['attendance'], $actions);
+        $attendanceOfficerPermissions = $this->findResourcePermissions(['attendance'], ['read', 'update', 'create', 'delete']);
         $specialAttendancePermissions = $this->findResourcePermissions(['student'], $specialAttendanceActions);
         $allPermissions = $attendanceOfficerPermissions->merge($specialAttendancePermissions);
         $attendanceOfficerRole->syncPermissions($allPermissions);

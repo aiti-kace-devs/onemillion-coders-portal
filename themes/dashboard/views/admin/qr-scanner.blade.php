@@ -66,8 +66,15 @@
                         </div>
                         <div class="mb-4 col-md-4">
                             <label for="date" class="form-label">Select Date</label>
-                            <input class="form-control" type="date" name="date" id=""
-                                max="{{ now()->toDateString() }}" value="{{ now()->toDateString() }}">
+                            @can('attendance.status')
+                                <input class="form-control" type="date" name="date" id=""
+                                    max="{{ now()->toDateString() }}" value="{{ now()->toDateString() }}">
+                            @else
+                                <input class="form-control" type="date" name="date" id=""
+                                    min="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}"
+                                    value="{{ now()->toDateString() }}" readonly>
+                                <small class="text-muted">You can only take attendance for today</small>
+                            @endcan
                         </div>
                 </form>
             </div>

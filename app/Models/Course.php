@@ -29,4 +29,9 @@ class Course extends Model
     {
         return $this->belongsTo(Programme::class);
     }
+
+    public function assignedAdmins()
+{
+    return $this->belongsToMany(Admin::class, 'admin_course', 'course_id', 'admin_id');
+}
 }
