@@ -65,16 +65,15 @@
                                                 <td>{{ $key + 1 }}</td>
                                                 <td>{{ $record->name }}</td>
                                                 <td>{{ $record->email }}</td>
-                                                @if (Auth::user()->isSuper())
+                                                @can('attendance.delete')
                                                     <form action="{{ route('admin.remove-attendance', $record->id) }}"
                                                         name="remove-attendance-{{ $record->id }}">
                                                         <td>
-                                                            <button onclick="removeAttendance()"
-                                                                data-id="{{ $record->id }}"
+                                                            <button onclick="removeAttendance()" data-id="{{ $record->id }}"
                                                                 class="btn btn-sm btn-danger">Remove</button>
                                                         </td>
                                                     </form>
-                                                @endif
+                                                @endcan
                                             </tr>
                                         @endforeach
                                     </tbody>
