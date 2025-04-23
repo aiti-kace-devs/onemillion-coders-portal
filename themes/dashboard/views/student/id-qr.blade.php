@@ -135,8 +135,8 @@
 
 
                         <div class="col-12">
-                            {{-- <p class="alert alert-info">You'll be given the opportunity to change your details later.</p> --}}
-                            @if (detailsUpdated($user) && null !== $user->gender && null !== $user->network_type && null !== $user->contact)
+                            <p class="alert alert-info">You'll be given the opportunity to change your details later.</p>
+                            {{-- @if (detailsUpdated($user) && null !== $user->gender && null !== $user->network_type && null !== $user->contact)
                                 <p class="text-sm text-danger">You have already updated your details</p>
                             @else
                                 <button onclick="confirmUpdateDetails()" type="button"
@@ -144,7 +144,7 @@
                                 <p class="text-sm text-danger">You can only update your details once, make sure you verify
                                     all
                                     details before submitting.</p>
-                            @endif
+                            @endif --}}
                         </div>
                     </div>
                 </form>
@@ -154,7 +154,7 @@
                 <div class="text-md">Session : {{ $user->selected_session }}</div>
                 <div class="text-lg font-bold mt-2">Student ID for Attendance</div>
                 <div id="qrcode"></div>
-                <button type="button" class="btn btn-primary" onclick="downloadQRCode()">Download</button>
+                <button type="button" class="btn btn-primary" id="downloadQRCode">Download</button>
                 <!-- /.row -->
                 <!-- Main row -->
 
@@ -171,48 +171,34 @@
     <script src="{{ asset('assets/js/jquery.inputmask.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/js/easy.qrcode.min.js') }}"></script>
     <script @nonce>
-        const logoCanvas = document.createElement('canvas');
-        logoCanvas.width = 200;
-        logoCanvas.height = 100;
-        const logoCtx = logoCanvas.getContext('2d');
+        const innerWidth = Math.floor(window.innerWidth * (7 / 9));
+        const width = innerWidth > 400 ? 400 : innerWidth
+        const qrcode = new QRCode(document.getElementById("qrcode"), {
+            text: "{{ Auth::user()->userId }}",
+            width: width,
+            height: width,
+            colorDark: "black",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H,
+            quietZone: 20,
+            logo: "{{ asset('assets/images/logo-bt.png') }}",
+            logoWidth: 170,
+            logoHeight: 80,
+        });
 
-        // Draw logo
-        const logoImg = new Image();
-        let qrcode;
-
-        logoImg.src = "{{ asset('assets/images/logo-bt.png') }}";
-        logoImg.onload = function() {
-            logoCtx.drawImage(logoImg, 50, 0, 100, 60);
-
-            // Add text
-            logoCtx.font = 'bold 14px Arial';
-            logoCtx.fillStyle = 'black';
-            logoCtx.textAlign = 'center';
-            logoCtx.fillText("{{ Auth::user()->name }}", 100, 85);
-
-            const innerWidth = Math.floor(window.innerWidth * (7 / 9));
-            const width = innerWidth > 400 ? 400 : innerWidth
-            qrcode = new QRCode(document.getElementById("qrcode"), {
-                text: "{{ Auth::user()->userId }}",
-                width: width,
-                height: width,
-                colorDark: "black",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H,
-                quietZone: 20,
-                logo: logoCanvas.toDataURL('image/png'),
-                logoWidth: 200,
-                logoHeight: 150,
-            });
-        }
 
         function downloadQRCode() {
-            qrcode.download("StudentID-{{ Auth::user()->userId }}")
+            qrcode.download("StudentName-{{ Auth::user()->name }}")
         }
 
         $(document).ready(function() {
             const cardTypeSelect = $("#card_type");
             const ghcardInput = $("#ghcard");
+            const downloadQRButton = $('#downloadQRCode');
+
+            downloadQRButton.on('click', function() {
+                downloadQRCode();
+            })
 
             function toggleInputMask() {
                 if (cardTypeSelect.val() === "ghcard") {
