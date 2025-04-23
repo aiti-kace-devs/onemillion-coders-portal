@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\FormSubmittedEvent;
 use App\Models\Form;
+use App\Models\User;
 use App\Models\FormResponse;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -124,31 +125,25 @@ class FormResponseController extends Controller
             }
 
             if (!empty($field['validators']['unique'])) {
-                $existingRecords = FormResponse::select('response_data')->get();
-                $isDuplicate = false;
-
-                foreach ($existingRecords as $record) {
-                    // $data = json_decode($record->response_data, true);
-                    $data = is_array($record->response_data)
-                        ? $record->response_data
-                        : json_decode($record->response_data, true);
-
-                    if (!empty($data[$field['field_name']]) && $data[$field['field_name']] == ($formattedData[$field['field_name']] ?? null)) {
-                        $isDuplicate = true;
-                        break;
+                $valueToCheck = $formattedData[$field['field_name']] ?? null;
+            
+                if (!empty($valueToCheck)) {
+                    $userFieldMap = [
+                        'email' => 'email',
+                        'phone' => 'mobile_no',
+                    ];
+            
+                    $dbColumn = $userFieldMap[$field['field_name']] ?? null;
+            
+                    if ($dbColumn) {
+                        $exists = User::where($dbColumn, $valueToCheck)->exists();
+            
+                        if ($exists) {
+                            return redirect()->back()->withInput()->withErrors([
+                                $fieldKey => ["{$fieldTitle} has already been taken."]
+                            ]);
+                        }
                     }
-                }
-
-                if ($isDuplicate) {
-                    // Log::info("{$fieldTitle} has already been taken.");
-                    return redirect()->back()->withInput()->withErrors([
-                        $fieldKey => ["{$fieldTitle} has already been taken."]
-                    ]);
-                    // return response()->json([
-                    //     'errors' => [
-                    //         $fieldKey => ["{$fieldTitle} has already been taken."]
-                    //     ]
-                    // ], 422);
                 }
             }
 

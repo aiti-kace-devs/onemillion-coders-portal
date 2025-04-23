@@ -1,11 +1,34 @@
 @extends('layouts.app')
 @section('title', 'Scan QR Code')
 @section('content')
-    <style>
+    <style @nonce>
         canvas {
             height: 400px;
             width: 400px;
             margin: 0 auto 0 auto;
+        }
+
+        #qrcode {
+            height: 85vh
+        }
+
+        #qr-overlay canvas {
+            border: 2px solid white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        #qr-overlay {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
     </style>
     <div class="content-wrapper">
@@ -68,17 +91,17 @@
                 </form>
             </div>
             <div class="row g-3 d-flex justify-content-center align-tems-center mb-4">
-                <button type="button" class="btn btn-primary col-auto" onclick="startScanner()">Start
+                <button type="button" class="btn btn-primary col-auto" id="startScanner">Start
                     QR Code Scanner</button>
-                <button type="button" class="btn btn-danger ml-4" onclick="stopScanner()">Stop QR Code Scanner</button>
-                <button type="button" class="btn btn-success ml-4" onclick="generateCode()">Generate QR Code</button>
-                <button type="button" class="btn btn-danger ml-4" onclick="stopCodeGeneration()">Stop QR Code
+                <button type="button" class="btn btn-danger ml-4" id="stopScanner">Stop QR Code Scanner</button>
+                <button type="button" class="btn btn-success ml-4" id="generateCode">Generate QR Code</button>
+                <button type="button" class="btn btn-danger ml-4" id="stopCodeGeneration">Stop QR Code
                     Generation</button>
 
             </div>
 
             <div class="row g-3 flex justify-content-center align-tems-center">
-                <div class="d-flex flex-column" id="qrcode" style="height: 85vh"></div>
+                <div class="d-flex flex-column" id="qrcode"></div>
                 <video class="col-12" id="scanner"></video>
             </div>
 
@@ -97,13 +120,34 @@
 @push('scripts')
     <script src="{{ asset('assets/js/qr-scanner.min.js') }}"></script>
     <script src="{{ asset('assets/js/easy.qrcode.min.js') }}"></script>
-    <script>
+    <script @nonce>
         let codeIinterval = null;
 
         let qrCode = null;
 
         const scannerElem = $('#scanner');
         const qrcodeElem = $('#qrcode');
+
+        const startScannerBtn = $('#startScanner');
+        const stopScannerBtn = $('#stopScanner');
+
+        const generateCodeBtn = $('#generateCode');
+        const stopCodeGenerationBtn = $('#stopCodeGeneration');
+
+        startScannerBtn.on('click', function() {
+            startScanner();
+        });
+        stopScannerBtn.on('click', function() {
+            stopScanner();
+        });
+        generateCodeBtn.on('click', function() {
+            generateCode();
+        });
+        stopCodeGenerationBtn.on('click', function() {
+            stopCodeGeneration();
+        });
+
+
 
 
         function getFormValues() {
@@ -237,10 +281,10 @@
             qrcodeElem.prepend(
                 `<h3>This Code Expires In <span  id="timer" class="js-timeout">${values['validity']}: 00</span>. A new code will re-generate automatically </h3>
                 <br>
-                <div>
+                <div class="row g-3 d-flex justify-content-center align-tems-center mb-4">
                     <button onclick="copyToClipBoard(this)" class="btn btn-info" data-link="${data['url']}">Click to copy link</button>
-                </div>
-                `)
+                    <button type="button" class="btn btn-info ml-4" id="maximizeQR">Maximize QR Code</button>
+                </div>`)
             codeIinterval = setInterval(generateCode, 1000 * 60 * values['validity']);
             countdown();
         }
@@ -319,5 +363,97 @@
                 position: 'top-end'
             });
         }
+
+        function maximizeQRCode() {
+            const qrContainer = document.getElementById('qrcode');
+            const qrCanvas = qrContainer.querySelector('canvas');
+
+            if (!qrCanvas) {
+                Swal.fire({
+                    text: "Please generate a QR code first",
+                    icon: 'error',
+                    timer: 2000,
+                    toast: true,
+                    position: 'top'
+                });
+                return;
+            }
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'rgba(0,0,0,0.98)';
+            overlay.style.zIndex = '9999';
+            overlay.style.display = 'flex';
+            overlay.style.flexDirection = 'column';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+            overlay.style.cursor = 'pointer';
+            overlay.id = 'qr-overlay';
+
+            const qrWrapper = document.createElement('div');
+            qrWrapper.style.display = 'flex';
+            qrWrapper.style.flexDirection = 'column';
+            qrWrapper.style.alignItems = 'center';
+            qrWrapper.style.justifyContent = 'center';
+            qrWrapper.style.width = '100%';
+            qrWrapper.style.height = '100%';
+
+
+            const newCanvas = document.createElement('canvas');
+            const scaleFactor = 2;
+            newCanvas.width = qrCanvas.width * scaleFactor;
+            newCanvas.height = qrCanvas.height * scaleFactor;
+
+            const context = newCanvas.getContext('2d');
+            context.imageSmoothingEnabled = false;
+            context.drawImage(qrCanvas, 0, 0, newCanvas.width, newCanvas.height);
+
+            newCanvas.style.maxWidth = '95vw';
+            newCanvas.style.maxHeight = '95vh';
+            newCanvas.style.width = 'auto';
+            newCanvas.style.height = 'auto';
+            newCanvas.style.border = '4px solid white';
+            newCanvas.style.boxShadow = '0 0 30px rgba(255,255,255,0.7)';
+
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '✕ Close';
+            closeBtn.style.position = 'fixed';
+            closeBtn.style.top = '25px';
+            closeBtn.style.right = '25px';
+            closeBtn.style.padding = '12px 24px';
+            closeBtn.style.background = '#dc3545';
+            closeBtn.style.color = 'white';
+            closeBtn.style.border = 'none';
+            closeBtn.style.borderRadius = '6px';
+            closeBtn.style.cursor = 'pointer';
+            closeBtn.style.zIndex = '10000';
+            closeBtn.style.fontSize = '18px';
+            closeBtn.style.fontWeight = 'bold';
+
+            qrWrapper.appendChild(newCanvas);
+            overlay.appendChild(qrWrapper);
+            overlay.appendChild(closeBtn);
+            document.body.appendChild(overlay);
+
+            closeBtn.onclick = () => document.body.removeChild(overlay);
+            overlay.onclick = (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            };
+
+            const handleKeyDown = (e) => {
+                if (e.key === 'Escape') {
+                    document.body.removeChild(overlay);
+                    document.removeEventListener('keydown', handleKeyDown);
+                }
+            };
+            document.addEventListener('keydown', handleKeyDown);
+        }
+        $(document).on('click', '#maximizeQR', maximizeQRCode);
     </script>
 @endpush

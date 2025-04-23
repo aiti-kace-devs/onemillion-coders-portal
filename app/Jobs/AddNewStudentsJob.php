@@ -120,13 +120,15 @@ class AddNewStudentsJob implements ShouldQueue
                 // $userId = $std->userId;
                 // GoogleSheets::updateGoogleSheets($userId, ["registered" => true, "result" => "N/A"]);
                 event(new UserRegistered($std, $plainPassword));
-                $smsContent = SmsHelper::getTemplate(AFTER_REGISTRATION_SMS, [
-                    'name' => $student['name'],
-                ]) ?? '';;
-                $details['message'] = $smsContent;
-                $details['phonenumber'] = $student['mobile_no'];
+                if (config(SEND_SMS_AFTER_REGISTRATION, true)) {
+                    $smsContent = SmsHelper::getTemplate(AFTER_REGISTRATION_SMS, [
+                        'name' => $student['name'],
+                    ]) ?? '';;
+                    $details['message'] = $smsContent;
+                    $details['phonenumber'] = $student['mobile_no'];
 
-                SendSMSAfterRegistrationJob::dispatch($details);
+                    SendSMSAfterRegistrationJob::dispatch($details);
+                }
             }
         }
 

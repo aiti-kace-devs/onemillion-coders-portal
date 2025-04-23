@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Protection Course Details</title>
     <link rel="stylesheet" href="{{ asset('assets/home/css/style.css') }}">
-    <style>
+    <style @nonce>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -62,12 +62,14 @@
     <div class="container">
         <div class="text-content">
             <div class="detail-item">
-                <h1> <span class="detail-label">Certified Data Protection Professional (CDPP) – Practitioner Level</span></h1>
+                <h1> <span class="detail-label">Certified Data Protection Professional (CDPP) – Practitioner Level</span>
+                </h1>
                 <!-- <span class="detail-value">Cybersecurity Specialist</span> -->
             </div>
             <div class="detail-item">
                 <span class="detail-label">Objective:</span>
-                <span class="detail-value">Equip professionals with advanced practical skills to implement and manage data protection frameworks, conduct audits, and lead compliance initiatives.</span>
+                <span class="detail-value">Equip professionals with advanced practical skills to implement and manage
+                    data protection frameworks, conduct audits, and lead compliance initiatives.</span>
             </div>
             <!-- <div class="detail-item">
         <span class="detail-label">No. of People to Train:</span>
@@ -111,13 +113,15 @@
                             <li><b>Adequacy Decisions:</b></li>
                             <ul class="detail-value">
                                 <li>Concept and criteria under the GDPR.</li>
-                                <li>Assessment of adequacy and its significance for third countries, including possible future recognition of African states.</li>
+                                <li>Assessment of adequacy and its significance for third countries, including possible
+                                    future recognition of African states.</li>
                             </ul>
 
                             <li><b>Other Mechanisms:</b></li>
                             <ul class="detail-value">
                                 <li>Codes of Conduct and Certification Schemes.</li>
-                                <li>Derogations for specific situations (e.g., explicit consent, contract performance).</li>
+                                <li>Derogations for specific situations (e.g., explicit consent, contract performance).
+                                </li>
                             </ul>
                         </ul>
                     </ul>
@@ -142,7 +146,7 @@
                 <span class="detail-label">Outcome:</span>
                 <span class="detail-value"><b>CDPP Certification</b></span>
             </div>
-            
+
             <a href="{{ url('/forms/register') }}" class="register-button">Register</a>
         </div>
         <div class="image-content">

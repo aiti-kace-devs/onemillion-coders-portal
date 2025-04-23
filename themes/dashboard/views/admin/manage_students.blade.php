@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Dashboard')
 @section('content')
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <style>
+    {{-- <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" /> --}}
+    <style @nonce>
         .multi-select-container {
             display: inline-block;
             position: relative;
@@ -110,8 +110,8 @@
         }
     </style>
 
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <style>
+    {{-- <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" /> --}}
+    <style @nonce>
         .multi-select-container {
             display: inline-block;
             position: relative;
@@ -246,35 +246,37 @@
                         <div class="card">
                             <div class="card-header" id="headingOne">
                                 <span class="d-flex flex-column flex-md-row justify-content-between">
-                                    <div class="mb-0 dropdown-toggle" style="cursor: pointer;" data-toggle="collapse"
+                                    <div class="mb-0 dropdown-toggle cursor-pointer" data-toggle="collapse"
                                         data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
                                         FILTER DATA
                                     </div>
                                     <div class="row">
                                         <div class="col-md-12 d-flex justify-content-end pr-3 mb-2">
-                                            <a class="btn btn-info mr-2" href="javascript:;" data-toggle="modal"
-                                                data-target="#myModal">Add new student</a>
-                                            <button class="btn btn-warning mr-2" data-toggle="modal"
-                                                data-target="#bulk-email-modal">Send Emails
-                                                <i class="fas fa-envelope"></i>
-                                            </button>
-
-                                            <button class="btn btn-success mr-2" data-toggle="modal"
-                                                data-target="#bulk">Send SMS
-                                                <i class="fas fa-sms"></i>
-                                            </button>
-
-
-
-                                            </button>
-                                            <button class="btn btn-primary mr-2" id="admit-selected">Admit Students</button>
+                                            @can('student.create')
+                                                {{-- <a class="btn btn-info mr-2" href="javascript:;" data-toggle="modal"
+                                                    data-target="#myModal">Add new student</a> --}}
+                                            @endcan
+                                            @can('student.bulk-sms')
+                                                <button class="btn btn-warning mr-2" data-toggle="modal"
+                                                    data-target="#bulk-email-modal">Send Emails
+                                                    <i class="fas fa-envelope"></i>
+                                                </button>
+                                                <button class="btn btn-success mr-2" data-toggle="modal"
+                                                    data-target="#bulk">Send SMS
+                                                    <i class="fas fa-sms"></i>
+                                                </button>
+                                            @endcan
+                                            @can('student.admit')
+                                                <button class="btn btn-primary mr-2" id="shortlist-selected">Shortlist
+                                                    Students</button>
+                                            @endcan
                                         </div>
                                     </div>
                                 </span>
                             </div>
 
                             <div id="collapseOne" class="collapse show" aria-labelledby="headingOne"
-                                data-parent="#accordion" style="">
+                                data-parent="#accordion">
                                 {{-- <div class="card-body"> --}}
                                 <div class="card-body">
                                     <div class="row mb-3">
@@ -446,7 +448,7 @@
         @push('scripts')
             <script type="text/javascript" src="{{ url('assets/js/jquery-multiselect.min.js') }}"></script>
 
-            <script>
+            <script @nonce>
                 var allFilteredIds = [];
                 var manuallySelectedIds = [];
                 var isFilterApplied = false;
@@ -467,20 +469,19 @@
 
                     var table = $('#studentsTable').DataTable({
                         dom: 'Bfrtip',
-                        buttons: [{
-                            extend: 'csv',
-                            text: '<i class="fas fa-file-csv"></i> Export CSV',
-                            className: 'btn btn-success',
-                            title: 'Students_Export_' + new Date().toISOString().slice(0, 10),
-                            exportOptions: {
-                                columns: [1,2,3,4,5,6,7,9],
-                                // format: {
-                                //     body: function(data, row, column, node) {
-                                //         return data.replace(/<[^>]*>/g, '');
-                                //     }
-                                // }
-                            }
-                        }],
+                        buttons: [
+                            @can('student.admit')
+                                {
+                                    extend: 'csv',
+                                    text: '<i class="fas fa-file-csv"></i> Export CSV',
+                                    className: 'btn btn-success',
+                                    title: 'Students_Export_' + new Date().toISOString().slice(0, 10),
+                                    exportOptions: {
+                                        columns: [1, 2, 3, 4, 5, 6, 7, 9],
+                                    }
+                                }
+                            @endcan
+                        ],
                         processing: true,
                         serverSide: true,
                         ajax: {
@@ -671,7 +672,7 @@
                         }
                     });
 
-                    $('#admit-selected').click(function() {
+                    $('#shortlist-selected').click(function() {
                         var selectedIds = manuallySelectedIds.length > 0 ? manuallySelectedIds : allFilteredIds;
 
                         if (!selectedIds || selectedIds.length === 0) {
@@ -683,16 +684,16 @@
                         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
 
                         Swal.fire({
-                            title: 'Admit Students?',
-                            text: `You are about to admit ${selectedIds.length} students. Continue?`,
+                            title: 'Shortlist Students?',
+                            text: `You are about to shortlist ${selectedIds.length} students. Continue?`,
                             icon: 'question',
                             showCancelButton: true,
-                            confirmButtonText: 'Yes, admit them',
+                            confirmButtonText: 'Yes, shortlist them',
                             cancelButtonText: 'Cancel'
                         }).then((result) => {
                             if (result.isConfirmed) {
                                 $.ajax({
-                                    url: "{{ route('admin.admit_student') }}",
+                                    url: "{{ route('admin.save_shortlisted_students') }}",
                                     type: 'POST',
                                     headers: {
                                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr(
@@ -703,21 +704,21 @@
                                     },
                                     success: function(response) {
                                         toastr.success(response.message ||
-                                            'Students admitted successfully!');
+                                            'Students shortlisted successfully!');
                                         table.ajax.reload();
                                         manuallySelectedIds = [];
                                     },
                                     error: function(xhr) {
                                         toastr.error(xhr.responseJSON?.message ||
-                                            'Failed to admit students.');
+                                            'Failed to shortlist students.');
                                         console.error(xhr.responseText);
                                     },
                                     complete: function() {
-                                        btn.prop('disabled', false).html('Admit Students');
+                                        btn.prop('disabled', false).html('Shortlist Students');
                                     }
                                 });
                             } else {
-                                btn.prop('disabled', false).html('Admit Students');
+                                btn.prop('disabled', false).html('Shortlist Students');
                             }
                         });
                     });

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Protection Course Details</title>
     <link rel="stylesheet" href="{{ asset('assets/home/css/style.css') }}">
-    <style>
+    <style @nonce>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -67,7 +67,8 @@
             </div>
             <div class="detail-item">
                 <span class="detail-label">Objective:</span>
-                <span class="detail-value">Build foundational knowledge of Act 843 and data protection principles.</span>
+                <span class="detail-value">Build foundational knowledge of Act 843 and data protection
+                    principles.</span>
             </div>
             <!-- <div class="detail-item">
         <span class="detail-label">No. of People to Train:</span>
@@ -93,7 +94,8 @@
 
             <div class="detail-item">
                 <span class="detail-label">Training Providers:</span>
-                <span class="detail-value">Only training institutions approved by the Data Protection Commission (DPC) can offer CDPO courses.</span>
+                <span class="detail-value">Only training institutions approved by the Data Protection Commission (DPC)
+                    can offer CDPO courses.</span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Assessment:</span>
@@ -101,7 +103,7 @@
             </div>
             <div class="detail-item">
                 <span class="detail-label">Outcome:</span>
-                <span class="detail-value"><b>CDPO  Certification</b></span>
+                <span class="detail-value"><b>CDPO Certification</b></span>
             </div>
             <a href="{{ url('/forms/register') }}" class="register-button">Register</a>
         </div>

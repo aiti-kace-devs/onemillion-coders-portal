@@ -41,8 +41,8 @@
 
                                                     <input type="text" value="{{ $template->name }}" name="name"
                                                         placeholder="Enter sms name" class="form-control" id="name">
-                                                    <span class="name_error font-weight-bold invalid-feedback"
-                                                        style="display: block;" role="alert"></span>
+                                                    <span class="name_error font-weight-bold invalid-feedback block"
+                                                        role="alert"></span>
                                                 </div>
                                             </div>
 
@@ -55,8 +55,8 @@
                                                         Use placeholders like {name}, {date} etc. that can be replaced when
                                                         sending.
                                                     </small>
-                                                    <span class="content_error font-weight-bold invalid-feedback"
-                                                        style="display: block;" role="alert"></span>
+                                                    <span class="content_error font-weight-bold invalid-feedback block"
+                                                        role="alert"></span>
                                                 </div>
                                             </div>
 
@@ -77,7 +77,7 @@
             </section>
         </div>
         <!-- /.content-header -->
-        <script>
+        <script @nonce>
             const manageAction = "{{ route('admin.sms.template.update', $template) }}";
             const method = 'PUT';
         </script>

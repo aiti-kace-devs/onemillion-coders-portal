@@ -8,7 +8,7 @@
     $deadline = $date;
     $hoursLeft = $leftToDeadline;
 
-    $studentDeadline = (new Carbon\Carbon($registered))->addDays(2);
+    $studentDeadline = (new Carbon\Carbon($registered))->addDays(config(EXAM_DEADLINE_AFTER_REGISTRATION, 2));
     $studentHoursLeft = $now->diffInHours($studentDeadline);
 
     if ($studentHoursLeft < $leftToDeadline) {

@@ -30,8 +30,7 @@
                             <div class="card">
 
                                 <div class="card-body">
-                                    <table class="table table-striped table-bordered table-hover datatable"
-                                        style="width: max-100%">
+                                    <table class="table table-striped table-bordered table-hover datatable mw-100">
                                         <thead>
                                             <tr>
                                                 <th>#</th>
@@ -53,7 +52,9 @@
                                                         );
 
                                                         $studentTimeAllowed = Carbon\Carbon::now()->diffInHours(
-                                                            (new Carbon\Carbon($std_info['registered']))->addDays(2),
+                                                            (new Carbon\Carbon($std_info['registered']))->addDays(
+                                                                config(EXAM_DEADLINE_AFTER_REGISTRATION, 2),
+                                                            ),
                                                         );
 
                                                         // ->diffInHours(new Carbon\Carbon($std_info['exam_date']));

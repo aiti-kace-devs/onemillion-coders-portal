@@ -158,6 +158,7 @@
     </style>
 </head>
 
+
 <body>
     <header>
         <h1>One Million Coders Program (Pilot Courses)</h1>
@@ -217,7 +218,7 @@
             @endforeach
         </div>
 
-    <script>
+    <script @nonce>
         function showCategory(category) {
             const sections = document.querySelectorAll('.course-section');
             sections.forEach(section => {
@@ -242,5 +243,6 @@
         }
     </script>
 </body>
+
 
 </html>

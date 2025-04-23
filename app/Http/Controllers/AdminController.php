@@ -36,7 +36,7 @@ use App\Mail\ExamLoginCredentials;
 use App\Mail\StudentAdmitted;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Auth;
-
+use App\Models\AdmissionRejection;
 use App\Helpers\GoogleSheets;
 use App\Models\Course;
 use App\Models\Branch;
@@ -55,7 +55,7 @@ class AdminController extends Controller
     public function index()
     {
         $user_count = User::get()->count();
-        $exam_count = Oex_exam_master::get()->count();
+        $shortlist_count = User::where('shortlist', 1)->count();
         $admin_count = Admin::get()->count();
         $user_admission_count = UserAdmission::whereNotNull('session')->count();
         $programe_count = Programme::get()->count();
@@ -124,7 +124,7 @@ class AdminController extends Controller
 
         return view('admin.dashboard', [
             'student' => $user_count,
-            'exam' => $exam_count,
+            'shortlist' => $shortlist_count,
             'admin' => $admin_count,
             'admission' => $user_admission_count,
             'course' => $programe_count,
@@ -367,12 +367,7 @@ class AdminController extends Controller
 
         $distinctAges = User::select('age')->whereNotNull('age')->distinct()->orderBy('age')->pluck('age')->toArray();
 
-        $data['availableAges'] = User::whereNotNull('age')
-            ->select('age')
-            ->distinct()
-            ->orderBy('age')
-            ->pluck('age')
-            ->toArray();
+        $data['availableAges'] = User::whereNotNull('age')->select('age')->distinct()->orderBy('age')->pluck('age')->toArray();
 
         if ($request->ajax()) {
             $baseQuery = user_exam::with('result')
@@ -407,7 +402,7 @@ class AdminController extends Controller
             // }
 
             if ($request->has('admission_status')) {
-                $admissionStatuses = (array)$request->admission_status;
+                $admissionStatuses = (array) $request->admission_status;
                 $baseQuery->where(function ($query) use ($admissionStatuses) {
                     foreach ($admissionStatuses as $status) {
                         if ($status === 'Admitted') {
@@ -442,7 +437,9 @@ class AdminController extends Controller
                 $selectedAges = (array) $request->age_range;
                 $baseQuery->where(function ($query) use ($selectedAges) {
                     foreach ($selectedAges as $age) {
-                        if ($age === '0') continue;
+                        if ($age === '0') {
+                            continue;
+                        }
                         $query->orWhere('users.age', $age);
                     }
                 });
@@ -509,15 +506,24 @@ class AdminController extends Controller
                     return $passed ? '<span class="badge badge-success">PASS</span>' : '<span class="badge badge-danger">FAIL</span>';
                 })
                 ->addColumn('actions', function ($std) {
-                    $buttons = ['<a href="' . url('admin/delete_students/' . $std->id) . '" class="btn btn-danger btn-sm">Delete</a>'];
+                    $buttons = [];
+
+                    $viewButton = '<a href="' . url('admin/admin_view_result/' . $std->user_id) . '" class="btn btn-success">' . 'View <i class="fas fa-poll"></i>' . '</a>';
+
+                    $dropdownToggle = '<button type="button" class="btn btn-success btn-sm dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-expanded="false">' . '<span class="sr-only">Toggle Dropdown</span>' . '</button>';
+
+                    $dropdownMenu = '<div class="dropdown-menu">';
+                    $dropdownMenu .= '<a class="dropdown-item" href="' . url('admin/delete_students/' . $std->id) . '">Delete <i class="fas fa-trash-alt"></i></a>';
+                    $dropdownMenu .= '<a class="dropdown-item" href="' . route('admin.reset-exam', [$std->exam_id, $std->user_id]) . '">Reset Result <i class="fas fa-redo"></i></a>';
+                    $dropdownMenu .= '</div>';
 
                     if ($std->exam_joined) {
-                        $buttons[] = '<a href="' . url('admin/admin_view_result/' . $std->user_id) . '" class="btn btn-success btn-sm">View Result</a>';
+                        return '<div class="btn-group">' . $viewButton . $dropdownToggle . $dropdownMenu . '</div>';
+                    } else {
+                        $buttons[] = '<a href="' . url('admin/delete_students/' . $std->id) . '" class="btn btn-danger btn-sm">Delete <i class="fas fa-trash-alt"></i></a>';
+                        $buttons[] = '<a href="' . route('admin.reset-exam', [$std->exam_id, $std->user_id]) . '" class="btn btn-info btn-sm">Reset Result <i class="fas fa-redo"></i></a>';
+                        return '<div class="btn-group">' . implode('', $buttons) . '</div>';
                     }
-
-                    $buttons[] = '<a href="' . route('admin.reset-exam', [$std->exam_id, $std->user_id]) . '" class="btn btn-info btn-sm">Reset Result</a>';
-
-                    return implode(' ', $buttons);
                 })
                 ->with(['all_filtered_ids' => $baseQuery->pluck('user_exams.id')->toArray()])
                 ->rawColumns(['checkbox', 'result', 'status', 'actions'])
@@ -527,7 +533,6 @@ class AdminController extends Controller
         $data['mailable'] = MailerHelper::getMailableClasses();
 
         // return view('mailables.index', ['mailables' => $mailables]);
-
 
         return view('admin.manage_students', $data);
     }
@@ -694,7 +699,7 @@ class AdminController extends Controller
     //Registered student page
     public function registered_students()
     {
-        $data['users'] = User::select('users.*', 'user_admission.id as admitted', 'courses.course_name', 'course_sessions.name as session_name', 'user_admission.session as session_id', 'courses.id as course_id')->leftJoin('user_admission', 'users.userId', '=', 'user_admission.user_id')->leftJoin('courses', 'user_admission.course_id', '=', 'courses.id')->leftJoin('course_sessions', 'user_admission.session', '=', 'course_sessions.id')->get();
+        $data['users'] = User::select('users.*', 'user_admission.id as admitted', 'courses.course_name', 'course_sessions.name as session_name', 'user_admission.session as session_id', 'courses.id as course_id')->leftJoin('user_admission', 'users.userId', '=', 'user_admission.user_id')->leftJoin('courses', 'user_admission.course_id', '=', 'courses.id')->leftJoin('course_sessions', 'user_admission.session', '=', 'course_sessions.id')->paginate(15);
         $courses = Course::all();
         $sessions = CourseSession::all();
         $data['courses'] = $courses;
@@ -896,6 +901,31 @@ class AdminController extends Controller
         ]);
     }
 
+
+
+    public function delete_admission($user_id, Request $request)
+    {
+        $delete_user_admission = UserAdmission::where('user_id', $user_id)->first();
+
+        if ($delete_user_admission) {
+            $delete_user_admission->delete();
+            AdmissionRejection::create([
+                'user_id' => $user_id,
+                'course_id' => $delete_user_admission->course_id,
+                'rejected_at' => now(),
+            ]);
+
+            User::where('userId', $user_id)->update(['shortlist' => 0]);
+
+            return response()->json(['message' => 'User admission and shortlisted deleted successfully.'], 200);
+        } else {
+            return response()->json(['message' => 'User admission not found.'], 404);
+        }
+    }
+
+
+
+
     public function verification_page(Request $request)
     {
         $allCourses = Course::all();
@@ -947,83 +977,47 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'course_id' => 'required|exists:courses,id',
-            'session_id' => 'required|exists:course_sessions,id',
-            'user_id' => 'required|exists:users,userId',
+            'session_id' => 'sometimes|exists:course_sessions,id',
+            'user_id' => 'sometimes|nullable|required_if:user_ids,null|exists:users,userId',
             'change' => 'sometimes',
+            'user_ids' => 'sometimes|nullable|required_if:user_id,null|array',
+            'user_ids.*' => 'exists:users,userId',
         ]);
-    
+
+
         $course = Course::find($validated['course_id']);
-        $session = CourseSession::find($validated['session_id']);
-        $user_id = $validated['user_id'];
+        $session = CourseSession::find($validated['session_id'] ?? '');
         $change = $validated['change'] == 'true';
-        $user = User::where('userId', $user_id)->first();
-    
-        if ($session->course_id != $course->id) {
+
+        if ($session && $session->course_id != $course->id) {
             return redirect()->back()->with([
                 'flash' => 'Session not valid for selected course',
                 'key' => 'error',
             ]);
         }
-    
-        CreateStudentAdmissionJob::dispatch($user, $course, $session);
-    
-        $message = 'Student admitted successfully';
-    
-        $oldAdmission = UserAdmission::where('user_id', $user_id)->first();
-        $url = url('student/select-session/' . $user_id);
-    
-        try {
-            if ($oldAdmission && !$oldAdmission->email_sent) {
-                try {
-                    Mail::to($user->email)->queue(new StudentAdmitted($user));
-                    $oldAdmission->email_sent = now();
-                    $oldAdmission->save();
-                } catch (\Exception $e) {
-                    \Log::warning('Failed to send admission email (existing admission): ' . $e->getMessage());
-                }
-            }
-    
+        $message = 'Student(s) admitted successfully';
+
+        if ($validated['user_id'] ?? false) {
+            $user_id = $validated['user_id'];
+            $user = User::where('userId', $user_id)->first();
+            CreateStudentAdmissionJob::dispatch($user, $course, $session);
+            $oldAdmission = UserAdmission::where('user_id', $user_id)->first();
             if ($oldAdmission && $change) {
                 $message = 'Student admission changed successfully';
             }
-    
-            if (!$oldAdmission) {
-                $admission = new UserAdmission();
-                $admission->user_id = $user_id;
-                $admission->course_id = $course->id;
-                $admission->email_sent = now(); // Update immediately even if email fails
-                $admission->session = $session->id;
-                $admission->confirmed = now();
-                $admission->location = $course->location;
-                $admission->save();
-    
-                try {
-                    Mail::to($user->email)
-                        ->bcc(env('MAIL_FROM_ADDRESS', 'no-reply@gi-kace.gov.gh'))
-                        ->queue(new StudentAdmitted($user));
-                } catch (\Exception $e) {
-                    \Log::warning('Failed to send admission email (new admission): ' . $e->getMessage());
-                }
-    
-                AdmitStudentJob::dispatch($admission);
+        } else if (count($validated['user_ids'] ?? []) > 0) {
+            $user_ids = $validated['user_ids'];
+            foreach ($user_ids as $user_id) {
+                $user = User::where('userId', $user_id)->first();
+                CreateStudentAdmissionJob::dispatch($user, $course, $session);
             }
-    
-            return redirect()->back()->with([
-                'flash' => $message,
-                'key' => 'success',
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Admit Student Error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-    
-            return redirect(url('student/select-session/' . $user_id))->with([
-                'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
-                'key' => 'error',
-            ]);
         }
+        return redirect()->back()->with([
+            'flash' => $message,
+            'key' => 'success',
+        ]);
     }
-    
+
 
     public function reset_verify($userId)
     {
@@ -1198,11 +1192,20 @@ class AdminController extends Controller
             'subject' => 'required',
             'message' => 'sometimes',
             'template' => 'required_if:message,null',
-            'student_ids' => 'required|array',
+            'student_ids' => 'required_if:list,null|nullable|array',
             'student_ids.*' => 'exists:users,id',
+            'list' => 'required_if:student_ids,null|nullable|string'
         ], [], [
             'student_ids.*' => 'student'
         ]);
+
+        // if no list_name or students_id
+        if (empty($validated['list']) && empty($validated['student_ids'])) {
+            return redirect()->back()->with([
+                'flash' => 'No students/ list selected.',
+                'key' => 'error',
+            ]);
+        }
 
         SendBulkEmailJob::dispatch($validated);
 
@@ -1214,8 +1217,6 @@ class AdminController extends Controller
             ]);
     }
 
-
-
     public function fetch_sms_template()
     {
         // Fetch the templates
@@ -1224,11 +1225,6 @@ class AdminController extends Controller
         return response()->json($templates);
     }
 
-
-
-
-
-
     public function sendBulkSMS(Request $request)
     {
 
@@ -1236,31 +1232,25 @@ class AdminController extends Controller
         if (empty($studentIds)) {
             return response()->json(['success' => false, 'message' => 'No students selected.'], 400);
         }
-    
+
         try {
             foreach ($studentIds as $studentId) {
                 $user = User::where('userId', $studentId)->first();
                 if (!$user) continue;
-
-        
             }
 
             return redirect()
-            ->back()
-            ->with([
-                'flash' => 'SMS sending initiated successfully!',
-                'key' => 'success',
-            ]);
-
-
+                ->back()
+                ->with([
+                    'flash' => 'SMS sending initiated successfully!',
+                    'key' => 'success',
+                ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
-
-
     }
 
 
@@ -1269,44 +1259,44 @@ class AdminController extends Controller
 
     // public function sendBulkSMS(Request $request)
     // {
-        // $validated = $request->validate([
-        //     'message' => 'required|string',
-        //     'student_ids' => 'required|array',
-        //     'student_ids.*' => 'exists:users,id',
-        // ], [], [
-        //     'student_ids.*' => 'student'
-        // ]);
+    // $validated = $request->validate([
+    //     'message' => 'required|string',
+    //     'student_ids' => 'required|array',
+    //     'student_ids.*' => 'exists:users,id',
+    // ], [], [
+    //     'student_ids.*' => 'student'
+    // ]);
 
-        // Log::info('Students student_ids.', $mobileNumbers);
+    // Log::info('Students student_ids.', $mobileNumbers);
 
-        // // Fetch mobile numbers of selected students
-        // $mobileNumbers = User::whereIn('userId', $validated['student_ids'])
-        //     ->pluck('mobile_no')
-        //     ->filter() // Remove any null values
-        //     ->toArray();
+    // // Fetch mobile numbers of selected students
+    // $mobileNumbers = User::whereIn('userId', $validated['student_ids'])
+    //     ->pluck('mobile_no')
+    //     ->filter() // Remove any null values
+    //     ->toArray();
 
-        // if (empty($mobileNumbers)) {
-        //     return redirect()->back()->with([
-        //         'flash' => 'No valid mobile numbers found.',
-        //         'key' => 'error',
-        //     ]);
-        // }
+    // if (empty($mobileNumbers)) {
+    //     return redirect()->back()->with([
+    //         'flash' => 'No valid mobile numbers found.',
+    //         'key' => 'error',
+    //     ]);
+    // }
 
-        // Log::info('Students mobileNumbers.', $mobileNumbers);
+    // Log::info('Students mobileNumbers.', $mobileNumbers);
 
-        // // Dispatch job for bulk SMS sending
-        // $message = (string) $validated['message'];
-        // $recipients = array_filter((array) $mobileNumbers);
+    // // Dispatch job for bulk SMS sending
+    // $message = (string) $validated['message'];
+    // $recipients = array_filter((array) $mobileNumbers);
 
-        // //SendBulkSMSJob::dispatch($message, $recipients);
+    // //SendBulkSMSJob::dispatch($message, $recipients);
 
 
-        // return redirect()
-        //     ->back()
-        //     ->with([
-        //         'flash' => 'SMS sending initiated successfully!',
-        //         'key' => 'success',
-        //     ]);
+    // return redirect()
+    //     ->back()
+    //     ->with([
+    //         'flash' => 'SMS sending initiated successfully!',
+    //         'key' => 'success',
+    //     ]);
     // }
 
 
@@ -1317,15 +1307,28 @@ class AdminController extends Controller
     public function saveShortlistedStudents(Request $request)
     {
         $request->validate([
-            'emails' => 'required|array',
+            'emails' => 'sometimes|array',
             'emails.*' => 'email',
+            'student_ids' => 'sometimes|array',
+            'student_ids.*' => 'numeric',
+            'phone_numbers' => 'sometimes|array',
+            // 'phone_numbers.*' => 'phone'
         ], [], [
-            'emails.*' => 'email address'
+            'emails.*' => 'email address',
+            'student_ids.*' => 'student'
         ]);
+        if (empty($request->input('emails')) && empty($request->input('student_ids')) && empty($request->input('phone_numbers'))) {
+            return response()->json([
+                'message' => 'Email(s), Student ID(s), or PhoneNumber(s) are required.',
+            ], 400);
+        }
 
-        $emails = $request->input('emails');
+        $data = $request->input('emails') ?? $request->input('student_ids') ?? $request->input('phone_numbers');
+        $columnName  = $request->has('emails')
+            ? 'email'
+            : ($request->has('phone_numbers') ? 'mobile_no' : 'id');;
 
-        $usersToUpdate = User::whereIn('email', $emails)
+        $usersToUpdate = User::whereIn($columnName, (array) $data)
             ->where(function ($query) {
                 $query->whereNull('shortlist')
                     ->orWhere('shortlist', '!=', 1);
@@ -1344,5 +1347,16 @@ class AdminController extends Controller
         return response()->json([
             'message' => "$updatedCount user(s) successfully shortlisted.",
         ]);
+    }
+
+
+    public function getSettingsPage()
+    {
+        return view('admin.appsettings.index');
+    }
+
+    public function saveSettings(Request $request)
+    {
+        // $validated =
     }
 }

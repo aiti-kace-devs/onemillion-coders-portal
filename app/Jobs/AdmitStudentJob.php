@@ -36,8 +36,8 @@ class AdmitStudentJob implements ShouldQueue
     {
         $this->admission = $admission;
         $this->student = User::where('userId', $this->admission->user_id)->first();
-        $this->course = Course::findOrFail($this->admission->course_id);
-        $this->session = CourseSession::findOrFail($this->admission->session);
+        $this->course = Course::find($this->admission->course_id);
+        $this->session = CourseSession::find($this->admission->session);
     }
 
     /**
@@ -57,19 +57,23 @@ class AdmitStudentJob implements ShouldQueue
 
     private function sendConfirmationEmail()
     {
-        Mail::to($this->student->email)->bcc(env('MAIL_FROM_ADDRESS', 'no-reply@example.com'))
-            ->send(new ConfirmationSuccessful(
-                $this->student->name,
-                $this->session
-            ));
+        if (config(SEND_EMAIL_AFTER_ADMISSION_CONFIRMATION, true)) {
+            Mail::to($this->student->email)->bcc(env('MAIL_FROM_ADDRESS', 'no-reply@example.com'))
+                ->send(new ConfirmationSuccessful(
+                    $this->student->name,
+                    $this->session
+                ));
+        }
 
-        $smsContent = SmsHelper::getTemplate(AFTER_ADMISSION_CONFIRMATION_SMS, [
-            'name' => $this->student->name,
-            'course' => $this->course->programme->title,
-        ]) ?? '';;
-        $details['message'] = $smsContent;
-        $details['phonenumber'] = $this->student->mobile_no;
+        if (config(SEND_SMS_AFTER_ADMISSION_CONFIRMATION, true)) {
+            $smsContent = SmsHelper::getTemplate(AFTER_ADMISSION_CONFIRMATION_SMS, [
+                'name' => $this->student->name,
+                'course' => $this->course->programme->title,
+            ]) ?? '';;
+            $details['message'] = $smsContent;
+            $details['phonenumber'] = $this->student->mobile_no;
 
-        SendSMSAfterRegistrationJob::dispatch($details);
+            SendSMSAfterRegistrationJob::dispatch($details);
+        }
     }
 }
