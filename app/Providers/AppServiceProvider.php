@@ -30,5 +30,12 @@ class AppServiceProvider extends ServiceProvider
             ->getDoctrineSchemaManager()
             ->getDatabasePlatform()
             ->registerDoctrineTypeMapping('enum', 'string');
+
+        if ($this->app->isLocal()) {
+            // Set CSP nonce for Laravel Debugbar during development
+            if (class_exists(\Barryvdh\Debugbar\Facades\Debugbar::class) && app()->bound('debugbar')) {
+                app('debugbar')->getJavascriptRenderer()->setCspNonce(csp_nonce());
+            }
+        }
     }
 }
