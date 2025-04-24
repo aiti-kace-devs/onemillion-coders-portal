@@ -929,7 +929,7 @@ class AdminController extends Controller
 
     public function verification_page(Request $request)
     {
-        $allCourses = Course::all();
+        $allCourses = auth('admin')->user()->assignedCourses()->get();
         $students = [];
 
         $selectedCourse = $request->input('course_id');
@@ -952,7 +952,7 @@ class AdminController extends Controller
 
     public function viewAttendanceByDate(Request $request)
     {
-        $courses = Course::all();
+        $courses = auth('admin')->user()->assignedCourses()->get();
         $attendance = collect();
         $selectedCourse = null;
         $selectedDate = null;
