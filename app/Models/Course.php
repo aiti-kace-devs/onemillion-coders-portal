@@ -31,7 +31,27 @@ class Course extends Model
     }
 
     public function assignedAdmins()
-{
-    return $this->belongsToMany(Admin::class, 'admin_course', 'course_id', 'admin_id');
-}
+    {
+        return $this->belongsToMany(Admin::class, 'admin_course', 'course_id', 'admin_id');
+    }
+
+    public function sessions()
+    {
+        return $this->hasMany(CourseSession::class, 'course_id',);
+    }
+
+    public function scopeMyAssignedCourses($query)
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            return $query->whereNull('id');
+        }
+
+        if ($user->can('attendance.status')) {
+            return $query;
+        } else {
+            return $query->whereIn('courses.id', $user->assignedCourses()->pluck('id')->toArray());
+        }
+    }
 }

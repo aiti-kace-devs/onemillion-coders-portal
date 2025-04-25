@@ -41,12 +41,23 @@
     <link rel="stylesheet" href="{{ url('assets/plugins/summernote/summernote-bs4.min.css') }}">
     {{-- <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.21/css/dataTables.bootstrap4.min.css"> --}}
     <link rel="stylesheet" href="{{ url('assets/js/jquery-multiselect.min.css') }}">
+    <link rel="stylesheet" href="{{ url('assets/js/bootstrap-multiselect.min.css') }}">
+
 
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/dataTables.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/responsive.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/plugins/datatables-new/buttons.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.4.0/styles/default.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+    <style @nonce>
+        .multiselect-container {
+            width: 100%;
+        }
+
+        .multiselect-native-select>.btn-group {
+            width: 100% !important;
+        }
+    </style>
 
 
     {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"
@@ -129,15 +140,15 @@
                         data-accordion="false">
                         <!-- Add icons to the links using the .nav-icon class
                with font-awesome or any other icon font library -->
-                            <li class="nav-item">
-                                <a href="{{ url('admin/dashboard') }}"
-                                    class="nav-link @if (request()->is('admin/dashboard')) active @endif">
-                                    <i class="nav-icon fas fa-tachometer-alt"></i>
-                                    <p>
-                                        Dashboard
-                                    </p>
-                                </a>
-                            </li>
+                        <li class="nav-item">
+                            <a href="{{ url('admin/dashboard') }}"
+                                class="nav-link @if (request()->is('admin/dashboard')) active @endif">
+                                <i class="nav-icon fas fa-tachometer-alt"></i>
+                                <p>
+                                    Dashboard
+                                </p>
+                            </a>
+                        </li>
 
                         @can('category.read')
                             <li class="nav-item">
@@ -221,16 +232,16 @@
                             </li>
                         @endcan
 
-                        {{-- @can('student.read') --}}
-                        <li class="nav-item">
-                            <a href="{{ url('admin/manage_students') }}"
-                                class="nav-link @if (request()->is('admin/manage_students')) active @endif">
+                        @canany('student.read|student.bulk-sms|student.admit|student.email|student.shortlist')
+                            <li class="nav-item">
+                                <a href="{{ url('admin/manage_students') }}"
+                                    class="nav-link @if (request()->is('admin/manage_students')) active @endif">
 
-                                <i class="fas fa-user nav-icon"></i>
-                                <p>Students</p>
-                            </a>
-                        </li>
-                        {{-- @endcan --}}
+                                    <i class="fas fa-user nav-icon"></i>
+                                    <p>Students</p>
+                                </a>
+                            </li>
+                        @endcanany
 
                         @can('student.admit')
                             <li class="nav-item">
@@ -468,6 +479,7 @@
     <script src="{{ url('assets/plugins/datatables-new/buttons.print.min.js') }}"></script>
     <script src="{{ url('assets/plugins/datatables-new/buttons.colVis.min.js') }}"></script>
     <script type="text/javascript" src="{{ url('assets/js/jquery-multiselect.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url('assets/js/bootstrap-multiselect.min.js') }}"></script>
 
     {{-- end datatables  --}}
     {{-- <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
@@ -518,8 +530,7 @@
                 document.title = document.title + " - {{ config('app.name') }}"
             }
         });
-    </script>
-    <script @nonce>
+
         const flashMessage = "{{ session('flash') }}";
         const key = "{{ session('key') }}";
 
@@ -531,6 +542,20 @@
                 })
             }, 500);
         }
+
+        // $('select[multiple]').multiSelect({
+        //     noneText: 'Select...',
+        //     allText: 'Select All',
+        //     presets: [{
+        //             name: 'All',
+        //             all: true
+        //         },
+        //         {
+        //             name: 'Clear',
+        //             options: []
+        //         }
+        //     ]
+        // });
     </script>
     @stack('scripts')
 </body>
