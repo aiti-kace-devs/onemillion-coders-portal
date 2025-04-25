@@ -72,15 +72,42 @@
                                     <div v-if="form.columns.length > 0" class="mt-2 flex flex-wrap gap-2">
                                         <div v-for="(column, index) in form.columns" :key="index"
                                             class="inline-flex items-center bg-blue-50 text-blue-800 rounded-full px-3 py-1 text-sm font-medium">
-                                            <span class="truncate max-w-[200px]">
-                                                {{ column.name.split('.')[1] || column.name }}
-                                                <span v-if="column.alias" class="text-blue-600"> (as {{ column.alias
-                                                }})</span>
-                                            </span>
-                                            <button type="button" @click="removeColumn(index)"
-                                                class="ml-1.5 text-blue-500 hover:text-blue-700 focus:outline-none">
-                                                <span class="material-symbols-outlined text-sm">close</span>
-                                            </button>
+                                            <template v-if="column.editing">
+                                                <!-- Edit mode -->
+                                                <div class="flex items-center gap-2">
+                                                    <select v-model="column.editName"
+                                                        class="text-sm border rounded px-2 py-1 bg-white">
+                                                        <option v-for="col in allAvailableColumns" :key="col.name"
+                                                            :value="col.name" :selected="col.name === column.name">
+                                                            {{ col.name }} ({{ col.type }})
+                                                        </option>
+                                                    </select>
+                                                    <TextInput type="text" v-model="column.editAlias"
+                                                        placeholder="Alias"
+                                                        class="text-sm border rounded px-2 py-1 w-24" />
+                                                    <button type="button" @click.stop="saveColumnEdit(index)"
+                                                        class="text-green-600 hover:text-green-800">
+                                                        <span class="material-symbols-outlined text-sm">check</span>
+                                                    </button>
+                                                    <button type="button" @click.stop="cancelColumnEdit(index)"
+                                                        class="text-red-600 hover:text-red-800">
+                                                        <span class="material-symbols-outlined text-sm">close</span>
+                                                    </button>
+                                                </div>
+                                            </template>
+                                            <template v-else>
+                                                <!-- Display mode -->
+                                                <span class="truncate max-w-[200px] cursor-pointer"
+                                                    @click="startColumnEdit(index)">
+                                                    {{ column.name }}
+                                                    <span v-if="column.alias" class="text-blue-600"> (as {{ column.alias
+                                                    }})</span>
+                                                </span>
+                                                <button type="button" @click.stop="removeColumn(index)"
+                                                    class="ml-1.5 text-blue-500 hover:text-blue-700 focus:outline-none">
+                                                    <span class="material-symbols-outlined text-sm">close</span>
+                                                </button>
+                                            </template>
                                         </div>
                                     </div>
                                     <div v-else class="mt-2 text-gray-500 italic">
@@ -88,7 +115,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Add Column Form -->
+                                <!-- Add Column Form (remain the same) -->
                                 <div class="border p-4 rounded-lg bg-gray-50">
                                     <InputLabel value="Add New Column" />
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
@@ -101,7 +128,7 @@
                                                     :key="groupName" :label="groupName">
                                                     <option v-for="col in group" :key="col.name" :value="col.name"
                                                         :disabled="isColumnSelected(col.name)">
-                                                        {{ col.name.split('.')[1] }} ({{ col.type }})
+                                                        {{ col.name }} ({{ col.type }})
                                                     </option>
                                                 </optgroup>
                                             </SelectInput>
@@ -497,6 +524,10 @@ export default {
             testResult: null,
             showQueryDetails: false,
             isTesting: false,
+            newColumn: {
+                name: '',
+                alias: ''
+            },
         };
     },
     computed: {
@@ -545,6 +576,48 @@ export default {
         }
     },
     methods: {
+        startColumnEdit(index) {
+            // Set editing mode for the clicked column
+            this.form.columns = this.form.columns.map((col, i) => {
+                if (i === index) {
+                    return {
+                        ...col,
+                        editing: true,
+                        editName: col.name,
+                        editAlias: col.alias
+                    };
+                }
+                return col;
+            });
+        },
+
+        saveColumnEdit(index) {
+            // Save the edited values
+            this.form.columns = this.form.columns.map((col, i) => {
+                if (i === index) {
+                    return {
+                        ...col,
+                        name: col.editName,
+                        alias: col.editAlias,
+                        editing: false
+                    };
+                }
+                return col;
+            });
+        },
+
+        cancelColumnEdit(index) {
+            // Cancel editing and revert changes
+            this.form.columns = this.form.columns.map((col, i) => {
+                if (i === index) {
+                    return {
+                        ...col,
+                        editing: false
+                    };
+                }
+                return col;
+            });
+        },
         isColumnSelected(columnName) {
             return this.form.columns.some(col => col.name === columnName);
         },
