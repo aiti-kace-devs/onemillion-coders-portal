@@ -61,7 +61,7 @@ class BasePolicy extends Basic
                 'fonts.bunny.net',
                 'maxcdn.bootstrapcdn.com',
                 'cdn.jsdelivr.net',
-                Keyword::UNSAFE_INLINE,
+                // Keyword::UNSAFE_INLINE,
 
             ])
             ->addDirective(Directive::FONT, [
@@ -73,7 +73,7 @@ class BasePolicy extends Basic
                 'fonts.bunny.net',
                 'data:',
                 'maxcdn.bootstrapcdn.com',
-                Keyword::UNSAFE_INLINE,
+                // Keyword::UNSAFE_INLINE,
 
             ])
             ->addDirective(Directive::WORKER, [

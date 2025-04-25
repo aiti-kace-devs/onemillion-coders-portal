@@ -25,9 +25,9 @@ class AttendanceController extends Controller
 
         $date = Carbon::parse($data['date']);
 
-        if ($date->isWeekend()) {
-            return response()->json(["message" => 'Date is a weekend'], 400);
-        }
+        // if ($date->isWeekend()) {
+        //     return response()->json(["message" => 'Date is a weekend'], 400);
+        // }
 
         // $course = Course::findOrFail($courseId);
         $course = Course::findOrFail($data['course_id']);
@@ -160,9 +160,9 @@ class AttendanceController extends Controller
 
     private function createAttendance($user_id, $course_id, $date)
     {
-        if (Carbon::parse($date)->isWeekend()) {
-            return false;
-        }
+        // if (Carbon::parse($date)->isWeekend()) {
+        //     return false;
+        // }
 
         $attendanceRecord = Attendance::where('user_id', $user_id)->whereDate('date', $date)->first();
 
@@ -187,9 +187,9 @@ class AttendanceController extends Controller
             'date' => 'required|date|before_or_equal:' . now()->toDateString(),
         ]);
         $carbonDate = Carbon::parse($data['date']);
-        if ($carbonDate->isWeekend()) {
-            return response()->json(['message' => 'Cannot confirm attendance for a weekend', 'success' => false]);
-        }
+        // if ($carbonDate->isWeekend()) {
+        //     return response()->json(['message' => 'Cannot confirm attendance for a weekend', 'success' => false]);
+        // }
 
         if (!$carbonDate->is(Carbon::today()) && !auth()->user()->can('attendance.update')) {
             return response()->json(['message' => 'You can only confirm attendance for today - ' . Carbon::today()->format('l jS F, Y'), 'success' => false]);

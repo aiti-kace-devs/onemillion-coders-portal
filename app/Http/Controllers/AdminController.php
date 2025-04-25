@@ -54,11 +54,11 @@ class AdminController extends Controller
     // admin dashboard
     public function index()
     {
-        $user_count = User::get()->count();
+        $user_count = User::count();
         $shortlist_count = User::where('shortlist', 1)->count();
-        $admin_count = Admin::get()->count();
+        $admin_count = Admin::count();
         $user_admission_count = UserAdmission::whereNotNull('session')->count();
-        $programe_count = Programme::get()->count();
+        $programe_count = Programme::count();
 
         $studentsPerRegion = DB::table('users')
             ->join('courses', 'users.registered_course', '=', 'courses.id')
