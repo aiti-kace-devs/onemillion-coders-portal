@@ -174,8 +174,6 @@ export default {
             this.selectedRow = null;
         },
         showSmsModal(data) {
-            console.log("showSmsModal", data);
-
             this.selectedRow = data;
             this.smsMessage = '';
             this.smsModal = true;

@@ -45,8 +45,6 @@ class SendBulkEmailJob implements ShouldQueue
         ) {
             $this->correctTemplate = true;
         }
-
-        dump($data);
     }
 
     /**
@@ -93,7 +91,6 @@ class SendBulkEmailJob implements ShouldQueue
                     }
                 } else {
                     $emails = $chunk->pluck('email')->all();
-                    dump($emails);
                     Mail::to(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                         ->bcc($emails)
                         ->send(new GenericEmail($this->message, $this->subject));

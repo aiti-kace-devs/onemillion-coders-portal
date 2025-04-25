@@ -1239,12 +1239,10 @@ class AdminController extends Controller
 
         SendBulkEmailJob::dispatch($validated);
 
-        return redirect()
-            ->back()
-            ->with([
-                'flash' => 'Email sent successfully',
-                'key' => 'success',
-            ]);
+        return response()->json([
+            'flash' => 'SMS sending initiated successfully!',
+            'key' => 'success',
+        ]);
     }
 
     public function fetch_sms_template()
@@ -1255,79 +1253,34 @@ class AdminController extends Controller
         return response()->json($templates);
     }
 
+
+
     public function sendBulkSMS(Request $request)
     {
+        $validated = $request->validate([
+            'message' => 'required|string',
+            'student_ids' => 'sometimes|nullable|array',
+            'student_ids.*' => 'exists:users,id',
+            'list' => 'required_if:student_ids,null|nullable|string'
+        ], [], [
+            'student_ids.*' => 'student'
+        ]);
 
-        $studentIds = $request->student_ids;
-        if (empty($studentIds)) {
-            return response()->json(['success' => false, 'message' => 'No students selected.'], 400);
+        if (empty($validated['list']) && empty($validated['student_ids'])) {
+            return redirect()->back()->with([
+                'flash' => 'No students/ list selected.',
+                'key' => 'error',
+            ]);
         }
 
-        try {
-            foreach ($studentIds as $studentId) {
-                $user = User::where('userId', $studentId)->first();
-                if (!$user) continue;
-            }
+        SendBulkSMSJob::dispatch($validated);
 
-            return redirect()
-                ->back()
-                ->with([
-                    'flash' => 'SMS sending initiated successfully!',
-                    'key' => 'success',
-                ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ], 500);
-        }
+
+        return response()->json([
+            'flash' => 'SMS sending initiated successfully!',
+            'key' => 'success',
+        ]);
     }
-
-
-
-
-
-    // public function sendBulkSMS(Request $request)
-    // {
-    // $validated = $request->validate([
-    //     'message' => 'required|string',
-    //     'student_ids' => 'required|array',
-    //     'student_ids.*' => 'exists:users,id',
-    // ], [], [
-    //     'student_ids.*' => 'student'
-    // ]);
-
-    // Log::info('Students student_ids.', $mobileNumbers);
-
-    // // Fetch mobile numbers of selected students
-    // $mobileNumbers = User::whereIn('userId', $validated['student_ids'])
-    //     ->pluck('mobile_no')
-    //     ->filter() // Remove any null values
-    //     ->toArray();
-
-    // if (empty($mobileNumbers)) {
-    //     return redirect()->back()->with([
-    //         'flash' => 'No valid mobile numbers found.',
-    //         'key' => 'error',
-    //     ]);
-    // }
-
-    // Log::info('Students mobileNumbers.', $mobileNumbers);
-
-    // // Dispatch job for bulk SMS sending
-    // $message = (string) $validated['message'];
-    // $recipients = array_filter((array) $mobileNumbers);
-
-    // //SendBulkSMSJob::dispatch($message, $recipients);
-
-
-    // return redirect()
-    //     ->back()
-    //     ->with([
-    //         'flash' => 'SMS sending initiated successfully!',
-    //         'key' => 'success',
-    //     ]);
-    // }
 
 
 
