@@ -424,7 +424,7 @@ Route::prefix('admin')
             });
         });
 
-        Route::middleware('permission:student.bulk-email')->group(function () {
+        Route::middleware(['auth:admin', 'permission:student.bulk-email|sudent.bulk-sms'])->group(function () {
             // Route::get('/manage-lists', [ListController::class, 'index'])->name('lists.index')->middleware('admin.super');
             Route::get('/lists/fetch', [ListController::class, 'fetch'])->name('lists.fetch');
             Route::get('/lists/view-data', [ListController::class, 'viewData'])->name('lists.view-data');
