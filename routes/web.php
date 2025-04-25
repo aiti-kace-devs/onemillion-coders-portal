@@ -189,7 +189,7 @@ Route::prefix('admin')
                     ->middleware('permission:student.admit');
             });
 
-            Route::get('/manage_students', [AdminController::class, 'manage_students'])->name('manage_students');
+            Route::get('/manage_students', [AdminController::class, 'manage_students'])->name('manage_students')->middleware('permission:student.read|student.bulk-sms|student.admit|student.email|student.shortlist');
 
             Route::middleware('permission:student.read')->group(function () {
                 Route::get('/student_status/{id}', [AdminController::class, 'student_status'])

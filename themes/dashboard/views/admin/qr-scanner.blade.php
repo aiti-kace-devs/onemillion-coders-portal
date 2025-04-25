@@ -58,17 +58,7 @@
                 <!-- Small boxes (Stat box) -->
                 <form name="qr-form">
                     <div class="row">
-                        <div class="mb-4 col-md-4">
-                            <label for="course_id" class="form-label">Select Course</label>
-                            <select name="course_id" class="form-control">
-                                <option value="">Choose One</option>
-
-                                @foreach ($courses as $course)
-                                    <option value="{{ $course->id }}"> {{ $course->location }} -
-                                        {{ $course->course_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                        <x-course-selector :groupedCourses="$groupedCourses"></x-course-selector>
                         <div class="mb-4 col-md-2">
                             <label for="validity" class="form-label">Validity In Mins</label>
                             <input class="form-control" type="number" name="validity" id="" max="120"
@@ -85,7 +75,7 @@
                         </div>
                         <div class="mb-4 col-md-4">
                             <label for="date" class="form-label">Select Date</label>
-                            @can('attendance.status')
+                            @can('attendance.update')
                                 <input class="form-control" type="date" name="date" id=""
                                     max="{{ now()->toDateString() }}" value="{{ now()->toDateString() }}">
                             @else
@@ -194,6 +184,7 @@
             return values;
         }
 
+        const QREngine = QrScanner.createQrEngine(QrScanner.WORKER_PATH);
         const qrScanner = new QrScanner(
             document.getElementById('scanner'),
             async result => {
@@ -250,7 +241,9 @@
                 preferredCamera: 'environment',
                 highlightScanRegion: true,
                 highlightCodeOutline: true,
-                maxScansPerSecond: 1
+                maxScansPerSecond: 1,
+                qrEngine: QREngine,
+                alsoTryWithoutScanRegion: true
             },
         );
 

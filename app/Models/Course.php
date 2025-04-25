@@ -51,7 +51,7 @@ class Course extends Model
         if ($user->can('attendance.status')) {
             return $query;
         } else {
-            return $query->whereIn('courses.id', $user->assignedCourses()->pluck('course_id')->toArray());
+            return $query->whereIn('courses.id', $user->assignedCourses()->pluck('id')->toArray());
         }
     }
 }

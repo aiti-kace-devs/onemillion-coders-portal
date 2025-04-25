@@ -849,17 +849,19 @@ class AdminController extends Controller
     public function scan_qrcode_page()
     {
         // $courses = auth('admin')->user()->assignedCourses()->get();
-        $courses = Course::myAssignedCourses()->get();
+        $courses = Course::myAssignedCourses()->get()->groupBy('location');
 
         return view('admin.qr-scanner', [
             // "locations" => $locations,
-            'courses' => $courses,
+            'groupedCourses' => $courses,
         ]);
     }
 
     public function verifyDetails(Request $request)
     {
-        $courses = Course::all();
+        // $courses = Course::all();
+        $courses = Course::myAssignedCourses()->get()->groupBy('location');
+
 
         $students = collect();
         $selectedCourse = null;
@@ -888,7 +890,7 @@ class AdminController extends Controller
             $student->save();
             $student->verified_by_name = Admin::find($student->verified_by)->name;
 
-            UpdateSheetWithGhanaCardDetails::dispatch($student);
+            // UpdateSheetWithGhanaCardDetails::dispatch($student);
 
             return response()->json([
                 'success' => true,
@@ -929,13 +931,14 @@ class AdminController extends Controller
 
     public function verification_page(Request $request)
     {
-        $allCourses = auth('admin')->user()->assignedCourses()->get();
+        // $allCourses = auth('admin')->user()->assignedCourses()->get();
+        $allCourses = Course::myAssignedCourses()->get();
         $students = [];
 
         $selectedCourse = $request->input('course_id');
 
         if (isset($selectedCourse)) {
-            $students = UserAdmission::select('users.*', 'user_admission.created_at as admission_created', 'user_admission.updated_at as admission_updated', \DB::raw('(select admins.name from admins where admins.id = users.verified_by) as verified_by_name'))
+            $students = UserAdmission::select('users.*', 'user_admission.created_at as admission_created', 'user_admission.updated_at as admission_updated', DB::raw('(select admins.name from admins where admins.id = users.verified_by) as verified_by_name'))
                 ->join('users', 'users.userId', 'user_admission.user_id')
 
                 ->where('course_id', $selectedCourse)
@@ -943,26 +946,49 @@ class AdminController extends Controller
             $selectedCourse = Course::find($selectedCourse);
         }
 
+
         return view('admin.verification', [
             'courses' => $allCourses,
             'students' => $students,
             'selectedCourse' => $selectedCourse,
+            'groupedCourses' => $allCourses->groupBy('location'),
+
         ]);
     }
 
     public function viewAttendanceByDate(Request $request)
     {
-        $courses = auth('admin')->user()->assignedCourses()->get();
+        // $courses = auth('admin')->user()->assignedCourses()->get();
+        $courses = Course::myAssignedCourses()->get();
+        $sessions = CourseSession::whereIn('course_id', $courses->pluck('id')->all())
+            ->select('id', 'session', 'name', 'course_id')->get();
         $attendance = collect();
         $selectedCourse = null;
         $selectedDate = null;
 
         if ($request->has('course_id') && $request->has('date')) {
+            if (!in_array($request->course_id, $courses->pluck('id')->all())) {
+                return back()->with([
+                    'key' => 'error',
+                    'flash' => 'You do not have permission to view this course'
+                ]);
+            }
             $selectedCourse = Course::find($request->input('course_id'));
             $selectedDate = $request->input('date');
+            $selectedSessions = $request->input('session_ids') != "" ? explode(',', trim($request->input('session_ids'))) : [];
+
 
             if ($selectedCourse && $selectedDate) {
-                $attendance = Attendance::select('attendances.*', 'users.name', 'users.email')->join('users', 'users.userId', '=', 'attendances.user_id')->where('attendances.course_id', $selectedCourse->id)->whereDate('attendances.date', '=', $selectedDate)->get();
+                $attendance = Attendance::select('attendances.*', 'users.name', 'users.email', 'course_sessions.session')
+                    ->join('users', 'users.userId', '=', 'attendances.user_id')
+                    ->join('user_admission', 'user_admission.user_id', '=', 'users.userId')
+                    ->join('course_sessions', 'course_sessions.id', '=', 'user_admission.session')
+                    ->where('attendances.course_id', $selectedCourse->id)
+                    ->whereDate('attendances.date', '=', $selectedDate);
+                if ($selectedSessions && count($selectedSessions) > 0) {
+                    $attendance->whereIn('course_sessions.id', $selectedSessions);
+                }
+                $attendance = $attendance->get();
             }
         }
 
@@ -971,6 +997,9 @@ class AdminController extends Controller
             'attendance' => $attendance,
             'selectedCourse' => $selectedCourse,
             'selectedDate' => $selectedDate,
+            'sessions' => $sessions,
+            'groupedCourses' => $courses->groupBy('location'),
+            'selectedSessions' => $selectedSessions ?? []
         ]);
     }
 

@@ -186,9 +186,13 @@ class AttendanceController extends Controller
             'course_id' => 'required|exists:courses,id',
             'date' => 'required|date|before_or_equal:' . now()->toDateString(),
         ]);
-
-        if (Carbon::parse($data['date'])->isWeekend()) {
+        $carbonDate = Carbon::parse($data['date']);
+        if ($carbonDate->isWeekend()) {
             return response()->json(['message' => 'Cannot confirm attendance for a weekend', 'success' => false]);
+        }
+
+        if (!$carbonDate->is(Carbon::today()) && !auth()->user()->can('attendance.update')) {
+            return response()->json(['message' => 'You can only confirm attendance for today - ' . Carbon::today()->format('l jS F, Y'), 'success' => false]);
         }
 
 

@@ -45,6 +45,6 @@ class Admin extends Authenticatable
     }
     public function assignedCourses()
     {
-        return $this->belongsToMany(Course::class, 'admin_course', 'admin_id', 'course_id')->select('courses.*', 'courses.id as course_id');
+        return $this->belongsToMany(Course::class, 'admin_course', 'admin_id', 'course_id')->select('courses.*');
     }
 }
