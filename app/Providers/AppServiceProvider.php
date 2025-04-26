@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -37,5 +38,13 @@ class AppServiceProvider extends ServiceProvider
                 app('debugbar')->getJavascriptRenderer()->setCspNonce(csp_nonce());
             }
         }
+
+        if ($this->app->isProduction()) {
+            URL::forceScheme('https');
+        }
+
+        $this->app->singleton('SMSLogger', function ($app) {
+            return new \App\Logging\SMSLogger();
+        });
     }
 }

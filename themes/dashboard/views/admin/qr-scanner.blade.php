@@ -287,7 +287,11 @@
                     height: 400,
                     colorDark: "#000000",
                     colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
+                    correctLevel: QRCode.CorrectLevel.H,
+                    quietZone: 20,
+                    logo: "{{ asset('assets/images/logo-bt.png') }}",
+                    logoWidth: 170,
+                    logoHeight: 80,
                 });
             }
             qrcodeElem.prepend(

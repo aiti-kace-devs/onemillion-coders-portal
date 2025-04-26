@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class SendSmsJob implements ShouldQueue
 {
@@ -17,18 +18,25 @@ class SendSmsJob implements ShouldQueue
 
     protected $phone;
     protected $message;
+    protected $logger;
 
     public function __construct($phone, $message)
     {
-        $this->phone = $phone;
+        $this->phone =  is_array($phone) ? $phone : [$phone];
         $this->message = $message;
+        $this->logger = app('SMSLogger');
     }
 
 
 
     public function handle()
     {
-        \Log::info('Send SMS job has started.');
+        $LOGONLY = env('LOG_SMS_ONLY', app()->isLocal() ? true : false);
+
+        if ($LOGONLY) {
+            $this->logger->info("Sending SMS message. [LogOnly: TRUE] ", ['phonenumber(s)' =>  implode(',', $this->phone), 'message' => $this->message]);
+            return;
+        }
 
         try {
             $apiKey = env('ARKESEL_SMS_API_KEY');
@@ -40,14 +48,15 @@ class SendSmsJob implements ShouldQueue
             ])->post('https://sms.arkesel.com/api/v2/sms/send', [
                 'sender' => $sender,
                 'message' => $this->message,
-                'recipients' => [$this->phone],
+                'recipients' => $this->phone,
                 'sandbox' => env('USE_SMS_SANDBOX', config('app.env') === 'local' ? true : false),
             ]);
 
-            \Log::info('SMS Response', ['response' => $response->json()]);
+            $this->logger->info('SMS Sent Successfully ', ['response' => $response->json()]);
             return $response->json();
         } catch (\Exception $e) {
-            \Log::error('SMS Job Failed', ['error' => $e->getMessage()]);
+            $this->logger->error('Failed to send SMS ', ['phonenumber(s) ' =>  implode(', ', $this->phone), 'message' => $this->message, 'error' => $e->getMessage()]);
+            Log::error('SMS Job Failed', ['error' => $e->getMessage()]);
         }
     }
 }

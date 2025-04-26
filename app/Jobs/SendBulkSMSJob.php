@@ -69,28 +69,8 @@ class SendBulkSMSJob implements ShouldQueue
      */
     private function sendSMS(array $phone, string $message): void
     {
-        try {
-            $apiKey = env('ARKESEL_SMS_API_KEY');
-            $sender = substr(env('SMS_SENDER_NAME', 'ApTest'), 0, 11);
 
-            $response = Http::withHeaders([
-                'api-key' => $apiKey,
-            ])->post('https://sms.arkesel.com/api/v2/sms/send', [
-                'sender' => $sender,
-                'message' => $message,
-                'recipients' => $phone,
-                'sandbox' => env('USE_SMS_SANDBOX', config('app.env') === 'local' ? true : false),
-
-            ]);
-            $phoneNumbers = implode('|', $phone);
-            Log::info("SMS sent to {$phoneNumbers}", [
-                'response' => $response->json()
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Failed to send SMS to {$phoneNumbers}", [
-                'error' => $e->getMessage(),
-            ]);
-        }
+        SendSmsJob::dispatch($phone, $message);
     }
 
     /**
