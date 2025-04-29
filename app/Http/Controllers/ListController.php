@@ -223,7 +223,7 @@ class ListController extends Controller
         // dump($selectQuery->toSql());
         // Create the view
         try {
-            $name = Str::lower(Str::camel($viewName));
+            $name = Str::lower(Str::snake($viewName));
             DB::statement("CREATE OR REPLACE VIEW {$name} AS {$selectQuery->toSql()}");
             return redirect()->route('admin.lists.index')->with('success', 'List view created successfully!');
             //code...

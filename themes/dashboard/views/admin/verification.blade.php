@@ -10,8 +10,8 @@
             <div class="container-fluid">
                 <div class="row mb-2">
                     <div class="col-sm-6">
-                        <h1 class="m-0">Verify Students For {{ $selectedCourse?->course_name }},
-                            {{ $selectedCourse?->location }}</h1>
+                        <p class="m-0 text-primary">Verify Students For {{ $selectedCourse?->course_name }},
+                            {{ $selectedCourse?->location }}</p>
                     </div><!-- /.col -->
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
@@ -29,18 +29,7 @@
                             <!-- Default box -->
                             <div class="card">
                                 <div class="card-header">
-
-                                    <p>Select Course</p>
-                                    <select name="course_id" id="course_id" class="form-control">
-                                        <option value="">Select Course</option>
-
-                                        @foreach ($courses as $course)
-                                            <option value="{{ $course->id }}"
-                                                @if ($course->id == $selectedCourse?->id) selected @endif>
-                                                {{ $course->location }} -
-                                                {{ $course->course_name }}</option>
-                                        @endforeach
-                                    </select>
+                                    <x-course-selector :groupedCourses="$groupedCourses" :selectedCourse="$selectedCourse"></x-course-selector>
                                 </div>
                             </div>
                             <div class="card-body">

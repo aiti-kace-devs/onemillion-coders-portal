@@ -11,6 +11,25 @@
         #qrcode {
             height: 85vh
         }
+
+        #qr-overlay canvas {
+            border: 2px solid white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        #qr-overlay {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
     </style>
     <div class="content-wrapper">
         <!-- Content Header (Page header) -->
@@ -39,17 +58,7 @@
                 <!-- Small boxes (Stat box) -->
                 <form name="qr-form">
                     <div class="row">
-                        <div class="mb-4 col-md-4">
-                            <label for="course_id" class="form-label">Select Course</label>
-                            <select name="course_id" class="form-control">
-                                <option value="">Choose One</option>
-
-                                @foreach ($courses as $course)
-                                    <option value="{{ $course->id }}"> {{ $course->location }} -
-                                        {{ $course->course_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                        <x-course-selector :groupedCourses="$groupedCourses"></x-course-selector>
                         <div class="mb-4 col-md-2">
                             <label for="validity" class="form-label">Validity In Mins</label>
                             <input class="form-control" type="number" name="validity" id="" max="120"
@@ -66,18 +75,27 @@
                         </div>
                         <div class="mb-4 col-md-4">
                             <label for="date" class="form-label">Select Date</label>
-                            <input class="form-control" type="date" name="date" id=""
-                                max="{{ now()->toDateString() }}" value="{{ now()->toDateString() }}">
+                            @can('attendance.update')
+                                <input class="form-control" type="date" name="date" id=""
+                                    max="{{ now()->toDateString() }}" value="{{ now()->toDateString() }}">
+                            @else
+                                <input class="form-control" type="date" name="date" id="dateInput"
+                                    min="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}"
+                                    value="{{ now()->toDateString() }}">
+                                {{-- <small class="text-muted">You can only take attendance for today</small> --}}
+                            @endcan
                         </div>
                 </form>
             </div>
             <div class="row g-3 d-flex justify-content-center align-tems-center mb-4">
-                <button type="button" class="btn btn-primary col-auto" onclick="startScanner()">Start
+                <button type="button" class="btn btn-primary col-auto" id="startScanner">Start
                     QR Code Scanner</button>
-                <button type="button" class="btn btn-danger ml-4" onclick="stopScanner()">Stop QR Code Scanner</button>
-                <button type="button" class="btn btn-success ml-4" onclick="generateCode()">Generate QR Code</button>
-                <button type="button" class="btn btn-danger ml-4" onclick="stopCodeGeneration()">Stop QR Code
-                    Generation</button>
+                <button type="button" class="btn btn-danger ml-4" id="stopScanner">Stop QR Code Scanner</button>
+                @can('attendance.status')
+                    <button type="button" class="btn btn-success ml-4" id="generateCode">Generate QR Code</button>
+                    <button type="button" class="btn btn-danger ml-4" id="stopCodeGeneration">Stop QR Code
+                        Generation</button>
+                @endcan
 
             </div>
 
@@ -109,6 +127,37 @@
         const scannerElem = $('#scanner');
         const qrcodeElem = $('#qrcode');
 
+        const startScannerBtn = $('#startScanner');
+        const stopScannerBtn = $('#stopScanner');
+
+        const generateCodeBtn = $('#generateCode');
+        const stopCodeGenerationBtn = $('#stopCodeGeneration');
+
+        startScannerBtn.on('click', function() {
+            startScanner();
+        });
+        stopScannerBtn.on('click', function() {
+            stopScanner();
+        });
+        generateCodeBtn.on('click', function() {
+            generateCode();
+        });
+        stopCodeGenerationBtn.on('click', function() {
+            stopCodeGeneration();
+        });
+
+
+        $(document).ready(function() {
+            $('#dateInput').on('keydown', function(e) {
+                e.preventDefault();
+                return false;
+            }).on('change', function() {
+                if (this.value !== new Date().toISOString().split('T')[0]) {
+                    this.value = new Date().toISOString().split('T')[0];
+                    alert('You can only select today\'s date');
+                }
+            });
+        });
 
         function getFormValues() {
             // const values = $('').serializeArray();
@@ -135,6 +184,7 @@
             return values;
         }
 
+        const QREngine = QrScanner.createQrEngine(QrScanner.WORKER_PATH);
         const qrScanner = new QrScanner(
             document.getElementById('scanner'),
             async result => {
@@ -191,7 +241,9 @@
                 preferredCamera: 'environment',
                 highlightScanRegion: true,
                 highlightCodeOutline: true,
-                maxScansPerSecond: 1
+                maxScansPerSecond: 1,
+                qrEngine: QREngine,
+                alsoTryWithoutScanRegion: true
             },
         );
 
@@ -235,16 +287,20 @@
                     height: 400,
                     colorDark: "#000000",
                     colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
+                    correctLevel: QRCode.CorrectLevel.H,
+                    quietZone: 20,
+                    logo: "{{ asset('assets/images/logo-bt.png') }}",
+                    logoWidth: 170,
+                    logoHeight: 80,
                 });
             }
             qrcodeElem.prepend(
                 `<h3>This Code Expires In <span  id="timer" class="js-timeout">${values['validity']}: 00</span>. A new code will re-generate automatically </h3>
                 <br>
-                <div>
+                <div class="row g-3 d-flex justify-content-center align-tems-center mb-4">
                     <button onclick="copyToClipBoard(this)" class="btn btn-info" data-link="${data['url']}">Click to copy link</button>
-                </div>
-                `)
+                    <button type="button" class="btn btn-info ml-4" id="maximizeQR">Maximize QR Code</button>
+                </div>`)
             codeIinterval = setInterval(generateCode, 1000 * 60 * values['validity']);
             countdown();
         }
@@ -323,5 +379,97 @@
                 position: 'top-end'
             });
         }
+
+        function maximizeQRCode() {
+            const qrContainer = document.getElementById('qrcode');
+            const qrCanvas = qrContainer.querySelector('canvas');
+
+            if (!qrCanvas) {
+                Swal.fire({
+                    text: "Please generate a QR code first",
+                    icon: 'error',
+                    timer: 2000,
+                    toast: true,
+                    position: 'top'
+                });
+                return;
+            }
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'rgba(0,0,0,0.98)';
+            overlay.style.zIndex = '9999';
+            overlay.style.display = 'flex';
+            overlay.style.flexDirection = 'column';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+            overlay.style.cursor = 'pointer';
+            overlay.id = 'qr-overlay';
+
+            const qrWrapper = document.createElement('div');
+            qrWrapper.style.display = 'flex';
+            qrWrapper.style.flexDirection = 'column';
+            qrWrapper.style.alignItems = 'center';
+            qrWrapper.style.justifyContent = 'center';
+            qrWrapper.style.width = '100%';
+            qrWrapper.style.height = '100%';
+
+
+            const newCanvas = document.createElement('canvas');
+            const scaleFactor = 2;
+            newCanvas.width = qrCanvas.width * scaleFactor;
+            newCanvas.height = qrCanvas.height * scaleFactor;
+
+            const context = newCanvas.getContext('2d');
+            context.imageSmoothingEnabled = false;
+            context.drawImage(qrCanvas, 0, 0, newCanvas.width, newCanvas.height);
+
+            newCanvas.style.maxWidth = '95vw';
+            newCanvas.style.maxHeight = '95vh';
+            newCanvas.style.width = 'auto';
+            newCanvas.style.height = 'auto';
+            newCanvas.style.border = '4px solid white';
+            newCanvas.style.boxShadow = '0 0 30px rgba(255,255,255,0.7)';
+
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '✕ Close';
+            closeBtn.style.position = 'fixed';
+            closeBtn.style.top = '25px';
+            closeBtn.style.right = '25px';
+            closeBtn.style.padding = '12px 24px';
+            closeBtn.style.background = '#dc3545';
+            closeBtn.style.color = 'white';
+            closeBtn.style.border = 'none';
+            closeBtn.style.borderRadius = '6px';
+            closeBtn.style.cursor = 'pointer';
+            closeBtn.style.zIndex = '10000';
+            closeBtn.style.fontSize = '18px';
+            closeBtn.style.fontWeight = 'bold';
+
+            qrWrapper.appendChild(newCanvas);
+            overlay.appendChild(qrWrapper);
+            overlay.appendChild(closeBtn);
+            document.body.appendChild(overlay);
+
+            closeBtn.onclick = () => document.body.removeChild(overlay);
+            overlay.onclick = (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            };
+
+            const handleKeyDown = (e) => {
+                if (e.key === 'Escape') {
+                    document.body.removeChild(overlay);
+                    document.removeEventListener('keydown', handleKeyDown);
+                }
+            };
+            document.addEventListener('keydown', handleKeyDown);
+        }
+        $(document).on('click', '#maximizeQR', maximizeQRCode);
     </script>
 @endpush
