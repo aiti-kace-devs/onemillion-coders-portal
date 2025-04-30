@@ -49,8 +49,9 @@
                                             <div class="col-sm-12">
                                                 <div class="form-group">
                                                     <label for="">Enter Content</label>
-
-                                                    <textarea name="content" id="content" class="form-control" rows="5" required>{{ $template->content }}</textarea>
+                                                    <x-wysiwyg name="content"
+                                                        id="content">{{ $template->content }}</x-wysiwyg>
+                                                    {{-- <textarea name="content" id="content" class="form-control" rows="5" required>{{ $template->content }}</textarea> --}}
                                                     <small class="form-text text-muted">
                                                         Use placeholders like {name}, {date} etc. that can be replaced when
                                                         sending.

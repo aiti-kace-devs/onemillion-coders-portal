@@ -21,10 +21,11 @@ class GenericEmail extends Mailable implements ShouldQueue
      *
      * @return void
      */
-    public function __construct($markdownContent = '', $subjectLine = '')
+    public function __construct($markdownContent = '', $subjectLine = '', $view = 'mail.generic-email', public $data = [])
     {
         $this->markdownContent = $markdownContent;
         $this->subjectLine = $subjectLine;
+        $this->view = $view;
 
         $converter = new CommonMarkConverter();
         $this->markdownContent = $converter->convert($markdownContent)->getContent();
@@ -50,7 +51,7 @@ class GenericEmail extends Mailable implements ShouldQueue
     public function content()
     {
         return new Content(
-            markdown: 'mail.generic-email',
+            markdown: $this->view,
         );
     }
 

@@ -13,7 +13,9 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Qoraiche\MailEclipse\Facades\MailEclipse;
 
 class SendBulkEmailJob implements ShouldQueue
 {
@@ -25,6 +27,10 @@ class SendBulkEmailJob implements ShouldQueue
     public $template;
     public $list;
     public $correctTemplate = false;
+
+    public $jobViewFilePath = '';
+    private $filename = '';
+
 
     /**
      * Create a new job instance.
@@ -85,19 +91,17 @@ class SendBulkEmailJob implements ShouldQueue
                 if ($messageContainsVariables) {
                     foreach ($chunk as $recipient) {
                         $message = MailerHelper::replaceVariables($this->message, (array)$recipient);
-                        Mail::to($recipient->email)->send(
-                            new GenericEmail($message, $this->subject)
-                        );
+                        MailerHelper::sendGenericTemplateEmail($recipient->email, $message, $this->subject);
                     }
                 } else {
                     $emails = $chunk->pluck('email')->all();
-                    Mail::to(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
-                        ->bcc($emails)
-                        ->send(new GenericEmail($this->message, $this->subject));
+                    MailerHelper::sendGenericTemplateEmail($emails, $this->message, $this->subject, true);
                 }
             } else if ($this->template && $this->correctTemplate) {
                 foreach ($chunk as $recipient) {
-                    Mail::to($recipient->email)->send(new $this->template($recipient));
+                    Mail::to($recipient->email)
+                        ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
+                        ->send(new $this->template($recipient));
                 }
             }
         });
@@ -113,21 +117,82 @@ class SendBulkEmailJob implements ShouldQueue
                 $chunkedUsers = User::whereIn('id', $ids)->get()->all();
                 foreach ($chunkedUsers as $user) {
                     $message = MailerHelper::replaceVariables($this->message, $user->toArray());
-                    Mail::to($user->email)->send(
-                        new GenericEmail($message, $this->subject)
-                    );
+                    MailerHelper::sendGenericTemplateEmail($user->email, $message, $this->subject);
                 }
             } else {
                 $emails = User::whereIn('id', $ids)->select('email')->pluck('email')->all();
-                Mail::to(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
-                    ->bcc($emails)
-                    ->send(new GenericEmail($this->message, $this->subject));
+                MailerHelper::sendGenericTemplateEmail($emails, $this->message, $this->subject, true);
             }
         } else if ($this->template && $this->correctTemplate) {
             $chunkedUsers = User::whereIn('id', $ids)->get()->all();
             foreach ($chunkedUsers as $user) {
-                Mail::to($user->email)->send(new $this->template($user));
+                Mail::to($user->email)
+                    ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
+                    ->send(new $this->template($user));
             }
+        }
+    }
+
+    private function getGenericTemplateEmail(string $content, $subject = null)
+    {
+        $replaceContent = MailEclipse::markdownedTemplateToView(false, $content);
+        $this->createView($replaceContent);
+        return new GenericEmail($replaceContent, $subject, 'email.' . $this->filename);
+    }
+
+    private function sendBulkGenericTemplateEmail(string|array $emails, string $content, $subject = null, $bulk = false)
+    {
+        $replaceContent = MailEclipse::markdownedTemplateToView(false, $content);
+        $filename = $this->createView($replaceContent);
+        if (!$filename) {
+            Log::error('Unable to send bulk image, view not created');
+            return;
+        }
+        $mailable =  new GenericEmail($replaceContent, $subject, "mail.temp.$filename");
+
+        if ($bulk) {
+            Mail::to(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
+                ->bcc($emails)
+                ->send($mailable);
+        } else {
+            Mail::to($emails)
+                ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
+                ->send($mailable);
+        }
+        $this->removeView($filename);
+    }
+
+
+    private function createView($content)
+    {
+        $filename = time() . '_' . Str::random(5);
+        if (!is_dir(resource_path("views/mail/temp"))) {
+            mkdir(resource_path("views/mail/temp"));
+        }
+        $jobViewFilePath = resource_path("views/mail/temp/$filename.blade.php");
+        $result = file_put_contents($jobViewFilePath, "<x-mail::message>$content</x-mail::message>");
+        if (!$result) {
+            return false;
+        }
+        return $filename;
+    }
+
+    private function removeView(string $filename)
+    {
+        $jobViewFilePath = resource_path("views/mail/temp/$filename.blade.php");
+        dump($jobViewFilePath);
+        if (file_exists($jobViewFilePath)) {
+            dump('removing file');
+            unlink($jobViewFilePath);
+        }
+    }
+
+    private function getView()
+    {
+        if (Storage::exists($this->jobViewFilePath)) {
+            return Storage::get($this->jobViewFilePath);
+        } else {
+            return null;
         }
     }
 }

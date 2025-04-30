@@ -2,9 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Mail\ConfirmationSuccessful;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -12,11 +10,9 @@ use Illuminate\Queue\SerializesModels;
 use App\Models\UserAdmission;
 use App\Models\User;
 use App\Models\CourseSession;
-use App\Helpers\GoogleSheets;
+use App\Helpers\MailerHelper;
 use App\Helpers\SmsHelper;
 use App\Models\Course;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Log;
 
 
 class AdmitStudentJob implements ShouldQueue
@@ -58,11 +54,12 @@ class AdmitStudentJob implements ShouldQueue
     private function sendConfirmationEmail()
     {
         if (config(SEND_EMAIL_AFTER_ADMISSION_CONFIRMATION, true)) {
-            Mail::to($this->student->email)->bcc(env('MAIL_FROM_ADDRESS', 'no-reply@example.com'))
-                ->send(new ConfirmationSuccessful(
-                    $this->student->name,
-                    $this->session
-                ));
+            MailerHelper::sendTemplateEmail(AFTER_ADMISSION_CONFIRMATION_EMAIL, $this->student->email, [
+                'name' => $this->student->name,
+                'courseSessioName' => $this->session->name,
+                'courseSessionTime' => $this->session->course_time,
+                'link' => $this->session->link
+            ], 'Admission Confirmation Successful');
         }
 
         if (config(SEND_SMS_AFTER_ADMISSION_CONFIRMATION, true)) {

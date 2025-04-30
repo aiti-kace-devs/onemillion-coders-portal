@@ -52,7 +52,30 @@ export default {
                     'quote', 'unordered-list', 'ordered-list', '|',
                     'link', '|',
                     'preview', 'side-by-side', 'fullscreen', '|',
-                    'guide'
+                    'guide', {
+                        name: "button-component",
+                        action: this.setButtonComponent,
+                        className: "fa fa-hand-pointer-o",
+                        title: "Button Component",
+                    },
+                    {
+                        name: "table-component",
+                        action: this.setTableComponent,
+                        className: "fa fa-table",
+                        title: "Table Component",
+                    },
+                    // {
+                    //     name: "promotion-component",
+                    //     action: setPromotionComponent,
+                    //     className: "fa fa-bullhorn",
+                    //     title: "Promotion Component",
+                    // },
+                    {
+                        name: "panel-component",
+                        action: this.setPanelComponent,
+                        className: "fa fa-thumb-tack",
+                        title: "Panel Component",
+                    },
                 ],
                 minHeight: '200px',
                 spellChecker: false,
@@ -277,7 +300,47 @@ export default {
             this.emailModal = false;
             // Reset the editor content when modal closes
             this.emailMessage = '';
+        },
+        setButtonComponent(editor) {
+
+            const cm = editor.codemirror;
+            let output = '';
+            const selectedText = cm.getSelection();
+            const text = selectedText || 'Button Text';
+            output = `
+[component]: # ('mail::button',  ['url' => ''])\n`
+                + text
+                + `\n[endcomponent]: #`;
+            cm.replaceSelection(output);
+
+        }, setPanelComponent(editor) {
+
+            const cm = editor.codemirror;
+            let output = '';
+            const selectedText = cm.getSelection();
+            const text = selectedText || 'Panel Text';
+            output = `
+[component]: # ('mail::panel')\n`
+                + text
+                + `\n[endcomponent]: #`;
+            cm.replaceSelection(output);
+
+        },
+        setTableComponent(editor) {
+            const cm = editor.codemirror;
+            let output = '';
+            const selectedText = cm.getSelection();
+
+            output = `
+[component]: # ('mail::table')
+| Laravel       | Table         | Example  |
+| ------------- |:-------------:| --------:|
+| Col 2 is      | Centered      | $10      |
+| Col 3 is      | Right-Aligned | $20      |
+[endcomponent]: #`;
+            cm.replaceSelection(output);
         }
+
     },
 };
 </script>
@@ -304,9 +367,9 @@ export default {
                         </div>
 
                         <div class="flex flex-col mt-4">
-                            <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
+                            <div class="overflow-visible sm:-mx-6 lg:-mx-8">
                                 <div class="py-2 inline-w-full sm:px-6 lg:px-8">
-                                    <div class="overflow-x-auto">
+                                    <div class="overflow-visible">
                                         <table id="data_table" class="w-full text-sm table-striped">
                                             <thead class="capitalize border-b bg-gray-100 font-medium">
                                                 <tr>
@@ -386,8 +449,7 @@ export default {
         </Modal>
 
         <!-- Email Modal -->
-        <Modal :show="emailModal" :closeable="true" :modalTitle="'Send Email to List'" @close="hideEmailModal"
-            :maxWidth="'md'">
+        <Modal :show="emailModal" :closeable="true" :modalTitle="'Send Email to List'" @close="hideEmailModal">
             <div class="mt-4">
                 <p class="text-sm text-gray-600 mb-4">You are about to send an email to this list.</p>
 
