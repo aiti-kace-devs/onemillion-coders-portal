@@ -82,11 +82,10 @@ class MailerHelper
         $replaceContent = MailEclipse::markdownedTemplateToView(false, $content);
         $filename = static::createView($replaceContent);
         if (!$filename) {
-            Log::error('Unable to send bulk image, view not created');
+            Log::error('Unable to send email, view not created');
             return;
         }
         $mailable =  new GenericEmail($replaceContent, $subject, "mail.temp.$filename");
-        dump($data);
         if ($bulk) {
             Mail::to(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                 ->bcc($emails)
@@ -117,7 +116,7 @@ class MailerHelper
     {
         $jobViewFilePath = resource_path("views/mail/temp/$filename.blade.php");
         if (file_exists($jobViewFilePath)) {
-            // unlink($jobViewFilePath);
+            unlink($jobViewFilePath);
         }
     }
 }

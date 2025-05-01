@@ -180,9 +180,7 @@ class SendBulkEmailJob implements ShouldQueue
     private function removeView(string $filename)
     {
         $jobViewFilePath = resource_path("views/mail/temp/$filename.blade.php");
-        dump($jobViewFilePath);
         if (file_exists($jobViewFilePath)) {
-            dump('removing file');
             unlink($jobViewFilePath);
         }
     }
