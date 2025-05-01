@@ -342,7 +342,8 @@
 
 
 
-                                <table id="studentsTable" class="table table-striped table-bordered table-hover">
+                                <table id="studentsTable"
+                                    class="table table-striped table-bordered table-hover datatable edit-columns">
                                     <thead>
                                         <tr>
                                             <th width="20px"><input type="checkbox" id="select-all"></th>

@@ -510,7 +510,22 @@
             if ($.fn.DataTable.isDataTable('.datatable')) {
                 $('.datatable').DataTable().destroy();
             }
-            $('.datatable').DataTable({
+            var table = $('.datatable').DataTable({
+                initComplete: function() {
+                    // Apply saved visibility states
+                    console.log(this.api());
+
+                    var savedVisibility = JSON.parse(localStorage.getItem('columnVisibility') || '[]');
+                    if (savedVisibility.length) {
+                        this.api().columns().every(function(index) {
+                            this.visible(savedVisibility[index] !== false);
+                        });
+                    }
+
+                    this.api().columns().every(function(index) {
+                        console.log(index);
+                    });
+                },
                 columnDefs: [{
                     width: "15%",
                     targets: -1
@@ -529,19 +544,48 @@
             if (!title.includes("{{ config('app.name') }}")) {
                 document.title = document.title + " - {{ config('app.name') }}"
             }
+
+
+            const columnsEditable = $('.datatable.edit-columns');
+
+            if (columnsEditable) {
+                const columnsInput =
+                    `<div class="column-visibility-controls">
+                        <p>Toggle Columns:</p>
+                        <div id="columnToggles"></div>
+                    </div>`;
+                columnsEditable.parent().prepend(columnsInput);
+
+                setTimeout(function() {
+                    $('#columnToggles').html(
+                        table.columns().header().map(function(header, index) {
+                            return '<label><input type="checkbox" checked data-column="' +
+                                index + '">' + $(header).text() + '</label>';
+                        }).toArray().join('<br>')
+                    );
+
+                    // Toggle column visibility when checkbox changes
+                    $('#columnToggles').on('change', 'input[type="checkbox"]', function() {
+                        var column = table.column($(this).attr('data-column'));
+                        column.visible(!column.visible());
+                    });
+                }, 500)
+            }
+
+
+            const flashMessage = "{{ session('flash') }}";
+            const key = "{{ session('key') }}";
+
+            if (flashMessage) {
+                setTimeout(() => {
+                    Swal.fire({
+                        text: flashMessage,
+                        icon: key || 'info'
+                    })
+                }, 500);
+            }
         });
 
-        const flashMessage = "{{ session('flash') }}";
-        const key = "{{ session('key') }}";
-
-        if (flashMessage) {
-            setTimeout(() => {
-                Swal.fire({
-                    text: flashMessage,
-                    icon: key || 'info'
-                })
-            }, 500);
-        }
 
         // $('select[multiple]').multiSelect({
         //     noneText: 'Select...',
