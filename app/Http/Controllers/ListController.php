@@ -71,7 +71,7 @@ class ListController extends Controller
                           </button>
                         </div>
 
-                        <div id="dropdown-menu-' . $row['name'] . '" class="hidden dropdown-menu fixed right-0 z-50 mt-2 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="menu-button" tabindex="-1">
+                        <div id="dropdown-menu-' . $row['name'] . '" class="dropdown-menu absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="menu-button" tabindex="-1">
                             <button type="button" data-id="' . $row['name'] . '" class="sms ' . $linkClass . '">
                                 Send SMS
                             </button>

@@ -272,6 +272,16 @@
                                 </a>
                             </li>
                         @endcan
+
+                        @can('email-template.read')
+                            <li class="nav-item">
+                                <a href="{{ url('admin/manage-email-template') }}"
+                                    class="nav-link @if (request()->is('admin/manage-email-template')) active @endif">
+                                    <i class="fas fa-envelope nav-icon"></i>
+                                    <p>Email Templates</p>
+                                </a>
+                            </li>
+                        @endcan
                         {{-- <li class="nav-item">
                             <a href="{{ url('admin/generate_qrcode') }}" class="nav-link">
                         <i class="fas fa-qrcode nav-icon"></i>

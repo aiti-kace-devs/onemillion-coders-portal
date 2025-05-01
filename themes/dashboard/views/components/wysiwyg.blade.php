@@ -1,8 +1,9 @@
 <link rel="stylesheet" href="{{ url('/assets/plugins/simplemde/simplemde.min.css') }}">
+<script src="{{ url('assets/plugins/jquery/jquery.min.js') }}"></script>
 <script src="{{ url('/assets/plugins/simplemde/simplemde.min.js') }}"></script>
 
 
-<textarea id="template_editor" cols="30" rows="10"></textarea>
+<textarea {{ $attributes }} id="template_editor" cols="30" rows="10">{{ $slot }}</textarea>
 
 <script @nonce>
     var simplemde = new SimpleMDE({
@@ -93,12 +94,6 @@
                 action: setTableComponent,
                 className: "fa fa-table",
                 title: "Table Component",
-            },
-            {
-                name: "promotion-component",
-                action: setPromotionComponent,
-                className: "fa fa-bullhorn",
-                title: "Promotion Component",
             },
             {
                 name: "panel-component",

@@ -1006,14 +1006,13 @@ class AdminController extends Controller
     public function admit_student(Request $request)
     {
         $validated = $request->validate([
-            'course_id' => 'required|exists:courses,id',
-            'session_id' => 'sometimes|exists:course_sessions,id',
+            'course_id' => 'required|nullable|exists:courses,id',
+            'session_id' => 'sometimes|nullable|exists:course_sessions,id',
             'user_id' => 'sometimes|nullable|required_if:user_ids,null|exists:users,userId',
             'change' => 'sometimes',
             'user_ids' => 'sometimes|nullable|required_if:user_id,null|array',
             'user_ids.*' => 'exists:users,userId',
         ]);
-
 
         $course = Course::find($validated['course_id']);
         $session = CourseSession::find($validated['session_id'] ?? '');

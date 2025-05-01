@@ -16,7 +16,7 @@ class PermissionSeeder extends Seeder
     public function run(): void
     {
         //
-        $resources = ['student', 'user', 'course', 'session', 'branch', 'programme', 'centre', 'category', 'exam', 'result', 'admin', 'attendance', 'form', 'form-response', 'sms-template', 'report'];
+        $resources = ['student', 'user', 'course', 'session', 'branch', 'programme', 'centre', 'category', 'exam', 'result', 'admin', 'attendance', 'form', 'form-response', 'sms-template', 'report', 'email-template'];
         $actions = ['create', 'read', 'update', 'delete', 'status'];
         $specialStudentActions = ['shortlist', 'admit', 'bulk-sms', 'bulk-email', 'verify'];
         $specialPermissions = ['monitor', 'config', 'page-editor', 'manager', 'permission'];

@@ -15,11 +15,10 @@ use App\Models\Course;
 use App\Models\UserAdmission;
 use App\Models\user_exam;
 use Illuminate\Support\Carbon;
-use App\Helpers\GoogleSheets;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use App\Jobs\AdmitStudentJob;
+use App\Jobs\CreateStudentAdmissionJob;
 use App\Jobs\TestSubmittedJob;
 use App\Models\AdmissionRejection;
 
@@ -389,7 +388,7 @@ class StudentOperation extends Controller
                 'key' => 'success',
             ]);
         } catch (\Exception $e) {
-            // Log::error($e);
+            Log::error($e);
             return redirect(url('student/select-session/' . $user_id))->with([
                 'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
                 'key' => 'error',
@@ -477,50 +476,8 @@ class StudentOperation extends Controller
         try {
             foreach ($studentIds as $studentId) {
                 $user = User::where('userId', $studentId)->first();
-                if (!$user) {
-                    continue;
-                }
-
-                $course = Course::find($user->registered_course);
-                if (!$course) {
-                    continue;
-                }
-
-                $existingAdmission = UserAdmission::where('user_id', $user->userId)->first();
-                if ($existingAdmission) {
-                    if (!$existingAdmission->email_sent) {
-                        try {
-                            Mail::to($user->email)->send(
-                                new StudentAdmitted(
-                                    $user
-                                )
-                            );
-                            $existingAdmission->update(['email_sent' => now()]);
-                            $count++;
-                        } catch (\Throwable $mailError) {
-                            \Log::error("Failed to send email to {$user->email}: " . $mailError->getMessage());
-                        }
-                    }
-                    continue;
-                }
-
-                UserAdmission::create([
-                    'user_id' => $user->userId, // Keep UUID
-                    'course_id' => $course->id,
-                    'email_sent' => now(),
-                ]);
-
-                try {
-                    Mail::to($user->email)
-                        ->bcc(env('MAIL_FROM_ADDRESS', 'no-reply@example.com'))
-                        ->send(new StudentAdmitted(
-                            $user,
-
-                        ));
-                } catch (\Throwable $mailError) {
-                    \Log::error("Failed to send email to {$user->email}: " . $mailError->getMessage());
-                }
-
+                $course = Course::findOrFail($user->registered_course);
+                CreateStudentAdmissionJob::dispatch($user, $course, null);
                 $count++;
             }
 
