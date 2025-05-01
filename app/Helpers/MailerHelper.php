@@ -52,7 +52,7 @@ class MailerHelper
         return $content;
     }
 
-    public static function sendGenericTemplateEmail(string|array $emails, string $content, $subject = null, $bulk = false)
+    public static function sendGenericTemplateEmail(string|array $emails, string $content, $subject = null, $bulk = false, $data = [])
     {
         $replaceContent = MailEclipse::markdownedTemplateToView(false, $content);
         $filename = static::createView($replaceContent);
@@ -60,7 +60,7 @@ class MailerHelper
             Log::error('Unable to send bulk image, view not created');
             return;
         }
-        $mailable =  new GenericEmail($replaceContent, $subject, "mail.temp.$filename");
+        $mailable =  new GenericEmail($replaceContent, $subject, "mail.temp.$filename", $data);
 
         if ($bulk) {
             Mail::to(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
@@ -81,7 +81,7 @@ class MailerHelper
             return;
         }
 
-        static::sendGenericTemplateEmail($emails, $content, $subject, $bulk);
+        static::sendGenericTemplateEmail($emails, $content, $subject, $bulk, $data);
     }
 
     public static function createView($content, $filename = null)
