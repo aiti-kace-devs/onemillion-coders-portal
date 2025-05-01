@@ -84,9 +84,9 @@ class MailerHelper
         static::sendGenericTemplateEmail($emails, $content, $subject, $bulk);
     }
 
-    private static function createView($content)
+    public static function createView($content, $filename = null)
     {
-        $filename = time() . '_' . Str::random(5);
+        $filename = $filename ?? time() . '_' . Str::random(5);
         if (!is_dir(resource_path("views/mail/temp"))) {
             mkdir(resource_path("views/mail/temp"));
         }

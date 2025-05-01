@@ -9,12 +9,15 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Str;
 use League\CommonMark\CommonMarkConverter;
+use Throwable;
 
 class GenericEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
+    public $deleteWhenMissingModels = true;
     public $markdownContent;
     public $subjectLine;
     /**
@@ -83,10 +86,19 @@ class GenericEmail extends Mailable implements ShouldQueue
         $this->removeTempView();
     }
 
-    public function failed()
+    public function failed(?Throwable $exception): void
     {
-        $this->removeTempView();
+        $message = $exception->getMessage();
+        // fix for view not found
+        if (Str::contains($message, ["View [$this->view] not found"])) {
+            // view not found create it
+            $file = str_replace('mail.temp.', '', $this->view);
+            MailerHelper::createView($this->markdownContent, $file);
+        }
+        // $this->removeTempView();
     }
+
+
 
     private function removeTempView()
     {
