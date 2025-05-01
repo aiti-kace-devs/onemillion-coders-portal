@@ -45,6 +45,8 @@ class MailerHelper
         foreach ($data as $key => $value) {
             if (Str::contains($content, $key))
                 $content = str_replace('{' . $key . '}', $value, $content);
+            if (Str::contains($content, $key))
+                $content = str_replace('{' . $key . '}', $value, $content);
         }
 
         return $content;
