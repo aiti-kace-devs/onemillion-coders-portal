@@ -69,7 +69,6 @@ class MailerHelper
                 ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                 ->send($mailable);
         }
-        static::removeView($filename);
     }
 
 
@@ -79,23 +78,8 @@ class MailerHelper
         if (!$content) {
             return;
         }
-        $replaceContent = MailEclipse::markdownedTemplateToView(false, $content);
-        $filename = static::createView($replaceContent);
-        if (!$filename) {
-            Log::error('Unable to send email, view not created');
-            return;
-        }
-        $mailable =  new GenericEmail($replaceContent, $subject, "mail.temp.$filename");
-        if ($bulk) {
-            Mail::to(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
-                ->bcc($emails)
-                ->send($mailable);
-        } else {
-            Mail::to($emails)
-                ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
-                ->send($mailable);
-        }
-        static::removeView($filename);
+
+        static::sendGenericTemplateEmail($emails, $content, $subject, $bulk);
     }
 
     private static function createView($content)
@@ -105,16 +89,17 @@ class MailerHelper
             mkdir(resource_path("views/mail/temp"));
         }
         $jobViewFilePath = resource_path("views/mail/temp/$filename.blade.php");
-        $result = file_put_contents($jobViewFilePath, "@component('mail::message')$content   Thanks,   {{ config('app.name') }}@endcomponent");
+        $result = file_put_contents($jobViewFilePath, "<x-mail::message>$content   <br>   Thanks,   {{ config('app.name') }}</x-mail::message>");
         if (!$result) {
             return false;
         }
         return $filename;
     }
 
-    private static function removeView(string $filename)
+    public static function removeView(string $filename)
     {
-        $jobViewFilePath = resource_path("views/mail/temp/$filename.blade.php");
+        $file = str_replace('mail.temp.', '', $filename);
+        $jobViewFilePath = resource_path("views/mail/temp/$file.blade.php");
         if (file_exists($jobViewFilePath)) {
             unlink($jobViewFilePath);
         }

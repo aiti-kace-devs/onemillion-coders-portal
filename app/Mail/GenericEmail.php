@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Helpers\MailerHelper;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -75,4 +76,22 @@ class GenericEmail extends Mailable implements ShouldQueue
     //     return $this->subject($this->subjectLine)
     //         ->html($htmlContent);
     // }
+
+    // Called when job succeeds
+    public function success()
+    {
+        $this->removeTempView();
+    }
+
+    public function failed()
+    {
+        $this->removeTempView();
+    }
+
+    private function removeTempView()
+    {
+        if ($this->view !== 'mail.generic-email') {
+            MailerHelper::removeView($this->view);
+        }
+    }
 }
