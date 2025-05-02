@@ -529,7 +529,6 @@ class StudentOperation extends Controller
             ->join('course_sessions', 'user_admission.session', '=', 'course_sessions.id')
             ->join('courses', 'user_admission.course_id', '=', 'courses.id')
             ->first();
-
         return view('student.id-qr', [
             'user' => $user,
         ]);
@@ -553,17 +552,20 @@ class StudentOperation extends Controller
         $user = Auth::user();
 
         $rules = [
-            'name' => 'sometimes|string|max:255',
+            'name' => 'sometimes|string|regex:/^[\pL\s\-\' ]+$/u|min:5|max:255|min:4',
             'gender' => 'sometimes|in:male,female',
-            'contact' => 'sometimes|string|regex:/^[1-9][0-9]{8}$/|max:10',
+            'mobile_no' => 'sometimes|string|phone',
             'network_type' => 'sometimes|in:mtn,telecel,airteltigo',
             'card_type' => 'sometimes|in:ghcard,voters_id,drivers_license,passport',
         ];
 
         if ($request->input('card_type') === 'ghcard') {
-            $rules['ghcard'] = 'sometimes|string|regex:/^[0-9]{9}-[0-9]{1}$/|max:16';
+            $rules['ghcard'] = "sometimes|string|regex:/^GHA-[0-9]{9}-[0-9]{1}$/|max:16|unique:users,ghcard,id:{$user->id}";
+            $request->merge([
+                'ghcard' => 'GHA-' . $request->ghcard,
+            ]);
         } else {
-            $rules['ghcard'] = 'sometimes|string|max:20';
+            $rules['ghcard'] = "sometimes|string|max:20|unique:users,ghcard,id:{$user->id}";
         }
 
         $validatedData = $request->validate($rules, [], ['ghcard' => 'Card number']);
@@ -572,31 +574,38 @@ class StudentOperation extends Controller
             $user->network_type = $validatedData['network_type'];
         }
 
-        if ($user->name && $user->ghcard && $user->gender && $user->contact) {
-        } elseif ($user->name && $user->ghcard) {
-            if (isset($validatedData['gender'])) {
-                $user->gender = $validatedData['gender'];
-            }
-            if (isset($validatedData['contact'])) {
-                $user->contact = '0' . $validatedData['contact'];
-            }
-        } else {
-            if (isset($validatedData['name'])) {
-                $user->name = $validatedData['name'];
-            }
-            if (isset($validatedData['card_type'])) {
-                $user->card_type = $validatedData['card_type'];
-            }
-            if (isset($validatedData['ghcard'])) {
-                $user->ghcard = $request->input('card_type') === 'ghcard' ? 'GHA-' . $validatedData['ghcard'] : $validatedData['ghcard'];
-            }
-            if (isset($validatedData['gender'])) {
-                $user->gender = $validatedData['gender'];
-            }
-            if (isset($validatedData['contact'])) {
-                $user->contact = '0' . $validatedData['contact'];
-            }
+        if ($user->details_updated_at) {
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'Cannot update details AGAIN',
+                    'key' => 'error',
+                ]);
         }
+        if (isset($validatedData['gender'])) {
+            $user->gender = $validatedData['gender'];
+        }
+        if (isset($validatedData['mobile_no'])) {
+            $user->mobile_no = $validatedData['mobile_no'];
+        }
+        if (isset($validatedData['name'])) {
+            if ($user->name != $validatedData['name'] && !$user->previous_name) {
+                $user->previous_name = $user->name;
+            }
+            if ($validatedData['name'] == $user->previous_name) {
+                $user->previous_name = null;
+            }
+            $user->name = $validatedData['name'];
+        }
+        if (isset($validatedData['card_type'])) {
+            $user->card_type = $validatedData['card_type'];
+        }
+        if (isset($validatedData['ghcard'])) {
+            $user->ghcard = $validatedData['ghcard'];
+        }
+
+
+        $user->details_updated_at = now();
         $user->save();
 
         return redirect()

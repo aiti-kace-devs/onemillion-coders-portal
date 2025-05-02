@@ -75,7 +75,7 @@ class User extends Authenticatable
 
     public function detailsUpdated()
     {
-        return $this->updated_at != $this->created_at;
+        return $this->details_updated_at != null;
     }
 
     public function isSuper()
