@@ -222,7 +222,7 @@ Route::prefix('admin')
                 Route::get('/scan_qrcode', [AdminController::class, 'scan_qrcode_page'])->middleware('permission:attendance.create');
                 Route::get('/verification', [AdminController::class, 'verification_page'])->name('verification');
                 Route::get('/verify_details', [AdminController::class, 'verifyDetails'])->name('verify-details');
-                Route::get('/reset-verify/{id}', [AdminController::class, 'reset_verify'])->name('reset-verify');
+                Route::get('/reset-verify/{id}', [AdminController::class, 'reset_verify'])->name('reset-verify')->middleware('permission:student.update');
                 Route::post('/verify-student/{id}', [AdminController::class, 'verifyStudent'])->name('verify-student');
             });
 
@@ -460,20 +460,20 @@ Route::prefix('student')
     ->middleware('theme:dashboard')
     ->name('student.')
     ->group(function () {
-        Route::get('/select-session/{user_id}', [StudentOperation::class, 'select_session_view'])->middleware('auth');
+        Route::get('/select-session/{user_id}', [StudentOperation::class, 'select_session_view'])->middleware(['auth', 'is_admitted']);
         Route::post('/select-session/{user_id}', [StudentOperation::class, 'confirm_session'])
             ->name('select-session')
-            ->middleware('auth');
+            ->middleware(['auth', 'is_admitted']);
         Route::delete('/delete-student-admission/{user_id}', [StudentOperation::class, 'delete_admission'])
             ->name('delete-student-admission')
-            ->middleware('auth');
+            ->middleware(['auth', 'is_admitted']);
 
         Route::middleware(['auth:web'])->group(function () {
             Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');
             Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
-            Route::get('/profile', [StudentOperation::class, 'profile'])->name('profile');
-            Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course');
-            Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course');
+            Route::get('/profile', [StudentOperation::class, 'profile'])->name('profile')->middleware('is_not_admitted');
+            Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course')->middleware('is_not_admitted');
+            Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course')->middleware('is_not_admitted');
 
             Route::get('/exam', [StudentOperation::class, 'exam']);
             Route::get('/join_exam/{id}', [StudentOperation::class, 'join_exam']);
@@ -481,12 +481,12 @@ Route::prefix('student')
             Route::get('/show_result/{id}', [StudentOperation::class, 'show_result']);
             Route::get('/apply_exam/{id}', [StudentOperation::class, 'apply_exam']);
             // Route::get('/view_result/{id}', [StudentOperation::class, 'view_result']);
-            Route::post('/attendance/record', [AttendanceController::class, 'recordAttendance'])->name('attendance.record');
-            Route::get('/attendance', [AttendanceController::class, 'viewAttendance'])->name('attendance.show');
-            Route::get('/id-qrcode', [StudentOperation::class, 'get_details_page']);
+            Route::post('/attendance/record', [AttendanceController::class, 'recordAttendance'])->name('attendance.record')->middleware('is_admitted:true');
+            Route::get('/attendance', [AttendanceController::class, 'viewAttendance'])->name('attendance.show')->middleware('is_admitted:true');
+            Route::get('/id-qrcode', [StudentOperation::class, 'get_details_page'])->middleware('is_admitted:true');
             Route::get('/scan-qrcode', [StudentOperation::class, 'get_scanner_page']);
             Route::get('/meeting-link', [StudentOperation::class, 'get_meeting_link_page']);
-            Route::post('/update-details', [StudentOperation::class, 'updateDetails'])->name('updateDetails');
+            Route::post('/update-details', [StudentOperation::class, 'updateDetails'])->name('updateDetails')->middleware('is_admitted');
 
             // Route::get('/ateendance', [StudentOperation::class, 'view_result']);
 

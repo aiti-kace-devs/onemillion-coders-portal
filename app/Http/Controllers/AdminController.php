@@ -883,6 +883,19 @@ class AdminController extends Controller
 
         // match with ghana card format
         $correctFormat = preg_match('/GHA-[0-9]{9}-[0-9]{1}$/', $student->ghcard);
+
+        $courses = Course::myAssignedCourses()->pluck('id')->values()->all();
+
+        $allowed = in_array($student->admission->course_id, $courses);
+
+        if (!$allowed) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot verify students of this course'
+            ]);
+        }
+
+
         if (($student && $correctFormat) || ($student && $student->ghcard && $student->card_type !== 'ghcard')) {
             $adminId = Auth::guard('admin')->id();
             $student->verification_date = now();
@@ -952,7 +965,6 @@ class AdminController extends Controller
             'students' => $students,
             'selectedCourse' => $selectedCourse,
             'groupedCourses' => $allCourses->groupBy('location'),
-
         ]);
     }
 
@@ -1050,17 +1062,12 @@ class AdminController extends Controller
 
     public function reset_verify($userId)
     {
-        $u = User::findOrFail($userId);
-        if ($u && !$u->verification_date) {
-            $u->ghcard = null;
-            $u->card_type = null;
-            $u->updated_at = $u->created_at;
-        }
+        $user = User::findOrFail($userId);
 
-        $u->contact = null;
-        $u->gender = null;
-        $u->network_type = null;
-        $u->save();
+        $user->details_updated_at = null;
+        $user->verified_by = null;
+        $user->verification_date = null;
+        $user->save();
 
         return redirect()
             ->back()

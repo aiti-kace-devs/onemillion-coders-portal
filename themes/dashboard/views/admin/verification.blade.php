@@ -36,7 +36,7 @@
                                 <table class="table table-striped table-bordered table-hover datatable">
                                     <thead>
                                         <tr>
-                                            <th>Name</th>
+                                            <th>Name (Previous Name)</th>
                                             <th>Email</th>
                                             <th>Card Type</th>
                                             <th>Card Number</th>
@@ -47,7 +47,9 @@
                                     <tbody>
                                         @foreach ($students as $student)
                                             <tr>
-                                                <td>{{ $student['name'] }}</td>
+                                                <td>{{ $student['name'] }} <span class="text-primary">
+                                                        ({{ $student['previous_name'] ?? 'N/A' }})
+                                                    </span></td>
                                                 <td>{{ $student['email'] }}</td>
                                                 <td class="text-uppercase">{{ $student['card_type'] }}</td>
                                                 <td>{{ $student['ghcard'] }}</td>
