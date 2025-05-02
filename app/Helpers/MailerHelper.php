@@ -91,7 +91,8 @@ class MailerHelper
             mkdir(resource_path("views/mail/temp"));
         }
         $jobViewFilePath = resource_path("views/mail/temp/$filename.blade.php");
-        $result = file_put_contents($jobViewFilePath, "<x-mail::message>$content   <br>   Thanks,   {{ config('app.name') }}</x-mail::message>");
+        $converted = html_entity_decode($content);
+        $result = file_put_contents($jobViewFilePath, "<x-mail::message>$converted   <br>   Thanks,   {{ config('app.name') }}</x-mail::message>");
         if (!$result) {
             return false;
         }

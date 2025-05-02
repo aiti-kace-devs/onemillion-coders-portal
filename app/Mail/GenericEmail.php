@@ -88,13 +88,14 @@ class GenericEmail extends Mailable implements ShouldQueue
 
     public function failed(?Throwable $exception): void
     {
-        $message = $exception->getMessage();
+        // TODO: remove recreation of view on error
+        // $message = $exception->getMessage();
         // fix for view not found
-        if (Str::contains($message, ["View [$this->view] not found"])) {
-            // view not found create it
-            $file = str_replace('mail.temp.', '', $this->view);
-            MailerHelper::createView($this->markdownContent, $file);
-        }
+        // if (Str::contains($message, ["View [$this->view] not found"])) {
+        // view not found create it
+        $file = str_replace('mail.temp.', '', $this->view);
+        MailerHelper::createView($this->markdownContent, $file);
+        // }
         // $this->removeTempView();
     }
 
