@@ -38,7 +38,7 @@ class SendFeedback extends Command
             ->get()->pluck('email')->all();
 
         if (count($userEmails) > 0) {
-            MailerHelper::sendTemplateEmail(templateName: AFTER_EXAM_SUBMISSION_EMAIL, emails: $userEmails, data: [], subject: '', bulk: true);
+            MailerHelper::sendTemplateEmail(templateName: AFTER_EXAM_SUBMISSION_EMAIL, emails: $userEmails, data: [], subject: 'Assessment Test Received Successfully', bulk: true);
             user_exam::whereIn('id', $completedExams->pluck('id')->all())->update([
                 'user_feedback' => Carbon::now()->toDateTimeString()
             ]);
