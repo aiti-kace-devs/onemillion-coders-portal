@@ -75,14 +75,24 @@
                     </div>
                 </div>
 
-                <!-- Course Information Card -->
+
                 <!-- Course Information Card -->
                 <div class="card">
                     <div class="card-header bg-info">
                         <h3 class="card-title">Course Information</h3>
                     </div>
                     <div class="card-body">
-                        @if (!empty($user->exam) && $course)
+                        {{-- @if (!empty($user->exam) && $course && !$rejection)
+                        <div class="row mb-3">
+                            <div class="col-md-3 font-weight-bold">Course Revoked:</div>
+                            <div class="col-md-9">{{$course ->course_name }}</div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-3 font-weight-bold">Revoked Date:</div>
+                            <div class="col-md-9">{{ $rejection->rejected_at }}</div>
+                        </div> --}}
+                        @if (!empty($user->exam) && $course && !$rejection)
                             <div class="row mb-3">
                                 <div class="col-md-3 font-weight-bold">Course Name:</div>
                                 <div class="col-md-9">{{ $course->course_name }}</div>
@@ -119,6 +129,33 @@
                                     </div>
                                 </div>
                             @endunless
+
+                            @elseif ($rejection && $course)
+                            <div class="alert alert-danger text-center mb-3">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                                <h5>Course Revoked</h5>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-3 font-weight-bold">Revoked Course:</div>
+                                <div class="col-md-9">{{ $course->course_name }}</div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-3 font-weight-bold">Revoked Date:</div>
+                                <div class="col-md-9">{{ $rejection->rejected_at }}</div>
+                            </div>
+
+                             <!-- Select a new course-->
+                            {{-- <div class="col-sm-12">
+                                <div class="form-group">
+                                    <a href="{{ route('student.change-course') }}" class="btn btn-primary">
+                                        <i class="fas fa-plus-circle"></i> Select a New Course
+                                    </a>
+                                </div>
+                            </div> --}}
+
+
                         @else
                             <div class="alert alert-warning text-center">
                                 <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
