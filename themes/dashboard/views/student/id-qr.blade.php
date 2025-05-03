@@ -147,16 +147,16 @@
 
                         <div class="input-group col-12 mb-2">
                             <label class="form-label col-12">Phone Number</label>
-                            <div class="input-group-prepend">
+                            {{-- <div class="input-group-prepend">
                                 @if (!$user->contact)
                                     <span class="input-group-text" id="basic-addon1">+233</span>
                                 @endif
-                            </div>
-                            <input id="contact" type="text" required value="{{ $user->mobile_no }}" name="contact"
+                            </div> --}}
+                            <input id="mobile_no" type="text" required value="{{ $user->mobile_no }}" name="mobile_no"
                                 placeholder="201234567" @if ($user->mobile_no) disabled @endif
-                                class="form-control @error('contact') is-invalid @enderror col-12 mr-2">
+                                class="form-control @error('mobile_no') is-invalid @enderror col-12 mr-2">
                         </div>
-                        @error('contact')
+                        @error('mobile_no')
                             <div role="alert" class="alert alert-danger">{{ $message }}</div>
                         @enderror
 
@@ -166,8 +166,7 @@
                             @if (detailsUpdated($user))
                                 <p class="text-sm text-danger">You have already updated your details</p>
                             @else
-                                <button onclick="confirmUpdateDetails()" type="button"
-                                    class="btn btn-primary">Update</button>
+                                <button id="confirmUpdateDetails" type="button" class="btn btn-primary">Update</button>
                                 <p class="text-sm text-danger">You can only update your details once, make sure you verify
                                     all
                                     details before submitting.</p>
@@ -257,6 +256,10 @@
         //         },
         //     }
         // });
+
+        $('#confirmUpdateDetails').on('click', function() {
+            confirmUpdateDetails();
+        });
 
         function confirmUpdateDetails() {
             Swal.fire({
