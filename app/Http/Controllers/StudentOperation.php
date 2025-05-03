@@ -59,7 +59,12 @@ class StudentOperation extends Controller
             $course = Course::find($user->registered_course);
         }
 
-        return view('student.profile', compact('user', 'course'));
+        // Check if the user has a rejected admission
+    $rejection = AdmissionRejection::where('user_id', $user->userId)
+    ->orderBy('rejected_at', 'desc')
+    ->first();
+
+        return view('student.profile', compact('user', 'course', 'rejection'));
     }
 
     // application status
