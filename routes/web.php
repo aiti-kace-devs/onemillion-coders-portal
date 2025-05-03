@@ -436,7 +436,7 @@ Route::prefix('admin')
                 });
             // end of manage emai_template routes
             Route::middleware('permission:manage.monitor')->group(function () {
-                Route::get('app-logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index'])->middleware('permission:manage.config');
+                // Route::get('app-logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index'])->middleware('permission:manage.config');
                 Route::get('/app-config', [AppConfigController::class, 'index'])
                     ->name('config.index')
                     ->middleware('admin.super');
