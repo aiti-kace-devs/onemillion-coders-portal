@@ -169,7 +169,7 @@
                                     Aptitude Test
                                 </h5>
 
-                                @unless ($user_exam?->submitted)
+                                @unless ($user_exam?->submitted ?? false)
                                     <a href="{{ url('student/join_exam/' . $user_exam->exam_id) }}"
                                         class="btn btn-danger mb-2">Take
                                         Test
@@ -181,7 +181,7 @@
                         <div class="status-line"></div>
                     </div>
                     <div class="collapse-content " id="collapse2">
-                        @if ($user_exam?->submitted)
+                        @if ($user_exam?->submitted ?? false)
                             <p> Test submitted on {{ Carbon\Carbon::parse($user_exam->submitted)->toDateTimeString() }}</p>
                         @else
                             <p>You must complete the aptitude test to proceed to the next stage. Click “Take Test Now” to
