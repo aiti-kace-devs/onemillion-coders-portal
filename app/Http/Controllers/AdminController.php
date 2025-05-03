@@ -508,22 +508,24 @@ class AdminController extends Controller
                 ->addColumn('actions', function ($std) {
                     $buttons = [];
 
-                    $viewButton = '<a href="' . url('admin/admin_view_result/' . $std->user_id) . '" class="btn btn-success">' . 'View <i class="fas fa-poll"></i>' . '</a>';
 
-                    $dropdownToggle = '<button type="button" class="btn btn-success btn-sm dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-expanded="false">' . '<span class="sr-only">Toggle Dropdown</span>' . '</button>';
+                    $actionsButton = '<a class="btn btn-outline-primary"> Actions</i> </a>';
+
+                    $dropdownToggle = '<button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-expanded="false">' . '<span class="sr-only">Toggle Dropdown</span>' . '</button>';
 
                     $dropdownMenu = '<div class="dropdown-menu">';
                     $dropdownMenu .= '<a class="dropdown-item" href="' . url('admin/delete_students/' . $std->id) . '">Delete <i class="fas fa-trash-alt"></i></a>';
                     $dropdownMenu .= '<a class="dropdown-item" href="' . route('admin.reset-exam', [$std->exam_id, $std->user_id]) . '">Reset Result <i class="fas fa-redo"></i></a>';
-                    $dropdownMenu .= '</div>';
+                    if (auth()->user()->can('user.update')) {
+                        $dropdownMenu .= '<a class="dropdown-item" target="_blank" href="' . route('admin.login_as_student', $std->user_id) . '">Login As <i class="fas fa-user"></i></a>';
+                    }
 
                     if ($std->exam_joined) {
-                        return '<div class="btn-group">' . $viewButton . $dropdownToggle . $dropdownMenu . '</div>';
-                    } else {
-                        $buttons[] = '<a href="' . url('admin/delete_students/' . $std->id) . '" class="btn btn-danger btn-sm">Delete <i class="fas fa-trash-alt"></i></a>';
-                        $buttons[] = '<a href="' . route('admin.reset-exam', [$std->exam_id, $std->user_id]) . '" class="btn btn-info btn-sm">Reset Result <i class="fas fa-redo"></i></a>';
-                        return '<div class="btn-group">' . implode('', $buttons) . '</div>';
+                        $dropdownMenu .= '<a target="_blank" href="' . url('admin/admin_view_result/' . $std->user_id) . '" class="dropdown-item">' . 'View Results<i class="fas fa-poll"></i>' . '</a>';
                     }
+                    $dropdownMenu .= '</div>';
+
+                    return '<div class="btn-group">' . $actionsButton . $dropdownToggle . $dropdownMenu . '</div>';
                 })
                 ->with(['all_filtered_ids' => $baseQuery->pluck('user_exams.id')->toArray()])
                 ->rawColumns(['checkbox', 'result', 'status', 'actions'])
@@ -538,7 +540,17 @@ class AdminController extends Controller
     }
 
 
+    public function login_as_student(Request $request, $user_id)
+    {
+        $user = User::find($user_id);
+        if ($user) {
+            Auth::guard('web')->login($user);
 
+            return redirect()->route('student.dashboard');
+        } else {
+            return redirect()->back()->with('error', 'User not found.');
+        }
+    }
 
 
 

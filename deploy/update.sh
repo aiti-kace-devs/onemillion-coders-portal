@@ -1,3 +1,1 @@
-git pull && composer update --no-dev && php artisan migrate --force && php artisan optimize:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache \
-&& sudo chown -R www-data:www-data storage && sudo chown -R www-data:www-data bootstrap/cache \
-&& sudo systemctl restart php8.2-fpm && sudo systemctl restart nginx
+git pull && sudo su www-data -s /bin/bash && php artisan horizon:pause && composer install --no-dev && php artisan migrate --force && php artisan optimize:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan horizon:continue && exit && npm run build && cat ./fix-permissions.sh | sudo -S bash && cat ./restart-services.sh | sudo -S bash
