@@ -191,7 +191,7 @@ Route::prefix('admin')
             });
 
             Route::get('/manage_students', [AdminController::class, 'manage_students'])->name('manage_students')->middleware('permission:student.read|student.bulk-sms|student.admit|student.email|student.shortlist');
-            Route::get('/login_as_student/{id}', [AdminController::class, 'login_as_student'])->name('login_as_student')->middleware('permission:student.read');
+            Route::get('/login_as_student/{id}', [AdminController::class, 'login_as_student'])->name('login_as_student')->middleware('permission:user.update');
 
             Route::middleware('permission:student.read')->group(function () {
                 Route::get('/student_status/{id}', [AdminController::class, 'student_status'])

@@ -516,7 +516,7 @@ class AdminController extends Controller
                     $dropdownMenu = '<div class="dropdown-menu">';
                     $dropdownMenu .= '<a class="dropdown-item" href="' . url('admin/delete_students/' . $std->id) . '">Delete <i class="fas fa-trash-alt"></i></a>';
                     $dropdownMenu .= '<a class="dropdown-item" href="' . route('admin.reset-exam', [$std->exam_id, $std->user_id]) . '">Reset Result <i class="fas fa-redo"></i></a>';
-                    if (auth()->user()->hasRole('super-admin', 'admin')) {
+                    if (auth()->user()->can('user.update')) {
                         $dropdownMenu .= '<a class="dropdown-item" target="_blank" href="' . route('admin.login_as_student', $std->user_id) . '">Login As <i class="fas fa-user"></i></a>';
                     }
 

@@ -37,7 +37,7 @@ class StudentOperation extends Controller
             ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
             ->orderBy('user_exams.exam_id', 'desc')
             ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-            ->where('user_exams.user_id', Session::get('id'))
+            ->where('user_exams.user_id', Auth::user()->id)
             ->where('user_exams.std_status', '1')
             ->get()
             ->toArray();
@@ -60,9 +60,9 @@ class StudentOperation extends Controller
         }
 
         // Check if the user has a rejected admission
-    $rejection = AdmissionRejection::where('user_id', $user->userId)
-    ->orderBy('rejected_at', 'desc')
-    ->first();
+        $rejection = AdmissionRejection::where('user_id', $user->userId)
+            ->orderBy('rejected_at', 'desc')
+            ->first();
 
         return view('student.profile', compact('user', 'course', 'rejection'));
     }
@@ -70,7 +70,7 @@ class StudentOperation extends Controller
     // application status
     public function application_status()
     {
-        $user_exam = user_exam::where('user_id', Session::get('id'))->first();
+        $user_exam = user_exam::where('user_id', Auth::user()->id)->first();
         $user_admission = UserAdmission::where('user_id', Auth::user()->userId)->first();
         // dd($exam_submitted, $data);
 
@@ -87,7 +87,7 @@ class StudentOperation extends Controller
             ->join('users', 'users.id', '=', 'user_exams.user_id')
             ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
             ->orderBy('user_exams.exam_id', 'desc')
-            ->where('user_exams.user_id', Session::get('id'))
+            ->where('user_exams.user_id', Auth::user()->id)
             ->where('user_exams.std_status', '1')
             ->get()
             ->toArray();
@@ -107,7 +107,7 @@ class StudentOperation extends Controller
         $question = Oex_question_master::where('exam_set_id', $randomExamId)->inRandomOrder()->get();
 
         // $question = Oex_question_master::where('exam_id', $id)->inRandomOrder()->get();
-        $user_exam = user_exam::where('exam_id', $id)->where('user_id', Session::get('id'))->get()->first();
+        $user_exam = user_exam::where('exam_id', $id)->where('user_id', Auth::user()->id)->get()->first();
 
         if ($user_exam && $user_exam->submitted) {
             return redirect(url('student/exam'))->with([
@@ -160,12 +160,12 @@ class StudentOperation extends Controller
     // start exam
     public function start_exam($id)
     {
-        $user_exam = user_exam::where('exam_id', $id)->where('user_id', Session::get('id'))->get()->first();
+        $user_exam = user_exam::where('exam_id', $id)->where('user_id', Auth::user()->id)->get()->first();
         $arr = ['status' => 'true', 'message' => 'started successfully'];
         if (!$user_exam->started) {
             user_exam::updateOrCreate(
                 [
-                    'user_id' => Session::get('id'),
+                    'user_id' => Auth::user()->id,
                     'exam_id' => $id,
                 ],
                 ['started' => Carbon::now()->toDateTimeString()],
@@ -178,10 +178,10 @@ class StudentOperation extends Controller
     //On submit
     public function submit_questions(Request $request)
     {
-        $std_info = user_exam::where('user_id', Session::get('id'))->where('exam_id', $request->exam_id)->get()->first();
+        $std_info = user_exam::where('user_id', Auth::user()->id)->where('exam_id', $request->exam_id)->get()->first();
 
         if ($std_info && $std_info->submitted) {
-            $res = Oex_result::where('exam_id', $request->exam_id)->where('user_id', Session::get('id'))->get()->first();
+            $res = Oex_result::where('exam_id', $request->exam_id)->where('user_id', Auth::user()->id)->get()->first();
             $yes_ans = $res->yes_ans;
             $total = $res->yes_ans + $res->no_ans;
             $percentage = round(($yes_ans / $total) * 100);
@@ -223,12 +223,12 @@ class StudentOperation extends Controller
         $std_info->submitted = Carbon::now()->toDateTimeString();
         $std_info->update();
 
-        $user = User::where('id', Session::get('id'))->first();
+        $user = Auth::user();
         $userId = $user->userId;
 
         $res = new Oex_result();
         $res->exam_id = $request->exam_id;
-        $res->user_id = Session::get('id');
+        $res->user_id = $user->id;
         $res->yes_ans = $yes_ans;
         $res->no_ans = $no_ans;
         $res->result_json = json_encode($result);
@@ -252,14 +252,14 @@ class StudentOperation extends Controller
     //Applying for exam
     public function apply_exam($id)
     {
-        $checkuser = user_exam::where('user_id', Session::get('id'))->where('exam_id', $id)->get()->first();
+        $checkuser = user_exam::where('user_id', Auth::user()->id)->where('exam_id', $id)->get()->first();
 
         if ($checkuser) {
             $arr = ['status' => 'false', 'message' => 'Already applied, see your exam section'];
         } else {
             $exam_user = new user_exam();
 
-            $exam_user->user_id = Session::get('id');
+            $exam_user->user_id = Auth::user()->id;
             $exam_user->exam_id = $id;
             $exam_user->std_status = 1;
             $exam_user->exam_joined = 0;
@@ -275,9 +275,9 @@ class StudentOperation extends Controller
     //View Result
     public function view_result($id)
     {
-        $data['result_info'] = Oex_result::where('exam_id', $id)->where('user_id', Session::get('id'))->get()->first();
+        $data['result_info'] = Oex_result::where('exam_id', $id)->where('user_id', Auth::user()->id)->get()->first();
 
-        $data['student_info'] = User::where('id', Session::get('id'))->get()->first();
+        $data['student_info'] = User::where('id', Auth::user()->id)->get()->first();
 
         $data['exam_info'] = Oex_exam_master::where('id', $id)->get()->first();
 
