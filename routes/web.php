@@ -48,6 +48,7 @@ Route::get('/course/{slug}', [LandingPageController::class, 'show'])->where('cou
     ->name('course');
 
 Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
+
 Route::post('form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
 
 Route::prefix('admin')
@@ -312,6 +313,10 @@ Route::prefix('admin')
                 ->name('programme.')
                 ->group(function () {
                     Route::get('/', [ProgrammeController::class, 'index'])->name('index');
+                    Route::get('/fetch', [ProgrammeController::class, 'fetch'])->name('fetch');
+                    Route::get('/create', [ProgrammeController::class, 'create'])
+                        ->name('create')
+                        ->middleware('permission:programme.create');
                     Route::get('/programme_status/{id}', [AdminController::class, 'programme_status'])
                         ->name('status')
                         ->middleware('permission:programme.status');

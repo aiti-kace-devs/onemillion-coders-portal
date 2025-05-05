@@ -40,6 +40,14 @@ class ProgrammeController extends Controller
             ->editColumn('end_date', function ($row) {
                 return '<span class="hidden">' . strtotime($row->end_date) . '</span>' . Carbon::parse($row->end_date)->toFormattedDayDateString();
             })
+            ->editColumn('status', function($row){
+                return '<input
+                type="checkbox"
+                value="' . $row->status . '"
+                v-model="proxyChecked"
+                class="rounded-sm w-5 h-5 border-gray-700 text-gray-700 shadow-sm focus:ring-gray-500"
+            />';
+            })
             ->addColumn('action', function ($row) {
                 $linkClass = 'inline-flex items-center w-full px-4 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-25 hover:text-gray-50 hover:bg-gray-100';
 
@@ -67,7 +75,7 @@ class ProgrammeController extends Controller
 
                 return $action;
             })
-            ->rawColumns(['start_date', 'end_date', 'action'])
+            ->rawColumns(['start_date', 'end_date', 'status', 'action'])
             ->make(true);
     }
 
