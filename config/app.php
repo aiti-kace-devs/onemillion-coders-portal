@@ -175,7 +175,6 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\HorizonServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        Rap2hpoutre\LaravelLogViewer\LaravelLogViewerServiceProvider::class,
         GeoSot\EnvEditor\ServiceProvider::class,
         HansSchouten\LaravelPageBuilder\ServiceProvider::class,
         App\Providers\AppConfigServiceProvider::class,

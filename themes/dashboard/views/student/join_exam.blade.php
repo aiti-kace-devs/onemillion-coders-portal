@@ -174,7 +174,7 @@
                                                                     {{ $options['option4'] }}
                                                                 </li>
 
-                                                                <li class="none"><input value="null" type="radio"
+                                                                <li class="none d-none"><input value="null" type="radio"
                                                                         checked="checked" name="ans{{ $key + 1 }}">
                                                                     {{ $options['option4'] }}</li>
                                                             </ul>

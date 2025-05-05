@@ -2,18 +2,22 @@
 
 namespace App\Mail;
 
+use App\Helpers\MailerHelper;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Str;
 use League\CommonMark\CommonMarkConverter;
+use Throwable;
 
 class GenericEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
+    public $deleteWhenMissingModels = true;
     public $markdownContent;
     public $subjectLine;
     /**
@@ -21,10 +25,11 @@ class GenericEmail extends Mailable implements ShouldQueue
      *
      * @return void
      */
-    public function __construct($markdownContent = '', $subjectLine = '')
+    public function __construct($markdownContent = '', $subjectLine = '', $view = 'mail.generic-email', public $data = [])
     {
         $this->markdownContent = $markdownContent;
         $this->subjectLine = $subjectLine;
+        $this->view = $view;
 
         $converter = new CommonMarkConverter();
         $this->markdownContent = $converter->convert($markdownContent)->getContent();
@@ -50,7 +55,7 @@ class GenericEmail extends Mailable implements ShouldQueue
     public function content()
     {
         return new Content(
-            markdown: 'mail.generic-email',
+            markdown: $this->view,
         );
     }
 
@@ -74,4 +79,32 @@ class GenericEmail extends Mailable implements ShouldQueue
     //     return $this->subject($this->subjectLine)
     //         ->html($htmlContent);
     // }
+
+    // Called when job succeeds
+    public function success()
+    {
+        $this->removeTempView();
+    }
+
+    public function failed(?Throwable $exception): void
+    {
+        // TODO: remove recreation of view on error
+        // $message = $exception->getMessage();
+        // fix for view not found
+        // if (Str::contains($message, ["View [$this->view] not found"])) {
+        // view not found create it
+        $file = str_replace('mail.temp.', '', $this->view);
+        MailerHelper::createView($this->markdownContent, $file);
+        // }
+        // $this->removeTempView();
+    }
+
+
+
+    private function removeTempView()
+    {
+        if ($this->view !== 'mail.generic-email') {
+            MailerHelper::removeView($this->view);
+        }
+    }
 }

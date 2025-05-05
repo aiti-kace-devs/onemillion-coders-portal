@@ -54,11 +54,11 @@ class AdminController extends Controller
     // admin dashboard
     public function index()
     {
-        $user_count = User::get()->count();
+        $user_count = User::count();
         $shortlist_count = User::where('shortlist', 1)->count();
-        $admin_count = Admin::get()->count();
+        $admin_count = Admin::count();
         $user_admission_count = UserAdmission::whereNotNull('session')->count();
-        $programe_count = Programme::get()->count();
+        $programe_count = Programme::count();
 
         $studentsPerRegion = DB::table('users')
             ->join('courses', 'users.registered_course', '=', 'courses.id')
@@ -508,22 +508,24 @@ class AdminController extends Controller
                 ->addColumn('actions', function ($std) {
                     $buttons = [];
 
-                    $viewButton = '<a href="' . url('admin/admin_view_result/' . $std->user_id) . '" class="btn btn-success">' . 'View <i class="fas fa-poll"></i>' . '</a>';
 
-                    $dropdownToggle = '<button type="button" class="btn btn-success btn-sm dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-expanded="false">' . '<span class="sr-only">Toggle Dropdown</span>' . '</button>';
+                    $actionsButton = '<a class="btn btn-outline-primary"> Actions</i> </a>';
+
+                    $dropdownToggle = '<button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-expanded="false">' . '<span class="sr-only">Toggle Dropdown</span>' . '</button>';
 
                     $dropdownMenu = '<div class="dropdown-menu">';
                     $dropdownMenu .= '<a class="dropdown-item" href="' . url('admin/delete_students/' . $std->id) . '">Delete <i class="fas fa-trash-alt"></i></a>';
                     $dropdownMenu .= '<a class="dropdown-item" href="' . route('admin.reset-exam', [$std->exam_id, $std->user_id]) . '">Reset Result <i class="fas fa-redo"></i></a>';
-                    $dropdownMenu .= '</div>';
+                    if (auth()->user()->can('user.update')) {
+                        $dropdownMenu .= '<a class="dropdown-item" target="_blank" href="' . route('admin.login_as_student', $std->user_id) . '">Login As <i class="fas fa-user"></i></a>';
+                    }
 
                     if ($std->exam_joined) {
-                        return '<div class="btn-group">' . $viewButton . $dropdownToggle . $dropdownMenu . '</div>';
-                    } else {
-                        $buttons[] = '<a href="' . url('admin/delete_students/' . $std->id) . '" class="btn btn-danger btn-sm">Delete <i class="fas fa-trash-alt"></i></a>';
-                        $buttons[] = '<a href="' . route('admin.reset-exam', [$std->exam_id, $std->user_id]) . '" class="btn btn-info btn-sm">Reset Result <i class="fas fa-redo"></i></a>';
-                        return '<div class="btn-group">' . implode('', $buttons) . '</div>';
+                        $dropdownMenu .= '<a target="_blank" href="' . url('admin/admin_view_result/' . $std->user_id) . '" class="dropdown-item">' . 'View Results<i class="fas fa-poll"></i>' . '</a>';
                     }
+                    $dropdownMenu .= '</div>';
+
+                    return '<div class="btn-group">' . $actionsButton . $dropdownToggle . $dropdownMenu . '</div>';
                 })
                 ->with(['all_filtered_ids' => $baseQuery->pluck('user_exams.id')->toArray()])
                 ->rawColumns(['checkbox', 'result', 'status', 'actions'])
@@ -538,7 +540,17 @@ class AdminController extends Controller
     }
 
 
+    public function login_as_student(Request $request, $user_id)
+    {
+        $user = User::find($user_id);
+        if ($user) {
+            Auth::guard('web')->login($user);
 
+            return redirect()->route('student.dashboard');
+        } else {
+            return redirect()->back()->with('error', 'User not found.');
+        }
+    }
 
 
 
@@ -848,17 +860,20 @@ class AdminController extends Controller
 
     public function scan_qrcode_page()
     {
-        $courses = Course::all();
+        // $courses = auth('admin')->user()->assignedCourses()->get();
+        $courses = Course::myAssignedCourses()->get()->groupBy('location');
 
         return view('admin.qr-scanner', [
             // "locations" => $locations,
-            'courses' => $courses,
+            'groupedCourses' => $courses,
         ]);
     }
 
     public function verifyDetails(Request $request)
     {
-        $courses = Course::all();
+        // $courses = Course::all();
+        $courses = Course::myAssignedCourses()->get()->groupBy('location');
+
 
         $students = collect();
         $selectedCourse = null;
@@ -880,6 +895,19 @@ class AdminController extends Controller
 
         // match with ghana card format
         $correctFormat = preg_match('/GHA-[0-9]{9}-[0-9]{1}$/', $student->ghcard);
+
+        $courses = Course::myAssignedCourses()->pluck('id')->values()->all();
+
+        $allowed = in_array($student->admission->course_id, $courses);
+
+        if (!$allowed) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot verify students of this course'
+            ]);
+        }
+
+
         if (($student && $correctFormat) || ($student && $student->ghcard && $student->card_type !== 'ghcard')) {
             $adminId = Auth::guard('admin')->id();
             $student->verification_date = now();
@@ -887,7 +915,7 @@ class AdminController extends Controller
             $student->save();
             $student->verified_by_name = Admin::find($student->verified_by)->name;
 
-            UpdateSheetWithGhanaCardDetails::dispatch($student);
+            // UpdateSheetWithGhanaCardDetails::dispatch($student);
 
             return response()->json([
                 'success' => true,
@@ -928,13 +956,14 @@ class AdminController extends Controller
 
     public function verification_page(Request $request)
     {
-        $allCourses = Course::all();
+        // $allCourses = auth('admin')->user()->assignedCourses()->get();
+        $allCourses = Course::myAssignedCourses()->get();
         $students = [];
 
         $selectedCourse = $request->input('course_id');
 
         if (isset($selectedCourse)) {
-            $students = UserAdmission::select('users.*', 'user_admission.created_at as admission_created', 'user_admission.updated_at as admission_updated', \DB::raw('(select admins.name from admins where admins.id = users.verified_by) as verified_by_name'))
+            $students = UserAdmission::select('users.*', 'user_admission.created_at as admission_created', 'user_admission.updated_at as admission_updated', DB::raw('(select admins.name from admins where admins.id = users.verified_by) as verified_by_name'))
                 ->join('users', 'users.userId', 'user_admission.user_id')
 
                 ->where('course_id', $selectedCourse)
@@ -942,26 +971,48 @@ class AdminController extends Controller
             $selectedCourse = Course::find($selectedCourse);
         }
 
+
         return view('admin.verification', [
             'courses' => $allCourses,
             'students' => $students,
             'selectedCourse' => $selectedCourse,
+            'groupedCourses' => $allCourses->groupBy('location'),
         ]);
     }
 
     public function viewAttendanceByDate(Request $request)
     {
-        $courses = Course::all();
+        // $courses = auth('admin')->user()->assignedCourses()->get();
+        $courses = Course::myAssignedCourses()->get();
+        $sessions = CourseSession::whereIn('course_id', $courses->pluck('id')->all())
+            ->select('id', 'session', 'name', 'course_id')->get();
         $attendance = collect();
         $selectedCourse = null;
         $selectedDate = null;
 
         if ($request->has('course_id') && $request->has('date')) {
+            if (!in_array($request->course_id, $courses->pluck('id')->all())) {
+                return back()->with([
+                    'key' => 'error',
+                    'flash' => 'You do not have permission to view this course'
+                ]);
+            }
             $selectedCourse = Course::find($request->input('course_id'));
             $selectedDate = $request->input('date');
+            $selectedSessions = $request->input('session_ids') != "" ? explode(',', trim($request->input('session_ids'))) : [];
+
 
             if ($selectedCourse && $selectedDate) {
-                $attendance = Attendance::select('attendances.*', 'users.name', 'users.email')->join('users', 'users.userId', '=', 'attendances.user_id')->where('attendances.course_id', $selectedCourse->id)->whereDate('attendances.date', '=', $selectedDate)->get();
+                $attendance = Attendance::select('attendances.*', 'users.name', 'users.email', 'course_sessions.session')
+                    ->join('users', 'users.userId', '=', 'attendances.user_id')
+                    ->join('user_admission', 'user_admission.user_id', '=', 'users.userId')
+                    ->join('course_sessions', 'course_sessions.id', '=', 'user_admission.session')
+                    ->where('attendances.course_id', $selectedCourse->id)
+                    ->whereDate('attendances.date', '=', $selectedDate);
+                if ($selectedSessions && count($selectedSessions) > 0) {
+                    $attendance->whereIn('course_sessions.id', $selectedSessions);
+                }
+                $attendance = $attendance->get();
             }
         }
 
@@ -970,20 +1021,22 @@ class AdminController extends Controller
             'attendance' => $attendance,
             'selectedCourse' => $selectedCourse,
             'selectedDate' => $selectedDate,
+            'sessions' => $sessions,
+            'groupedCourses' => $courses->groupBy('location'),
+            'selectedSessions' => $selectedSessions ?? []
         ]);
     }
 
     public function admit_student(Request $request)
     {
         $validated = $request->validate([
-            'course_id' => 'required|exists:courses,id',
-            'session_id' => 'sometimes|exists:course_sessions,id',
+            'course_id' => 'required|nullable|exists:courses,id',
+            'session_id' => 'sometimes|nullable|exists:course_sessions,id',
             'user_id' => 'sometimes|nullable|required_if:user_ids,null|exists:users,userId',
             'change' => 'sometimes',
             'user_ids' => 'sometimes|nullable|required_if:user_id,null|array',
             'user_ids.*' => 'exists:users,userId',
         ]);
-
 
         $course = Course::find($validated['course_id']);
         $session = CourseSession::find($validated['session_id'] ?? '');
@@ -1021,17 +1074,12 @@ class AdminController extends Controller
 
     public function reset_verify($userId)
     {
-        $u = User::findOrFail($userId);
-        if ($u && !$u->verification_date) {
-            $u->ghcard = null;
-            $u->card_type = null;
-            $u->updated_at = $u->created_at;
-        }
+        $user = User::findOrFail($userId);
 
-        $u->contact = null;
-        $u->gender = null;
-        $u->network_type = null;
-        $u->save();
+        $user->details_updated_at = null;
+        $user->verified_by = null;
+        $user->verification_date = null;
+        $user->save();
 
         return redirect()
             ->back()
@@ -1209,12 +1257,10 @@ class AdminController extends Controller
 
         SendBulkEmailJob::dispatch($validated);
 
-        return redirect()
-            ->back()
-            ->with([
-                'flash' => 'Email sent successfully',
-                'key' => 'success',
-            ]);
+        return response()->json([
+            'flash' => 'SMS sending initiated successfully!',
+            'key' => 'success',
+        ]);
     }
 
     public function fetch_sms_template()
@@ -1225,79 +1271,34 @@ class AdminController extends Controller
         return response()->json($templates);
     }
 
+
+
     public function sendBulkSMS(Request $request)
     {
+        $validated = $request->validate([
+            'message' => 'required|string',
+            'student_ids' => 'sometimes|nullable|array',
+            'student_ids.*' => 'exists:users,id',
+            'list' => 'required_if:student_ids,null|nullable|string'
+        ], [], [
+            'student_ids.*' => 'student'
+        ]);
 
-        $studentIds = $request->student_ids;
-        if (empty($studentIds)) {
-            return response()->json(['success' => false, 'message' => 'No students selected.'], 400);
+        if (empty($validated['list']) && empty($validated['student_ids'])) {
+            return redirect()->back()->with([
+                'flash' => 'No students/ list selected.',
+                'key' => 'error',
+            ]);
         }
 
-        try {
-            foreach ($studentIds as $studentId) {
-                $user = User::where('userId', $studentId)->first();
-                if (!$user) continue;
-            }
+        SendBulkSMSJob::dispatch($validated);
 
-            return redirect()
-                ->back()
-                ->with([
-                    'flash' => 'SMS sending initiated successfully!',
-                    'key' => 'success',
-                ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ], 500);
-        }
+
+        return response()->json([
+            'flash' => 'SMS sending initiated successfully!',
+            'key' => 'success',
+        ]);
     }
-
-
-
-
-
-    // public function sendBulkSMS(Request $request)
-    // {
-    // $validated = $request->validate([
-    //     'message' => 'required|string',
-    //     'student_ids' => 'required|array',
-    //     'student_ids.*' => 'exists:users,id',
-    // ], [], [
-    //     'student_ids.*' => 'student'
-    // ]);
-
-    // Log::info('Students student_ids.', $mobileNumbers);
-
-    // // Fetch mobile numbers of selected students
-    // $mobileNumbers = User::whereIn('userId', $validated['student_ids'])
-    //     ->pluck('mobile_no')
-    //     ->filter() // Remove any null values
-    //     ->toArray();
-
-    // if (empty($mobileNumbers)) {
-    //     return redirect()->back()->with([
-    //         'flash' => 'No valid mobile numbers found.',
-    //         'key' => 'error',
-    //     ]);
-    // }
-
-    // Log::info('Students mobileNumbers.', $mobileNumbers);
-
-    // // Dispatch job for bulk SMS sending
-    // $message = (string) $validated['message'];
-    // $recipients = array_filter((array) $mobileNumbers);
-
-    // //SendBulkSMSJob::dispatch($message, $recipients);
-
-
-    // return redirect()
-    //     ->back()
-    //     ->with([
-    //         'flash' => 'SMS sending initiated successfully!',
-    //         'key' => 'success',
-    //     ]);
-    // }
 
 
 

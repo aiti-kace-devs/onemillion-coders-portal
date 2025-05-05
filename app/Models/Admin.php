@@ -21,22 +21,14 @@ class Admin extends Authenticatable
      *
      * @var string[]
      */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'status'
-    ];
+    protected $fillable = ['name', 'email', 'password', 'status', 'course_id'];
 
     /**
      * The attributes that should be hidden for serialization.
      *
      * @var array
      */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
     /**
      * The attributes that should be cast.
@@ -50,5 +42,9 @@ class Admin extends Authenticatable
     public function isSuper()
     {
         return $this->is_super;
+    }
+    public function assignedCourses()
+    {
+        return $this->belongsToMany(Course::class, 'admin_course', 'admin_id', 'course_id')->select('courses.*');
     }
 }

@@ -16,6 +16,11 @@ class SmsHelper
 
         $content = $template->content;
 
+        return SmsHelper::replaceVariables($content, $variables);
+    }
+
+    public static function replaceVariables(string $content, array $variables = [])
+    {
         foreach ($variables as $key => $value) {
             $content = str_replace("{" . $key . "}", $value, $content);
         }

@@ -37,7 +37,7 @@
                 @php
                     function detailsUpdated($user)
                     {
-                        return $user->user_updated != $user->user_created && $user->ghcard;
+                        return $user->details_updated_at != null;
                     }
                 @endphp
                 <!-- Small boxes (Stat box) -->
@@ -49,23 +49,39 @@
                             <label class="form-label col-12">Fullname (as appears on your Ghana Card/ any National ID)
                             </label>
                             <input id="name" type="text" required value=" {{ $user->student_name }}" name="name"
-                                class="form-control col-12" @if (detailsUpdated($user)) disabled @endif>
+                                class="form-control col-12  @error('name') is-invalid @enderror"
+                                @if (detailsUpdated($user)) disabled @endif>
+                            @if ($user->previous_name)
+                                <div class="text-primary">Previous Name: {{ $user->previous_name }}</div>
+                            @endif
+                            @error('name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <div class="col-12 mb-2">
                             <label class="form-label col-12">Card Type</label>
-                            <select id="card_type" name="card_type" class="form-control"
+                            <select id="card_type" name="card_type"
+                                class="form-control @error('card_type') is-invalid @enderror"
                                 @if (detailsUpdated($user)) disabled @endif required>
                                 <option value="">Select Card Type</option>
-                                <option value="ghcard" {{ $user->card_type === 'ghcard' ? 'selected' : '' }}>Ghana Card
+                                <option value="ghcard"
+                                    {{ old('card_type', $user->card_type) === 'ghcard' ? 'selected' : '' }}>Ghana Card
                                 </option>
-                                <option value="voters_id" {{ $user->card_type === 'voters_id' ? 'selected' : '' }}>Voter's
+                                <option value="voters_id"
+                                    {{ old('card_type', $user->card_type) === 'voters_id' ? 'selected' : '' }}>Voter's
                                     ID</option>
                                 <option value="drivers_license"
-                                    {{ $user->card_type === 'drivers_license' ? 'selected' : '' }}>Driver's License</option>
-                                <option value="passport" {{ $user->card_type === 'passport' ? 'selected' : '' }}>Passport
+                                    {{ old('card_type', $user->card_type) === 'drivers_license' ? 'selected' : '' }}>
+                                    Driver's
+                                    License</option>
+                                <option value="passport"
+                                    {{ old('card_type', $user->card_type) === 'passport' ? 'selected' : '' }}>Passport
                                 </option>
                             </select>
+                            @error('card_type')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <div class="input-group col-12 mb-2">
@@ -80,19 +96,23 @@
                                 class="form-control  @error('ghcard') is-invalid @enderror
                                 @if (!empty($user->verification_date)) is-valid @else is-invalid @endif
                                           col-12 mr-2">
+                            @error('ghcard')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @else
+                                {{-- Invalid Feedback --}}
+                                @if (empty($user->verification_date))
+                                    <div class="invalid-feedback">
+                                        Card not verified (This will be done manually by an administrator)
+                                    </div>
+                                @endif
+                                {{-- Valid Feedback --}}
+                                @if (!empty($user->verification_date))
+                                    <div class="valid-feedback">
+                                        Card Verified Successfully
+                                    </div>
+                                @endif
+                            @enderror
 
-                            {{-- Invalid Feedback --}}
-                            @if (empty($user->verification_date))
-                                <div class="invalid-feedback">
-                                    Card not verified
-                                </div>
-                            @endif
-                            {{-- Valid Feedback --}}
-                            @if (!empty($user->verification_date))
-                                <div class="valid-feedback">
-                                    Card Verified Successfully
-                                </div>
-                            @endif
                         </div>
 
                         <div class="col-12 mb-2">
@@ -107,40 +127,46 @@
 
                         <div class="col-12 mb-2">
                             <label class="form-label col-12">Network Type</label>
-                            <select id="network_type" name="network_type" class="form-control"
+                            <select id="network_type" name="network_type"
+                                class="form-control  @error('network_type') is-invalid @enderror"
                                 @if ($user->network_type) disabled @endif required>
                                 <option value="">Select Network</option>
-                                <option value="mtn" {{ $user->network_type === 'mtn' ? 'selected' : '' }}>MTN</option>
-                                <option value="telecel" {{ $user->network_type === 'telecel' ? 'selected' : '' }}>Telecel
+                                <option value="mtn"
+                                    {{ old('network_type', $user->network_type) === 'mtn' ? 'selected' : '' }}>MTN</option>
+                                <option value="telecel"
+                                    {{ old('network_type', $user->network_type) === 'telecel' ? 'selected' : '' }}>Telecel
                                 </option>
-                                <option value="airteltigo" {{ $user->network_type === 'airteltigo' ? 'selected' : '' }}>
+                                <option value="airteltigo"
+                                    {{ old('network_type', $user->network_type) === 'airteltigo' ? 'selected' : '' }}>
                                     AirtelTigo</option>
                             </select>
+                            @error('network_type')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <div class="input-group col-12 mb-2">
                             <label class="form-label col-12">Phone Number</label>
-                            <div class="input-group-prepend">
+                            {{-- <div class="input-group-prepend">
                                 @if (!$user->contact)
                                     <span class="input-group-text" id="basic-addon1">+233</span>
                                 @endif
-                            </div>
-                            <input id="contact" type="text" required value="{{ $user->contact }}" name="contact"
-                                placeholder="201234567" @if ($user->contact) disabled @endif
-                                class="form-control @error('contact') is-invalid @enderror col-12 mr-2">
+                            </div> --}}
+                            <input id="mobile_no" type="text" required value="{{ $user->mobile_no }}" name="mobile_no"
+                                placeholder="201234567" @if ($user->mobile_no) disabled @endif
+                                class="form-control @error('mobile_no') is-invalid @enderror col-12 mr-2">
                         </div>
-                        @error('contact')
+                        @error('mobile_no')
                             <div role="alert" class="alert alert-danger">{{ $message }}</div>
                         @enderror
 
 
                         <div class="col-12">
                             {{-- <p class="alert alert-info">You'll be given the opportunity to change your details later.</p> --}}
-                            @if (detailsUpdated($user) && null !== $user->gender && null !== $user->network_type && null !== $user->contact)
+                            @if (detailsUpdated($user))
                                 <p class="text-sm text-danger">You have already updated your details</p>
                             @else
-                                <button onclick="confirmUpdateDetails()" type="button"
-                                    class="btn btn-primary">Update</button>
+                                <button id="confirmUpdateDetails" type="button" class="btn btn-primary">Update</button>
                                 <p class="text-sm text-danger">You can only update your details once, make sure you verify
                                     all
                                     details before submitting.</p>
@@ -148,13 +174,14 @@
                         </div>
                     </div>
                 </form>
-
-                <div class="text-md">Location : {{ $user->location }} </div>
-                <div class="text-md">Course : {{ $user->course_name }}</div>
-                <div class="text-md">Session : {{ $user->selected_session }}</div>
-                <div class="text-lg font-bold mt-2">Student ID for Attendance</div>
-                <div id="qrcode"></div>
-                <button type="button" class="btn btn-primary" onclick="downloadQRCode()">Download</button>
+                @if ($user->isAdmitted())
+                    <div class="text-md">Location : {{ $user->location }} </div>
+                    <div class="text-md">Course : {{ $user->course_name }}</div>
+                    <div class="text-md">Session : {{ $user->selected_session }}</div>
+                    <div class="text-lg font-bold mt-2">Student ID for Attendance</div>
+                    <div id="qrcode"></div>
+                    <button type="button" class="btn btn-primary" id="downloadQRCode">Download</button>
+                @endif
                 <!-- /.row -->
                 <!-- Main row -->
 
@@ -171,48 +198,34 @@
     <script src="{{ asset('assets/js/jquery.inputmask.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/js/easy.qrcode.min.js') }}"></script>
     <script @nonce>
-        const logoCanvas = document.createElement('canvas');
-        logoCanvas.width = 200;
-        logoCanvas.height = 100;
-        const logoCtx = logoCanvas.getContext('2d');
+        const innerWidth = Math.floor(window.innerWidth * (7 / 9));
+        const width = innerWidth > 400 ? 400 : innerWidth
+        const qrcode = new QRCode(document.getElementById("qrcode"), {
+            text: "{{ Auth::user()->userId }}",
+            width: width,
+            height: width,
+            colorDark: "black",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H,
+            quietZone: 20,
+            logo: "{{ asset('assets/images/logo-bt.png') }}",
+            logoWidth: 170,
+            logoHeight: 80,
+        });
 
-        // Draw logo
-        const logoImg = new Image();
-        let qrcode;
-
-        logoImg.src = "{{ asset('assets/images/logo-bt.png') }}";
-        logoImg.onload = function() {
-            logoCtx.drawImage(logoImg, 50, 0, 100, 60);
-
-            // Add text
-            logoCtx.font = 'bold 14px Arial';
-            logoCtx.fillStyle = 'black';
-            logoCtx.textAlign = 'center';
-            logoCtx.fillText("{{ Auth::user()->name }}", 100, 85);
-
-            const innerWidth = Math.floor(window.innerWidth * (7 / 9));
-            const width = innerWidth > 400 ? 400 : innerWidth
-            qrcode = new QRCode(document.getElementById("qrcode"), {
-                text: "{{ Auth::user()->userId }}",
-                width: width,
-                height: width,
-                colorDark: "black",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H,
-                quietZone: 20,
-                logo: logoCanvas.toDataURL('image/png'),
-                logoWidth: 200,
-                logoHeight: 150,
-            });
-        }
 
         function downloadQRCode() {
-            qrcode.download("StudentID-{{ Auth::user()->userId }}")
+            qrcode.download("StudentName-{{ Auth::user()->name }}")
         }
 
         $(document).ready(function() {
             const cardTypeSelect = $("#card_type");
             const ghcardInput = $("#ghcard");
+            const downloadQRButton = $('#downloadQRCode');
+
+            downloadQRButton.on('click', function() {
+                downloadQRCode();
+            })
 
             function toggleInputMask() {
                 if (cardTypeSelect.val() === "ghcard") {
@@ -243,6 +256,10 @@
         //         },
         //     }
         // });
+
+        $('#confirmUpdateDetails').on('click', function() {
+            confirmUpdateDetails();
+        });
 
         function confirmUpdateDetails() {
             Swal.fire({

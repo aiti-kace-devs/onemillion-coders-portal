@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Course;
 use App\Models\User;
 use App\Models\Admin;
 use App\Providers\RouteServiceProvider;
@@ -55,7 +56,6 @@ use Spatie\Permission\Models\Role;
 //     }
 // }
 
-
 class RegisteredUserController extends Controller
 {
     /**
@@ -65,8 +65,9 @@ class RegisteredUserController extends Controller
      */
     public function index()
     {
-        $admins =  $admins = Admin::all();
-        return view('admin.index', compact('admins'));
+        $admins = $admins = Admin::all();
+        $courses = Course::all();
+        return view('admin.index', compact('admins', 'courses'));
     }
 
     /**
@@ -124,9 +125,10 @@ class RegisteredUserController extends Controller
         //dd($id, Admin::find($id));
         $roles = Role::all();
         $permissions = Permission::all();
+        $courses = Course::all();
 
         $admin = Admin::findOrFail($id);
-        return view('admin.edit', compact('admin', 'roles', 'permissions'));
+        return view('admin.edit', compact('admin', 'roles', 'permissions', 'courses'));
         // return view('admin.edit', compact('admin'));
     }
 
@@ -168,7 +170,6 @@ class RegisteredUserController extends Controller
         $admin->save();
 
         if (auth()->user()->hasRole('super-admin', 'admin')) {
-
             if ($request->has('roles')) {
                 $admin->syncRoles($request->roles);
             } else {
@@ -182,15 +183,23 @@ class RegisteredUserController extends Controller
                 $admin->syncPermissions([]);
             }
         }
+
+        if ($request->has('courses')) {
+            $admin->assignedCourses()->sync($request->courses);
+        } else {
+            $admin->assignedCourses()->detach();
+        }
         // Sync roles
         // echo json_encode(['status' => 'true', 'message' => 'Admin updated successfully!', 'reload' => url('admin/manage_admins')]);
 
         $redirectPath = $admin->is_super ? 'admin.manage_admins' : 'admin.manage_admins';
 
-        return redirect()->route($redirectPath)->with([
-            'flash' => 'Admin updated successfully!',
-            'key' => 'success'
-        ]);
+        return redirect()
+            ->route($redirectPath)
+            ->with([
+                'flash' => 'Admin updated successfully!',
+                'key' => 'success',
+            ]);
     }
 
     /**
@@ -204,14 +213,13 @@ class RegisteredUserController extends Controller
         $admin = Admin::findOrFail($id);
         $admin->delete();
 
-        return redirect()->route('admin.manage_admins')->with([
-            'flash' => 'Admin deleted successfully!',
-            'key' => 'success'
-        ]);
+        return redirect()
+            ->route('admin.manage_admins')
+            ->with([
+                'flash' => 'Admin deleted successfully!',
+                'key' => 'success',
+            ]);
     }
-
-
-
 
     //Editing is_super admin status
     public function is_super_admin_status($id)
@@ -227,5 +235,24 @@ class RegisteredUserController extends Controller
         $admin1 = Admin::where('id', $id)->get()->first();
         $admin1->is_super = $is_super;
         $admin1->update();
+    }
+
+    public function getAdminCourses(Admin $admin)
+    {
+        return response()->json($admin->assignedCourses->pluck('id'));
+    }
+
+    public function updateAdminCourses(Request $request)
+    {
+        $request->validate([
+            'admin_id' => 'required|exists:admins,id',
+            'courses' => 'array',
+            'courses.*' => 'exists:courses,id',
+        ]);
+
+        $admin = Admin::find($request->admin_id);
+        $admin->assignedCourses()->sync($request->courses);
+
+        return response()->json(['success' => true]);
     }
 }

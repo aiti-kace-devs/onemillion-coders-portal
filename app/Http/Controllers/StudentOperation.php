@@ -15,11 +15,10 @@ use App\Models\Course;
 use App\Models\UserAdmission;
 use App\Models\user_exam;
 use Illuminate\Support\Carbon;
-use App\Helpers\GoogleSheets;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use App\Jobs\AdmitStudentJob;
+use App\Jobs\CreateStudentAdmissionJob;
 use App\Jobs\TestSubmittedJob;
 use App\Models\AdmissionRejection;
 
@@ -38,7 +37,7 @@ class StudentOperation extends Controller
             ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
             ->orderBy('user_exams.exam_id', 'desc')
             ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-            ->where('user_exams.user_id', Session::get('id'))
+            ->where('user_exams.user_id', Auth::user()->id)
             ->where('user_exams.std_status', '1')
             ->get()
             ->toArray();
@@ -60,13 +59,18 @@ class StudentOperation extends Controller
             $course = Course::find($user->registered_course);
         }
 
-        return view('student.profile', compact('user', 'course'));
+        // Check if the user has a rejected admission
+        $rejection = AdmissionRejection::where('user_id', $user->userId)
+            ->orderBy('rejected_at', 'desc')
+            ->first();
+
+        return view('student.profile', compact('user', 'course', 'rejection'));
     }
 
     // application status
     public function application_status()
     {
-        $user_exam = user_exam::where('user_id', Session::get('id'))->first();
+        $user_exam = user_exam::where('user_id', Auth::user()->id)->first();
         $user_admission = UserAdmission::where('user_id', Auth::user()->userId)->first();
         // dd($exam_submitted, $data);
 
@@ -83,7 +87,7 @@ class StudentOperation extends Controller
             ->join('users', 'users.id', '=', 'user_exams.user_id')
             ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
             ->orderBy('user_exams.exam_id', 'desc')
-            ->where('user_exams.user_id', Session::get('id'))
+            ->where('user_exams.user_id', Auth::user()->id)
             ->where('user_exams.std_status', '1')
             ->get()
             ->toArray();
@@ -103,7 +107,7 @@ class StudentOperation extends Controller
         $question = Oex_question_master::where('exam_set_id', $randomExamId)->inRandomOrder()->get();
 
         // $question = Oex_question_master::where('exam_id', $id)->inRandomOrder()->get();
-        $user_exam = user_exam::where('exam_id', $id)->where('user_id', Session::get('id'))->get()->first();
+        $user_exam = user_exam::where('exam_id', $id)->where('user_id', Auth::user()->id)->get()->first();
 
         if ($user_exam && $user_exam->submitted) {
             return redirect(url('student/exam'))->with([
@@ -156,12 +160,12 @@ class StudentOperation extends Controller
     // start exam
     public function start_exam($id)
     {
-        $user_exam = user_exam::where('exam_id', $id)->where('user_id', Session::get('id'))->get()->first();
+        $user_exam = user_exam::where('exam_id', $id)->where('user_id', Auth::user()->id)->get()->first();
         $arr = ['status' => 'true', 'message' => 'started successfully'];
         if (!$user_exam->started) {
             user_exam::updateOrCreate(
                 [
-                    'user_id' => Session::get('id'),
+                    'user_id' => Auth::user()->id,
                     'exam_id' => $id,
                 ],
                 ['started' => Carbon::now()->toDateTimeString()],
@@ -174,10 +178,10 @@ class StudentOperation extends Controller
     //On submit
     public function submit_questions(Request $request)
     {
-        $std_info = user_exam::where('user_id', Session::get('id'))->where('exam_id', $request->exam_id)->get()->first();
+        $std_info = user_exam::where('user_id', Auth::user()->id)->where('exam_id', $request->exam_id)->get()->first();
 
         if ($std_info && $std_info->submitted) {
-            $res = Oex_result::where('exam_id', $request->exam_id)->where('user_id', Session::get('id'))->get()->first();
+            $res = Oex_result::where('exam_id', $request->exam_id)->where('user_id', Auth::user()->id)->get()->first();
             $yes_ans = $res->yes_ans;
             $total = $res->yes_ans + $res->no_ans;
             $percentage = round(($yes_ans / $total) * 100);
@@ -219,12 +223,12 @@ class StudentOperation extends Controller
         $std_info->submitted = Carbon::now()->toDateTimeString();
         $std_info->update();
 
-        $user = User::where('id', Session::get('id'))->first();
+        $user = Auth::user();
         $userId = $user->userId;
 
         $res = new Oex_result();
         $res->exam_id = $request->exam_id;
-        $res->user_id = Session::get('id');
+        $res->user_id = $user->id;
         $res->yes_ans = $yes_ans;
         $res->no_ans = $no_ans;
         $res->result_json = json_encode($result);
@@ -248,14 +252,14 @@ class StudentOperation extends Controller
     //Applying for exam
     public function apply_exam($id)
     {
-        $checkuser = user_exam::where('user_id', Session::get('id'))->where('exam_id', $id)->get()->first();
+        $checkuser = user_exam::where('user_id', Auth::user()->id)->where('exam_id', $id)->get()->first();
 
         if ($checkuser) {
             $arr = ['status' => 'false', 'message' => 'Already applied, see your exam section'];
         } else {
             $exam_user = new user_exam();
 
-            $exam_user->user_id = Session::get('id');
+            $exam_user->user_id = Auth::user()->id;
             $exam_user->exam_id = $id;
             $exam_user->std_status = 1;
             $exam_user->exam_joined = 0;
@@ -271,9 +275,9 @@ class StudentOperation extends Controller
     //View Result
     public function view_result($id)
     {
-        $data['result_info'] = Oex_result::where('exam_id', $id)->where('user_id', Session::get('id'))->get()->first();
+        $data['result_info'] = Oex_result::where('exam_id', $id)->where('user_id', Auth::user()->id)->get()->first();
 
-        $data['student_info'] = User::where('id', Session::get('id'))->get()->first();
+        $data['student_info'] = User::where('id', Auth::user()->id)->get()->first();
 
         $data['exam_info'] = Oex_exam_master::where('id', $id)->get()->first();
 
@@ -389,7 +393,7 @@ class StudentOperation extends Controller
                 'key' => 'success',
             ]);
         } catch (\Exception $e) {
-            // Log::error($e);
+            Log::error($e);
             return redirect(url('student/select-session/' . $user_id))->with([
                 'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
                 'key' => 'error',
@@ -477,50 +481,8 @@ class StudentOperation extends Controller
         try {
             foreach ($studentIds as $studentId) {
                 $user = User::where('userId', $studentId)->first();
-                if (!$user) {
-                    continue;
-                }
-
-                $course = Course::find($user->registered_course);
-                if (!$course) {
-                    continue;
-                }
-
-                $existingAdmission = UserAdmission::where('user_id', $user->userId)->first();
-                if ($existingAdmission) {
-                    if (!$existingAdmission->email_sent) {
-                        try {
-                            Mail::to($user->email)->send(
-                                new StudentAdmitted(
-                                    $user
-                                )
-                            );
-                            $existingAdmission->update(['email_sent' => now()]);
-                            $count++;
-                        } catch (\Throwable $mailError) {
-                            \Log::error("Failed to send email to {$user->email}: " . $mailError->getMessage());
-                        }
-                    }
-                    continue;
-                }
-
-                UserAdmission::create([
-                    'user_id' => $user->userId, // Keep UUID
-                    'course_id' => $course->id,
-                    'email_sent' => now(),
-                ]);
-
-                try {
-                    Mail::to($user->email)
-                        ->bcc(env('MAIL_FROM_ADDRESS', 'no-reply@example.com'))
-                        ->send(new StudentAdmitted(
-                            $user,
-
-                        ));
-                } catch (\Throwable $mailError) {
-                    \Log::error("Failed to send email to {$user->email}: " . $mailError->getMessage());
-                }
-
+                $course = Course::findOrFail($user->registered_course);
+                CreateStudentAdmissionJob::dispatch($user, $course, null);
                 $count++;
             }
 
@@ -572,7 +534,6 @@ class StudentOperation extends Controller
             ->join('course_sessions', 'user_admission.session', '=', 'course_sessions.id')
             ->join('courses', 'user_admission.course_id', '=', 'courses.id')
             ->first();
-
         return view('student.id-qr', [
             'user' => $user,
         ]);
@@ -596,17 +557,20 @@ class StudentOperation extends Controller
         $user = Auth::user();
 
         $rules = [
-            'name' => 'sometimes|string|max:255',
+            'name' => 'sometimes|string|regex:/^[\pL\s\-\' ]+$/u|min:5|max:255|min:4',
             'gender' => 'sometimes|in:male,female',
-            'contact' => 'sometimes|string|regex:/^[1-9][0-9]{8}$/|max:10',
+            'mobile_no' => 'sometimes|string|phone',
             'network_type' => 'sometimes|in:mtn,telecel,airteltigo',
             'card_type' => 'sometimes|in:ghcard,voters_id,drivers_license,passport',
         ];
 
         if ($request->input('card_type') === 'ghcard') {
-            $rules['ghcard'] = 'sometimes|string|regex:/^[0-9]{9}-[0-9]{1}$/|max:16';
+            $rules['ghcard'] = "sometimes|string|regex:/^GHA-[0-9]{9}-[0-9]{1}$/|max:16|unique:users,ghcard,id:{$user->id}";
+            $request->merge([
+                'ghcard' => 'GHA-' . $request->ghcard,
+            ]);
         } else {
-            $rules['ghcard'] = 'sometimes|string|max:20';
+            $rules['ghcard'] = "sometimes|string|max:20|unique:users,ghcard,id:{$user->id}";
         }
 
         $validatedData = $request->validate($rules, [], ['ghcard' => 'Card number']);
@@ -615,31 +579,38 @@ class StudentOperation extends Controller
             $user->network_type = $validatedData['network_type'];
         }
 
-        if ($user->name && $user->ghcard && $user->gender && $user->contact) {
-        } elseif ($user->name && $user->ghcard) {
-            if (isset($validatedData['gender'])) {
-                $user->gender = $validatedData['gender'];
-            }
-            if (isset($validatedData['contact'])) {
-                $user->contact = '0' . $validatedData['contact'];
-            }
-        } else {
-            if (isset($validatedData['name'])) {
-                $user->name = $validatedData['name'];
-            }
-            if (isset($validatedData['card_type'])) {
-                $user->card_type = $validatedData['card_type'];
-            }
-            if (isset($validatedData['ghcard'])) {
-                $user->ghcard = $request->input('card_type') === 'ghcard' ? 'GHA-' . $validatedData['ghcard'] : $validatedData['ghcard'];
-            }
-            if (isset($validatedData['gender'])) {
-                $user->gender = $validatedData['gender'];
-            }
-            if (isset($validatedData['contact'])) {
-                $user->contact = '0' . $validatedData['contact'];
-            }
+        if ($user->details_updated_at) {
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'Cannot update details AGAIN',
+                    'key' => 'error',
+                ]);
         }
+        if (isset($validatedData['gender'])) {
+            $user->gender = $validatedData['gender'];
+        }
+        if (isset($validatedData['mobile_no'])) {
+            $user->mobile_no = $validatedData['mobile_no'];
+        }
+        if (isset($validatedData['name'])) {
+            if ($user->name != $validatedData['name'] && !$user->previous_name) {
+                $user->previous_name = $user->name;
+            }
+            if ($validatedData['name'] == $user->previous_name) {
+                $user->previous_name = null;
+            }
+            $user->name = $validatedData['name'];
+        }
+        if (isset($validatedData['card_type'])) {
+            $user->card_type = $validatedData['card_type'];
+        }
+        if (isset($validatedData['ghcard'])) {
+            $user->ghcard = $validatedData['ghcard'];
+        }
+
+
+        $user->details_updated_at = now();
         $user->save();
 
         return redirect()

@@ -10,8 +10,8 @@
             <div class="container-fluid">
                 <div class="row mb-2">
                     <div class="col-sm-6">
-                        <h1 class="m-0">Verify Students For {{ $selectedCourse?->course_name }},
-                            {{ $selectedCourse?->location }}</h1>
+                        <p class="m-0 text-primary">Verify Students For {{ $selectedCourse?->course_name }},
+                            {{ $selectedCourse?->location }}</p>
                     </div><!-- /.col -->
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
@@ -29,25 +29,14 @@
                             <!-- Default box -->
                             <div class="card">
                                 <div class="card-header">
-
-                                    <p>Select Course</p>
-                                    <select name="course_id" id="course_id" class="form-control">
-                                        <option value="">Select Course</option>
-
-                                        @foreach ($courses as $course)
-                                            <option value="{{ $course->id }}"
-                                                @if ($course->id == $selectedCourse?->id) selected @endif>
-                                                {{ $course->location }} -
-                                                {{ $course->course_name }}</option>
-                                        @endforeach
-                                    </select>
+                                    <x-course-selector :groupedCourses="$groupedCourses" :selectedCourse="$selectedCourse"></x-course-selector>
                                 </div>
                             </div>
                             <div class="card-body">
                                 <table class="table table-striped table-bordered table-hover datatable">
                                     <thead>
                                         <tr>
-                                            <th>Name</th>
+                                            <th>Name (Previous Name)</th>
                                             <th>Email</th>
                                             <th>Card Type</th>
                                             <th>Card Number</th>
@@ -58,7 +47,9 @@
                                     <tbody>
                                         @foreach ($students as $student)
                                             <tr>
-                                                <td>{{ $student['name'] }}</td>
+                                                <td>{{ $student['name'] }} <span class="text-primary">
+                                                        ({{ $student['previous_name'] ?? 'N/A' }})
+                                                    </span></td>
                                                 <td>{{ $student['email'] }}</td>
                                                 <td class="text-uppercase">{{ $student['card_type'] }}</td>
                                                 <td>{{ $student['ghcard'] }}</td>

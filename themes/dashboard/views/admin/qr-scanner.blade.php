@@ -58,17 +58,7 @@
                 <!-- Small boxes (Stat box) -->
                 <form name="qr-form">
                     <div class="row">
-                        <div class="mb-4 col-md-4">
-                            <label for="course_id" class="form-label">Select Course</label>
-                            <select name="course_id" class="form-control">
-                                <option value="">Choose One</option>
-
-                                @foreach ($courses as $course)
-                                    <option value="{{ $course->id }}"> {{ $course->location }} -
-                                        {{ $course->course_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                        <x-course-selector :groupedCourses="$groupedCourses"></x-course-selector>
                         <div class="mb-4 col-md-2">
                             <label for="validity" class="form-label">Validity In Mins</label>
                             <input class="form-control" type="number" name="validity" id="" max="120"
@@ -85,8 +75,15 @@
                         </div>
                         <div class="mb-4 col-md-4">
                             <label for="date" class="form-label">Select Date</label>
-                            <input class="form-control" type="date" name="date" id=""
-                                max="{{ now()->toDateString() }}" value="{{ now()->toDateString() }}">
+                            @can('attendance.update')
+                                <input class="form-control" type="date" name="date" id=""
+                                    max="{{ now()->toDateString() }}" value="{{ now()->toDateString() }}">
+                            @else
+                                <input class="form-control" type="date" name="date" id="dateInput"
+                                    min="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}"
+                                    value="{{ now()->toDateString() }}">
+                                {{-- <small class="text-muted">You can only take attendance for today</small> --}}
+                            @endcan
                         </div>
                 </form>
             </div>
@@ -94,9 +91,11 @@
                 <button type="button" class="btn btn-primary col-auto" id="startScanner">Start
                     QR Code Scanner</button>
                 <button type="button" class="btn btn-danger ml-4" id="stopScanner">Stop QR Code Scanner</button>
-                <button type="button" class="btn btn-success ml-4" id="generateCode">Generate QR Code</button>
-                <button type="button" class="btn btn-danger ml-4" id="stopCodeGeneration">Stop QR Code
-                    Generation</button>
+                @can('attendance.status')
+                    <button type="button" class="btn btn-success ml-4" id="generateCode">Generate QR Code</button>
+                    <button type="button" class="btn btn-danger ml-4" id="stopCodeGeneration">Stop QR Code
+                        Generation</button>
+                @endcan
 
             </div>
 
@@ -148,7 +147,17 @@
         });
 
 
-
+        $(document).ready(function() {
+            $('#dateInput').on('keydown', function(e) {
+                e.preventDefault();
+                return false;
+            }).on('change', function() {
+                if (this.value !== new Date().toISOString().split('T')[0]) {
+                    this.value = new Date().toISOString().split('T')[0];
+                    alert('You can only select today\'s date');
+                }
+            });
+        });
 
         function getFormValues() {
             // const values = $('').serializeArray();
@@ -175,6 +184,7 @@
             return values;
         }
 
+        const QREngine = QrScanner.createQrEngine(QrScanner.WORKER_PATH);
         const qrScanner = new QrScanner(
             document.getElementById('scanner'),
             async result => {
@@ -231,7 +241,9 @@
                 preferredCamera: 'environment',
                 highlightScanRegion: true,
                 highlightCodeOutline: true,
-                maxScansPerSecond: 1
+                maxScansPerSecond: 1,
+                qrEngine: QREngine,
+                alsoTryWithoutScanRegion: true
             },
         );
 
@@ -275,7 +287,11 @@
                     height: 400,
                     colorDark: "#000000",
                     colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
+                    correctLevel: QRCode.CorrectLevel.H,
+                    quietZone: 20,
+                    logo: "{{ asset('assets/images/logo-bt.png') }}",
+                    logoWidth: 170,
+                    logoHeight: 80,
                 });
             }
             qrcodeElem.prepend(

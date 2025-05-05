@@ -16,7 +16,7 @@ class PermissionSeeder extends Seeder
     public function run(): void
     {
         //
-        $resources = ['student', 'user', 'course', 'session', 'branch', 'programme', 'centre', 'category', 'exam', 'result', 'admin', 'attendance', 'form', 'form-response', 'sms-template', 'report'];
+        $resources = ['student', 'user', 'course', 'session', 'branch', 'programme', 'centre', 'category', 'exam', 'result', 'admin', 'attendance', 'form', 'form-response', 'sms-template', 'report', 'email-template'];
         $actions = ['create', 'read', 'update', 'delete', 'status'];
         $specialStudentActions = ['shortlist', 'admit', 'bulk-sms', 'bulk-email', 'verify'];
         $specialPermissions = ['monitor', 'config', 'page-editor', 'manager', 'permission'];
@@ -58,7 +58,7 @@ class PermissionSeeder extends Seeder
         $notificationOfficerPermissions = $this->findResourcePermissions(['sms-template'], ['read', 'update', 'create', 'delete']);
         $specialPermissions = $this->findResourcePermissions(['student'], ['bulk-sms', 'bulk-email', 'read']);
         $allPermissions = $notificationOfficerPermissions->merge($specialPermissions);
-$notificationOfficerRole->syncPermissions($allPermissions);
+        $notificationOfficerRole->syncPermissions($allPermissions);
 
         //ATTENDANCE OFFICER ROLE
         $attendanceOfficerRole = Role::findByName('attendance-officer', 'admin');
@@ -72,7 +72,7 @@ $notificationOfficerRole->syncPermissions($allPermissions);
         // }
 
         // give permissions
-        $attendanceOfficerPermissions = $this->findResourcePermissions(['attendance'], $actions);
+        $attendanceOfficerPermissions = $this->findResourcePermissions(['attendance'], ['read', 'create']);
         $specialAttendancePermissions = $this->findResourcePermissions(['student'], $specialAttendanceActions);
         $allPermissions = $attendanceOfficerPermissions->merge($specialAttendancePermissions);
         $attendanceOfficerRole->syncPermissions($allPermissions);

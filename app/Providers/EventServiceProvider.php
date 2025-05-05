@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Events\FormSubmittedEvent;
 use App\Events\UserRegistered;
+use App\Listeners\EmailSentListener;
 use App\Listeners\FormSubmitedListener;
 use App\Listeners\SendExamLoginCredentials;
 use Illuminate\Auth\Events\Registered;
@@ -28,6 +29,9 @@ class EventServiceProvider extends ServiceProvider
         FormSubmittedEvent::class => [
             FormSubmitedListener::class,
         ],
+        \Illuminate\Queue\Events\JobProcessed::class => [
+            EmailSentListener::class
+        ]
     ];
 
     /**

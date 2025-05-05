@@ -2,18 +2,15 @@
 
 namespace App\Jobs;
 
-use App\Mail\ExamLoginCredentials;
+use App\Helpers\MailerHelper;
 use App\Models\Oex_exam_master;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class SendExamLoginCredentialsJob implements ShouldQueue
 {
@@ -41,15 +38,19 @@ class SendExamLoginCredentialsJob implements ShouldQueue
     public function handle()
     {
         $deadline = $this->exam_deadline();
-        Mail::to($this->std->email)->send(new ExamLoginCredentials($this->std, $this->plainPassword, $deadline));
 
-        //     Log::info('Handling the job, sending email to ' . $this->std->email);
-
-        // Mail::to($this->std->email)->send(new ExamLoginCredentials($this->std, $this->plainPassword));
-
-        // Log::info('Email sent to ' . $this->std->email);
-
-
+        MailerHelper::sendTemplateEmail(
+            AFTER_REGISTRATION_EMAIL,
+            $this->std->email,
+            [
+                'name' => $this->std->name,
+                'deadline' => $deadline,
+                'password' => $this->plainPassword,
+                'email' => $this->std->email,
+                'examUrl' => url('/student/exam')
+            ],
+            'One Million Coders Login Credentials'
+        );
     }
 
     private function exam_deadline()

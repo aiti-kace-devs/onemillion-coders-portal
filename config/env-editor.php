@@ -23,7 +23,9 @@ return [
         // Routes base name
         'name' => 'env-editor',
         // Middleware(s) applied on route Group
-        'middleware' => ['auth:admin'],
+        'middleware' => ['web', 'theme:dashboard', 'auth:admin', 'role:super-admin,admin'],
+        // 'middleware' => ['theme:dashboard', 'auth:admin',  'permission:manage.manager'],
+        //
     ],
 
     /* ------------------------------------------------------------------------------------------------
@@ -37,5 +39,5 @@ return [
      | ------------------------------------------------------------------------------------------------
      | Here you can set The "extends" blade of index.blade.php
     */
-    'layout' => 'env-editor::layout',
+    // 'layout' => 'layouts.app',
 ];
