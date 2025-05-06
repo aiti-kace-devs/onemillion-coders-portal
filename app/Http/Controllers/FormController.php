@@ -77,7 +77,7 @@ class FormController extends Controller
 
     public function create()
     {
-        return Inertia::render('Form/Create');
+        return Inertia::render('Form/Form');
     }
 
     /**

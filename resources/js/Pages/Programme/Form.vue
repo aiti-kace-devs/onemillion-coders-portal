@@ -10,14 +10,12 @@ import SelectInput from "@/Components/SelectInput.vue";
 import Checkbox from "@/Components/Checkbox.vue";
 import FileInput from "@/Components/FileInput.vue";
 import TextAreaInput from "@/Components/TextAreaInput.vue";
-import DangerButton from "@/Components/DangerButton.vue";
 
 export default {
   components: {
     AuthenticatedLayout,
     Head,
     PrimaryButton,
-    DangerButton,
     TextInput,
     InputError,
     InputLabel,
@@ -32,7 +30,6 @@ export default {
     admissionForm: Object,
   },
   data() {
-    const selections = ref([]);
     const fileInput = ref(null);
 
     const imageConfig = ref({
@@ -281,7 +278,7 @@ export default {
                                                     </div>
 
                                                     <!-- Restore Button -->
-                                                    <div v-if="this.mode == 'Edit' && imageConfig.isDirty">
+                                                    <div v-if="this.editContent && imageConfig.isDirty">
                                                         <button @click="restoreImage"
                                                             class="py-2 px-4 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">
                                                             Restore Original
