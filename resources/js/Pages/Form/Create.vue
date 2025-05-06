@@ -260,17 +260,17 @@
                                                 <InputLabel for="code" value="Unique Code"
                                                     :required="true" />
                                                 <TextInput id="code" type="text" class="w-full"
-                                                    v-model="form.code" :placeholder="'Code'" autocomplete="code"
+                                                    v-model="form.code" :placeholder="'Unique Code'" autocomplete="code"
                                                     :class="{ 'border-red-600': form.errors.code }" />
                                                 <InputError :message="form.errors.code" />
                                             </div>
                                             <!-- message after registration -->
                                             <div>
                                                 <InputLabel for="message_after_registration"
-                                                    value="Message After Registration" :required="true" />
+                                                    value="Message After Submission" :required="true" />
                                                 <TextInput id="message_after_registration" type="text" class="w-full"
                                                     v-model="form.message_after_registration"
-                                                    :placeholder="'Message After Registration'"
+                                                    :placeholder="'Message After Submission'"
                                                     :class="{
                                                         'border-red-600': form.errors.message_after_registration,
                                                     }" />
