@@ -149,6 +149,12 @@ const { component } = usePage().props;
                                 <span class="material-symbols-outlined">ballot</span>
                             </SidebarNavLink>
 
+                            <SidebarNavLink :href="route('admin.questionnaire.index')" :active="route().current('admin.questionnaire.*') ||
+                                route().current('admin.questionnaire_responses.*')
+                                " :label="'questionnaires'">
+                                <span class="material-symbols-outlined">rate_review</span>
+                            </SidebarNavLink>
+
                             <SidebarNavLink :href="route('admin.session.index')"
                                 :active="route().current('admin.session.*')" :label="'sessions'">
                                 <span class="material-symbols-outlined">schedule</span>

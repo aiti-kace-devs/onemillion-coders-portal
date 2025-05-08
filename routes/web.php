@@ -22,6 +22,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\SmsTemplateController;
 use App\Http\Controllers\EmailTemplateController;
+use App\Http\Controllers\QuestionnaireController;
 use Illuminate\Support\Str;
 
 /*
@@ -49,6 +50,9 @@ Route::get('/{course}', [LandingPageController::class, 'courseView'])
 
 Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
 Route::post('form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
+
+Route::get('/questionnaire/{code}', [QuestionnaireController::class, 'submitForm'])->name('questionnaire.show');
+// Route::post('form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
 
 Route::prefix('admin')
     ->middleware(['auth:admin'])
@@ -104,6 +108,35 @@ Route::prefix('admin')
                     ->name('destroy')
                     ->middleware('permission:form-response.delete');
             });
+
+            // questionnaires route
+        Route::prefix('/questionnaires')
+        ->middleware('permission:form.read')
+        ->name('questionnaire.')
+        ->group(function () {
+            Route::get('/', [QuestionnaireController::class, 'index'])->name('index');
+            Route::get('/fetch', [QuestionnaireController::class, 'fetch'])->name('fetch');
+            Route::get('/create', [QuestionnaireController::class, 'create'])
+                ->name('create')
+                ->middleware('permission:form.create');
+            Route::post('/', [QuestionnaireController::class, 'store'])
+                ->name('store')
+                ->middleware('permission:form.create');
+            Route::get('/{questionnaire}/edit', [QuestionnaireController::class, 'edit'])
+                ->name('edit')
+                ->middleware('permission:form.update');
+            Route::put('/{questionnaire}/update', [QuestionnaireController::class, 'update'])
+                ->name('update')
+                ->middleware('permission:form.update');
+            Route::get('/{questionnaire}/preview', [QuestionnaireController::class, 'preview'])->name('preview');
+            Route::get('/{questionnaire}/responses', [QuestionnaireController::class, 'show'])->name('show');
+            Route::get('/{questionnaire}/export', [QuestionnaireController::class, 'export'])
+                ->name('export')
+                ->middleware('permission:form.create');
+            Route::post('/{questionnaire}/destroy', [QuestionnaireController::class, 'destroy'])
+                ->name('destroy')
+                ->middleware('permission:form.delete');
+        });
     });
 
 Route::prefix('admin')

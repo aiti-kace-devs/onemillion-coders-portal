@@ -2,25 +2,25 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\FormResponseExport;
+use App\Exports\QuestionnaireResponseExport;
 use App\Models\Branch;
 use App\Models\Course;
-use App\Http\Requests\DynamicFormRequest;
+use App\Http\Requests\QuestionnaireRequest;
 use App\Models\Centre;
-use App\Models\Form;
+use App\Models\Questionnaire;
 use Carbon\Carbon;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
 
-class FormController extends Controller
+class QuestionnaireController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return Inertia::render('Form/List');
+        return Inertia::render('Questionnaire/List');
     }
 
     /**
@@ -30,14 +30,11 @@ class FormController extends Controller
     public function fetch()
     {
 
-        $data = Form::get(['uuid', 'title', 'active', 'updated_at']);
+        $data = Questionnaire::get(['uuid', 'title', 'active', 'updated_at']);
         return DataTables::of($data)
             ->addIndexColumn()
-            ->editColumn('date', function ($row) {
-                return '<span class="hidden">' . strtotime($row->updated_at) . '</span>' . Carbon::parse($row->updated_at)->toDayDateTimeString();
-            })
-            ->editColumn('active', function ($row) {
-                return '<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">' . $row->active ? 'Active' : 'Inactive' . '</span>';
+            ->editColumn('status', function ($row) {
+                return  $row->active ? 'Active' : 'Inactive';
             })
             ->addColumn('action', function ($row) {
                 $linkClass = 'inline-flex items-center w-full px-4 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-25 hover:text-gray-50 hover:bg-gray-100';
@@ -71,25 +68,25 @@ class FormController extends Controller
 
                 return $action;
             })
-            ->rawColumns(['date', 'action'])
+            ->rawColumns(['status', 'date', 'action'])
             ->make(true);
     }
 
     public function create()
     {
         $isCreateMethod = true;
-        return Inertia::render('Form/Form', compact('isCreateMethod'));
+        return Inertia::render('Questionnaire/Form', compact('isCreateMethod'));
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(DynamicFormRequest $request)
+    public function store(QuestionnaireRequest $request)
     {
         $validated = $request->validated();
 
         if ($request->hasFile('image')) {
-            $destinationPath = 'form/banner/';
+            $destinationPath = 'questionnaire/banner/';
             $image = $request->file('image');
             $fileName = time() . '.' . $image->getClientOriginalExtension();
 
@@ -103,9 +100,9 @@ class FormController extends Controller
             $validated['image'] = $fileName;
         }
 
-        Form::create($validated);
+        Questionnaire::create($validated);
 
-        return redirect()->route('admin.form.index');
+        return redirect()->route('admin.questionnaire.index');
     }
 
     /**
@@ -113,9 +110,9 @@ class FormController extends Controller
      */
     public function show($uuid)
     {
-        $form = Form::where('uuid', $uuid)->first();
+        $form = Questionnaire::where('uuid', $uuid)->first();
 
-        return Inertia::render('Form/Show', compact('form'));
+        return Inertia::render('Questionnaire/Show', compact('form'));
     }
 
     /**
@@ -123,40 +120,42 @@ class FormController extends Controller
      */
     public function edit($uuid)
     {
-        $admissionForm = Form::where('uuid', $uuid)->firstOrFail();
-        $admissionForm->image = $admissionForm->image ? asset('storage/form/banner/' . $admissionForm->image) : null;
+        $isCreateMethod = false;
+        $questionnaire = Questionnaire::where('uuid', $uuid)->firstOrFail();
+        $questionnaire->image = $questionnaire->image ? asset('storage/questionnaire/banner/' . $questionnaire->image) : null;
 
-        return Inertia::render('Form/Edit', compact('admissionForm'));
+        return Inertia::render('Questionnaire/Form', compact('questionnaire', 'isCreateMethod'));
     }
 
     public function preview($uuid)
     {
-        $admissionForm = Form::where('uuid', $uuid)->first();
-        $admissionForm->image = $admissionForm->image ? asset('storage/form/banner/' . $admissionForm->image) : null;
+        $questionnaire = Questionnaire::where('uuid', $uuid)->first();
+        $questionnaire->image = $questionnaire->image ? asset('storage/questionnaire/banner/' . $questionnaire->image) : null;
 
-        $courses = [];
-        $branches = [];
-        $centres = [];
+        // $courses = [];
+        // $branches = [];
+        // $centres = [];
         $withLayout = true;
 
-        if (isset($admissionForm->schema)) {
-            $courses = Course::orderBy('course_name')->get();
-            $branches = Branch::orderBy('title')->get();
-            $centres = Centre::orderBy('title')->get();
-        }
-        return Inertia::render('Form/Preview', compact('admissionForm', 'courses', 'branches', 'centres', 'withLayout'));
+        // if (isset($admissionForm->schema)) {
+        //     $courses = Course::orderBy('course_name')->get();
+        //     $branches = Branch::orderBy('title')->get();
+        //     $centres = Centre::orderBy('title')->get();
+        // }
+
+        return Inertia::render('Questionnaire/Preview', compact('questionnaire', 'withLayout'));
     }
 
 
-    public function submitForm($formCode)
+    public function submitForm($code)
     {
-        // 679c89bf-91ec-488e-9878-0d010468ca3e
-        $admissionForm = Form::where('code', $formCode)->first();
-        if (!$admissionForm) {
+        
+        $questionnaire = Questionnaire::where('code', $code)->first();
+        if (!$questionnaire) {
             return redirect('home');
         }
 
-        $admissionForm->image = $admissionForm->image ? asset('storage/form/banner/' . $admissionForm->image) : null;
+        $questionnaire->image = $questionnaire->image ? asset('storage/questionnaire/banner/' . $questionnaire->image) : null;
         $withLayout = false;
 
         $courses = Course::join('programmes', 'programmes.id', '=', 'courses.programme_id')
@@ -169,20 +168,20 @@ class FormController extends Controller
 
         $branches = Branch::where('status', 1)->orderBy('title')->get();
 
-        return Inertia::render('Form/Preview', compact('admissionForm', 'courses', 'branches', 'centres', 'withLayout'));
+        return Inertia::render('Questionnaire/Preview', compact('questionnaire', 'courses', 'branches', 'centres', 'withLayout'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(DynamicFormRequest $request, $uuid)
+    public function update(QuestionnaireRequest $request, $uuid)
     {
         $validated = $request->validated();
-        $form = Form::where('uuid', $uuid)->first();
+        $form = Questionnaire::where('uuid', $uuid)->first();
 
         // Handle image upload if necessary
         if ($request->isDirty && $request->hasFile('image')) {
-            $destinationPath = 'form/banner/';
+            $destinationPath = 'questionnaire/banner/';
             $image = $request->file('image');
             $fileName = time() . '.' . $image->getClientOriginalExtension();
 
@@ -201,12 +200,12 @@ class FormController extends Controller
 
         $form->update($validated);
 
-        return redirect()->route('admin.form.index');
+        return redirect()->route('admin.questionnaire.index');
     }
 
     public function export($uuid)
     {
-        $admissionForm = Form::where('uuid', $uuid)->with('responses')->first();
+        $admissionForm = Questionnaire::where('uuid', $uuid)->with('responses')->first();
         $schema = collect($admissionForm->schema);
 
         $headers = $schema
@@ -248,7 +247,7 @@ class FormController extends Controller
      */
     public function destroy($uuid)
     {
-        $form = Form::where('uuid', $uuid)->first();
+        $form = Questionnaire::where('uuid', $uuid)->first();
 
         $form->delete();
     }
