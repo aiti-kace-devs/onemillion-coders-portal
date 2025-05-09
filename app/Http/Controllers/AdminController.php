@@ -1151,7 +1151,7 @@ class AdminController extends Controller
                 ->orderBy('course_id', 'desc')
                 ->orderBy('attendance_date')
                 ->get()
-                ->groupBy(['course_name', 'attendance_date']);
+                ->groupBy(['session_name', 'attendance_date']);
         }
 
         if ($request->get('report_type') == 'student_summary') {
@@ -1164,7 +1164,7 @@ class AdminController extends Controller
             $whereVirtualClause = $virtualQuery ? ' AND WEEK(a.date, 3) IN (' . implode(',', $validated['virtual_week']) . ') ' : '';
             $optimizeQuery =
                 "select _ta.total as attendance_total, _ta.user_id,
-                u.name as user_name, u.email as email, u.gender as user_gender, u.contact as user_contact, u.network_type as user_network_type, c.course_name, c.location as course_location, c.id " .
+                u.name as user_name, u.email as email, u.gender as user_gender, u.contact as user_contact, u.network_type as user_network_type, c.course_name, c.location as course_location, c.id, cs.name as session_name " .
                 ($dailyQuery ? ', _da.date as attendance_date' : '') .
                 ($virtualQuery ? ', _va.t as virtual_attendance, (_ta.total - _va.t) as in_person' : '') .
                 " from
@@ -1189,6 +1189,7 @@ class AdminController extends Controller
                 "
                 left join users u on u.userId = _ta.user_id
                 left join user_admission ua on ua.user_id = _ta.user_id
+                left join course_sessions cs on cs.id = ua.session
                 inner join courses c on c.id = ua.course_id
                 $whereCourseClause order by c.course_name, u.name";
             $dateParams = [$startDate, $endDate];
@@ -1227,7 +1228,7 @@ class AdminController extends Controller
             'dates' => $request->get('dates'),
             'selectedCourse' => $selectedCourse ?? '0',
             'selectedDailyOption' => $request->get('daily'),
-            'virtualQuery' => $virtualQuery,
+            'virtualQuery' => $virtualQuery ?? [],
             'virtual_week' => $validated['virtual_week'] ?? [],
         ];
         // dd($data);
