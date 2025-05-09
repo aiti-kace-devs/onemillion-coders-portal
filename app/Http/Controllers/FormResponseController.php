@@ -6,6 +6,8 @@ use App\Events\FormSubmittedEvent;
 use App\Models\Form;
 use App\Models\User;
 use App\Models\FormResponse;
+use App\Models\Attendance;
+use App\Models\FlagStudent;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -233,6 +235,56 @@ class FormResponseController extends Controller
                 $validated['response_data'][$field['field_name']] = $fileName;
             }
         }
+
+
+
+        $name = $validated['response_data']['name'] ?? null;
+        $gender = $validated['response_data']['gender'] ?? null;
+        $age = $validated['response_data']['age'] ?? null;
+        $flagCourse = $validated['response_data']['course_id'] ?? null;
+        
+        if ($name && $gender && $age) {
+            Log::info("Initializing Flag Student Logic");
+        
+            // Normalize all dash types to standard hyphen
+            $age = preg_replace('/[–—−‐‑‒⁃]/u', '-', $age);  // Replace en dash, em dash, etc.
+        
+            $ageRange = null;
+        
+            if (preg_match('/(\d+)\s*-\s*(\d+)/', $age, $matches)) {
+                $ageRange = ['min' => (int)$matches[1], 'max' => (int)$matches[2]];
+            } elseif (preg_match('/(\d+)\+/', $age, $matches)) {
+                $ageRange = ['min' => (int)$matches[1], 'max' => 120];
+            }
+        
+            if ($ageRange) {
+                $existingUser = User::where('name', $name)
+                    ->where('gender', $gender)
+                    ->whereBetween('age', [$ageRange['min'], $ageRange['max']])
+                    ->first();
+        
+                if ($existingUser) {
+                    $attendanceCount = Attendance::where('user_id', $existingUser->userId)->count();
+        
+                    if ($attendanceCount >= 2) {
+                        FlagStudent::create([
+                            'name' => $name,
+                            'gender' => $gender,
+                            'age' => $age,
+                            'email' => $validated['response_data']['email'] ?? null,
+                            'mobile_no' => $validated['response_data']['phone'] ?? null,
+                            'flag_course' => $flagCourse,
+                            'registered_course' => $existingUser->registered_course,
+                            'userId' => $existingUser->userId
+                        ]);
+                        Log::info("Flag Student created successfully");
+                    }
+                }
+            }
+        }
+        
+
+
 
         $response = new FormResponse($validated);
 
