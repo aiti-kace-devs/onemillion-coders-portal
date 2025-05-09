@@ -20,6 +20,7 @@ use App\Http\Controllers\ListController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProgrammeController;
+use App\Http\Controllers\CourseCompletedController;
 use App\Http\Controllers\SmsTemplateController;
 use App\Http\Controllers\EmailTemplateController;
 use Illuminate\Support\Str;
@@ -211,6 +212,18 @@ Route::prefix('admin')
                     ->middleware('permission:student.create');
                 Route::get('/view_answer/{id}', [StudentOperation::class, 'view_answer']);
             });
+
+
+            Route::middleware(['auth:admin'])->group(function () {
+                Route::get('/course_completed', [CourseCompletedController::class, 'index'])->name('course_completed.index');
+                Route::delete('/course-completed/{id}', [CourseCompletedController::class, 'destroy'])->name('course_completed.delete');
+                Route::get('/course-completed/filter', [CourseCompletedController::class, 'filter'])->name('course_completed.filter');
+                // Route::get('/course-completed/export', [CourseCompletedController::class, 'export'])->name('course_completed.export');
+            });
+
+
+
+
 
             Route::middleware('permission:attendance.read')->group(function () {
                 Route::post('/confirm_attendance', [AttendanceController::class, 'confirmAttendance'])->middleware('permission:attendance.create');

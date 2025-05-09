@@ -8,14 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 class CourseCompleted extends Model
 {
     use HasFactory;
-    protected $table = 'admission_rejections';
+    protected $table = 'course_completed';
     public $timestamps = false;
 
     protected $fillable = [
         'user_id',
         'course_id',
         'completed_at',
-        'status'
+        // 'status'
     ];
 
 

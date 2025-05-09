@@ -261,7 +261,22 @@
                                     <p>Registered students</p>
                                 </a>
                             </li>
+
+                            <li class="nav-item">
+                                <a href="{{ url('admin/course_completed') }}"
+                                    class="nav-link @if (request()->is('admin/course_completed')) active @endif">
+                                    <i class="fas fa-user-check nav-icon"></i>
+                                    <p>Completed Students</p>
+                                </a>
+                            </li>
+
+
+
+
                         @endcan
+
+
+
 
                         @can('sms-template.read')
                             <li class="nav-item">
