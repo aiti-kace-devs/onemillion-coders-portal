@@ -138,10 +138,11 @@
                                                     <th>Virtual</th>
                                                     <th>In-Person</th>
                                                 @endif
+                                                <th>Session</th>
                                                 <th>Total</th>
-                                                <th>Gender</th>
-                                                <th>Network Type</th>
-                                                <th>Phone Number</th>
+                                                {{-- <th>Gender</th> --}}
+                                                {{-- <th>Network Type</th>
+                                                <th>Phone Number</th> --}}
                                             @endif
                                             @if ($selectedDailyOption == 'yes')
                                                 @foreach ($dates_array as $date)
@@ -183,13 +184,15 @@
                                                         <td>{{ $record->first()->values()[0]->virtual_attendance ?? 0 }}
                                                         <td>{{ $record->first()->values()[0]->in_person }}</td>
                                                     @endif
+                                                    <td>{{ $record->first()[0]->session_name }}
                                                     <td>{{ $record->first()->values()[0]->attendance_total ?? 0 }}
-                                                    <td>{{ $record->first()[0]->user_gender ?? 'N/A' }}
+                                                        {{-- <td>{{ $record->first()[0]->user_gender ?? 'N/A' }} --}}
                                                     </td>
-                                                    <td>{{ $record->first()[0]->user_network_type ?? 'N/A' }}
+                                                    </td>
+                                                    {{-- <td>{{ $record->first()[0]->user_network_type ?? 'N/A' }}
                                                     </td>
                                                     <td>{{ $record->first()[0]->user_contact ?? 'N/A' }}
-                                                    </td>
+                                                    </td> --}}
                                                     @if ($selectedDailyOption == 'yes')
                                                         @foreach ($dates_array as $date)
                                                             @php
