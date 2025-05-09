@@ -178,7 +178,6 @@
                                                         ({{ $record->first()[0]->email }})
                                                     </td>
                                                     <td>{{ $record->first()[0]->course_name }}
-                                                        ({{ $record->first()[0]->course_location }})
                                                     </td>
                                                     @if ($virtualQuery)
                                                         <td>{{ $record->first()->values()[0]->virtual_attendance ?? 0 }}
