@@ -149,7 +149,12 @@ class QuestionnaireController extends Controller
 
     public function submitForm($code)
     {
-        
+        $user = \Auth::user();
+
+        if(!$user->isAdmitted() && !$user->hasAttendance()) {
+            return redirect(route('student.dashboard'))->with('error', 'You are not allowed to access this form.');
+        }
+
         $questionnaire = Questionnaire::where('code', $code)->first();
         if (!$questionnaire) {
             return redirect('home');

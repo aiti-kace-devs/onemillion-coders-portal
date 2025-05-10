@@ -97,4 +97,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(AdmissionRejection::class, 'user_id', 'userId');
     }
+
+    public function questionnaire_response()
+    {
+        return $this->hasOne(QuestionnaireResponse::class);
+    }
+
+    public function hasAttendance()
+    {        
+        return Attendance::where('user_id', $this->userId)->count() > 0;
+    }
 }

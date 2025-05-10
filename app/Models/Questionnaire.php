@@ -76,6 +76,6 @@ class Questionnaire extends Model
 
     public function responses()
     {
-        return $this->hasMany(FormResponse::class);
+        return $this->hasMany(QuestionnaireResponse::class);
     }
 }
