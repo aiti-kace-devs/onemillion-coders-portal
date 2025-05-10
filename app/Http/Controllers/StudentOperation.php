@@ -21,6 +21,7 @@ use App\Jobs\AdmitStudentJob;
 use App\Jobs\CreateStudentAdmissionJob;
 use App\Jobs\TestSubmittedJob;
 use App\Models\AdmissionRejection;
+use Illuminate\Validation\Rule;
 
 class StudentOperation extends Controller
 {
@@ -60,9 +61,7 @@ class StudentOperation extends Controller
         }
 
         // Check if the user has a rejected admission
-        $rejection = AdmissionRejection::where('user_id', $user->userId)
-            ->orderBy('rejected_at', 'desc')
-            ->first();
+        $rejection = AdmissionRejection::where('user_id', $user->userId)->orderBy('rejected_at', 'desc')->first();
 
         return view('student.profile', compact('user', 'course', 'rejection'));
     }
@@ -107,7 +106,10 @@ class StudentOperation extends Controller
         $question = Oex_question_master::where('exam_set_id', $randomExamId)->inRandomOrder()->get();
 
         // $question = Oex_question_master::where('exam_id', $id)->inRandomOrder()->get();
-        $user_exam = user_exam::where('exam_id', $id)->where('user_id', Auth::user()->id)->get()->first();
+        $user_exam = user_exam::where('exam_id', $id)
+            ->where('user_id', Auth::user()->id)
+            ->get()
+            ->first();
 
         if ($user_exam && $user_exam->submitted) {
             return redirect(url('student/exam'))->with([
@@ -160,7 +162,10 @@ class StudentOperation extends Controller
     // start exam
     public function start_exam($id)
     {
-        $user_exam = user_exam::where('exam_id', $id)->where('user_id', Auth::user()->id)->get()->first();
+        $user_exam = user_exam::where('exam_id', $id)
+            ->where('user_id', Auth::user()->id)
+            ->get()
+            ->first();
         $arr = ['status' => 'true', 'message' => 'started successfully'];
         if (!$user_exam->started) {
             user_exam::updateOrCreate(
@@ -178,10 +183,16 @@ class StudentOperation extends Controller
     //On submit
     public function submit_questions(Request $request)
     {
-        $std_info = user_exam::where('user_id', Auth::user()->id)->where('exam_id', $request->exam_id)->get()->first();
+        $std_info = user_exam::where('user_id', Auth::user()->id)
+            ->where('exam_id', $request->exam_id)
+            ->get()
+            ->first();
 
         if ($std_info && $std_info->submitted) {
-            $res = Oex_result::where('exam_id', $request->exam_id)->where('user_id', Auth::user()->id)->get()->first();
+            $res = Oex_result::where('exam_id', $request->exam_id)
+                ->where('user_id', Auth::user()->id)
+                ->get()
+                ->first();
             $yes_ans = $res->yes_ans;
             $total = $res->yes_ans + $res->no_ans;
             $percentage = round(($yes_ans / $total) * 100);
@@ -252,7 +263,10 @@ class StudentOperation extends Controller
     //Applying for exam
     public function apply_exam($id)
     {
-        $checkuser = user_exam::where('user_id', Auth::user()->id)->where('exam_id', $id)->get()->first();
+        $checkuser = user_exam::where('user_id', Auth::user()->id)
+            ->where('exam_id', $id)
+            ->get()
+            ->first();
 
         if ($checkuser) {
             $arr = ['status' => 'false', 'message' => 'Already applied, see your exam section'];
@@ -275,9 +289,14 @@ class StudentOperation extends Controller
     //View Result
     public function view_result($id)
     {
-        $data['result_info'] = Oex_result::where('exam_id', $id)->where('user_id', Auth::user()->id)->get()->first();
+        $data['result_info'] = Oex_result::where('exam_id', $id)
+            ->where('user_id', Auth::user()->id)
+            ->get()
+            ->first();
 
-        $data['student_info'] = User::where('id', Auth::user()->id)->get()->first();
+        $data['student_info'] = User::where('id', Auth::user()->id)
+            ->get()
+            ->first();
 
         $data['exam_info'] = Oex_exam_master::where('id', $id)->get()->first();
 
@@ -405,7 +424,6 @@ class StudentOperation extends Controller
 
     public function change_course()
     {
-
         $user = Auth::user();
 
         if ($user->admission) {
@@ -434,18 +452,22 @@ class StudentOperation extends Controller
     public function update_course(Request $request)
     {
         if (!config(ALLOW_COURSE_CHANGE, false)) {
-            return redirect()->back()->with([
-                'flash' => 'Students not allowed to change course at this time. Contact the administrators',
-                'key' => 'error',
-            ]);
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'Students not allowed to change course at this time. Contact the administrators',
+                    'key' => 'error',
+                ]);
         }
         $user = Auth::user();
 
         if ($user->admission) {
-            return redirect()->back()->with([
-                'flash' => 'Unable to change course.',
-                'key' => 'error',
-            ]);
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'Unable to change course.',
+                    'key' => 'error',
+                ]);
         }
 
         $request->validate([
@@ -459,14 +481,12 @@ class StudentOperation extends Controller
         //     return redirect()->back()->with('error', 'Selected course not found.');
         // }
 
-
         // Update user record with course and session information
         $user->registered_course = $request->course_id; // Store course_id in exam field
         $user->save();
 
         return redirect()->route('student.profile')->with('success', 'Course changed successfully.');
     }
-
 
     // API function not used
     public function admit_student(Request $request)
@@ -565,12 +585,12 @@ class StudentOperation extends Controller
         ];
 
         if ($request->input('card_type') === 'ghcard') {
-            $rules['ghcard'] = "sometimes|string|regex:/^GHA-[0-9]{9}-[0-9]{1}$/|max:16|unique:users,ghcard,id:{$user->id}";
+            $rules['ghcard'] = ['sometimes', 'string', 'regex:/^GHA-[0-9]{9}-[0-9]{1}$/', 'max:16', Rule::unique('users', 'ghcard')->ignore($user->id)];
             $request->merge([
                 'ghcard' => 'GHA-' . $request->ghcard,
             ]);
         } else {
-            $rules['ghcard'] = "sometimes|string|max:20|unique:users,ghcard,id:{$user->id}";
+            $rules['ghcard'] = ['sometimes', 'string', 'max:20', Rule::unique('users','ghcard')->ignore($user->id)];
         }
 
         $validatedData = $request->validate($rules, [], ['ghcard' => 'Card number']);
@@ -608,7 +628,6 @@ class StudentOperation extends Controller
         if (isset($validatedData['ghcard'])) {
             $user->ghcard = $validatedData['ghcard'];
         }
-
 
         $user->details_updated_at = now();
         $user->save();
