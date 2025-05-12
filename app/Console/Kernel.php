@@ -26,6 +26,8 @@ class Kernel extends ConsoleKernel
             ->dailyAt('01:00');
 
         $schedule->command('email:sendFeedback')->everyTenMinutes();
+
+        $schedule->command('horizon:snapshot')->everyFiveMinutes();
     }
 
     /**
