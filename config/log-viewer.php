@@ -72,7 +72,7 @@ return [
     */
 
     'middleware' => [
-        'web',
+        // 'web',
         'auth:admin',
         'permission:manage.monitor'
         // \Opcodes\LogViewer\Http\Middleware\AuthorizeLogViewer::class,
