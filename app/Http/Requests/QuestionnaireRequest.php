@@ -43,7 +43,7 @@ class QuestionnaireRequest extends FormRequest
                 'schema.*.description' => ['nullable', 'string'],
                 'schema.*.questions.*.title' => ['required', 'string'],
                 'schema.*.questions.*.description' => ['nullable', 'string'],
-                'schema.*.questions.*.type' => ['required', 'string', 'in:select,radio,checkbox,text,number,file,select_course,email,phonenumber,textarea'],
+                'schema.*.questions.*.type' => ['required', 'string', 'in:select,radio,checkbox,text,number,file,select_course,select_instructor,email,phonenumber,textarea'],
                 'schema.*.questions.*.rules' => ['nullable', 'string'],
                 'schema.*.questions.*.options' => [
                     'nullable',

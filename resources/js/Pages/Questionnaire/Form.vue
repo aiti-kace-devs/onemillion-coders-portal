@@ -98,8 +98,8 @@ export default {
         questions: [],
       };
 
-    //   this.sections.push(newSection);
-    this.addSection(newSection);
+      //   this.sections.push(newSection);
+      this.addSection(newSection);
 
       schema?.questions?.forEach((question) => {
         const newField = {
@@ -155,9 +155,15 @@ export default {
     addSelection(sectionIndex, fieldDetails = null) {
       if (!this.sections[sectionIndex]) return;
 
+      if (!this.sections[sectionIndex].questions) {
+        this.sections[sectionIndex].questions = [];
+      }
+
       const newField = fieldDetails || {
         id: `field_${sectionIndex}_${this.sections[sectionIndex].questions.length + 1}`, // More robust unique ID
-        label: `Field ${sectionIndex} ${this.sections[sectionIndex].questions.length + 1}`,
+        label: `Field ${sectionIndex} ${
+          this.sections[sectionIndex].questions.length + 1
+        }`,
         title: null,
         description: null,
         type: "text",
@@ -183,7 +189,14 @@ export default {
     },
 
     changeSelectionType(sectionIndex, index) {
+        if (!this.sections[sectionIndex]) return;
+
       this.form.clearErrors(`schema.${sectionIndex}.questions.${index}.options`);
+
+        if (!this.sections[sectionIndex].questions || 
+      !this.sections[sectionIndex].questions[index]) {
+    return;
+  }
 
       const selection = this.sections[sectionIndex].questions[index];
 
@@ -535,6 +548,7 @@ export default {
                                   <option value="number">Number</option>
                                   <option value="file">File</option>
                                   <option value="select_course">Course Selection</option>
+                                  <option value="select_instructor">Instructor Selection</option>
                                 </SelectInput>
                               </div>
 
