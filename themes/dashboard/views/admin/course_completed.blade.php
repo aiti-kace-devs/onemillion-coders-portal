@@ -49,7 +49,8 @@
                                             @foreach ($courseCompletions as $key => $completion)
                                                 <tr>
                                                     <td>{{ $key + 1 }}</td>
-                                                    <td>{{ $completion->user_name }}</td>
+                                                    <td>{{ $completion->user_name }} <br>
+                                                        <small class="text-muted">{{ $completion->user_email }}</small></td>
                                                     <td>{{ $completion->course_title }}</td>
                                                     <td>{{ \Carbon\Carbon::parse($completion->completed_at)->format('M d, Y H:i') }}</td>
                                                     <td class="d-flex">

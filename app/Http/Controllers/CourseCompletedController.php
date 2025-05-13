@@ -22,7 +22,7 @@ class CourseCompletedController extends Controller
         $courseCompletions = DB::table('course_completed')
             ->join('users', 'course_completed.user_id', '=', 'users.userId')
             ->join('courses', 'course_completed.course_id', '=', 'courses.id')
-            ->select('course_completed.*', 'users.name as user_name', 'courses.course_name as course_title')
+            ->select('course_completed.*', 'users.name as user_name', 'users.email as user_email', 'courses.course_name as course_title')
             ->orderBy('course_completed.completed_at', 'desc')
             ->get();
 
@@ -38,16 +38,18 @@ class CourseCompletedController extends Controller
     {
         // Find users who have attended courses more than 10 times
         $completions = DB::table('attendances')
-            ->select(
-                'user_id',
-                'course_id',
-                DB::raw('COUNT(date) AS date_count'),
-                DB::raw('MAX(date) AS completed_at')
-            )
-            ->groupBy('user_id', 'course_id')
-            ->having('date_count', '>', 10)
-            ->orderBy('date_count', 'desc')
-            ->get();
+        ->join('courses', 'attendances.course_id', '=', 'courses.id')
+        ->select(
+            'attendances.user_id',
+            'attendances.course_id',
+            DB::raw('COUNT(DISTINCT attendances.date) AS date_count'),
+            DB::raw('MAX(attendances.date) AS completed_at'),
+            'courses.number_of_days'
+        )
+        ->groupBy('attendances.user_id', 'attendances.course_id', 'courses.number_of_days')
+        ->havingRaw('date_count >= (courses.number_of_days * 0.7)')
+        ->orderBy('date_count', 'desc')
+        ->get();
 
         // For each eligible completion, insert or update the course_completed record
         foreach($completions as $completion) {
