@@ -669,7 +669,7 @@ class StudentOperation extends Controller
 
         $user = \Auth::user();
 
-        if ($user->isAdmitted() && $user->hasAttendance()) {
+        if (!$user->isAdmitted() && !$user->hasAttendance()) {
             return redirect(route('student.questionnaire.index'))->with(
                 [
                     'flash' => 'You are not allowed to access this form.',

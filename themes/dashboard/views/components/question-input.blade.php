@@ -1,10 +1,21 @@
-@props(['instructors', 'questions'])
+@props(['instructors', 'questions', 'section'])
 
-@foreach ($instructors as $instructor)
+
+
+
+@foreach (($instructors ?? []) as $instructor)
+@foreach ($questions as $index => $question)
+
+@php
+$fieldName = "response_data[{$question['field_name']}]";
+$fieldId = "field-{$i}-{$index}";
+$required = $question['validators']['required'] ? 'required' : '';
+$options = isset($question['options']) ? explode(',', $question['options']) : [];
+@endphp
 
 <div class="form-group">
     <div>
-        <label class="h5 font-weight-normal" for="field-{{ $i }}-{{ $index }}">
+        <label class="h5 font-weight-normal" for="field-{{ $section }}-{{ $index }}">
             {{ $question['title'] }}
             @if($question['validators']['required'])
             <span class="text-danger">*</span>
@@ -14,7 +25,7 @@
 
     @php
     $fieldName = "response_data[{$question['field_name']}]";
-    $fieldId = "field-{$i}-{$index}";
+    $fieldId = "field-{$section}-{$index}";
     $required = $question['validators']['required'] ? 'required' : '';
     $options = isset($question['options']) ? explode(',', $question['options']) : [];
     @endphp
@@ -81,5 +92,5 @@
     @endif
     <span class="{{ str_replace(['[', ']'], ['_', ''], $fieldName)}}_error font-weight-bold invalid-feedback" style="display: block;" role="alert"></span>
 </div>
-
+@endforeach
 @endforeach

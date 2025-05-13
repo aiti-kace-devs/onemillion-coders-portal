@@ -66,28 +66,22 @@
                                     <input type="hidden" name="section" value="{{ $i }}">
 
                                     {{-- GENERAL SECTION QUESTIONS --}}
-@if (strtolower($section['title']) !== 'instructors')
-    @foreach ($section['questions'] as $index => $question)
-    <x-question-input
-        :fieldName="'response_data[' . $question['field_name'] . ']'"
-        :fieldId="'field-' . $i . '-' . $index"
-        :question="$question"
-        />
-    @endforeach
+                                    @if (strtolower($section['title']) !== 'instructors')
+                                    <x-question-input
+                                        :questions="$section['questions']"
+                                        :section="$i" />
+                                    @else
+                                    {{-- INSTRUCTOR-SPECIFIC QUESTIONS --}}
+                                    @foreach ($instructors as $insIndex => $instructor)
+                                    <h5 class="mt-4 mb-3">Instructor: {{ $instructor->name }}</h5>
 
-@else
-    {{-- INSTRUCTOR-SPECIFIC QUESTIONS --}}
-    @foreach ($instructors as $insIndex => $instructor)
-        <h5 class="mt-4 mb-3">Instructor: {{ $instructor->name }}</h5>
-        @foreach ($section['questions'] as $index => $question)
-            @include('partials.question-input', [
-                'fieldName' => "response_data[instructors][{$instructor->id}][{$question['field_name']}]",
-                'fieldId' => "field-instructor-{$insIndex}-{$index}",
-                'question' => $question,
-            ])
-        @endforeach
-    @endforeach
-@endif
+
+                                    <x-question-input
+                                        :questions="$section['questions']"
+                                        :instructors="$instructors"
+                                        :section="$i" />
+                                    @endforeach
+                                    @endif
 
 
                                     @foreach ($section['questions'] as $index => $question)
@@ -173,8 +167,8 @@
                                     @endforeach
 
                                     @if (strtolower($section['title']) === 'instructors')
-                                   @foreach ($instructors as $instructor)
-                                   <div class="form-group">
+                                    @foreach ($instructors as $instructor)
+                                    <div class="form-group">
                                         <div>
                                             <label class="h5 font-weight-normal" for="field-{{ $i }}-{{ $index }}">
                                                 {{ $question['title'] }}
@@ -253,8 +247,8 @@
                                         @endif
                                         <span class="{{ str_replace(['[', ']'], ['_', ''], $fieldName)}}_error font-weight-bold invalid-feedback" style="display: block;" role="alert"></span>
                                     </div>
-                                   
-                                   @endforeach
+
+                                    @endforeach
                                     @endif
 
                                     <div class="form-group mt-4">
