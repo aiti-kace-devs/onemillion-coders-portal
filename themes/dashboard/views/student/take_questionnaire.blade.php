@@ -147,6 +147,13 @@
                                     </div>
                                     @endforeach
 
+                                     @if (strtolower($section['title']) === 'instructors')
+                        <x-instructors-form :instructors="$instructors" :questions="$section['questions']" :questionnaire="$questionnaire" :index="$i" />
+
+
+                        </x-instructors-form>
+                    @endif
+
                                     <div class="form-group mt-4">
                                         <button type="submit" class="btn btn-primary">
                                             {{ $i == count($questionnaire['schema']) - 1 ? 'Submit' : 'Save & Next' }}
@@ -156,6 +163,7 @@
                             </div>
                         </div>
                     </div>
+                   
                     @endforeach
                 </div>
             </div>

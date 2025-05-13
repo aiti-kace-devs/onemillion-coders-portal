@@ -169,9 +169,8 @@ export default {
         type: "text",
         placeholder: "Question",
         options: null,
-        rules: "",
         validators: {
-          required: false,
+          required: true,
           unique: false,
         },
       };
@@ -188,21 +187,15 @@ export default {
       this.sections[sectionIndex].questions.splice(index, 1);
     },
 
-    changeSelectionType(sectionIndex, index) {
-        if (!this.sections[sectionIndex]) return;
+    changeSelectionType(sectionIndex, questionIndex) {
+      const question = this.sections[sectionIndex]?.questions?.[questionIndex];
+      if (!question) return;
 
-      this.form.clearErrors(`schema.${sectionIndex}.questions.${index}.options`);
+      this.form.clearErrors(`schema.${sectionIndex}.questions.${questionIndex}.options`);
 
-        if (!this.sections[sectionIndex].questions || 
-      !this.sections[sectionIndex].questions[index]) {
-    return;
-  }
-
-      const selection = this.sections[sectionIndex].questions[index];
-
-      if (!["select", "radio", "checkbox", "file"].includes(selection.type)) {
-        selection.options = null;
-      }
+      question.options = ["radio", "checkbox"].includes(question.type)
+        ? "very bad, bad, average, good, very good"
+        : null;
     },
     moveField(index, direction) {
       const swapIndex = direction === "up" ? index - 1 : index + 1;
@@ -452,8 +445,6 @@ export default {
                   </div>
                 </div>
 
-                {{ this.questionnaire }}
-
                 <!-- Sections -->
                 <div
                   v-for="(section, row) in sections"
@@ -533,22 +524,15 @@ export default {
 
                               <div>
                                 <SelectInput
-                                  @change="changeSelectionType(row)"
+                                  @change="changeSelectionType(row, index)"
                                   :id="'input_type_' + row"
                                   v-model="selection.type"
                                   class="w-full"
                                 >
-                                  <option value="text" selected>Text</option>
-                                  <option value="email">Email</option>
-                                  <option value="phonenumber">Phonenumber</option>
-                                  <option value="textarea">Textarea</option>
-                                  <option value="select">Select</option>
+                                  <option value="text" selected>Short answer</option>
+                                  <option value="textarea">Long answer</option>
                                   <option value="checkbox">Checkbox</option>
                                   <option value="radio">Radio</option>
-                                  <option value="number">Number</option>
-                                  <option value="file">File</option>
-                                  <option value="select_course">Course Selection</option>
-                                  <option value="select_instructor">Instructor Selection</option>
                                 </SelectInput>
                               </div>
 
@@ -580,21 +564,14 @@ export default {
 
                               <div
                                 class="col-span-full"
-                                v-if="
-                                  ['select', 'radio', 'checkbox', 'file'].includes(
-                                    selection.type
-                                  )
-                                "
+                                v-if="['radio', 'checkbox'].includes(selection.type)"
                               >
                                 <TextInput
                                   :id="selection.id"
                                   type="text"
                                   class="w-full"
                                   v-model="selection.options"
-                                  :placeholder="
-                                    (selection.type == 'file' ? 'File type' : 'Options') +
-                                    ' (comma-separated)'
-                                  "
+                                  :placeholder="'Options (comma-separated)'"
                                   :class="{
                                     'border-red-600':
                                       form.errors[
@@ -602,13 +579,6 @@ export default {
                                       ],
                                   }"
                                 />
-
-                                <div class="mt-1" v-if="selection.type == 'file'">
-                                  <p class="text-sm text-gray-600">
-                                    Supported formats: jpg, jpeg, png, gif, docx, txt,
-                                    pdf, csv, xlsx and zip.
-                                  </p>
-                                </div>
 
                                 <InputError
                                   :message="
@@ -618,62 +588,9 @@ export default {
                                   "
                                 />
                               </div>
-
-                              <div class="col-span-full">
-                                <TextInput
-                                  :id="selection.id"
-                                  type="text"
-                                  class="w-full"
-                                  v-model="selection.rules"
-                                  :placeholder="'Rules'"
-                                  :class="{
-                                    'border-red-600':
-                                      form.errors[
-                                        `schema.${row}.questions.${index}.rules`
-                                      ],
-                                  }"
-                                />
-                                <InputError
-                                  :message="
-                                    form.errors[`schema.${row}.questions.${index}.rules`]
-                                  "
-                                />
-                              </div>
                             </div>
 
-                            <div class="flex justify-between items-center">
-                              <div class="flex items-center gap-4">
-                                <div>
-                                  <label
-                                    class="inline-flex items-center cursor-pointer space-x-3 text-sm"
-                                  >
-                                    Required
-                                    <Checkbox
-                                      v-model:checked="selection.validators.required"
-                                      class="sr-only peer"
-                                    />
-                                    <div
-                                      class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-700 peer-disabled:cursor-not-allowed"
-                                    ></div>
-                                  </label>
-                                </div>
-
-                                <div>
-                                  <label
-                                    class="inline-flex items-center cursor-pointer space-x-3 text-sm"
-                                  >
-                                    Unique
-                                    <Checkbox
-                                      v-model:checked="selection.validators.unique"
-                                      class="sr-only peer"
-                                    />
-                                    <div
-                                      class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-700 peer-disabled:cursor-not-allowed"
-                                    ></div>
-                                  </label>
-                                </div>
-                              </div>
-
+                            <div class="flex justify-end items-center">
                               <!-- <div
                                 class="flex flex-col items-center"
                                 :class="{

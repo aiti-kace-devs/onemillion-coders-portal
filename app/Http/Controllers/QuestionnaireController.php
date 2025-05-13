@@ -9,6 +9,7 @@ use App\Http\Requests\QuestionnaireRequest;
 use App\Models\Centre;
 use App\Models\Questionnaire;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
@@ -182,6 +183,7 @@ class QuestionnaireController extends Controller
     public function update(QuestionnaireRequest $request, $uuid)
     {
         $validated = $request->validated();
+
         $form = Questionnaire::where('uuid', $uuid)->first();
 
         // Handle image upload if necessary

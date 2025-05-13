@@ -43,30 +43,13 @@ class QuestionnaireRequest extends FormRequest
                 'schema.*.description' => ['nullable', 'string'],
                 'schema.*.questions.*.title' => ['required', 'string'],
                 'schema.*.questions.*.description' => ['nullable', 'string'],
-                'schema.*.questions.*.type' => ['required', 'string', 'in:select,radio,checkbox,text,number,file,select_course,select_instructor,email,phonenumber,textarea'],
+                'schema.*.questions.*.type' => ['required', 'string', 'in:radio,checkbox,text,textarea'],
                 'schema.*.questions.*.rules' => ['nullable', 'string'],
                 'schema.*.questions.*.options' => [
                     'nullable',
-                    'required_if:schema.*.type,select,radio,checkbox,file',
+                    'required_if:schema.*.type,radio,checkbox',
                     'string',
                     'min:1',
-                    function ($attribute, $value, $fail) {
-                        $index = explode('.', $attribute)[1]; // Extract index from "schema.X.options"
-                        $type = request("schema.$index.type"); // Get the type for the same index
-
-                        if ($type === 'file') {
-                            $allowedFileTypes = ['jpg', 'jpeg', 'png', 'gif', 'docx', 'txt', 'pdf', 'csv', 'xlsx', 'zip'];
-
-                            // Convert input to an array, normalize case, and trim spaces
-                            $values = array_map('trim', explode(',', strtolower($value)));
-
-                            $invalidValues = array_diff($values, $allowedFileTypes);
-
-                            if (!empty($invalidValues)) {
-                                $fail('The file type' . (count($invalidValues) > 1 ? 's' : '') . ' "' . implode(', ', $invalidValues) . '" ' . (count($invalidValues) > 1 ? 'are' : 'is') . ' invalid.');
-                            }
-                        }
-                    }
                 ],
                 'schema.*.questions.*.validators.required' => ['nullable', 'boolean'],
                 'schema.*.questions.*.validators.unique' => ['nullable', 'boolean'],

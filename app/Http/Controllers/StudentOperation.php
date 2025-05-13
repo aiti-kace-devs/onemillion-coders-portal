@@ -593,7 +593,7 @@ class StudentOperation extends Controller
                 'ghcard' => 'GHA-' . $request->ghcard,
             ]);
         } else {
-            $rules['ghcard'] = ['sometimes', 'string', 'max:20', Rule::unique('users','ghcard')->ignore($user->id)];
+            $rules['ghcard'] = ['sometimes', 'string', 'max:20', Rule::unique('users', 'ghcard')->ignore($user->id)];
         }
 
         $validatedData = $request->validate($rules, [], ['ghcard' => 'Card number']);
@@ -689,200 +689,209 @@ class StudentOperation extends Controller
             );
         }
 
-        return view('student.take_questionnaire', compact('questionnaire', 'hasSubmitted'));
+        $instructors = collect();
+        
+        foreach ($questionnaire->schema as $section) {
+            if (strtolower($section['title']) === 'instructors') {
+                $admission = $user->admission;
+                $instructors = Course::find($admission->course_id)?->assignedAdmins()->get() ?? collect();
+            }
+        }
+
+        return view('student.take_questionnaire', compact('questionnaire', 'hasSubmitted', 'instructors'));
     }
 
     public function store_questionnaire(Request $request)
     {
-            $code = $request->code;
-            $sectionIndex = $request->section;
+        $code = $request->code;
+        $sectionIndex = $request->section;
 
-            $questionnaire = Questionnaire::where('code', $code)->first();
-            $section = $questionnaire->schema[$sectionIndex];
-            $totalSections = count($questionnaire->schema);
-            $schema = $section['questions'];
+        $questionnaire = Questionnaire::where('code', $code)->first();
+        $section = $questionnaire->schema[$sectionIndex];
+        $totalSections = count($questionnaire->schema);
+        $schema = $section['questions'];
 
-            $validationRules = [
-                'response_data' => 'required|array',
-            ];
+        $validationRules = [
+            'response_data' => 'required|array',
+        ];
 
-            $customMessages = [
-                'response_data.required' => 'The form responses are required.',
-            ];
+        $customMessages = [
+            'response_data.required' => 'The form responses are required.',
+        ];
 
-            $formattedData = [];
-            $attributes = [];
+        $formattedData = [];
+        $attributes = [];
 
-            foreach ($request->input('response_data', []) as $key => $value) {
-                foreach ($schema as $field) {
-                    if (strcasecmp($key, $field['title']) == 0) {
-                        $formattedData[$field['field_name']] = trim($value);
-                        break;
-                    }
+        foreach ($request->input('response_data', []) as $key => $value) {
+            foreach ($schema as $field) {
+                if (strcasecmp($key, $field['title']) == 0) {
+                    $formattedData[$field['field_name']] = trim($value);
+                    break;
                 }
             }
+        }
 
-            foreach ($schema as $field) {
-                $fieldKey = $field['type'] == 'select_course' ? 'response_data.course_id' : "response_data.{$field['field_name']}";
+        foreach ($schema as $field) {
+            $fieldKey = $field['type'] == 'select_course' ? 'response_data.course_id' : "response_data.{$field['field_name']}";
 
-                $fieldTitle = ucwords(str_replace('_', ' ', $field['title']));
+            $fieldTitle = ucwords(str_replace('_', ' ', $field['title']));
 
-                $rules = [];
+            $rules = [];
 
-                $attributes[$fieldKey] = Str::remove('_id', Str::remove('response_data.', $fieldKey, true));
+            $attributes[$fieldKey] = Str::remove('_id', Str::remove('response_data.', $fieldKey, true));
 
-                if (!empty($field['validators']['required'])) {
-                    $rules[] = 'required';
-                    $customMessages["{$fieldKey}.required"] = "This field is required.";
-                }
+            if (!empty($field['validators']['required'])) {
+                $rules[] = 'required';
+                $customMessages["{$fieldKey}.required"] = "This field is required.";
+            }
 
-                if (!empty($field['validators']['unique'])) {
-                    $valueToCheck = $formattedData[$field['field_name']] ?? null;
+            if (!empty($field['validators']['unique'])) {
+                $valueToCheck = $formattedData[$field['field_name']] ?? null;
 
-                    if (!empty($valueToCheck)) {
-                        $userFieldMap = [
-                            'email' => 'email',
-                            'phone' => 'mobile_no',
-                        ];
+                if (!empty($valueToCheck)) {
+                    $userFieldMap = [
+                        'email' => 'email',
+                        'phone' => 'mobile_no',
+                    ];
 
-                        $dbColumn = $userFieldMap[$field['field_name']] ?? null;
+                    $dbColumn = $userFieldMap[$field['field_name']] ?? null;
 
-                        if ($dbColumn) {
-                            $exists = User::where($dbColumn, $valueToCheck)->exists();
+                    if ($dbColumn) {
+                        $exists = User::where($dbColumn, $valueToCheck)->exists();
 
-                            if ($exists) {
-                                return redirect()->back()->withInput()->withErrors([
-                                    $fieldKey => ["{$fieldTitle} has already been taken."]
-                                ]);
-                            }
+                        if ($exists) {
+                            return redirect()->back()->withInput()->withErrors([
+                                $fieldKey => ["{$fieldTitle} has already been taken."]
+                            ]);
                         }
                     }
                 }
-
-                switch ($field['type']) {
-                    case 'text':
-                    case 'textarea':
-                        $rules[] = 'string';
-                        $customMessages["{$fieldKey}.string"] = "This field must be a string.";
-                        break;
-
-                    case 'radio':
-                    case 'select':
-                        $rules[] = 'string';
-                        $customMessages["{$fieldKey}.string"] = "This field must be a valid option.";
-                        break;
-
-                    case 'number':
-                        $rules[] = 'numeric';
-                        $customMessages["{$fieldKey}.numeric"] = "This field must be a number.";
-                        break;
-
-                    case 'email':
-                        $rules[] = 'email';
-                        $customMessages["{$fieldKey}.email"] = "This field must be a valid email address.";
-                        break;
-
-                    case 'checkbox':
-                        $rules[] = 'array';
-                        $customMessages["{$fieldKey}.array"] = "This field must be an array.";
-                        break;
-
-                    case 'file':
-                        $rules[] = 'file';
-                        $rules[] = 'max:2048';
-
-                        if (!empty($field['options'])) {
-                            $allowedMimes = array_map('trim', explode(',', strtolower($field['options'])));
-                            $rules[] = 'mimes:' . implode(',', $allowedMimes);
-                            $customMessages["{$fieldKey}.mimes"] = "Must be a file of type: " . implode(', ', $allowedMimes) . ".";
-                        }
-
-                        $customMessages["{$fieldKey}.file"] = "This field must be a file.";
-                        $customMessages["{$fieldKey}.max"] = "The file must not be greater than 2MB.";
-
-                        break;
-
-                    case 'select_course':
-                        $rules[] = 'exists:courses,id';
-                        $customMessages["{$fieldKey}.exists"] = "The selected course is invalid";
-                        break;
-
-                    case 'phonenumber':
-                        $rules[] = 'phone';
-                        $customMessages["{$fieldKey}.phone"] = "This must be a valid phonenumber.";
-                        $fieldName = $field['field_name'];
-                        break;
-
-                    default:
-                        $rules[] = 'nullable';
-                        break;
-                }
-
-                $validationRules[$fieldKey] = implode('|', $rules);
-                $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|' . $field['rules'] ?? '' : '';
-                $validationRules[$fieldKey] =  $validationRules[$fieldKey] . $additionRules;
             }
 
-            $validator = Validator::make($request->all(), $validationRules, $customMessages, $attributes);
+            switch ($field['type']) {
+                case 'text':
+                case 'textarea':
+                    $rules[] = 'string';
+                    $customMessages["{$fieldKey}.string"] = "This field must be a string.";
+                    break;
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'error' => $validator->errors()->toArray()
-                ], 422);
-            }
+                case 'radio':
+                case 'select':
+                    $rules[] = 'string';
+                    $customMessages["{$fieldKey}.string"] = "This field must be a valid option.";
+                    break;
 
-            $validated = $validator->validated();
+                case 'number':
+                    $rules[] = 'numeric';
+                    $customMessages["{$fieldKey}.numeric"] = "This field must be a number.";
+                    break;
 
-            // Handle file uploads
-            foreach ($schema as $field) {
-                if ($field['type'] === 'file' && $request->hasFile("response_data.{$field['field_name']}")) {
-                    $destinationPath = 'form/uploads/';
-                    $file = $request->file("response_data.{$field['field_name']}");
+                case 'email':
+                    $rules[] = 'email';
+                    $customMessages["{$fieldKey}.email"] = "This field must be a valid email address.";
+                    break;
 
-                    $fileName = time() . '.' . $file->getClientOriginalExtension();
+                case 'checkbox':
+                    $rules[] = 'array';
+                    $customMessages["{$fieldKey}.array"] = "This field must be an array.";
+                    break;
 
-                    // Delete old image if it exists
-                    if (\Storage::disk('public')->exists($destinationPath . $fileName)) {
-                        \Storage::disk('public')->delete($destinationPath . $fileName);
+                case 'file':
+                    $rules[] = 'file';
+                    $rules[] = 'max:2048';
+
+                    if (!empty($field['options'])) {
+                        $allowedMimes = array_map('trim', explode(',', strtolower($field['options'])));
+                        $rules[] = 'mimes:' . implode(',', $allowedMimes);
+                        $customMessages["{$fieldKey}.mimes"] = "Must be a file of type: " . implode(', ', $allowedMimes) . ".";
                     }
 
-                    // Save new image
-                    \Storage::disk('public')->putFileAs($destinationPath, $file, $fileName);
+                    $customMessages["{$fieldKey}.file"] = "This field must be a file.";
+                    $customMessages["{$fieldKey}.max"] = "The file must not be greater than 2MB.";
 
-                    $validated['response_data'][$field['field_name']] = $fileName;
-                }
+                    break;
+
+                case 'select_course':
+                    $rules[] = 'exists:courses,id';
+                    $customMessages["{$fieldKey}.exists"] = "The selected course is invalid";
+                    break;
+
+                case 'phonenumber':
+                    $rules[] = 'phone';
+                    $customMessages["{$fieldKey}.phone"] = "This must be a valid phonenumber.";
+                    $fieldName = $field['field_name'];
+                    break;
+
+                default:
+                    $rules[] = 'nullable';
+                    break;
             }
 
-            // Load existing draft or create new one
-            $draft = QuestionnaireResponse::firstOrCreate(
-                [
-                    'questionnaire_id' => $questionnaire->id,
-                    'user_id' => Auth::id(),
-                ],
-                [
-                    'response_data' => [],
-                ]
-            );
+            $validationRules[$fieldKey] = implode('|', $rules);
+            $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|' . $field['rules'] ?? '' : '';
+            $validationRules[$fieldKey] =  $validationRules[$fieldKey] . $additionRules;
+        }
 
-            // Get existing data
-            $existing = $draft->response_data ?? [];
+        $validator = Validator::make($request->all(), $validationRules, $customMessages, $attributes);
 
-            // Update only the current section
-            $existing[$sectionIndex] = $validated['response_data'];
-
-            // Save the updated response_data
-            $draft->update([
-                'response_data' => $existing,
-                'is_submitted' => $sectionIndex >= $totalSections - 1,
-            ]);
-
+        if ($validator->fails()) {
             return response()->json([
-                'status' => true,
-                'progress' => [
-                    'is_submitted' => $sectionIndex >= $totalSections - 1,
-                    'redirect_url' => route('student.questionnaire.index'),
-                    'next_section' => $sectionIndex + 1
-                ],
-            ]);
+                'error' => $validator->errors()->toArray()
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        // Handle file uploads
+        foreach ($schema as $field) {
+            if ($field['type'] === 'file' && $request->hasFile("response_data.{$field['field_name']}")) {
+                $destinationPath = 'form/uploads/';
+                $file = $request->file("response_data.{$field['field_name']}");
+
+                $fileName = time() . '.' . $file->getClientOriginalExtension();
+
+                // Delete old image if it exists
+                if (\Storage::disk('public')->exists($destinationPath . $fileName)) {
+                    \Storage::disk('public')->delete($destinationPath . $fileName);
+                }
+
+                // Save new image
+                \Storage::disk('public')->putFileAs($destinationPath, $file, $fileName);
+
+                $validated['response_data'][$field['field_name']] = $fileName;
+            }
+        }
+
+        // Load existing draft or create new one
+        $draft = QuestionnaireResponse::firstOrCreate(
+            [
+                'questionnaire_id' => $questionnaire->id,
+                'user_id' => Auth::id(),
+            ],
+            [
+                'response_data' => [],
+            ]
+        );
+
+        // Get existing data
+        $existing = $draft->response_data ?? [];
+
+        // Update only the current section
+        $existing[$sectionIndex] = $validated['response_data'];
+
+        // Save the updated response_data
+        $draft->update([
+            'response_data' => $existing,
+            'is_submitted' => $sectionIndex >= $totalSections - 1,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'progress' => [
+                'is_submitted' => $sectionIndex >= $totalSections - 1,
+                'redirect_url' => route('student.questionnaire.index'),
+                'next_section' => $sectionIndex + 1
+            ],
+        ]);
     }
 }
