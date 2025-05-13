@@ -189,7 +189,7 @@
                                 </a>
                             </li>
                             {{-- @endif --}}
-                            @if (!Auth::user()->isAdmitted())
+                            @if (Auth::user()->isAdmitted())
                                 <li class="nav-item">
                                     <a href="{{ url('student/id-qrcode') }}" class="nav-link">
                                         <i class="nav-icon fas fa-qrcode"></i>
@@ -218,7 +218,7 @@
                                     </a>
                                 </li>
 
-                                @if(!Auth::user()->hasAttendance())
+                                @if(Auth::user()->hasAttendance())
                                 <li class="nav-item">
                                     <a href="{{ url('student/questionnaire') }}"
                                         class="nav-link {{ request()->is('student/questionnaire') ? 'active' : '' }}">
