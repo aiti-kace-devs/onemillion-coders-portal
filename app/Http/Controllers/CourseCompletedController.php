@@ -31,6 +31,32 @@ class CourseCompletedController extends Controller
         return view('admin.course_completed', compact('courseCompletions'));
     }
 
+    public function getAttendanceForCourse($courseId, $userId = null)
+    {
+        $query = DB::table('attendances')
+            ->join('users', 'attendances.user_id', '=', 'users.userId')
+            ->join('courses', 'attendances.course_id', '=', 'courses.id')
+            ->select(
+                'attendances.user_id',
+                'users.name as user_name',
+                'users.email as user_email',
+                'attendances.course_id',
+                'courses.course_name',
+                'courses.number_of_days',
+                DB::raw('COUNT(DISTINCT attendances.date) AS attendance_count'),
+                DB::raw('MAX(attendances.date) AS last_attendance_date')
+            )
+            ->where('attendances.course_id', $courseId)
+            ->groupBy('attendances.user_id', 'users.name', 'users.email', 'attendances.course_id', 'courses.course_name', 'courses.number_of_days');
+
+        // If user ID is provided, filter by that user
+        if ($userId) {
+            $query->where('attendances.user_id', $userId);
+        }
+
+        return $query->orderBy('attendance_count', 'desc')->get();
+    }
+
     /**
      * Delete a course completion record.
      */
