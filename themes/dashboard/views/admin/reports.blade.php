@@ -172,22 +172,21 @@
                                             @foreach ($studentAttendanceData as $record)
                                                 <tr>
                                                     <td class="text-lowercase">
-                                                        <span class="text-uppercase">
-                                                            {{ $record->first()[0]->user_name }}</span>
-
-                                                        ({{ $record->first()[0]->email }})
+                                                        <span>
+                                                            <span
+                                                                class="text-uppercase">{{ $record->first()[0]->user_name }}</span>({{ $record->first()[0]->email }})
+                                                        </span>
                                                     </td>
                                                     <td>{{ $record->first()[0]->course_name }}
                                                     </td>
                                                     @if ($virtualQuery)
                                                         <td>{{ $record->first()->values()[0]->virtual_attendance ?? 0 }}
+                                                        </td>
                                                         <td>{{ $record->first()->values()[0]->in_person }}</td>
                                                     @endif
-                                                    <td>{{ $record->first()[0]->session_name }}
-                                                    <td>{{ $record->first()->values()[0]->attendance_total ?? 0 }}
-                                                        {{-- <td>{{ $record->first()[0]->user_gender ?? 'N/A' }} --}}
-                                                    </td>
-                                                    </td>
+                                                    <td>{{ $record->first()[0]->session_name }}</td>
+                                                    <td>{{ $record->first()->values()[0]->attendance_total ?? 0 }} </td>
+                                                    {{-- <td>{{ $record->first()[0]->user_gender ?? 'N/A' }} --}}
                                                     {{-- <td>{{ $record->first()[0]->user_network_type ?? 'N/A' }}
                                                     </td>
                                                     <td>{{ $record->first()[0]->user_contact ?? 'N/A' }}
