@@ -8,7 +8,7 @@
 
 @php
 $fieldName = "response_data[{$question['field_name']}]";
-$fieldId = "field-{$i}-{$index}";
+$fieldId = "field-{$section}-{$index}";
 $required = $question['validators']['required'] ? 'required' : '';
 $options = isset($question['options']) ? explode(',', $question['options']) : [];
 @endphp
@@ -22,13 +22,6 @@ $options = isset($question['options']) ? explode(',', $question['options']) : []
             @endif
         </label>
     </div>
-
-    @php
-    $fieldName = "response_data[{$question['field_name']}]";
-    $fieldId = "field-{$section}-{$index}";
-    $required = $question['validators']['required'] ? 'required' : '';
-    $options = isset($question['options']) ? explode(',', $question['options']) : [];
-    @endphp
 
     {{-- Input types --}}
     @if (in_array($question['type'], ['text', 'email', 'number', 'password']))
@@ -90,7 +83,7 @@ $options = isset($question['options']) ? explode(',', $question['options']) : []
     @if (!empty($question['description']))
     <small class="form-text text-info">{{ $question['description'] }}</small>
     @endif
-    <span class="{{ str_replace(['[', ']'], ['_', ''], $fieldName)}}_error font-weight-bold invalid-feedback" style="display: block;" role="alert"></span>
+    <span class="{{ str_replace(['[', ']'], ['_', ''], $fieldName) }}_error font-weight-bold invalid-feedback" style="display: block;" role="alert"></span>
 </div>
 @endforeach
 @endforeach

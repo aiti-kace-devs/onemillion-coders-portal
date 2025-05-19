@@ -877,7 +877,7 @@ class StudentOperation extends Controller
         $existing = $draft->response_data ?? [];
 
         // Update only the current section
-        $existing[$sectionIndex] = $validated['response_data'];
+        $existing[$section['title']] = $validated['response_data'];
 
         // Save the updated response_data
         $draft->update([

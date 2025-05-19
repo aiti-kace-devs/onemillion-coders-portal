@@ -93,6 +93,7 @@ export default {
 
     this.questionnaire.schema.forEach((schema, sectionIndex) => {
       const newSection = {
+        type: schema?.type,
         title: schema?.title,
         description: schema?.description,
         questions: [],
@@ -457,8 +458,22 @@ export default {
                     </p>
                     <div class="grid gap-5">
                       <div>
-                        <div class="grid gap-4">
-                          <div>
+                        <div class="grid lg:grid-cols-3 gap-4">
+
+                          <div class="lg:col-span-1">
+                            <SelectInput
+                              :id="section.id"
+                              v-model="section.type"
+                              class="w-full"
+                            >
+                              <option value="facility" selected>Facility</option>
+                              <option value="course">Course</option>
+                              <option value="instructor">Instructor</option>
+                              <option value="others">Others</option>
+                            </SelectInput>
+                          </div>
+
+                          <div v-if="section.type === 'others'" class="lg:col-span-full">
                             <InputLabel for="title" value="Title" :required="false" />
                             <TextInput
                               :id="section.id"
@@ -473,7 +488,7 @@ export default {
                             <InputError :message="form.errors[`schema.${row}.title`]" />
                           </div>
 
-                          <div>
+                          <div class="col-span-full">
                             <InputLabel
                               for="description"
                               value="Description"
