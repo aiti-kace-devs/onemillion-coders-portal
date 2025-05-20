@@ -86,6 +86,13 @@ class QuestionnaireController extends Controller
     {
         $validated = $request->validated();
 
+         if (!empty($validated['schema'])) {
+            $validated['schema'] = array_map(function ($section) {
+                $section['title'] = ($section['type'] !== 'others') ? $section['type'] : ($section['title'] ?? '');
+                return $section;
+            }, $validated['schema']);
+        }
+
         if ($request->hasFile('image')) {
             $destinationPath = 'questionnaire/banner/';
             $image = $request->file('image');
@@ -152,7 +159,7 @@ class QuestionnaireController extends Controller
     {
         $user = \Auth::user();
 
-        if(!$user->isAdmitted() && !$user->hasAttendance()) {
+        if (!$user->isAdmitted() && !$user->hasAttendance()) {
             return redirect(route('student.dashboard'))->with('error', 'You are not allowed to access this form.');
         }
 
@@ -183,6 +190,13 @@ class QuestionnaireController extends Controller
     public function update(QuestionnaireRequest $request, $uuid)
     {
         $validated = $request->validated();
+
+        if (!empty($validated['schema'])) {
+            $validated['schema'] = array_map(function ($section) {
+                $section['title'] = ($section['type'] !== 'others') ? $section['type'] : ($section['title'] ?? '');
+                return $section;
+            }, $validated['schema']);
+        }
 
         $form = Questionnaire::where('uuid', $uuid)->first();
 

@@ -689,12 +689,12 @@ class StudentOperation extends Controller
             );
         }
 
-        $instructors = collect();
+        $instructors = null;
         
         foreach ($questionnaire->schema as $section) {
-            if (strtolower($section['title']) === 'instructors') {
+            if (strtolower($section['type']) === 'instructors') {
                 $admission = $user->admission;
-                $instructors = Course::find($admission->course_id)?->assignedAdmins()->get() ?? collect();
+                $instructors = Course::find($admission->course_id)?->assignedAdmins()->get() ?? null;
             }
         }
 

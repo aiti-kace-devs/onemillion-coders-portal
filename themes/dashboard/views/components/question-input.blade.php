@@ -1,11 +1,13 @@
-@props(['instructors', 'questions', 'section'])
+@props([
+'instructors' => [],
+'questions' => [],
+'section',
+])
 
 
 
 
-@foreach (($instructors ?? []) as $instructor)
 @foreach ($questions as $index => $question)
-
 @php
 $fieldName = "response_data[{$question['field_name']}]";
 $fieldId = "field-{$section}-{$index}";
@@ -26,26 +28,6 @@ $options = isset($question['options']) ? explode(',', $question['options']) : []
     {{-- Input types --}}
     @if (in_array($question['type'], ['text', 'email', 'number', 'password']))
     <input type="{{ $question['type'] }}"
-        name="{{ $fieldName }}"
-        id="{{ $fieldId }}"
-        class="form-control"
-        placeholder="{{ $question['title'] }}">
-    @elseif ($question['type'] === 'file')
-    <input type="file"
-        name="{{ $fieldName }}"
-        id="{{ $fieldId }}"
-        class="form-control-file">
-    @elseif ($question['type'] === 'select')
-    <select name="{{ $fieldName }}"
-        id="{{ $fieldId }}"
-        class="form-control">
-        <option value="" disabled selected>-- Select an option --</option>
-        @foreach ($options as $option)
-        <option value="{{ trim($option) }}">{{ ucfirst(trim($option)) }}</option>
-        @endforeach
-    </select>
-    @elseif ($question['type'] === 'phonenumber')
-    <input type="tel"
         name="{{ $fieldName }}"
         id="{{ $fieldId }}"
         class="form-control"
@@ -71,8 +53,8 @@ $options = isset($question['options']) ? explode(',', $question['options']) : []
             name="{{ $fieldName }}"
             id="{{ $fieldId }}-opt-{{ $idx }}"
             value="{{ trim($option) }}">
-        <label class="form-check-label" for="{{ $fieldId }}-opt-{{ $idx }}">
-            {{ ucfirst(trim($option)) }}
+        <label class="form-check-label text-capitalize" for="{{ $fieldId }}-opt-{{ $idx }}">
+            {{ str_replace(['1', '2', '3', '4', '5'], ['very bad', 'bad', 'good', 'very good', 'excellent'], trim($option)) }}
         </label>
     </div>
     @endforeach
@@ -85,5 +67,4 @@ $options = isset($question['options']) ? explode(',', $question['options']) : []
     @endif
     <span class="{{ str_replace(['[', ']'], ['_', ''], $fieldName) }}_error font-weight-bold invalid-feedback" style="display: block;" role="alert"></span>
 </div>
-@endforeach
 @endforeach

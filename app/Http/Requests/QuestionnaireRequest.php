@@ -35,10 +35,11 @@ class QuestionnaireRequest extends FormRequest
                     'required',
                     Rule::unique('questionnaires', 'code')->ignore($this->route('questionnaire'), 'uuid')
                 ],
-                'message_when_inactive' => ['required'],
-                'message_after_submission' => ['required'],
+                'message_when_inactive' => ['required', 'string'],
+                'message_after_submission' => ['required', 'string'],
                 'active' => ['nullable'],
                 'schema' => ['required', 'array'],
+                'schema.*.type' => ['required', 'string', 'in:course,instructors,others,facility'],
                 'schema.*.title' => ['nullable', 'string'],
                 'schema.*.description' => ['nullable', 'string'],
                 'schema.*.questions.*.title' => ['required', 'string'],
@@ -62,6 +63,7 @@ class QuestionnaireRequest extends FormRequest
         return [
             'schema' => 'section',
             'code' => 'unique code',
+            'schema.*.type' => 'type',
             'schema.*.title' => 'title',
             'schema.*.description' => 'description',
             'schema.*.questions.*.title' => 'question',

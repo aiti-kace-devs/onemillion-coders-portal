@@ -33,7 +33,7 @@
                 <!-- Vertical nav tabs for mobile responsiveness -->
                 <div class="nav flex-column nav-pills" id="sectionTabs" role="tablist">
                     @foreach ($questionnaire['schema'] as $i => $section)
-                    <a class="nav-link {{ $i == 0 ? 'active' : '' }}"
+                    <a class="nav-link text-capitalize {{ $i == 0 ? 'active' : '' }}"
                         id="tab-{{ $i }}"
                         data-toggle="pill"
                         href="#section-{{ $i }}"
@@ -65,190 +65,15 @@
 
                                     <input type="hidden" name="section" value="{{ $i }}">
 
-                                    {{-- GENERAL SECTION QUESTIONS --}}
-                                    @if (strtolower($section['title']) !== 'instructors')
+                                    @if (strtolower($section['type']) !== 'instructors')
                                     <x-question-input
                                         :questions="$section['questions']"
                                         :section="$i" />
                                     @else
-                                    {{-- INSTRUCTOR-SPECIFIC QUESTIONS --}}
-                                    @foreach ($instructors as $insIndex => $instructor)
-                                    <h5 class="mt-4 mb-3">Instructor: {{ $instructor->name }}</h5>
-
-
                                     <x-question-input
                                         :questions="$section['questions']"
                                         :instructors="$instructors"
                                         :section="$i" />
-                                    @endforeach
-                                    @endif
-
-
-                                    @foreach ($section['questions'] as $index => $question)
-                                    <div class="form-group">
-                                        <div>
-                                            <label class="h5 font-weight-normal" for="field-{{ $i }}-{{ $index }}">
-                                                {{ $question['title'] }}
-                                                @if($question['validators']['required'])
-                                                <span class="text-danger">*</span>
-                                                @endif
-                                            </label>
-                                        </div>
-
-                                        @php
-                                        $fieldName = "response_data[{$question['field_name']}]";
-                                        $fieldId = "field-{$i}-{$index}";
-                                        $required = $question['validators']['required'] ? 'required' : '';
-                                        $options = isset($question['options']) ? explode(',', $question['options']) : [];
-                                        @endphp
-
-                                        {{-- Input types --}}
-                                        @if (in_array($question['type'], ['text', 'email', 'number', 'password']))
-                                        <input type="{{ $question['type'] }}"
-                                            name="{{ $fieldName }}"
-                                            id="{{ $fieldId }}"
-                                            class="form-control"
-                                            placeholder="{{ $question['title'] }}">
-                                        @elseif ($question['type'] === 'file')
-                                        <input type="file"
-                                            name="{{ $fieldName }}"
-                                            id="{{ $fieldId }}"
-                                            class="form-control-file">
-                                        @elseif ($question['type'] === 'select')
-                                        <select name="{{ $fieldName }}"
-                                            id="{{ $fieldId }}"
-                                            class="form-control">
-                                            <option value="" disabled selected>-- Select an option --</option>
-                                            @foreach ($options as $option)
-                                            <option value="{{ trim($option) }}">{{ ucfirst(trim($option)) }}</option>
-                                            @endforeach
-                                        </select>
-                                        @elseif ($question['type'] === 'phonenumber')
-                                        <input type="tel"
-                                            name="{{ $fieldName }}"
-                                            id="{{ $fieldId }}"
-                                            class="form-control"
-                                            placeholder="{{ $question['title'] }}">
-                                        @elseif ($question['type'] === 'checkbox')
-                                        @foreach ($options as $idx => $option)
-                                        <div class="form-check">
-                                            <input type="checkbox"
-                                                class="form-check-input"
-                                                name="{{ $fieldName }}[]"
-                                                id="{{ $fieldId }}-opt-{{ $idx }}"
-                                                value="{{ trim($option) }}">
-                                            <label class="form-check-label" for="{{ $fieldId }}-opt-{{ $idx }}">
-                                                {{ ucfirst(trim($option)) }}
-                                            </label>
-                                        </div>
-                                        @endforeach
-                                        @elseif ($question['type'] === 'radio')
-                                        @foreach ($options as $idx => $option)
-                                        <div class="form-check form-check-inline">
-                                            <input type="radio"
-                                                class="form-check-input"
-                                                name="{{ $fieldName }}"
-                                                id="{{ $fieldId }}-opt-{{ $idx }}"
-                                                value="{{ trim($option) }}">
-                                            <label class="form-check-label" for="{{ $fieldId }}-opt-{{ $idx }}">
-                                                {{ ucfirst(trim($option)) }}
-                                            </label>
-                                        </div>
-                                        @endforeach
-                                        @elseif ($question['type'] === 'select_course')
-                                        <p class="text-muted">[Select Course Component Placeholder]</p>
-                                        @endif
-
-                                        @if (!empty($question['description']))
-                                        <small class="form-text text-info">{{ $question['description'] }}</small>
-                                        @endif
-                                        <span class="{{ str_replace(['[', ']'], ['_', ''], $fieldName)}}_error font-weight-bold invalid-feedback" style="display: block;" role="alert"></span>
-                                    </div>
-                                    @endforeach
-
-                                    @if (strtolower($section['title']) === 'instructors')
-                                    @foreach ($instructors as $instructor)
-                                    <div class="form-group">
-                                        <div>
-                                            <label class="h5 font-weight-normal" for="field-{{ $i }}-{{ $index }}">
-                                                {{ $question['title'] }}
-                                                @if($question['validators']['required'])
-                                                <span class="text-danger">*</span>
-                                                @endif
-                                            </label>
-                                        </div>
-
-                                        @php
-                                        $fieldName = "response_data[{$question['field_name']}]";
-                                        $fieldId = "field-{$i}-{$index}";
-                                        $required = $question['validators']['required'] ? 'required' : '';
-                                        $options = isset($question['options']) ? explode(',', $question['options']) : [];
-                                        @endphp
-
-                                        {{-- Input types --}}
-                                        @if (in_array($question['type'], ['text', 'email', 'number', 'password']))
-                                        <input type="{{ $question['type'] }}"
-                                            name="{{ $fieldName }}"
-                                            id="{{ $fieldId }}"
-                                            class="form-control"
-                                            placeholder="{{ $question['title'] }}">
-                                        @elseif ($question['type'] === 'file')
-                                        <input type="file"
-                                            name="{{ $fieldName }}"
-                                            id="{{ $fieldId }}"
-                                            class="form-control-file">
-                                        @elseif ($question['type'] === 'select')
-                                        <select name="{{ $fieldName }}"
-                                            id="{{ $fieldId }}"
-                                            class="form-control">
-                                            <option value="" disabled selected>-- Select an option --</option>
-                                            @foreach ($options as $option)
-                                            <option value="{{ trim($option) }}">{{ ucfirst(trim($option)) }}</option>
-                                            @endforeach
-                                        </select>
-                                        @elseif ($question['type'] === 'phonenumber')
-                                        <input type="tel"
-                                            name="{{ $fieldName }}"
-                                            id="{{ $fieldId }}"
-                                            class="form-control"
-                                            placeholder="{{ $question['title'] }}">
-                                        @elseif ($question['type'] === 'checkbox')
-                                        @foreach ($options as $idx => $option)
-                                        <div class="form-check">
-                                            <input type="checkbox"
-                                                class="form-check-input"
-                                                name="{{ $fieldName }}[]"
-                                                id="{{ $fieldId }}-opt-{{ $idx }}"
-                                                value="{{ trim($option) }}">
-                                            <label class="form-check-label" for="{{ $fieldId }}-opt-{{ $idx }}">
-                                                {{ ucfirst(trim($option)) }}
-                                            </label>
-                                        </div>
-                                        @endforeach
-                                        @elseif ($question['type'] === 'radio')
-                                        @foreach ($options as $idx => $option)
-                                        <div class="form-check form-check-inline">
-                                            <input type="radio"
-                                                class="form-check-input"
-                                                name="{{ $fieldName }}"
-                                                id="{{ $fieldId }}-opt-{{ $idx }}"
-                                                value="{{ trim($option) }}">
-                                            <label class="form-check-label" for="{{ $fieldId }}-opt-{{ $idx }}">
-                                                {{ ucfirst(trim($option)) }}
-                                            </label>
-                                        </div>
-                                        @endforeach
-                                        @elseif ($question['type'] === 'select_course')
-                                        <p class="text-muted">[Select Course Component Placeholder]</p>
-                                        @endif
-
-                                        @if (!empty($question['description']))
-                                        <small class="form-text text-info">{{ $question['description'] }}</small>
-                                        @endif
-                                        <span class="{{ str_replace(['[', ']'], ['_', ''], $fieldName)}}_error font-weight-bold invalid-feedback" style="display: block;" role="alert"></span>
-                                    </div>
-
-                                    @endforeach
                                     @endif
 
                                     <div class="form-group mt-4">

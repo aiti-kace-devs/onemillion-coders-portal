@@ -144,6 +144,7 @@ export default {
   methods: {
     addSection(sectionDetails = null) {
       const newSection = sectionDetails || {
+        type: '',
         title: null,
         description: null,
         questions: [],
@@ -195,7 +196,7 @@ export default {
       this.form.clearErrors(`schema.${sectionIndex}.questions.${questionIndex}.options`);
 
       question.options = ["radio", "checkbox"].includes(question.type)
-        ? "very bad, bad, average, good, very good"
+        ? "1, 2, 3, 4, 5"
         : null;
     },
     moveField(index, direction) {
@@ -459,20 +460,25 @@ export default {
                     <div class="grid gap-5">
                       <div>
                         <div class="grid lg:grid-cols-3 gap-4">
-
                           <div class="lg:col-span-1">
                             <SelectInput
                               :id="section.id"
                               v-model="section.type"
                               class="w-full"
+                              :class="{
+                                'border-red-600': form.errors[`schema.${row}.type`],
+                              }"
                             >
-                              <option value="facility" selected>Facility</option>
+                              <option value="" disabled>-- Select Type --</option>
+                              <option value="facility">Facility</option>
                               <option value="course">Course</option>
-                              <option value="instructor">Instructor</option>
+                              <option value="instructors">Instructors</option>
                               <option value="others">Others</option>
                             </SelectInput>
-                          </div>
 
+                            <InputError :message="form.errors[`schema.${row}.type`]" />
+                          </div>
+                          
                           <div v-if="section.type === 'others'" class="lg:col-span-full">
                             <InputLabel for="title" value="Title" :required="false" />
                             <TextInput
@@ -688,7 +694,7 @@ export default {
                 </div>
 
                 <div>
-                  <PrimaryButton @click="addSection" type="button">
+                  <PrimaryButton @click="addSection()" type="button">
                     <span class="material-symbols-outlined mr-2"> add </span>
                     add section
                   </PrimaryButton>
