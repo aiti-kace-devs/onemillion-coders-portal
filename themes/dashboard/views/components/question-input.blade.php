@@ -25,7 +25,7 @@ $options = isset($question['options']) ? explode(',', $question['options']) : []
     </div>
     {{-- Input types --}}
 
-    @if ($question['type'] === 'instructor_feedback')
+    @if ($sectionType === 'instructors' && $question['type'] === 'instructor_feedback')
     @foreach ($instructors as $idx => $instructor)
     <div class="form-check">
         <input type="checkbox"
@@ -38,8 +38,7 @@ $options = isset($question['options']) ? explode(',', $question['options']) : []
         </label>
     </div>
     @endforeach
-    @else
-    @if (in_array($question['type'], ['text', 'email', 'number', 'password']))
+    @elseif (in_array($question['type'], ['text', 'email', 'number', 'password']))
     <input type="{{ $question['type'] }}"
         name="{{ $fieldName }}"
         id="{{ $fieldId }}"
@@ -67,11 +66,19 @@ $options = isset($question['options']) ? explode(',', $question['options']) : []
             id="{{ $fieldId }}-opt-{{ $idx }}"
             value="{{ trim($option) }}">
         <label class="form-check-label text-capitalize" for="{{ $fieldId }}-opt-{{ $idx }}">
-            {{ str_replace(['1', '2', '3', '4', '5'], ['very bad', 'bad', 'good', 'very good', 'excellent'], trim($option)) }}
+            {{
+                            match (trim($option)) {
+                                '1' => 'Very Bad',
+                                '2' => 'Bad',
+                                '3' => 'Good',
+                                '4' => 'Very Good',
+                                '5' => 'Excellent',
+                                default => ucfirst(trim($option))
+                            }
+                        }}
         </label>
     </div>
     @endforeach
-    @endif
     @endif
 
     @if (!empty($question['description']))

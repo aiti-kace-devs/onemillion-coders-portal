@@ -784,26 +784,6 @@ class StudentOperation extends Controller
 
         $validated = $validator->validated();
 
-        // Handle file uploads
-        foreach ($schema as $field) {
-            if ($field['type'] === 'file' && $request->hasFile("response_data.{$field['field_name']}")) {
-                $destinationPath = 'form/uploads/';
-                $file = $request->file("response_data.{$field['field_name']}");
-
-                $fileName = time() . '.' . $file->getClientOriginalExtension();
-
-                // Delete old image if it exists
-                if (\Storage::disk('public')->exists($destinationPath . $fileName)) {
-                    \Storage::disk('public')->delete($destinationPath . $fileName);
-                }
-
-                // Save new image
-                \Storage::disk('public')->putFileAs($destinationPath, $file, $fileName);
-
-                $validated['response_data'][$field['field_name']] = $fileName;
-            }
-        }
-
         // Load existing draft or create new one
         $draft = QuestionnaireResponse::firstOrCreate(
             [
