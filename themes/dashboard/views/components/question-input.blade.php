@@ -1,31 +1,44 @@
 @props([
 'instructors' => [],
-'questions' => [],
-'section',
+'sectionQuestions' => [],
+'sectionIndex',
+'sectionType'
 ])
 
-
-
-
-@foreach ($questions as $index => $question)
+@foreach ($sectionQuestions as $index => $question)
 @php
 $fieldName = "response_data[{$question['field_name']}]";
-$fieldId = "field-{$section}-{$index}";
-$required = $question['validators']['required'] ? 'required' : '';
+$fieldId = "field-{$sectionIndex}-{$index}";
+$required = !empty($question['validators']['required']) ? 'required' : '';
 $options = isset($question['options']) ? explode(',', $question['options']) : [];
 @endphp
 
 <div class="form-group">
     <div>
-        <label class="h5 font-weight-normal" for="field-{{ $section }}-{{ $index }}">
-            {{ $question['title'] }}
+        <label class="h5 font-weight-normal" for="field-{{ $sectionIndex }}-{{ $index }}">
+            {{ $question['type'] === 'instructor_feedback' ? 'Select instructors that taught you?' :  $question['title'] }}
+
             @if($question['validators']['required'])
             <span class="text-danger">*</span>
             @endif
         </label>
     </div>
-
     {{-- Input types --}}
+
+    @if ($question['type'] === 'instructor_feedback')
+    @foreach ($instructors as $idx => $instructor)
+    <div class="form-check">
+        <input type="checkbox"
+            class="form-check-input"
+            name="{{ $fieldName }}[]"
+            id="{{ $fieldId }}-opt-{{ $idx }}"
+            value="{{ trim($instructor->id) }}">
+        <label class="form-check-label" for="{{ $fieldId }}-opt-{{ $idx }}">
+            {{ ucfirst(trim($instructor->name)) }}
+        </label>
+    </div>
+    @endforeach
+    @else
     @if (in_array($question['type'], ['text', 'email', 'number', 'password']))
     <input type="{{ $question['type'] }}"
         name="{{ $fieldName }}"
@@ -58,8 +71,7 @@ $options = isset($question['options']) ? explode(',', $question['options']) : []
         </label>
     </div>
     @endforeach
-    @elseif ($question['type'] === 'select_course')
-    <p class="text-muted">[Select Course Component Placeholder]</p>
+    @endif
     @endif
 
     @if (!empty($question['description']))

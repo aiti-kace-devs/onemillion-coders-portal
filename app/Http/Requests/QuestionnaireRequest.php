@@ -44,7 +44,7 @@ class QuestionnaireRequest extends FormRequest
                 'schema.*.description' => ['nullable', 'string'],
                 'schema.*.questions.*.title' => ['required', 'string'],
                 'schema.*.questions.*.description' => ['nullable', 'string'],
-                'schema.*.questions.*.type' => ['required', 'string', 'in:radio,checkbox,text,textarea'],
+                'schema.*.questions.*.type' => ['required', 'string', 'in:radio,checkbox,text,textarea,instructor_feedback'],
                 'schema.*.questions.*.rules' => ['nullable', 'string'],
                 'schema.*.questions.*.options' => [
                     'nullable',

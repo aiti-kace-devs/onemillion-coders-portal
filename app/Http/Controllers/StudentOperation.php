@@ -745,29 +745,6 @@ class StudentOperation extends Controller
                 $customMessages["{$fieldKey}.required"] = "This field is required.";
             }
 
-            if (!empty($field['validators']['unique'])) {
-                $valueToCheck = $formattedData[$field['field_name']] ?? null;
-
-                if (!empty($valueToCheck)) {
-                    $userFieldMap = [
-                        'email' => 'email',
-                        'phone' => 'mobile_no',
-                    ];
-
-                    $dbColumn = $userFieldMap[$field['field_name']] ?? null;
-
-                    if ($dbColumn) {
-                        $exists = User::where($dbColumn, $valueToCheck)->exists();
-
-                        if ($exists) {
-                            return redirect()->back()->withInput()->withErrors([
-                                $fieldKey => ["{$fieldTitle} has already been taken."]
-                            ]);
-                        }
-                    }
-                }
-            }
-
             switch ($field['type']) {
                 case 'text':
                 case 'textarea':
@@ -781,46 +758,11 @@ class StudentOperation extends Controller
                     $customMessages["{$fieldKey}.string"] = "This field must be a valid option.";
                     break;
 
-                case 'number':
-                    $rules[] = 'numeric';
-                    $customMessages["{$fieldKey}.numeric"] = "This field must be a number.";
-                    break;
-
-                case 'email':
-                    $rules[] = 'email';
-                    $customMessages["{$fieldKey}.email"] = "This field must be a valid email address.";
-                    break;
-
                 case 'checkbox':
                     $rules[] = 'array';
                     $customMessages["{$fieldKey}.array"] = "This field must be an array.";
                     break;
 
-                case 'file':
-                    $rules[] = 'file';
-                    $rules[] = 'max:2048';
-
-                    if (!empty($field['options'])) {
-                        $allowedMimes = array_map('trim', explode(',', strtolower($field['options'])));
-                        $rules[] = 'mimes:' . implode(',', $allowedMimes);
-                        $customMessages["{$fieldKey}.mimes"] = "Must be a file of type: " . implode(', ', $allowedMimes) . ".";
-                    }
-
-                    $customMessages["{$fieldKey}.file"] = "This field must be a file.";
-                    $customMessages["{$fieldKey}.max"] = "The file must not be greater than 2MB.";
-
-                    break;
-
-                case 'select_course':
-                    $rules[] = 'exists:courses,id';
-                    $customMessages["{$fieldKey}.exists"] = "The selected course is invalid";
-                    break;
-
-                case 'phonenumber':
-                    $rules[] = 'phone';
-                    $customMessages["{$fieldKey}.phone"] = "This must be a valid phonenumber.";
-                    $fieldName = $field['field_name'];
-                    break;
 
                 default:
                     $rules[] = 'nullable';

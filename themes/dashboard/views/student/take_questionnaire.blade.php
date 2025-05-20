@@ -65,27 +65,26 @@
 
                                     <input type="hidden" name="section" value="{{ $i }}">
 
-                                    @if (strtolower($section['type']) !== 'instructors')
                                     <x-question-input
-                                        :questions="$section['questions']"
-                                        :section="$i" />
-                                    @else
-                                    <x-question-input
-                                        :questions="$section['questions']"
-                                        :instructors="$instructors"
-                                        :section="$i" />
-                                    @endif
+                                        :sectionType="$section['type']"
+                                        :sectionQuestions="$section['questions']"
+                                        :sectionIndex="$i"
+                                        :instructors="$instructors" />
 
                                     <div class="form-group mt-4">
+                                        @php
+                                            $isLastSection = $i == count($questionnaire['schema']) - 1;
+                                            $isInstructorsSection = $section['type'] == 'instructors';
+                                        @endphp
+
                                         <button type="submit" class="btn btn-primary">
-                                            {{ $i == count($questionnaire['schema']) - 1 ? 'Submit' : 'Save & Next' }}
+                                            {{ ($isLastSection && !$isInstructorsSection) ? 'Submit' : 'Save & Next' }}
                                         </button>
                                     </div>
                                 </form>
                             </div>
                         </div>
                     </div>
-
                     @endforeach
                 </div>
             </div>
@@ -109,6 +108,8 @@
                         $(':input', form).removeClass('is-invalid');
                         $('.invalid-feedback', form).text("");
 
+                        console.log('here')
+
                         if (response.status) {
                             // Handle completion
                             if (response.progress.is_submitted) {
@@ -127,6 +128,7 @@
                         if (xhr.status === 422) {
                             const response = xhr.responseJSON;
 
+                            console.log(response.error);
                             if (response.error) {
                                 $.each(response.error, function(prefix, val) {
                                     const fieldId = prefix.replace('.', '_');

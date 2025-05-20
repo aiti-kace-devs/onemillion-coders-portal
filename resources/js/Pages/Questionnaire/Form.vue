@@ -144,7 +144,7 @@ export default {
   methods: {
     addSection(sectionDetails = null) {
       const newSection = sectionDetails || {
-        type: '',
+        type: "",
         title: null,
         description: null,
         questions: [],
@@ -478,7 +478,7 @@ export default {
 
                             <InputError :message="form.errors[`schema.${row}.type`]" />
                           </div>
-                          
+
                           <div v-if="section.type === 'others'" class="lg:col-span-full">
                             <InputLabel for="title" value="Title" :required="false" />
                             <TextInput
@@ -517,102 +517,107 @@ export default {
 
                         <div class="grid gap-5 mt-6">
                           <div
-                            class="border border-gray-400 p-6 rounded-lg shadow-sm space-y-4"
                             v-for="(selection, index) in section.questions"
                             :key="index"
                           >
-                            <div class="grid grid-cols-3 gap-4">
-                              <div class="col-span-2">
-                                <TextInput
-                                  :id="selection.id"
-                                  type="text"
-                                  class="w-full"
-                                  v-model="selection.title"
-                                  :placeholder="selection.placeholder"
-                                  :class="{
-                                    'border-red-600':
+                            <div
+                              v-if="selection.type !== 'instructor_feedback'"
+                              class="border border-gray-400 p-6 rounded-lg shadow-sm space-y-4"
+                            >
+                              <div class="grid grid-cols-3 gap-4">
+                                <div class="col-span-2">
+                                  <TextInput
+                                    :id="selection.id"
+                                    type="text"
+                                    class="w-full"
+                                    v-model="selection.title"
+                                    :placeholder="selection.placeholder"
+                                    :class="{
+                                      'border-red-600':
+                                        form.errors[
+                                          `schema.${row}.questions.${index}.title`
+                                        ],
+                                    }"
+                                  />
+                                  <InputError
+                                    :message="
                                       form.errors[
                                         `schema.${row}.questions.${index}.title`
-                                      ],
-                                  }"
-                                />
-                                <InputError
-                                  :message="
-                                    form.errors[`schema.${row}.questions.${index}.title`]
-                                  "
-                                />
-                              </div>
+                                      ]
+                                    "
+                                  />
+                                </div>
 
-                              <div>
-                                <SelectInput
-                                  @change="changeSelectionType(row, index)"
-                                  :id="'input_type_' + row"
-                                  v-model="selection.type"
-                                  class="w-full"
-                                >
-                                  <option value="text" selected>Short answer</option>
-                                  <option value="textarea">Long answer</option>
-                                  <option value="checkbox">Checkbox</option>
-                                  <option value="radio">Radio</option>
-                                </SelectInput>
-                              </div>
+                                <div>
+                                  <SelectInput
+                                    @change="changeSelectionType(row, index)"
+                                    :id="'input_type_' + row"
+                                    v-model="selection.type"
+                                    class="w-full"
+                                  >
+                                    <option value="text" selected>Short answer</option>
+                                    <option value="textarea">Long answer</option>
+                                    <option value="checkbox">Checkbox</option>
+                                    <option value="radio">Radio</option>
+                                  </SelectInput>
+                                </div>
 
-                              <div class="col-span-full">
-                                <InputLabel
-                                  for="description"
-                                  value="Description"
-                                  :required="false"
-                                />
-                                <TextAreaInput
-                                  v-model="selection.description"
-                                  class="w-full"
-                                  :class="{
-                                    'border-red-600':
+                                <div class="col-span-full">
+                                  <InputLabel
+                                    for="description"
+                                    value="Description"
+                                    :required="false"
+                                  />
+                                  <TextAreaInput
+                                    v-model="selection.description"
+                                    class="w-full"
+                                    :class="{
+                                      'border-red-600':
+                                        form.errors[
+                                          `schema.${row}.questions.${index}.description`
+                                        ],
+                                    }"
+                                  />
+
+                                  <InputError
+                                    :message="
                                       form.errors[
                                         `schema.${row}.questions.${index}.description`
-                                      ],
-                                  }"
-                                />
+                                      ]
+                                    "
+                                  />
+                                </div>
 
-                                <InputError
-                                  :message="
-                                    form.errors[
-                                      `schema.${row}.questions.${index}.description`
-                                    ]
-                                  "
-                                />
-                              </div>
+                                <div
+                                  class="col-span-full"
+                                  v-if="['radio', 'checkbox'].includes(selection.type)"
+                                >
+                                  <TextInput
+                                    :id="selection.id"
+                                    type="text"
+                                    class="w-full"
+                                    v-model="selection.options"
+                                    :placeholder="'Options (comma-separated)'"
+                                    :class="{
+                                      'border-red-600':
+                                        form.errors[
+                                          `schema.${row}.questions.${index}.options`
+                                        ],
+                                    }"
+                                  />
 
-                              <div
-                                class="col-span-full"
-                                v-if="['radio', 'checkbox'].includes(selection.type)"
-                              >
-                                <TextInput
-                                  :id="selection.id"
-                                  type="text"
-                                  class="w-full"
-                                  v-model="selection.options"
-                                  :placeholder="'Options (comma-separated)'"
-                                  :class="{
-                                    'border-red-600':
+                                  <InputError
+                                    :message="
                                       form.errors[
                                         `schema.${row}.questions.${index}.options`
-                                      ],
-                                  }"
-                                />
-
-                                <InputError
-                                  :message="
-                                    form.errors[
-                                      `schema.${row}.questions.${index}.options`
-                                    ]
-                                  "
-                                />
+                                      ]
+                                    "
+                                  />
+                                </div>
                               </div>
-                            </div>
 
-                            <div class="flex justify-end items-center">
-                              <!-- <div
+                              <div class="flex justify-end items-center">
+                                <!-- <div
                                 class="flex flex-col items-center"
                                 :class="{
                                   'gap-y-2.5': row !== 0 && row !== selections.length - 1,
@@ -649,14 +654,17 @@ export default {
                                 </div>
                               </div> -->
 
-                              <div>
-                                <DangerButton
-                                  type="button"
-                                  @click="removeSelection(row, index)"
-                                  class="h-8 w-9 flex items-center justify-center"
-                                >
-                                  <span class="material-symbols-outlined"> delete </span>
-                                </DangerButton>
+                                <div>
+                                  <DangerButton
+                                    type="button"
+                                    @click="removeSelection(row, index)"
+                                    class="h-8 w-9 flex items-center justify-center"
+                                  >
+                                    <span class="material-symbols-outlined">
+                                      delete
+                                    </span>
+                                  </DangerButton>
+                                </div>
                               </div>
                             </div>
                           </div>
