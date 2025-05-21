@@ -104,6 +104,9 @@
                                 </div>
                                 <div class="col-12 col-md-2">
                                     <input type="submit" class="btn btn-success mt-2" value="Generate Report" />
+                                    <button type="submit" class="btn btn-primary mt-2" name="action" value="download">
+                                        <i class="fas fa-download mr-1"></i> Download Report
+                                    </button>
                                 </div>
 
 

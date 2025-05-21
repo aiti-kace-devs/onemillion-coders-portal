@@ -314,7 +314,7 @@
                             </li>
                         @endcan
 
-                        @can('report.view')
+                        @can('report.read')
                             <li class="nav-item">
                                 <a href="{{ url('admin/reports') }}"
                                     class="nav-link @if (request()->is('admin/reports')) active @endif">
