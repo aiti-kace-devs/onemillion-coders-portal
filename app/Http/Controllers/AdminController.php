@@ -3,41 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\CreateStudentAdmissionJob;
+use Illuminate\Support\Str;
 use Yajra\DataTables\Facades\DataTables;
-use App\Events\UserRegistered;
 use App\Jobs\AddNewStudentsJob;
 use Illuminate\Support\Facades\DB;
-use App\Jobs\ProcessStudentRegistrationJob;
-use App\Jobs\UpdateSheetWithGhanaCardDetails;
-use App\Jobs\AdmitStudentJob;
 use App\Models\Attendance;
 use App\Models\CourseSession;
 use Illuminate\Http\Request;
 use App\Models\Oex_category;
 use App\Models\SmsTemplate;
 use App\Models\Oex_exam_master;
-use App\Models\Oex_student;
-use App\Models\Oex_portal;
 use App\Models\User;
 use App\Models\Oex_question_master;
-use Illuminate\Support\Arr;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Session;
 use App\Models\user_exam;
 use App\Models\Admin;
 use App\Models\FormResponse;
 use App\Models\Oex_result;
 use App\Models\UserAdmission;
-use App\Mail\ExamLoginCredentials;
-use App\Mail\StudentAdmitted;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Auth;
 use App\Models\AdmissionRejection;
-use App\Helpers\GoogleSheets;
 use App\Models\Course;
 use App\Models\Branch;
 use App\Models\Centre;
@@ -1033,7 +1018,7 @@ class AdminController extends Controller
     public function generateReport(Request $request)
     {
         $validated = $request->validate([
-            'report_type' => 'required|in:student_summary,course_summary',
+            'report_type' => 'required|in:student_summary,course_summary,session_summary',
             'dates' => 'required',
             'course_id' => 'sometimes|array',
             'daily' => 'sometimes|in:yes,no',
@@ -1054,22 +1039,27 @@ class AdminController extends Controller
 
         $dailyQuery = isset($validated['daily']) && $validated['daily'] == 'yes';
 
-        if ($request->get('report_type') == 'course_summary') {
+        if (!Str::startsWith($request->get('report_type'), 'student')) {
             // find students that have attendance for the selected dates
-            $attendanceData = DB::table('vDailyCourseAttendance', 'v1');
+            $viewName = $request->get('report_type') == 'course_summary' ? COURSE_ATTENDANCE_VIEW : COURSE_SESSION_ATTENDANCE_VIEW;
+            $groupByName = $request->get('report_type') == 'course_summary' ? 'course_name' : 'session_name';
+            $selectName = $request->get('report_type') == 'course_summary' ? 'v1.course_name as name' : 'v1.session_name as name';
+
+
+            $attendanceData =   DB::table($viewName, 'v1');
             if ($dailyQuery) {
                 $attendanceData = $attendanceData->whereRaw('DATE(attendance_date) BETWEEN ? AND ?', [$startDate, $endDate]);
             }
 
             $attendanceData = $attendanceData
                 ->whereRaw('DATE(attendance_date) BETWEEN ? AND ?', [$startDate, $endDate])
-                ->select('v1.*')
-                ->selectRaw('(SELECT AVG(v2.total) from `vDailyCourseAttendance` v2 where v2.course_id = v1.course_id AND DATE(attendance_date) BETWEEN ? AND ? group by v1.course_id ) as average', [$startDate, $endDate])
-                ->selectRaw('(SELECT SUM(v2.total) from `vDailyCourseAttendance` v2 where v2.course_id = v1.course_id AND DATE(attendance_date) BETWEEN ? AND ? group by v1.course_id ) as attendance_total', [$startDate, $endDate])
+                ->select('v1.*', $selectName)
+                ->selectRaw("(SELECT AVG(v2.total) from `$viewName` v2 where v2.course_id = v1.course_id AND DATE(attendance_date) BETWEEN ? AND ? group by v1.course_id ) as average", [$startDate, $endDate])
+                ->selectRaw("(SELECT SUM(v2.total) from `$viewName` v2 where v2.course_id = v1.course_id AND DATE(attendance_date) BETWEEN ? AND ? group by v1.course_id ) as attendance_total", [$startDate, $endDate])
                 ->orderBy('course_id', 'desc')
                 ->orderBy('attendance_date')
                 ->get()
-                ->groupBy(['session_name', 'attendance_date']);
+                ->groupBy([$groupByName, 'attendance_date']);
         }
 
         if ($request->get('report_type') == 'student_summary') {
@@ -1160,7 +1150,7 @@ class AdminController extends Controller
             $callback = function () use ($data) {
                 $file = fopen('php://output', 'w');
 
-                if ($data['report_type'] == 'course_summary') {
+                if ($data['report_type'] == 'course_summary' || $data['report_type'] == 'session_summary') {
                     fputcsv($file, ['Course Name', 'Average', 'Total']);
                     foreach ($data['attendanceData'] as $course => $record) {
                         fputcsv($file, [$course, floor($record->first()->values()[0]->average ?? 0), $record->first()->values()[0]->attendance_total]);

@@ -22,3 +22,6 @@ define('NOT_TO_REMOVE', [
     AFTER_ADMISSION_EMAIL,
     AFTER_ADMISSION_CONFIRMATION_EMAIL,
 ]);
+
+define('COURSE_ATTENDANCE_VIEW', 'v_daily_course_attendance');
+define('COURSE_SESSION_ATTENDANCE_VIEW', 'v_daily_course_session_attendance');
