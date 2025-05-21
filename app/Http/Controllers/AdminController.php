@@ -1043,6 +1043,8 @@ class AdminController extends Controller
             // find students that have attendance for the selected dates
             $viewName = $request->get('report_type') == 'course_summary' ? COURSE_ATTENDANCE_VIEW : COURSE_SESSION_ATTENDANCE_VIEW;
             $groupByName = $request->get('report_type') == 'course_summary' ? 'course_name' : 'session_name';
+            $groupKey = $request->get('report_type') == 'course_summary' ? 'course_id' : 'session_id';
+
             $selectName = $request->get('report_type') == 'course_summary' ? 'v1.course_name as name' : 'v1.session_name as name';
 
 
@@ -1054,9 +1056,9 @@ class AdminController extends Controller
             $attendanceData = $attendanceData
                 ->whereRaw('DATE(attendance_date) BETWEEN ? AND ?', [$startDate, $endDate])
                 ->select('v1.*', $selectName)
-                ->selectRaw("(SELECT AVG(v2.total) from `$viewName` v2 where v2.course_id = v1.course_id AND DATE(attendance_date) BETWEEN ? AND ? group by v1.course_id ) as average", [$startDate, $endDate])
-                ->selectRaw("(SELECT SUM(v2.total) from `$viewName` v2 where v2.course_id = v1.course_id AND DATE(attendance_date) BETWEEN ? AND ? group by v1.course_id ) as attendance_total", [$startDate, $endDate])
-                ->orderBy('course_id', 'desc')
+                ->selectRaw("(SELECT AVG(v2.total) from `$viewName` v2 where v2.$groupKey = v1.$groupKey AND DATE(attendance_date) BETWEEN ? AND ? group by v1.$groupKey ) as average", [$startDate, $endDate])
+                ->selectRaw("(SELECT SUM(v2.total) from `$viewName` v2 where v2.$groupKey = v1.$groupKey AND DATE(attendance_date) BETWEEN ? AND ? group by v1.$groupKey ) as attendance_total", [$startDate, $endDate])
+                ->orderBy($groupKey, 'desc')
                 ->orderBy('attendance_date')
                 ->get()
                 ->groupBy([$groupByName, 'attendance_date']);

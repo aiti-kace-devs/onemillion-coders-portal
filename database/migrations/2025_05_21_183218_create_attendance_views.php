@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         DB::statement(
-            "CREATE OR REPLACE VIEW " . COURSE_ATTENDANCE_VIEW . " AS
+            "CREATE OR REPLACE VIEW " . COURSE_SESSION_ATTENDANCE_VIEW . " AS
        SELECT s.course_name, at. attendance_date, at.total, at.course_id,
        cs.name AS session_name, b.title AS branch_name,
        p.title AS programme_name,
@@ -39,7 +39,7 @@ return new class extends Migration
         );
 
         DB::statement(
-            "CREATE OR REPLACE VIEW " . COURSE_SESSION_ATTENDANCE_VIEW . " AS
+            "CREATE OR REPLACE VIEW " . COURSE_ATTENDANCE_VIEW . " AS
         SELECT s.course_name, at. attendance_date, at.total, at.course_id,
         cs.name AS session_name, b.title AS branch_name,
         p.title AS programme_name,
