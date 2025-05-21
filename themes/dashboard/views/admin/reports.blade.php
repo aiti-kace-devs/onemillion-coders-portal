@@ -36,6 +36,9 @@
                                             <option value="course_summary"
                                                 @if ($report_type == 'course_summary') selected @endif>
                                                 Course Attendance Summary</option>
+                                            <option value="session_summary"
+                                                @if ($report_type == 'session_summary') selected @endif>
+                                                Course Session Attendance Summary</option>
                                             <option value="student_summary"
                                                 @if ($report_type == 'student_summary') selected @endif>
                                                 Student Attendance Summary</option>
@@ -104,6 +107,9 @@
                                 </div>
                                 <div class="col-12 col-md-2">
                                     <input type="submit" class="btn btn-success mt-2" value="Generate Report" />
+                                    <button type="submit" class="btn btn-primary mt-2" name="action" value="download">
+                                        <i class="fas fa-download mr-1"></i> Download Report
+                                    </button>
                                 </div>
 
 
@@ -112,7 +118,6 @@
                             <div class="card-body">
                                 @if ($report_type)
                                     <h4 class="text-uppercase mb-2 text-primary" id="reportHeading">
-                                        {{ $selectedCourse->location ?? '' }}
                                         {{ $selectedCourse['course_name'] ?? '' }}
                                         {{ str_replace('_', ' ', $report_type) }}
                                         Report For
@@ -127,7 +132,7 @@
 
                                         </tr> --}}
                                         <tr>
-                                            @if ($report_type == 'course_summary')
+                                            @if ($report_type == 'course_summary' || $report_type == 'session_summary')
                                                 <th>Course Name</th>
                                                 <th>Average</th>
                                                 <th>Total</th>
@@ -152,7 +157,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @if ($report_type == 'course_summary')
+                                        @if ($report_type == 'course_summary' || $report_type == 'session_summary')
                                             @foreach ($attendanceData as $course => $record)
                                                 <tr>
                                                     <td>{{ $course }}</td>

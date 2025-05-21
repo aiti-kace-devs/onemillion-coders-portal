@@ -3,41 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\CreateStudentAdmissionJob;
+use Illuminate\Support\Str;
 use Yajra\DataTables\Facades\DataTables;
-use App\Events\UserRegistered;
 use App\Jobs\AddNewStudentsJob;
 use Illuminate\Support\Facades\DB;
-use App\Jobs\ProcessStudentRegistrationJob;
-use App\Jobs\UpdateSheetWithGhanaCardDetails;
-use App\Jobs\AdmitStudentJob;
 use App\Models\Attendance;
 use App\Models\CourseSession;
 use Illuminate\Http\Request;
 use App\Models\Oex_category;
 use App\Models\SmsTemplate;
 use App\Models\Oex_exam_master;
-use App\Models\Oex_student;
-use App\Models\Oex_portal;
 use App\Models\User;
 use App\Models\Oex_question_master;
-use Illuminate\Support\Arr;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Session;
 use App\Models\user_exam;
 use App\Models\Admin;
 use App\Models\FormResponse;
 use App\Models\Oex_result;
 use App\Models\UserAdmission;
-use App\Mail\ExamLoginCredentials;
-use App\Mail\StudentAdmitted;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Auth;
 use App\Models\AdmissionRejection;
-use App\Helpers\GoogleSheets;
 use App\Models\Course;
 use App\Models\Branch;
 use App\Models\Centre;
@@ -60,35 +45,19 @@ class AdminController extends Controller
         $user_admission_count = UserAdmission::whereNotNull('session')->count();
         $programe_count = Programme::count();
 
-        $studentsPerRegion = DB::table('users')
-            ->join('courses', 'users.registered_course', '=', 'courses.id')
-            ->select('courses.location as region', DB::raw('count(*) as total'))
-            ->whereNotNull('users.registered_course')
-            ->groupBy('courses.location')
-            ->get();
+        $studentsPerRegion = DB::table('users')->join('courses', 'users.registered_course', '=', 'courses.id')->select('courses.location as region', DB::raw('count(*) as total'))->whereNotNull('users.registered_course')->groupBy('courses.location')->get();
 
-        $studentsPerCourse = User::select('courses.course_name', DB::raw('count(*) as total'))
-            ->leftJoin('courses', 'users.registered_course', '=', 'courses.id')
-            ->whereNotNull('registered_course')
-            ->groupBy('courses.course_name')
-            ->get();
+        $studentsPerCourse = User::select('courses.course_name', DB::raw('count(*) as total'))->leftJoin('courses', 'users.registered_course', '=', 'courses.id')->whereNotNull('registered_course')->groupBy('courses.course_name')->get();
 
         $studentsPerCourse = $studentsPerCourse->map(function ($item) {
-            $parts = explode(" - ", $item->course_name);
+            $parts = explode(' - ', $item->course_name);
             $item->display_name = $parts[0];
             return $item;
         });
 
-        $registrationsPerDay = User::select(DB::raw('DATE(created_at) as date'), DB::raw('count(*) as total'))
-            ->groupBy('date')
-            ->orderBy('date', 'asc')
-            ->limit(30)
-            ->get();
+        $registrationsPerDay = User::select(DB::raw('DATE(created_at) as date'), DB::raw('count(*) as total'))->groupBy('date')->orderBy('date', 'asc')->limit(30)->get();
 
-        $genderDistribution = User::select('gender', DB::raw('count(*) as total'))
-            ->whereNotNull('gender')
-            ->groupBy('gender')
-            ->get();
+        $genderDistribution = User::select('gender', DB::raw('count(*) as total'))->whereNotNull('gender')->groupBy('gender')->get();
 
         $ageGroups = User::select(
             DB::raw('CASE
@@ -99,7 +68,7 @@ class AdminController extends Controller
                                WHEN age >= 45 THEN "45+"
                                ELSE "Unknown"
                             END as age_group'),
-            DB::raw('count(*) as total')
+            DB::raw('count(*) as total'),
         )
             ->groupBy('age_group')
             ->orderBy(DB::raw('MIN(age)'))
@@ -112,15 +81,7 @@ class AdminController extends Controller
         //                       ->groupBy('courses.location')
         //                      ->get();
 
-        $admittedstudentsPerRegion = DB::table('user_admission')
-            ->join('courses', 'user_admission.course_id', '=', 'courses.id')
-            ->select('courses.location as region', DB::raw('count(*) as total'))
-            ->whereNotNull('user_admission.course_id')
-            ->whereNotNull('user_admission.session')
-            ->groupBy('courses.location')
-            ->get();
-
-
+        $admittedstudentsPerRegion = DB::table('user_admission')->join('courses', 'user_admission.course_id', '=', 'courses.id')->select('courses.location as region', DB::raw('count(*) as total'))->whereNotNull('user_admission.course_id')->whereNotNull('user_admission.session')->groupBy('courses.location')->get();
 
         return view('admin.dashboard', [
             'student' => $user_count,
@@ -133,7 +94,7 @@ class AdminController extends Controller
             'registrationsPerDay' => $registrationsPerDay,
             'genderDistribution' => $genderDistribution,
             'ageGroups' => $ageGroups,
-            'admittedstudentsPerRegion' => $admittedstudentsPerRegion
+            'admittedstudentsPerRegion' => $admittedstudentsPerRegion,
         ]);
     }
 
@@ -377,25 +338,7 @@ class AdminController extends Controller
                 ->leftJoin('user_admission', 'user_admission.user_id', '=', 'user_exams.user_id')
                 // ->where('users.shortlist', 1)
                 // ->leftJoin('courses', '')
-                ->select([
-                    'users.id as id',
-                    'users.userId as userId',
-                    'user_exams.id as exam_id',
-                    'users.name',
-                    'users.email',
-                    'users.age',
-                    'users.gender',
-                    'users.created_at',
-                    'courses.course_name as course_name',
-                    'courses.location as course_location',
-                    'oex_exam_masters.title as ex_name',
-                    'oex_exam_masters.passmark',
-                    'user_exams.user_id',
-                    'user_exams.exam_id',
-                    'user_exams.submitted',
-                    'user_exams.exam_joined',
-                    \DB::raw('CASE WHEN user_admission.user_id IS NOT NULL THEN "Admitted" ELSE "Not Admitted" END as admission_status')
-                ]);
+                ->select(['users.id as id', 'users.userId as userId', 'user_exams.id as exam_id', 'users.name', 'users.email', 'users.age', 'users.gender', 'users.created_at', 'courses.course_name as course_name', 'courses.location as course_location', 'oex_exam_masters.title as ex_name', 'oex_exam_masters.passmark', 'user_exams.user_id', 'user_exams.exam_id', 'user_exams.submitted', 'user_exams.exam_joined', \DB::raw('CASE WHEN user_admission.user_id IS NOT NULL THEN "Admitted" ELSE "Not Admitted" END as admission_status')]);
 
             // if ($request->has('ex_name')) {
             //     $baseQuery->whereIn('oex_exam_masters.title', (array) $request->ex_name);
@@ -508,7 +451,6 @@ class AdminController extends Controller
                 ->addColumn('actions', function ($std) {
                     $buttons = [];
 
-
                     $actionsButton = '<a class="btn btn-outline-primary"> Actions</i> </a>';
 
                     $dropdownToggle = '<button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-expanded="false">' . '<span class="sr-only">Toggle Dropdown</span>' . '</button>';
@@ -539,7 +481,6 @@ class AdminController extends Controller
         return view('admin.manage_students', $data);
     }
 
-
     public function login_as_student(Request $request, $user_id)
     {
         $user = User::find($user_id);
@@ -551,8 +492,6 @@ class AdminController extends Controller
             return redirect()->back()->with('error', 'User not found.');
         }
     }
-
-
 
     public function add_new_students(Request $request)
     {
@@ -614,7 +553,6 @@ class AdminController extends Controller
         echo json_encode(['status' => 'true', 'message' => 'Successfully updated', 'reload' => url('admin/manage_students')]);
     }
 
-
     //Shortlisted student page
     public function shortlisted_students(Request $request)
     {
@@ -630,27 +568,7 @@ class AdminController extends Controller
                 ->leftJoin('courses', 'user_admission.course_id', '=', 'courses.id') // Join with courses
                 ->leftJoin('course_sessions', 'user_admission.session', '=', 'course_sessions.id') // Join with course_sessions
                 ->where('users.shortlist', 1) // This filters users with shortlist = 1
-                ->select([
-                    'user_exams.id as exam_id',
-                    'users.id',
-                    'users.name',
-                    'users.email',
-                    'users.gender',
-                    'users.age',
-                    'users.shortlist',
-                    'users.created_at',
-                    'users.userId as userId',
-                    'user_exams.user_id',
-                    'user_exams.exam_id',
-                    'user_exams.exam_joined',
-                    'user_exams.submitted',
-                    'user_admission.id as admitted',
-                    \DB::raw('CASE WHEN user_admission.id IS NOT NULL THEN "Admitted" ELSE "Not Admitted" END as admission_status'),
-                    \DB::raw('CASE WHEN user_admission.id IS NOT NULL THEN courses.course_name ELSE NULL END as course_name'),
-                    \DB::raw('CASE WHEN user_admission.id IS NOT NULL THEN course_sessions.name ELSE NULL END as session_name'),
-                    'user_admission.session as session_id',
-                    'courses.id as course_id',
-                ]);
+                ->select(['user_exams.id as exam_id', 'users.id', 'users.name', 'users.email', 'users.gender', 'users.age', 'users.shortlist', 'users.created_at', 'users.userId as userId', 'user_exams.user_id', 'user_exams.exam_id', 'user_exams.exam_joined', 'user_exams.submitted', 'user_admission.id as admitted', \DB::raw('CASE WHEN user_admission.id IS NOT NULL THEN "Admitted" ELSE "Not Admitted" END as admission_status'), \DB::raw('CASE WHEN user_admission.id IS NOT NULL THEN courses.course_name ELSE NULL END as course_name'), \DB::raw('CASE WHEN user_admission.id IS NOT NULL THEN course_sessions.name ELSE NULL END as session_name'), 'user_admission.session as session_id', 'courses.id as course_id']);
 
             // Apply additional filters
             if ($request->has('admission_status')) {
@@ -675,8 +593,7 @@ class AdminController extends Controller
             if ($request->has('filter.search_term')) {
                 $term = $request->input('filter.search_term');
                 $baseQuery->where(function ($query) use ($term) {
-                    $query->where('users.name', 'like', "%$term%")
-                        ->orWhere('users.email', 'like', "%$term%");
+                    $query->where('users.name', 'like', "%$term%")->orWhere('users.email', 'like', "%$term%");
                 });
             }
 
@@ -685,9 +602,7 @@ class AdminController extends Controller
                 ->addColumn('session_name', fn($std) => $std->session_name ?? 'N/A')
                 ->addColumn('course_name', fn($std) => $std->course_name ?? 'N/A')
                 ->addColumn('admission_status', function ($std) {
-                    return $std->admission_status === 'Admitted'
-                        ? '<span class="badge badge-success">Admitted</span>'
-                        : '<span class="badge badge-secondary">Not Admitted</span>';
+                    return $std->admission_status === 'Admitted' ? '<span class="badge badge-success">Admitted</span>' : '<span class="badge badge-secondary">Not Admitted</span>';
                 })
                 ->addColumn('actions', function ($std) {
                     $buttons = ['<a href="' . url('admin/delete_students/' . $std->id) . '" class="btn btn-danger btn-sm">Delete</a>'];
@@ -705,8 +620,6 @@ class AdminController extends Controller
         $data['mailable'] = MailerHelper::getMailableClasses();
         return view('admin.manage_shortlist_students', $data);
     }
-
-
 
     //Registered student page
     public function registered_students()
@@ -874,7 +787,6 @@ class AdminController extends Controller
         // $courses = Course::all();
         $courses = Course::myAssignedCourses()->get()->groupBy('location');
 
-
         $students = collect();
         $selectedCourse = null;
 
@@ -903,10 +815,9 @@ class AdminController extends Controller
         if (!$allowed) {
             return response()->json([
                 'success' => false,
-                'message' => 'Cannot verify students of this course'
+                'message' => 'Cannot verify students of this course',
             ]);
         }
-
 
         if (($student && $correctFormat) || ($student && $student->ghcard && $student->card_type !== 'ghcard')) {
             $adminId = Auth::guard('admin')->id();
@@ -929,8 +840,6 @@ class AdminController extends Controller
         ]);
     }
 
-
-
     public function delete_admission($user_id, Request $request)
     {
         $delete_user_admission = UserAdmission::where('user_id', $user_id)->first();
@@ -951,9 +860,6 @@ class AdminController extends Controller
         }
     }
 
-
-
-
     public function verification_page(Request $request)
     {
         // $allCourses = auth('admin')->user()->assignedCourses()->get();
@@ -971,7 +877,6 @@ class AdminController extends Controller
             $selectedCourse = Course::find($selectedCourse);
         }
 
-
         return view('admin.verification', [
             'courses' => $allCourses,
             'students' => $students,
@@ -985,7 +890,8 @@ class AdminController extends Controller
         // $courses = auth('admin')->user()->assignedCourses()->get();
         $courses = Course::myAssignedCourses()->get();
         $sessions = CourseSession::whereIn('course_id', $courses->pluck('id')->all())
-            ->select('id', 'session', 'name', 'course_id')->get();
+            ->select('id', 'session', 'name', 'course_id')
+            ->get();
         $attendance = collect();
         $selectedCourse = null;
         $selectedDate = null;
@@ -994,21 +900,15 @@ class AdminController extends Controller
             if (!in_array($request->course_id, $courses->pluck('id')->all())) {
                 return back()->with([
                     'key' => 'error',
-                    'flash' => 'You do not have permission to view this course'
+                    'flash' => 'You do not have permission to view this course',
                 ]);
             }
             $selectedCourse = Course::find($request->input('course_id'));
             $selectedDate = $request->input('date');
-            $selectedSessions = $request->input('session_ids') != "" ? explode(',', trim($request->input('session_ids'))) : [];
-
+            $selectedSessions = $request->input('session_ids') != '' ? explode(',', trim($request->input('session_ids'))) : [];
 
             if ($selectedCourse && $selectedDate) {
-                $attendance = Attendance::select('attendances.*', 'users.name', 'users.email', 'course_sessions.session')
-                    ->join('users', 'users.userId', '=', 'attendances.user_id')
-                    ->join('user_admission', 'user_admission.user_id', '=', 'users.userId')
-                    ->join('course_sessions', 'course_sessions.id', '=', 'user_admission.session')
-                    ->where('attendances.course_id', $selectedCourse->id)
-                    ->whereDate('attendances.date', '=', $selectedDate);
+                $attendance = Attendance::select('attendances.*', 'users.name', 'users.email', 'course_sessions.session')->join('users', 'users.userId', '=', 'attendances.user_id')->join('user_admission', 'user_admission.user_id', '=', 'users.userId')->join('course_sessions', 'course_sessions.id', '=', 'user_admission.session')->where('attendances.course_id', $selectedCourse->id)->whereDate('attendances.date', '=', $selectedDate);
                 if ($selectedSessions && count($selectedSessions) > 0) {
                     $attendance->whereIn('course_sessions.id', $selectedSessions);
                 }
@@ -1023,7 +923,7 @@ class AdminController extends Controller
             'selectedDate' => $selectedDate,
             'sessions' => $sessions,
             'groupedCourses' => $courses->groupBy('location'),
-            'selectedSessions' => $selectedSessions ?? []
+            'selectedSessions' => $selectedSessions ?? [],
         ]);
     }
 
@@ -1043,10 +943,12 @@ class AdminController extends Controller
         $change = $validated['change'] == 'true';
 
         if ($session && $session->course_id != $course->id) {
-            return redirect()->back()->with([
-                'flash' => 'Session not valid for selected course',
-                'key' => 'error',
-            ]);
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'Session not valid for selected course',
+                    'key' => 'error',
+                ]);
         }
         $message = 'Student(s) admitted successfully';
 
@@ -1058,19 +960,20 @@ class AdminController extends Controller
             if ($oldAdmission && $change) {
                 $message = 'Student admission changed successfully';
             }
-        } else if (count($validated['user_ids'] ?? []) > 0) {
+        } elseif (count($validated['user_ids'] ?? []) > 0) {
             $user_ids = $validated['user_ids'];
             foreach ($user_ids as $user_id) {
                 $user = User::where('userId', $user_id)->first();
                 CreateStudentAdmissionJob::dispatch($user, $course, $session);
             }
         }
-        return redirect()->back()->with([
-            'flash' => $message,
-            'key' => 'success',
-        ]);
+        return redirect()
+            ->back()
+            ->with([
+                'flash' => $message,
+                'key' => 'success',
+            ]);
     }
-
 
     public function reset_verify($userId)
     {
@@ -1115,7 +1018,7 @@ class AdminController extends Controller
     public function generateReport(Request $request)
     {
         $validated = $request->validate([
-            'report_type' => 'required|in:student_summary,course_summary',
+            'report_type' => 'required|in:student_summary,course_summary,session_summary',
             'dates' => 'required',
             'course_id' => 'sometimes|array',
             'daily' => 'sometimes|in:yes,no',
@@ -1136,22 +1039,29 @@ class AdminController extends Controller
 
         $dailyQuery = isset($validated['daily']) && $validated['daily'] == 'yes';
 
-        if ($request->get('report_type') == 'course_summary') {
+        if (!Str::startsWith($request->get('report_type'), 'student')) {
             // find students that have attendance for the selected dates
-            $attendanceData = DB::table('vDailyCourseAttendance', 'v1');
+            $viewName = $request->get('report_type') == 'course_summary' ? COURSE_ATTENDANCE_VIEW : COURSE_SESSION_ATTENDANCE_VIEW;
+            $groupByName = $request->get('report_type') == 'course_summary' ? 'course_name' : 'session_name';
+            $groupKey = $request->get('report_type') == 'course_summary' ? 'course_id' : 'session_id';
+
+            $selectName = $request->get('report_type') == 'course_summary' ? 'v1.course_name as name' : 'v1.session_name as name';
+
+
+            $attendanceData =   DB::table($viewName, 'v1');
             if ($dailyQuery) {
                 $attendanceData = $attendanceData->whereRaw('DATE(attendance_date) BETWEEN ? AND ?', [$startDate, $endDate]);
             }
 
             $attendanceData = $attendanceData
                 ->whereRaw('DATE(attendance_date) BETWEEN ? AND ?', [$startDate, $endDate])
-                ->select('v1.*')
-                ->selectRaw('(SELECT AVG(v2.total) from `vDailyCourseAttendance` v2 where v2.course_id = v1.course_id AND DATE(attendance_date) BETWEEN ? AND ? group by v1.course_id ) as average', [$startDate, $endDate])
-                ->selectRaw('(SELECT SUM(v2.total) from `vDailyCourseAttendance` v2 where v2.course_id = v1.course_id AND DATE(attendance_date) BETWEEN ? AND ? group by v1.course_id ) as attendance_total', [$startDate, $endDate])
-                ->orderBy('course_id', 'desc')
+                ->select('v1.*', $selectName)
+                ->selectRaw("(SELECT AVG(v2.total) from `$viewName` v2 where v2.$groupKey = v1.$groupKey AND DATE(attendance_date) BETWEEN ? AND ? group by v1.$groupKey ) as average", [$startDate, $endDate])
+                ->selectRaw("(SELECT SUM(v2.total) from `$viewName` v2 where v2.$groupKey = v1.$groupKey AND DATE(attendance_date) BETWEEN ? AND ? group by v1.$groupKey ) as attendance_total", [$startDate, $endDate])
+                ->orderBy($groupKey, 'desc')
                 ->orderBy('attendance_date')
                 ->get()
-                ->groupBy(['session_name', 'attendance_date']);
+                ->groupBy([$groupByName, 'attendance_date']);
         }
 
         if ($request->get('report_type') == 'student_summary') {
@@ -1232,28 +1142,61 @@ class AdminController extends Controller
             'virtual_week' => $validated['virtual_week'] ?? [],
         ];
         // dd($data);
+        if ($request->input('action') === 'download') {
+            $filename = 'attendance_report_' . date('Y-m-d') . '.csv';
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ];
+
+            $callback = function () use ($data) {
+                $file = fopen('php://output', 'w');
+
+                if ($data['report_type'] == 'course_summary' || $data['report_type'] == 'session_summary') {
+                    fputcsv($file, ['Course Name', 'Average', 'Total']);
+                    foreach ($data['attendanceData'] as $course => $record) {
+                        fputcsv($file, [$course, floor($record->first()->values()[0]->average ?? 0), $record->first()->values()[0]->attendance_total]);
+                    }
+                } else {
+                    fputcsv($file, ['Student Name', 'Email', 'Course', 'Session', 'Total']);
+                    foreach ($data['studentAttendanceData'] as $record) {
+                        fputcsv($file, [$record->first()[0]->user_name, $record->first()[0]->email, $record->first()[0]->course_name, $record->first()[0]->session_name, $record->first()->values()[0]->attendance_total ?? 0]);
+                    }
+                }
+
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        }
         return view('admin.reports', $data);
     }
 
     public function sendBulkEmail(Request $request)
     {
-        $validated = $request->validate([
-            'subject' => 'required',
-            'message' => 'sometimes',
-            'template' => 'required_if:message,null',
-            'student_ids' => 'required_if:list,null|nullable|array',
-            'student_ids.*' => 'exists:users,id',
-            'list' => 'required_if:student_ids,null|nullable|string'
-        ], [], [
-            'student_ids.*' => 'student'
-        ]);
+        $validated = $request->validate(
+            [
+                'subject' => 'required',
+                'message' => 'sometimes',
+                'template' => 'required_if:message,null',
+                'student_ids' => 'required_if:list,null|nullable|array',
+                'student_ids.*' => 'exists:users,id',
+                'list' => 'required_if:student_ids,null|nullable|string',
+            ],
+            [],
+            [
+                'student_ids.*' => 'student',
+            ],
+        );
 
         // if no list_name or students_id
         if (empty($validated['list']) && empty($validated['student_ids'])) {
-            return redirect()->back()->with([
-                'flash' => 'No students/ list selected.',
-                'key' => 'error',
-            ]);
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'No students/ list selected.',
+                    'key' => 'error',
+                ]);
         }
 
         SendBulkEmailJob::dispatch($validated);
@@ -1272,28 +1215,31 @@ class AdminController extends Controller
         return response()->json($templates);
     }
 
-
-
     public function sendBulkSMS(Request $request)
     {
-        $validated = $request->validate([
-            'message' => 'required|string',
-            'student_ids' => 'sometimes|nullable|array',
-            'student_ids.*' => 'exists:users,id',
-            'list' => 'required_if:student_ids,null|nullable|string'
-        ], [], [
-            'student_ids.*' => 'student'
-        ]);
+        $validated = $request->validate(
+            [
+                'message' => 'required|string',
+                'student_ids' => 'sometimes|nullable|array',
+                'student_ids.*' => 'exists:users,id',
+                'list' => 'required_if:student_ids,null|nullable|string',
+            ],
+            [],
+            [
+                'student_ids.*' => 'student',
+            ],
+        );
 
         if (empty($validated['list']) && empty($validated['student_ids'])) {
-            return redirect()->back()->with([
-                'flash' => 'No students/ list selected.',
-                'key' => 'error',
-            ]);
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'No students/ list selected.',
+                    'key' => 'error',
+                ]);
         }
 
         SendBulkSMSJob::dispatch($validated);
-
 
         return response()->json([
             'flash' => 'SMS sending initiated successfully!',
@@ -1301,56 +1247,56 @@ class AdminController extends Controller
         ]);
     }
 
-
-
-
-
-
     public function saveShortlistedStudents(Request $request)
     {
-        $request->validate([
-            'emails' => 'sometimes|array',
-            'emails.*' => 'email',
-            'student_ids' => 'sometimes|array',
-            'student_ids.*' => 'numeric',
-            'phone_numbers' => 'sometimes|array',
-            // 'phone_numbers.*' => 'phone'
-        ], [], [
-            'emails.*' => 'email address',
-            'student_ids.*' => 'student'
-        ]);
+        $request->validate(
+            [
+                'emails' => 'sometimes|array',
+                'emails.*' => 'email',
+                'student_ids' => 'sometimes|array',
+                'student_ids.*' => 'numeric',
+                'phone_numbers' => 'sometimes|array',
+                // 'phone_numbers.*' => 'phone'
+            ],
+            [],
+            [
+                'emails.*' => 'email address',
+                'student_ids.*' => 'student',
+            ],
+        );
         if (empty($request->input('emails')) && empty($request->input('student_ids')) && empty($request->input('phone_numbers'))) {
-            return response()->json([
-                'message' => 'Email(s), Student ID(s), or PhoneNumber(s) are required.',
-            ], 400);
+            return response()->json(
+                [
+                    'message' => 'Email(s), Student ID(s), or PhoneNumber(s) are required.',
+                ],
+                400,
+            );
         }
 
-        $data = $request->input('emails') ?? $request->input('student_ids') ?? $request->input('phone_numbers');
-        $columnName  = $request->has('emails')
-            ? 'email'
-            : ($request->has('phone_numbers') ? 'mobile_no' : 'id');;
+        $data = $request->input('emails') ?? ($request->input('student_ids') ?? $request->input('phone_numbers'));
+        $columnName = $request->has('emails') ? 'email' : ($request->has('phone_numbers') ? 'mobile_no' : 'id');
 
         $usersToUpdate = User::whereIn($columnName, (array) $data)
             ->where(function ($query) {
-                $query->whereNull('shortlist')
-                    ->orWhere('shortlist', '!=', 1);
+                $query->whereNull('shortlist')->orWhere('shortlist', '!=', 1);
             })
             ->get();
 
         if ($usersToUpdate->isEmpty()) {
-            return response()->json([
-                'message' => 'No users found to update or all are already shortlisted.',
-            ], 404);
+            return response()->json(
+                [
+                    'message' => 'No users found to update or all are already shortlisted.',
+                ],
+                404,
+            );
         }
 
-        $updatedCount = User::whereIn('id', $usersToUpdate->pluck('id'))
-            ->update(['shortlist' => 1]);
+        $updatedCount = User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
 
         return response()->json([
             'message' => "$updatedCount user(s) successfully shortlisted.",
         ]);
     }
-
 
     public function getSettingsPage()
     {
