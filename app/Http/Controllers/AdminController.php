@@ -1058,6 +1058,9 @@ class AdminController extends Controller
                 ->select('v1.*', $selectName)
                 ->selectRaw("(SELECT AVG(v2.total) from `$viewName` v2 where v2.$groupKey = v1.$groupKey AND DATE(attendance_date) BETWEEN ? AND ? group by v1.$groupKey ) as average", [$startDate, $endDate])
                 ->selectRaw("(SELECT SUM(v2.total) from `$viewName` v2 where v2.$groupKey = v1.$groupKey AND DATE(attendance_date) BETWEEN ? AND ? group by v1.$groupKey ) as attendance_total", [$startDate, $endDate])
+                ->selectRaw("(SELECT MIN(v2.total) from `$viewName` v2 where v2.$groupKey = v1.$groupKey AND DATE(attendance_date) BETWEEN ? AND ? group by v1.$groupKey ) as min", [$startDate, $endDate])
+                ->selectRaw("(SELECT MAX(v2.total) from `$viewName` v2 where v2.$groupKey = v1.$groupKey AND DATE(attendance_date) BETWEEN ? AND ? group by v1.$groupKey ) as max", [$startDate, $endDate])
+
                 ->orderBy($groupKey, 'desc')
                 ->orderBy('attendance_date')
                 ->get()

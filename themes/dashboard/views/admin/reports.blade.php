@@ -64,7 +64,6 @@
                                             @foreach ($courses as $course)
                                                 <option value="{{ $course->id }}"
                                                     @if ($course->id == ($selectedCourse['id'] ?? null)) selected @endif>
-                                                    {{ $course->location }} -
                                                     {{ $course->course_name }}</option>
                                             @endforeach
                                         </select>
@@ -134,6 +133,8 @@
                                         <tr>
                                             @if ($report_type == 'course_summary' || $report_type == 'session_summary')
                                                 <th>Course Name</th>
+                                                <th>Min</th>
+                                                <th>Max</th>
                                                 <th>Average</th>
                                                 <th>Total</th>
                                             @else
@@ -161,6 +162,8 @@
                                             @foreach ($attendanceData as $course => $record)
                                                 <tr>
                                                     <td>{{ $course }}</td>
+                                                    <td>{{ $record->first()->values()[0]->min }}</td>
+                                                    <td>{{ $record->first()->values()[0]->max }}</td>
                                                     <td>{{ floor($record->first()->values()[0]->average ?? 0) }}</td>
                                                     <td>{{ $record->first()->values()[0]->attendance_total }}</td>
                                                     @if ($selectedDailyOption == 'yes')
