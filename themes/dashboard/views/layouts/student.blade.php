@@ -221,7 +221,7 @@
                                 @if(Auth::user()->hasAttendance())
                                 <li class="nav-item">
                                     <a href="{{ url('student/questionnaire') }}"
-                                        class="nav-link {{ request()->is('student/questionnaire') ? 'active' : '' }}">
+                                        class="nav-link {{ request()->is('student/questionnaire*') ? 'active' : '' }}">
                                         <i class="nav-icon fas fa-flag"></i>
                                         <p>
                                             Course Assessment

@@ -44,9 +44,9 @@
                                                     <td>{{ $questionnaire['title'] }}</td>
                                                     <td>
                                                         @if ($questionnaire['is_submitted'])
-                                                            <span class="badge badge-success">Submitted</span>
+                                                            <span class="badge badge-success">Complete</span>
                                                         @else
-                                                            <span class="badge badge-danger">Not Submitted</span>
+                                                            <span class="badge badge-danger">Incomplete</span>
                                                         @endif
                                                     </td>
 

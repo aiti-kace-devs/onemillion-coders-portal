@@ -41,14 +41,24 @@
                         {{ $section['title'] }}
                     </a>
                     @endforeach
+
+                    @foreach ($instructors as $instructor)
+                    <a class="nav-link text-capitalize d-none"
+                        id="tab-instructor-{{ $instructor['id'] }}"
+                        data-toggle="pill"
+                        href="#section-instructor-{{ $instructor['id'] }}"
+                        role="tab">
+                        {{ $instructor['name'] }}
+                    </a>
+                    @endforeach
                 </div>
             </div>
 
             <div class="col-12 col-md-9">
                 <div class="tab-content" id="sectionContent">
-                    @foreach ($questionnaire['schema'] as $i => $section)
-                    <div class="tab-pane fade {{ $i == 0 ? 'show active' : '' }}"
-                        id="section-{{ $i }}"
+                    @foreach ($instructors as $instructor)
+                    <div class="tab-pane fade"
+                        id="section-instructor-{{ $instructor['id'] }}"
                         role="tabpanel">
                         <div class="card mb-4">
                             <div class="card-body">
@@ -63,24 +73,80 @@
                                     enctype="multipart/form-data">
                                     @csrf
 
-                                    <input type="hidden" name="section" value="{{ $i }}">
+                                    <input type="hidden" name="section" value="instructor-{{ $instructor['id'] }}">
+                                    <label class="h5 font-weight-normal">
+                                        Review Instructor : {{ $instructor['name'] }}
+                                    </label>
 
                                     <x-question-input
-                                        :sectionType="$section['type']"
-                                        :sectionQuestions="$section['questions']"
+                                        :hideLabel="true"
+                                        :sectionTitle="'instructors_questions'"
+                                        :sectionQuestions="$instructorQuestions"
                                         :sectionIndex="$i"
-                                        :instructors="$instructors" />
+                                        :instructors="$section['type'] === 'instructors' ? $instructors : []"
+                                        :responses="$responses['instructors']['instructors_response'] ?? []"
+                                        />
+
+                                    <input type="hidden" name="instructor_id" value="{{ $instructor['id'] }}">
 
                                     <div class="form-group mt-4">
                                         @php
-                                            $isLastSection = $i == count($questionnaire['schema']) - 1;
-                                            $isInstructorsSection = $section['type'] == 'instructors';
+                                        $isLastSection = $i == count($questionnaire['schema']) - 1;
+                                        $isInstructorsSection = true;
+                                        @endphp
+
+                                        <button type="submit" id="instructor-{{ $instructor['id'] }}-btn" class="btn btn-primary">
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                    @foreach ($questionnaire['schema'] as $i => $section)
+                    <div class="tab-pane fade {{ $i == 0 ? 'show active' : '' }}"
+                        id="section-{{ $i }}"
+                        role="tabpanel">
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                @if (!empty($section['description']))
+                                <p class="text-muted small">{{ $section['description'] }}</p>
+                                @endif
+
+
+                                <form
+                                    method="POST"
+                                    class="questionnaireForm"
+                                    action="{{ route('student.questionnaire.store',  $questionnaire->code) }}"
+                                    enctype="multipart/form-data">
+                                    @csrf
+
+                                    <input type="hidden" name="section" value="{{ $i }}">
+
+                                    @if ($section['type'] === 'instructors')
+                                    <x-instructor-select :instructors="$instructors" :responses="$responses['selected_instructors'] ?? []" />
+                                    @else
+                                    <x-question-input
+                                        :sectionTitle="$section['title']"
+                                        :sectionQuestions="$section['questions']"
+                                        :sectionIndex="$i"
+                                        :instructors="$section['type'] === 'instructors' ? $instructors : []"
+                                        :responses="$responses ?? []" />
+
+                                    @endif
+
+                                    <div class="form-group mt-4">
+                                        @php
+                                        $isLastSection = $i == count($questionnaire['schema']) - 1;
+                                        $isInstructorsSection = $section['type'] == 'instructors';
                                         @endphp
 
                                         <button type="submit" class="btn btn-primary">
                                             {{ ($isLastSection && !$isInstructorsSection) ? 'Submit' : 'Save & Next' }}
                                         </button>
                                     </div>
+
+
                                 </form>
                             </div>
                         </div>
@@ -116,8 +182,23 @@
                                 window.location.href = response.progress.redirect_url;
                             } else {
                                 $('.tab-pane').removeClass('show active');
-                                $(`#section-${response.progress.next_section}`).addClass('show active');
-                                $(`a[href="#section-${response.progress.next_section}"]`).tab('show');
+
+                                if (response.progress.next_instructor) {
+                                    alert('next_instructor')
+                                    const instructorId = response.progress.next_instructor;
+                                    const buttonText = response.progress.instructor_button_text;
+
+                                    $(`#instructor-${instructorId}-btn`).text(buttonText);
+
+                                    $(`#section-instructor-${instructorId}`).addClass('show active');
+                                    
+                                    $(`a[href="#section-instructor-${instructorId}"]`).removeClass('show active');
+                                    $(`a[href="#section-${response.progress.next_section - 1}"]`).addClass('active');
+                                } else {
+                                    alert('next_section')
+                                    $(`#section-${response.progress.next_section}`).addClass('show active');
+                                    $(`a[href="#section-${response.progress.next_section}"]`).tab('show');
+                                }                               
                             }
                         }
                     },

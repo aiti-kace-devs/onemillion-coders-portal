@@ -678,7 +678,9 @@ class StudentOperation extends Controller
             );
         }
 
-        $hasSubmitted = $user->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->where('is_submitted', true)->exists();
+        $userQuestionnaireResponse = $user->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->first();
+
+        $hasSubmitted = $userQuestionnaireResponse->is_submitted ?? false;
 
         if ($hasSubmitted) {
             return redirect(route('student.questionnaire.index'))->with(
@@ -690,7 +692,7 @@ class StudentOperation extends Controller
         }
 
         $instructors = null;
-        
+
         foreach ($questionnaire->schema as $section) {
             if (strtolower($section['type']) === 'instructors') {
                 $admission = $user->admission;
@@ -698,18 +700,33 @@ class StudentOperation extends Controller
             }
         }
 
-        return view('student.take_questionnaire', compact('questionnaire', 'hasSubmitted', 'instructors'));
+        $responses = $userQuestionnaireResponse['response_data'] ?? [];
+
+        $instructorQuestions = collect($questionnaire->schema)->where('type', 'instructors')->first()['questions'] ?? [];
+
+        return view('student.take_questionnaire', compact('questionnaire', 'hasSubmitted', 'instructors', 'instructorQuestions', 'responses'));
     }
 
     public function store_questionnaire(Request $request)
     {
         $code = $request->code;
-        $sectionIndex = $request->section;
-
+        // find index of the instructors schema
+        $instructorSectionIndex =  null;
         $questionnaire = Questionnaire::where('code', $code)->first();
-        $section = $questionnaire->schema[$sectionIndex];
+
+        collect($questionnaire->schema)->each(function ($section, $index) use (&$instructorSectionIndex) {
+            if ($section['type'] === 'instructors') {
+                $instructorSectionIndex = $index;
+            }
+        });
+
+        $sectionIndex = Str::startsWith($request->section, 'instructor-') ? $instructorSectionIndex : (int)$request->section;
+
+        $instructorSection = collect($questionnaire->schema)->where('type', 'instructors')->first();
+        $section = Str::startsWith($sectionIndex, 'instructor-') ? $instructorSection :  $questionnaire->schema[$sectionIndex];
         $totalSections = count($questionnaire->schema);
         $schema = $section['questions'];
+
 
         $validationRules = [
             'response_data' => 'required|array',
@@ -725,54 +742,67 @@ class StudentOperation extends Controller
         foreach ($request->input('response_data', []) as $key => $value) {
             foreach ($schema as $field) {
                 if (strcasecmp($key, $field['title']) == 0) {
-                    $formattedData[$field['field_name']] = trim($value);
+                    $formattedData[$field['field_name']] = is_array($value)
+                        ? array_map('trim', $value)
+                        : trim($value);
+
                     break;
                 }
             }
         }
 
-        foreach ($schema as $field) {
-            $fieldKey = $field['type'] == 'select_course' ? 'response_data.course_id' : "response_data.{$field['field_name']}";
+        $isInstructorSelect = (bool)$request->input('response_data.instructors_select') ?? false;
+        $isInstructorQuestions = (bool)$request->input('instructor_id') ?? false;
 
-            $fieldTitle = ucwords(str_replace('_', ' ', $field['title']));
+        if ($isInstructorSelect) {
+            $validationRules['response_data.instructors'] = 'required|array';
+            $validationRules['response_data.instructors.*'] = 'exists:admins,id';
 
-            $rules = [];
+            $customMessages['response_data.instructors.required'] = 'Please select at least one instructor.';
+            $customMessages['response_data.instructors.*.exists'] = 'The selected instructor is invalid.';
+        } else {
+            foreach ($schema as $field) {
+                $fieldKey = "response_data.{$field['field_name']}";
 
-            $attributes[$fieldKey] = Str::remove('_id', Str::remove('response_data.', $fieldKey, true));
+                $rules = [];
 
-            if (!empty($field['validators']['required'])) {
-                $rules[] = 'required';
-                $customMessages["{$fieldKey}.required"] = "This field is required.";
+                $attributes[$fieldKey] = Str::remove('_id', Str::remove('response_data.', $fieldKey, true));
+
+                if (!empty($field['validators']['required'])) {
+                    $rules[] = 'required';
+                    $customMessages["{$fieldKey}.required"] = "This field is required.";
+                }
+
+                switch ($field['type']) {
+                    case 'text':
+                    case 'textarea':
+                        $rules[] = 'string';
+                        $customMessages["{$fieldKey}.string"] = "This field must be a string.";
+                        break;
+
+                    case 'radio':
+                    case 'select':
+                        $rules[] = 'string';
+                        $customMessages["{$fieldKey}.string"] = "This field must be a valid option.";
+                        break;
+
+                    case 'checkbox':
+                        $rules[] = 'array';
+                        $customMessages["{$fieldKey}.array"] = "This field must be an array.";
+                        break;
+
+
+                    default:
+                        $rules[] = 'nullable';
+                        break;
+                }
+
+                $validationRules[$fieldKey] = implode('|', $rules);
+                $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|' . $field['rules'] ?? '' : '';
+                $validationRules[$fieldKey] =  $validationRules[$fieldKey] . $additionRules;
             }
-
-            switch ($field['type']) {
-                case 'text':
-                case 'textarea':
-                    $rules[] = 'string';
-                    $customMessages["{$fieldKey}.string"] = "This field must be a string.";
-                    break;
-
-                case 'radio':
-                case 'select':
-                    $rules[] = 'string';
-                    $customMessages["{$fieldKey}.string"] = "This field must be a valid option.";
-                    break;
-
-                case 'checkbox':
-                    $rules[] = 'array';
-                    $customMessages["{$fieldKey}.array"] = "This field must be an array.";
-                    break;
-
-
-                default:
-                    $rules[] = 'nullable';
-                    break;
-            }
-
-            $validationRules[$fieldKey] = implode('|', $rules);
-            $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|' . $field['rules'] ?? '' : '';
-            $validationRules[$fieldKey] =  $validationRules[$fieldKey] . $additionRules;
         }
+
 
         $validator = Validator::make($request->all(), $validationRules, $customMessages, $attributes);
 
@@ -799,20 +829,62 @@ class StudentOperation extends Controller
         $existing = $draft->response_data ?? [];
 
         // Update only the current section
-        $existing[$section['title']] = $validated['response_data'];
+
+        // if ($isInstructorQuestions) {
+        //     $existing['instructors']['instructors_response'][$request->input('instructor_id')] =
+        //         $validated['response_data'];
+        // } else {
+        //     $existing[$section['title']] = $validated['response_data'];
+        // }
+
+        // // add the instructor response to the questionnaire schema
+        // if ($isInstructorSelect) {
+            //     $existing['instructors']['instructors_response'] = $validated['response_data']['instructors'];
+            // }
+
+        // $yetToComplete = collect($existing['instructors']['instructors'] ?? [])->filter(function ($instructor) use ($existing) {
+        //     return !isset($existing['instructors']['instructors_response'][$instructor]);
+        // })->values()->all();
+              
+        
+        if ($isInstructorSelect) {
+            // Store selected instructor IDs
+            $existing['selected_instructors'] = $validated['response_data']['instructors'];
+        } elseif ($isInstructorQuestions) {
+            // Store the individual instructor’s responses
+            $existing['instructors'][$request->input('instructor_id')] = $validated['response_data'];
+        } else {
+            // Store responses for other sections like facility, transport, etc.
+            $existing[$section['title']] = $validated['response_data'];
+        }
+
+        // Check which instructors haven't been filled yet
+        $yetToComplete = collect($existing['selected_instructors'] ?? [])->filter(function ($instructorId) use ($existing) {
+            return !isset($existing['instructors'][$instructorId]);
+        })->values()->all();
+
+        // remaining sections left to complete
+        $remainingSections = collect($questionnaire->schema)->filter(function ($section) use ($existing) {
+            return !isset($existing[$section['title']]);
+        })->keys()->all();
+
+        $isSubmitted =  count($remainingSections) === 0 && count($yetToComplete) === 0;        
 
         // Save the updated response_data
         $draft->update([
             'response_data' => $existing,
-            'is_submitted' => $sectionIndex >= $totalSections - 1,
+            'is_submitted' => $isSubmitted,
         ]);
 
         return response()->json([
             'status' => true,
             'progress' => [
-                'is_submitted' => $sectionIndex >= $totalSections - 1,
+                'is_submitted' => $isSubmitted,
                 'redirect_url' => route('student.questionnaire.index'),
-                'next_section' => $sectionIndex + 1
+                'next_section' => !$isSubmitted ? ($remainingSections[0] ?? null) : null,
+                'next_instructor' => $isInstructorQuestions || $isInstructorSelect ? ($yetToComplete[0] ?? false) : false,
+                'instructor_button_text' => ($sectionIndex >= $totalSections - 1 && count($yetToComplete) === 1) ? 'Submit' : 'Save & Next',
+                'instructor_selected' => $isInstructorSelect,
             ],
         ]);
     }

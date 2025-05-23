@@ -48,17 +48,17 @@ class Questionnaire extends Model
                             ->contains(fn($q) => ($q['type'] ?? null) === 'instructor_feedback');
 
                         // Only add default instructor question if none exists
-                        if (!$hasInstructorQuestion) {
-                            $section['questions'][] = [
-                                'title' => $section['type'],
-                                'field_name' => Str::slug(strtolower($section['type'])),
-                                'validators' => [
-                                    'required' => true,
-                                    'unique' => false
-                                ],
-                                'type' => 'instructor_feedback' // Added explicit type
-                            ];
-                        }
+                        // if (!$hasInstructorQuestion) {
+                        //     $section['questions'][] = [
+                        //         'title' => $section['type'],
+                        //         'field_name' => Str::slug(strtolower($section['type'])),
+                        //         'validators' => [
+                        //             'required' => true,
+                        //             'unique' => false
+                        //         ],
+                        //         'type' => 'instructor_feedback' // Added explicit type
+                        //     ];
+                        // }
                     }
 
                     // Ensure section has questions array

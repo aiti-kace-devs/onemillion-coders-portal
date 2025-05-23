@@ -100,7 +100,7 @@ class User extends Authenticatable
 
     public function questionnaire_response()
     {
-        return $this->hasOne(QuestionnaireResponse::class);
+        return $this->hasMany(QuestionnaireResponse::class);
     }
 
     public function hasAttendance()
