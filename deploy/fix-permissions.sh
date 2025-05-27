@@ -1,1 +1,1 @@
-sudo chown -R www-data:www-data storage && sudo chown -R www-data:www-data bootstrap/cache
+cd ../ && sudo chown -R www-data:www-data storage && sudo chown -R www-data:www-data bootstrap/cache

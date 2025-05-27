@@ -232,7 +232,7 @@
                             </li>
                         @endcan
 
-                        @canany('student.read|student.bulk-sms|student.admit|student.email|student.shortlist')
+                        @canany(['student.read', 'student.bulk-sms', 'student.admit', 'student.bulk-email', 'student.shortlist'])
                             <li class="nav-item">
                                 <a href="{{ url('admin/manage_students') }}"
                                     class="nav-link @if (request()->is('admin/manage_students')) active @endif">
@@ -314,7 +314,7 @@
                             </li>
                         @endcan
 
-                        @can('report.view')
+                        @can('report.read')
                             <li class="nav-item">
                                 <a href="{{ url('admin/reports') }}"
                                     class="nav-link @if (request()->is('admin/reports')) active @endif">

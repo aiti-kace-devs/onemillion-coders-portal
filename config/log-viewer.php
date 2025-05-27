@@ -48,7 +48,7 @@ return [
     |
     */
 
-    'back_to_system_url' => config('app.url', null),
+    'back_to_system_url' => config('app.url', null) . '/admin/dashboard',
 
     'back_to_system_label' => null, // Displayed by default: "Back to {{ app.name }}"
 
@@ -74,7 +74,7 @@ return [
     'middleware' => [
         'web',
         'auth:admin',
-        'permission:manage.monitor'
+        'role:super-admin,admin'
         // \Opcodes\LogViewer\Http\Middleware\AuthorizeLogViewer::class,
     ],
 
@@ -89,7 +89,7 @@ return [
 
     'api_middleware' => [
         \Opcodes\LogViewer\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        \Opcodes\LogViewer\Http\Middleware\AuthorizeLogViewer::class,
+        // \Opcodes\LogViewer\Http\Middleware\AuthorizeLogViewer::class,
     ],
 
     'api_stateful_domains' => env('LOG_VIEWER_API_STATEFUL_DOMAINS') ? explode(',', env('LOG_VIEWER_API_STATEFUL_DOMAINS')) : null,
