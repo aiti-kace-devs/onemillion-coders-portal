@@ -882,7 +882,7 @@ class StudentOperation extends Controller
                 'is_submitted' => $isSubmitted,
                 'redirect_url' => route('student.questionnaire.index'),
                 'next_section' => !$isSubmitted ? ($remainingSections[0] ?? null) : null,
-                'next_instructor' => $isInstructorQuestions || $isInstructorSelect ? ($yetToComplete[0] ?? false) : false,
+                'next_instructor' => 6,//$isInstructorQuestions || $isInstructorSelect ? ($yetToComplete[0] ?? false) : false,
                 'instructor_button_text' => ($sectionIndex >= $totalSections - 1 && count($yetToComplete) === 1) ? 'Submit' : 'Save & Next',
                 'instructor_selected' => $isInstructorSelect,
             ],

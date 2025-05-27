@@ -80,11 +80,11 @@
 
                                     <x-question-input
                                         :hideLabel="true"
-                                        :sectionTitle="'instructors_questions'"
+                                        :sectionTitle="'instructors'"
                                         :sectionQuestions="$instructorQuestions"
                                         :sectionIndex="$i"
                                         :instructors="$section['type'] === 'instructors' ? $instructors : []"
-                                        :responses="$responses['instructors']['instructors_response'] ?? []"
+                                        :responses="$responses['instructors'][$instructor['id']] ?? []"
                                         />
 
                                     <input type="hidden" name="instructor_id" value="{{ $instructor['id'] }}">

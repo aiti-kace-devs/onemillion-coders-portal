@@ -15,8 +15,6 @@ $required = !empty($question['validators']['required']) ? 'required' : '';
 $options = isset($question['options']) ? explode(',', $question['options']) : [];
 @endphp
 
-@dump($responses ?? '')
-
 <div class="form-group">
     <div>
         <label class="h5 font-weight-normal" for="field-{{ $sectionIndex }}-{{ $index }}">
@@ -40,7 +38,7 @@ $options = isset($question['options']) ? explode(',', $question['options']) : []
     @foreach ($options as $idx => $option)
     @php
     $optionValue = trim($option);
-    $selectedValue = old($fieldName, $responses[$sectionTitle][$question['field_name']] ?? '');
+    $selectedValue = old($fieldName, ($sectionTitle === 'instructors' ? $responses[$question['field_name']] : $responses[$sectionTitle][$question['field_name']] ?? ''));
     @endphp
 
     <div class="form-check">
@@ -59,7 +57,7 @@ $options = isset($question['options']) ? explode(',', $question['options']) : []
     @foreach ($options as $idx => $option)
     @php
     $optionValue = trim($option);
-    $selectedValue = old($fieldName, $responses[$sectionTitle][$question['field_name']] ?? '');
+    $selectedValue = old($fieldName, ($sectionTitle === 'instructors' ? $responses[$question['field_name']] : $responses[$sectionTitle][$question['field_name']] ?? ''));
     @endphp
 
     <div class="form-check form-check-inline">
