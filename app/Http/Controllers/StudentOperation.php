@@ -839,28 +839,33 @@ class StudentOperation extends Controller
 
         // // add the instructor response to the questionnaire schema
         // if ($isInstructorSelect) {
-            //     $existing['instructors']['instructors_response'] = $validated['response_data']['instructors'];
-            // }
+        //     $existing['instructors']['instructors_response'] = $validated['response_data']['instructors'];
+        // }
 
         // $yetToComplete = collect($existing['instructors']['instructors'] ?? [])->filter(function ($instructor) use ($existing) {
         //     return !isset($existing['instructors']['instructors_response'][$instructor]);
         // })->values()->all();
-              
-        
+
+
         if ($isInstructorSelect) {
             // Store selected instructor IDs
             $existing['selected_instructors'] = $validated['response_data']['instructors'];
+            $existing['last_completed_instructor'] = [];
         } elseif ($isInstructorQuestions) {
+            $instructorId = $request->input('instructor_id');
             // Store the individual instructor’s responses
-            $existing['instructors'][$request->input('instructor_id')] = $validated['response_data'];
+            $existing['instructors'][$instructorId] = $validated['response_data'];
+            $existing['last_completed_instructor'][] = $instructorId;
         } else {
             // Store responses for other sections like facility, transport, etc.
             $existing[$section['title']] = $validated['response_data'];
         }
 
+        // $yetToComplete = array_values(array_diff($existing['selected_instructors'] ?? [], (array) $request->input('instructor_id')));
+
         // Check which instructors haven't been filled yet
-        $yetToComplete = collect($existing['selected_instructors'] ?? [])->filter(function ($instructorId) use ($existing) {
-            return !isset($existing['instructors'][$instructorId]);
+        $yetToComplete = collect($existing['selected_instructors'] ?? [])->filter(function ($id) use ($existing) {
+            return !isset($existing['last_completed_instructor']);
         })->values()->all();
 
         // remaining sections left to complete
@@ -868,7 +873,7 @@ class StudentOperation extends Controller
             return !isset($existing[$section['title']]);
         })->keys()->all();
 
-        $isSubmitted =  count($remainingSections) === 0 && count($yetToComplete) === 0;        
+        $isSubmitted =  count($remainingSections) === 0 && count($yetToComplete) === 0;
 
         // Save the updated response_data
         $draft->update([
@@ -882,7 +887,7 @@ class StudentOperation extends Controller
                 'is_submitted' => $isSubmitted,
                 'redirect_url' => route('student.questionnaire.index'),
                 'next_section' => !$isSubmitted ? ($remainingSections[0] ?? null) : null,
-                'next_instructor' => 6,//$isInstructorQuestions || $isInstructorSelect ? ($yetToComplete[0] ?? false) : false,
+                'next_instructor' => $isInstructorQuestions || $isInstructorSelect ? ($yetToComplete[0] ?? false) : false,
                 'instructor_button_text' => ($sectionIndex >= $totalSections - 1 && count($yetToComplete) === 1) ? 'Submit' : 'Save & Next',
                 'instructor_selected' => $isInstructorSelect,
             ],

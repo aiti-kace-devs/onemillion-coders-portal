@@ -57,7 +57,7 @@ $options = isset($question['options']) ? explode(',', $question['options']) : []
     @foreach ($options as $idx => $option)
     @php
     $optionValue = trim($option);
-    $selectedValue = old($fieldName, ($sectionTitle === 'instructors' ? $responses[$question['field_name']] : $responses[$sectionTitle][$question['field_name']] ?? ''));
+    $selectedValue = old($fieldName, ($sectionTitle === 'instructors' ? $responses[$question['field_name']] ?? '' : $responses[$sectionTitle][$question['field_name']] ?? ''));
     @endphp
 
     <div class="form-check form-check-inline">
