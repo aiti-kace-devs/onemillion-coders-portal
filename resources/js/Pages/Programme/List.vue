@@ -142,7 +142,7 @@ export default {
               <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
                 <div class="py-2 inline-w-full sm:px-6 lg:px-8">
                   <div class="overflow-x-auto">
-                    <table id="data_table" class="w-full text-sm table-striped">
+                    <table id="data_table" class="w-full bg-green-700 text-sm table-striped">
                       <thead class="capitalize border-b bg-gray-100 font-medium">
                         <tr>
                           <th scope="col" class="text-gray-900 px-6 py-4 text-left">

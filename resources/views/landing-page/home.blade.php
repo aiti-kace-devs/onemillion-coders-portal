@@ -91,10 +91,18 @@
             /* Smooth transition for the shadow */
         }
 
+
+        .course-image{
+            width: 100%;
+            height: 250px
+        }
+
         .course-image img {
             width: 100%;
+            height: 100%;
             max-width: 50% auto;
             border-radius: 8px;
+            object-fit: cover;
         }
 
         .course-content {

@@ -41,12 +41,7 @@ class ProgrammeController extends Controller
                 return '<span class="hidden">' . strtotime($row->end_date) . '</span>' . Carbon::parse($row->end_date)->toFormattedDayDateString();
             })
             ->editColumn('status', function($row){
-                return '<input
-                type="checkbox"
-                value="' . $row->status . '"
-                v-model="proxyChecked"
-                class="rounded-sm w-5 h-5 border-gray-700 text-gray-700 shadow-sm focus:ring-gray-500"
-            />';
+                return '<span class="rounded-sm text-sm text-white capitalize p-2 ' . ($row->status ? 'bg-green-700' : 'bg-red-600') . '">' . ($row->status ? 'active' : 'inactive') . '</span>';
             })
             ->addColumn('action', function ($row) {
                 $linkClass = 'inline-flex items-center w-full px-4 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-25 hover:text-gray-50 hover:bg-gray-100';
@@ -152,6 +147,8 @@ class ProgrammeController extends Controller
     {
         $isCreateMethod = false;
         $programme = Programme::find($id);
+        $programme->status = (bool) $programme->status;
+        $programme->image = $programme->image ? asset('storage/programme/' . $programme->image) : null;
         $categories = CourseCategory::orderBy('title')->get();
 
         return Inertia::render('Programme/Form', compact('programme', 'categories', 'isCreateMethod'));
