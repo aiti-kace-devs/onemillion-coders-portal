@@ -84,8 +84,7 @@
                                         :sectionQuestions="$instructorQuestions"
                                         :sectionIndex="$i"
                                         :instructors="$section['type'] === 'instructors' ? $instructors : []"
-                                        :responses="$responses['instructors'][$instructor['id']] ?? []"
-                                        />
+                                        :responses="$responses['instructors'][$instructor['id']] ?? []" />
 
                                     <input type="hidden" name="instructor_id" value="{{ $instructor['id'] }}">
 
@@ -145,8 +144,6 @@
                                             {{ ($isLastSection && !$isInstructorsSection) ? 'Submit' : 'Save & Next' }}
                                         </button>
                                     </div>
-
-
                                 </form>
                             </div>
                         </div>
@@ -165,11 +162,22 @@
                 event.preventDefault();
                 const form = this;
 
+                // Disable the submit button to prevent multiple submissions
+                const submitButton = form.querySelector('button[type="submit"]');
+                const beforeSubmitButtonText = submitButton.textContent;
+
+                submitButton.disabled = true;
+                submitButton.textContent = 'Submitting...';
+
+
                 $.ajax({
                     type: $(form).attr('method'),
                     url: $(form).attr('action'),
                     data: $(form).serialize(),
                     success: function(response) {
+                        submitButton.disabled = false;
+                        submitButton.textContent = beforeSubmitButtonText;
+
                         // Clear previous errors
                         $(':input', form).removeClass('is-invalid');
                         $('.invalid-feedback', form).text("");
@@ -186,15 +194,13 @@
                                     const buttonText = response.progress.instructor_button_text;
 
                                     $(`#instructor-${instructorId}-btn`).text(buttonText);
-
                                     $(`#section-instructor-${instructorId}`).addClass('show active');
-                                    
                                     $(`a[href="#section-instructor-${instructorId}"]`).removeClass('show active');
-                                    $(`a[href="#section-${response.progress.next_section - 1}"]`).addClass('active');
                                 } else {
-                                    $(`#section-${response.progress.next_section}`).addClass('show active');
-                                    $(`a[href="#section-${response.progress.next_section}"]`).tab('show');
-                                }                               
+                                    const nextSection = response.progress.next_section;
+                                    $(`#section-${nextSection}`).addClass('show active');
+                                    $(`a[href="#section-${nextSection}"]`).tab('show');
+                                }
                             }
                         }
                     },
