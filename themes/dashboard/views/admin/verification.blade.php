@@ -66,9 +66,9 @@
                                                         <span class="badge badge-danger">Ask student to update
                                                             details</span>
                                                     @elseif (!$student->verification_date && !$student->verified_by)
-                                                        <button type="button" onclick="verifyStudent(this)"
+                                                        <button type="button"
                                                             data-id="{{ $student->id }}" data-name="{{ $student->name }}"
-                                                            class="btn btn-success btn-sm">Verify</button>
+                                                            class="btn btn-success btn-sm verify-student">Verify</button>
                                                         <a href="{{ route('admin.reset-verify', $student['id']) }}"
                                                             class="btn btn-danger btn-sm">Reset</a>
                                                     @else
@@ -96,30 +96,32 @@
     <!-- /.content-header -->
 @endsection
 @push('scripts')
-    <script @nonce>
-        $('#course_id').on('change', function(e) {
-            const course_id = $('#course_id').val()
+<script @nonce>
+    $(document).ready(function () {
+        // Course selector change handler
+        $('#course_id').on('change', function (e) {
+            const course_id = $('#course_id').val();
             window.location.href = `{{ route('admin.verification') }}?course_id=${course_id}`;
-        })
+        });
 
-        async function verifyStudent(ele) {
-            try {
-                const id = $(ele).attr('data-id');
-                const name = $(ele).attr('data-name');
-                Swal.fire({
-                    title: 'Confirm ' + name,
-                    text: `Are you sure you want to confirm identity of student: ${name}?`,
-                    icon: 'info',
-                    backdrop: `rgba(0,0,0,0.95)`,
-                    confirmButtonText: 'Yes, Submit',
-                    cancelButtonText: 'No, Cancel',
-                    showCancelButton: true,
-                    allowOutsideClick: false,
-                    preConfirm: async () => {
-                        const id = $(ele).attr('data-id');
-                        const name = $(ele).attr('data-name');
+        // Delegated event listener for Verify buttons
+        $(document).on('click', '.verify-student', function () {
+            const button = $(this);
+            const id = button.data('id');
+            const name = button.data('name');
 
-                        const url = `/admin/verify-student/${id }`;
+            Swal.fire({
+                title: 'Confirm ' + name,
+                text: `Are you sure you want to confirm identity of student: ${name}?`,
+                icon: 'info',
+                backdrop: `rgba(0,0,0,0.95)`,
+                confirmButtonText: 'Yes, Submit',
+                cancelButtonText: 'No, Cancel',
+                showCancelButton: true,
+                allowOutsideClick: false,
+                preConfirm: async () => {
+                    try {
+                        const url = `/admin/verify-student/${id}`;
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: {
@@ -136,32 +138,31 @@
                                 position: 'top-end'
                             });
 
-                            const parent = $($(ele).parent('td'))
+                            const parent = button.parent('td');
                             parent.html('<span class="badge badge-success">Verified</span>');
-                            const tdBefore = $(parent.prev('td'));
-                            tdBefore.html(`
-                            ${respData.student.verified_by_name} (${respData.student.verification_date})
-                            `)
+                            const tdBefore = parent.prev('td');
+                            tdBefore.html(
+                                `${respData.student.verified_by_name} (${respData.student.verification_date})`
+                            );
                         } else {
-                            return Swal.fire({
+                            Swal.fire({
                                 title: 'Error',
-                                message: respData.message,
+                                text: respData.message,
                                 toast: true,
-                                key: 'error'
-                            })
+                                icon: 'error'
+                            });
                         }
+                    } catch (error) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Unable to verify student',
+                            toast: true,
+                            icon: 'error'
+                        });
                     }
-                })
-
-
-            } catch (error) {
-                return Swal.fire({
-                    title: 'Error',
-                    message: 'Unable to verify student',
-                    toast: true,
-                    key: 'error'
-                });
-            }
-        }
-    </script>
+                }
+            });
+        });
+    });
+</script>
 @endpush

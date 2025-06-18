@@ -36,6 +36,9 @@
                                             <option value="course_summary"
                                                 @if ($report_type == 'course_summary') selected @endif>
                                                 Course Attendance Summary</option>
+                                            <option value="session_summary"
+                                                @if ($report_type == 'session_summary') selected @endif>
+                                                Course Session Attendance Summary</option>
                                             <option value="student_summary"
                                                 @if ($report_type == 'student_summary') selected @endif>
                                                 Student Attendance Summary</option>
@@ -61,7 +64,6 @@
                                             @foreach ($courses as $course)
                                                 <option value="{{ $course->id }}"
                                                     @if ($course->id == ($selectedCourse['id'] ?? null)) selected @endif>
-                                                    {{ $course->location }} -
                                                     {{ $course->course_name }}</option>
                                             @endforeach
                                         </select>
@@ -104,6 +106,9 @@
                                 </div>
                                 <div class="col-12 col-md-2">
                                     <input type="submit" class="btn btn-success mt-2" value="Generate Report" />
+                                    <button type="submit" class="btn btn-primary mt-2" name="action" value="download">
+                                        <i class="fas fa-download mr-1"></i> Download Report
+                                    </button>
                                 </div>
 
 
@@ -112,7 +117,6 @@
                             <div class="card-body">
                                 @if ($report_type)
                                     <h4 class="text-uppercase mb-2 text-primary" id="reportHeading">
-                                        {{ $selectedCourse->location ?? '' }}
                                         {{ $selectedCourse['course_name'] ?? '' }}
                                         {{ str_replace('_', ' ', $report_type) }}
                                         Report For
@@ -127,8 +131,10 @@
 
                                         </tr> --}}
                                         <tr>
-                                            @if ($report_type == 'course_summary')
+                                            @if ($report_type == 'course_summary' || $report_type == 'session_summary')
                                                 <th>Course Name</th>
+                                                <th>Min</th>
+                                                <th>Max</th>
                                                 <th>Average</th>
                                                 <th>Total</th>
                                             @else
@@ -138,10 +144,11 @@
                                                     <th>Virtual</th>
                                                     <th>In-Person</th>
                                                 @endif
+                                                <th>Session</th>
                                                 <th>Total</th>
-                                                <th>Gender</th>
-                                                <th>Network Type</th>
-                                                <th>Phone Number</th>
+                                                {{-- <th>Gender</th> --}}
+                                                {{-- <th>Network Type</th>
+                                                <th>Phone Number</th> --}}
                                             @endif
                                             @if ($selectedDailyOption == 'yes')
                                                 @foreach ($dates_array as $date)
@@ -151,10 +158,12 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @if ($report_type == 'course_summary')
+                                        @if ($report_type == 'course_summary' || $report_type == 'session_summary')
                                             @foreach ($attendanceData as $course => $record)
                                                 <tr>
                                                     <td>{{ $course }}</td>
+                                                    <td>{{ $record->first()->values()[0]->min }}</td>
+                                                    <td>{{ $record->first()->values()[0]->max }}</td>
                                                     <td>{{ floor($record->first()->values()[0]->average ?? 0) }}</td>
                                                     <td>{{ $record->first()->values()[0]->attendance_total }}</td>
                                                     @if ($selectedDailyOption == 'yes')
@@ -171,25 +180,25 @@
                                             @foreach ($studentAttendanceData as $record)
                                                 <tr>
                                                     <td class="text-lowercase">
-                                                        <span class="text-uppercase">
-                                                            {{ $record->first()[0]->user_name }}</span>
-
-                                                        ({{ $record->first()[0]->email }})
+                                                        <span>
+                                                            <span
+                                                                class="text-uppercase">{{ $record->first()[0]->user_name }}</span>({{ $record->first()[0]->email }})
+                                                        </span>
                                                     </td>
                                                     <td>{{ $record->first()[0]->course_name }}
-                                                        ({{ $record->first()[0]->course_location }})
                                                     </td>
                                                     @if ($virtualQuery)
                                                         <td>{{ $record->first()->values()[0]->virtual_attendance ?? 0 }}
+                                                        </td>
                                                         <td>{{ $record->first()->values()[0]->in_person }}</td>
                                                     @endif
-                                                    <td>{{ $record->first()->values()[0]->attendance_total ?? 0 }}
-                                                    <td>{{ $record->first()[0]->user_gender ?? 'N/A' }}
-                                                    </td>
-                                                    <td>{{ $record->first()[0]->user_network_type ?? 'N/A' }}
+                                                    <td>{{ $record->first()[0]->session_name }}</td>
+                                                    <td>{{ $record->first()->values()[0]->attendance_total ?? 0 }} </td>
+                                                    {{-- <td>{{ $record->first()[0]->user_gender ?? 'N/A' }} --}}
+                                                    {{-- <td>{{ $record->first()[0]->user_network_type ?? 'N/A' }}
                                                     </td>
                                                     <td>{{ $record->first()[0]->user_contact ?? 'N/A' }}
-                                                    </td>
+                                                    </td> --}}
                                                     @if ($selectedDailyOption == 'yes')
                                                         @foreach ($dates_array as $date)
                                                             @php
