@@ -174,8 +174,6 @@
                         $(':input', form).removeClass('is-invalid');
                         $('.invalid-feedback', form).text("");
 
-                        console.log('here')
-
                         if (response.status) {
                             // Handle completion
                             if (response.progress.is_submitted) {
@@ -184,7 +182,6 @@
                                 $('.tab-pane').removeClass('show active');
 
                                 if (response.progress.next_instructor) {
-                                    alert('next_instructor')
                                     const instructorId = response.progress.next_instructor;
                                     const buttonText = response.progress.instructor_button_text;
 
@@ -195,7 +192,6 @@
                                     $(`a[href="#section-instructor-${instructorId}"]`).removeClass('show active');
                                     $(`a[href="#section-${response.progress.next_section - 1}"]`).addClass('active');
                                 } else {
-                                    alert('next_section')
                                     $(`#section-${response.progress.next_section}`).addClass('show active');
                                     $(`a[href="#section-${response.progress.next_section}"]`).tab('show');
                                 }                               
@@ -209,7 +205,6 @@
                         if (xhr.status === 422) {
                             const response = xhr.responseJSON;
 
-                            console.log(response.error);
                             if (response.error) {
                                 $.each(response.error, function(prefix, val) {
                                     const fieldId = prefix.replace('.', '_');

@@ -828,44 +828,23 @@ class StudentOperation extends Controller
         // Get existing data
         $existing = $draft->response_data ?? [];
 
-        // Update only the current section
-
-        // if ($isInstructorQuestions) {
-        //     $existing['instructors']['instructors_response'][$request->input('instructor_id')] =
-        //         $validated['response_data'];
-        // } else {
-        //     $existing[$section['title']] = $validated['response_data'];
-        // }
-
-        // // add the instructor response to the questionnaire schema
-        // if ($isInstructorSelect) {
-        //     $existing['instructors']['instructors_response'] = $validated['response_data']['instructors'];
-        // }
-
-        // $yetToComplete = collect($existing['instructors']['instructors'] ?? [])->filter(function ($instructor) use ($existing) {
-        //     return !isset($existing['instructors']['instructors_response'][$instructor]);
-        // })->values()->all();
-
-
         if ($isInstructorSelect) {
             // Store selected instructor IDs
             $existing['selected_instructors'] = $validated['response_data']['instructors'];
-            $existing['last_completed_instructor'] = [];
+            $existing['completed_instructors'] = [];
         } elseif ($isInstructorQuestions) {
             $instructorId = $request->input('instructor_id');
             // Store the individual instructor’s responses
             $existing['instructors'][$instructorId] = $validated['response_data'];
-            $existing['last_completed_instructor'][] = $instructorId;
+            $existing['completed_instructors'][] = $instructorId;
         } else {
             // Store responses for other sections like facility, transport, etc.
             $existing[$section['title']] = $validated['response_data'];
         }
 
-        // $yetToComplete = array_values(array_diff($existing['selected_instructors'] ?? [], (array) $request->input('instructor_id')));
-
         // Check which instructors haven't been filled yet
         $yetToComplete = collect($existing['selected_instructors'] ?? [])->filter(function ($id) use ($existing) {
-            return !isset($existing['last_completed_instructor']);
+            return !in_array($id, $existing['completed_instructors'] ?? []);
         })->values()->all();
 
         // remaining sections left to complete
