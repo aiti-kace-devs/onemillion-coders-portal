@@ -1,3 +1,11 @@
+<script setup>
+const props = defineProps({
+  src: {
+    type: String,
+    default: "/assets/images/logo.png",
+  },
+});
+</script>
 <template>
-  <img src="/assets/images/logo.png" alt="logo" class="h-24 lg:h-28 w-auto" />
+  <img :src="src" alt="logo" />
 </template>

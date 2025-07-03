@@ -14,34 +14,25 @@ const props = defineProps({
   active: {
     type: Boolean,
   },
-  redirect: {
-    type: Boolean,
-    default: false 
-  },
 });
-
-const linkComponent = props.redirect ? "a" : Link;
 
 const classes = computed(() =>
   props.active
-    ? "flex gap-x-2 px-4 py-3 justify-center items-center cursor-pointer rounded-sm font-bold leading-5 peer text-white bg-gray-800"
-    : "flex gap-x-2 px-4 py-3 justify-center items-center cursor-pointer rounded-sm font-medium leading-5 text-gray-500 hover:text-gray-700 peer"
+    ? "flex gap-x-2 p-1.5 items-center cursor-pointer bg-gray-700 text-white font-medium rounded-sm peer capitalize"
+    : "flex gap-x-2 p-1.5 items-center cursor-pointer peer capitalize font-medium text-gray-500 hover:text-gray-700"
 );
 </script>
 
 <template>
-  <div class="group/item">
-    <component
-      :is="linkComponent"
-       :href="href" 
-       :class="classes">
+  <div class="px-4 group/item">
+    <Link :href="href" :class="classes">
       <slot />
 
       <div
-        class="flex-1 flex justify-between items-center font-medium whitespace-nowrap group-[.sidebar-collapsed]/container:hidden group"
+        class="flex-1 flex justify-between items-center hidden group-hover/sidebar-container:block group"
       >
-        <p class="capitalize">{{ label }}</p>
+        <p>{{ label }}</p>
       </div>
-    </component>
+    </Link>
   </div>
 </template>

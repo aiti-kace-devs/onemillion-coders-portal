@@ -456,6 +456,16 @@ Route::prefix('admin')
         });
     });
 
+// Student section routes
+Route::prefix('student')->name('student.')->group(function () {
+    // Profile route
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    });
+});
+
 /* Student section routes */
 Route::prefix('student')
     ->middleware('theme:dashboard')
@@ -472,7 +482,7 @@ Route::prefix('student')
         Route::middleware(['auth:web'])->group(function () {
             Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');
             Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
-            Route::get('/profile', [StudentOperation::class, 'profile'])->name('profile')->middleware('is_not_admitted');
+            // Route::get('/profile', [StudentOperation::class, 'profile'])->name('profile')->middleware('is_not_admitted');
             Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course')->middleware('is_not_admitted');
             Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course')->middleware('is_not_admitted');
 
