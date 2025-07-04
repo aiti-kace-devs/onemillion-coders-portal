@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,11 +19,21 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = User::select('users.*', 'users.updated_at as user_updated', 'users.created_at as user_created', 'users.name as student_name', 'courses.*', 'course_sessions.session as selected_session', 'course_sessions.*', 'user_admission.*')
+            ->where('userId', Auth::user()->userId)
+            ->join('user_admission', 'user_admission.user_id', '=', 'users.userId')
+            ->join('course_sessions', 'user_admission.session', '=', 'course_sessions.id')
+            ->join('courses', 'user_admission.course_id', '=', 'courses.id')
+            ->first();
+
+        $user->isAdmitted = $user->isAdmitted();
+
         return Inertia::render('Student/Profile/Edit', [
+            'user' => $user,
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
         ]);
-}
+    }
 
     /**
      * Update the user's profile information.

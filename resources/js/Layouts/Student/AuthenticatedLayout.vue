@@ -27,7 +27,9 @@ const hardRedirect = (url, event) => {
 };
 
 // Get the current route name for active link highlighting
-const { component } = usePage().props;
+const { auth, component } = usePage().props;
+
+const user = auth?.user || {};
 </script>
 
 <template>
@@ -40,95 +42,86 @@ const { component } = usePage().props;
       @click.away="isSidebarCollapsed = true"
     >
       <aside
-        class="fixed hidden lg:block h-full bg-white border-r shadow-md flex flex-col duration-300 ease-in-out z-[1002] w-[70px] group-hover/sidebar-container:w-2/3 lg:group-hover/sidebar-container:w-64 group-hover/sidebar-container:block"
+        class="fixed h-full bg-white border-r shadow-md flex flex-col transition-all duration-300 ease-in-out z-[1002] overflow-hidden"
+        :class="{
+          'w-0 lg:w-[70px]': isSidebarCollapsed,
+          'w-2/3 lg:w-64': !isSidebarCollapsed,
+        }"
+        aria-label="Sidebar Navigation"
       >
+        <!-- Logo -->
         <div
-          class="p-2 lg:py-2 lg:px-0 w-full flex justify-between items-start lg:flex-none"
+          class="p-2 lg:py-2 lg:px-0 flex items-start justify-between lg:flex-none w-full"
         >
-          <div class="w-full">
-            <Link :href="route('admin.dashboard')">
-              <ApplicationLogo
-                :src="
-                  isSidebarCollapsed
-                    ? '/assets/images/logo-short.png'
-                    : '/assets/images/logo-bt.png'
-                "
-                class="h-16 mx-auto group-hover/sidebar-container:ml-2 transition-all duration-300"
-              />
-            </Link>
-          </div>
-
-          <div class="lg:hidden">
-            <button
-              class="block cursor-pointer rounded-md p-1.5 text-gray-500 hover:bg-gray-100 focus:outline-none"
-              @click="isSidebarCollapsed = true"
-              aria-label="Toggle Sidebar"
-              aria-expanded="isSidebarCollapsed"
+          <Link :href="route('student.dashboard')" aria-label="Dashboard Home">
+            <ApplicationLogo
+              :src="
+                isSidebarCollapsed
+                  ? '/assets/images/logo-short.png'
+                  : '/assets/images/logo-bt.png'
+              "
+              class="h-16 transition-all duration-300 mx-auto group-hover/sidebar-container:ml-2"
+            />
+          </Link>
+          <!-- Close button for sidebar (visible on small screens) -->
+          <button
+            class="block cursor-pointer rounded-md p-1.5 text-gray-500 hover:bg-gray-100 focus:outline-none lg:hidden"
+            @click="isSidebarCollapsed = true"
+            aria-label="Close Sidebar"
+            type="button"
+          >
+            <svg
+              class="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
             >
-              <svg
-                class="h-6 w-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
         </div>
 
+        <!-- Navigation -->
         <nav
-          class="flex-1 flex-col py-2 space-y-3 h-[calc(100vh-100px)] overflow-x-hidden overflow-y-auto"
+          class="flex-1 flex-col py-4 space-y-2 h-[calc(100vh-80px)] overflow-x-hidden overflow-y-auto"
+          role="navigation"
         >
           <SidebarNavLink
+            :active="route().current('student.profile.*')"
+            :href="route('student.profile.edit')"
+            :label="'Profile'"
+          >
+            <span class="material-symbols-outlined">user_attributes</span>
+          </SidebarNavLink>
+
+          <SidebarNavLink
             :active="route().current('student.profile.edit')"
-            :href="route('admin.dashboard')"
-            :label="'home'"
-            :redirect="true"
+            :href="route('student.profile.edit')"
+            :label="'Profile'"
           >
-            <span class="material-symbols-outlined">home</span>
+            <span class="material-symbols-outlined">person</span>
           </SidebarNavLink>
 
           <SidebarNavLink
-            :active="route().current('admin.dashboard')"
-            :href="route('admin.dashboard')"
-            :label="'home'"
-            :redirect="true"
-          >
-            <span class="material-symbols-outlined">home</span>
-          </SidebarNavLink>
-
-          <SidebarNavLink
-            :href="route('admin.form.index')"
-            :active="
-              route().current('admin.form.*') || route().current('admin.form_responses.*')
-            "
-            :label="'forms'"
-          >
-            <span class="material-symbols-outlined">ballot</span>
-          </SidebarNavLink>
-
-          <SidebarNavLink
-            :href="route('admin.session.index')"
-            :active="route().current('admin.session.*')"
-            :label="'sessions'"
+            :href="route('student.dashboard')"
+            :active="route().current('student.*')"
+            :label="'Sessions'"
           >
             <span class="material-symbols-outlined">schedule</span>
           </SidebarNavLink>
 
           <SidebarNavLink
-            :href="route('admin.lists.index')"
-            :active="route().current('admin.lists.*')"
-            :label="'lists'"
+            :href="route('admin.form.index')"
+            :active="route().current('admin.form.*')"
+            :label="'Forms'"
           >
-            <span class="material-symbols-outlined">table</span>
+            <span class="material-symbols-outlined">ballot</span>
           </SidebarNavLink>
         </nav>
       </aside>
@@ -138,14 +131,15 @@ const { component } = usePage().props;
     <div class="flex-1 flex flex-col md:ml-[70px] bg-gray-100">
       <!-- Top Nav -->
       <header
-        class="sticky top-0 h-16 bg-white flex items-center justify-between px-2 lg:px-6 shadow-sm"
+        class="sticky top-0 h-16 bg-white flex items-center justify-between px-4 lg:px-8 shadow-sm z-10"
+        role="banner"
       >
         <div class="flex items-center gap-x-3">
           <button
             class="block lg:hidden cursor-pointer rounded-md p-1.5 text-gray-500 hover:bg-gray-100 focus:outline-none"
             @click="isSidebarCollapsed = false"
-            aria-label="Toggle Sidebar"
-            aria-expanded="isSidebarCollapsed"
+            aria-label="Open Sidebar"
+            :aria-expanded="!isSidebarCollapsed"
           >
             <svg
               class="h-6 w-6"
@@ -170,10 +164,58 @@ const { component } = usePage().props;
             <slot name="header" />
           </div>
         </div>
+
+        <div class="relative">
+          <Dropdown align="right" width="48">
+            <template #trigger>
+              <span class="inline-flex rounded-md">
+                <button
+                  type="button"
+                  class="inline-flex items-center p-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-transparent hover:text-gray-700 focus:outline-none transition ease-in-out duration-150"
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                >
+                  <span class="material-symbols-outlined"> account_circle </span>
+
+                  <svg
+                    class="-me-0.5 h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </span>
+            </template>
+
+            <template #content>
+              <DropdownLink
+                :href="route('student.profile.edit')"
+                class="inline-flex items-center"
+              >
+                <span class="material-symbols-outlined me-1"> person </span> Profile
+              </DropdownLink>
+              <DropdownLink
+                :href="route('logout')"
+                method="post"
+                as="button"
+                class="inline-flex items-center"
+              >
+                <span class="material-symbols-outlined me-1"> logout </span>
+                Log Out
+              </DropdownLink>
+            </template>
+          </Dropdown>
+        </div>
       </header>
 
       <!-- Page content -->
-      <main class="py-6">
+      <main class="py-6 px-4 lg:px-8">
         <slot />
       </main>
     </div>
