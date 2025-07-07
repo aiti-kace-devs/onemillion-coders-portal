@@ -1,0 +1,9 @@
+@extends(backpack_view('blank'))
+
+@section('content')
+    @include('vendor.backpack.crud.list_content')
+@endsection
+
+@section('after_scripts')
+    @include('vendor.backpack.admit_bulk_modal')
+@endsection

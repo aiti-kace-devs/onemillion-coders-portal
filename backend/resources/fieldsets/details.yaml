@@ -1,0 +1,33 @@
+title: Details
+fields:
+  -
+    handle: name
+    field:
+      type: text
+      display: Name
+  -
+    handle: caption
+    field:
+      type: text
+      display: Caption
+  -
+    handle: icon
+    field:
+      type: icon
+      display: Icon
+  -
+    handle: colour
+    field:
+      type: color
+      display: Colour
+  -
+    handle: value
+    field:
+      type: text
+      display: Value
+  -
+    handle: media
+    field:
+      container: public
+      type: assets
+      display: Media

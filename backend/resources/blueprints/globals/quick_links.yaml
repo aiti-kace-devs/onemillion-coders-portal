@@ -1,0 +1,14 @@
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: grid_field
+            field:
+              type: grid
+              display: 'Grid Field'
+              fields:
+                -
+                  import: details

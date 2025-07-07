@@ -1,0 +1,17 @@
+tabs:
+  new_tab:
+    display: 'New Tab'
+    sections:
+      -
+        display: Details
+        fields:
+          -
+            handle: name
+            field:
+              type: text
+              display: Name
+          -
+            handle: value
+            field:
+              type: text
+              display: Value

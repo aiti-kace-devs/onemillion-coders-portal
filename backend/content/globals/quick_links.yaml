@@ -1,0 +1,17 @@
+title: 'Quick Links'
+data:
+  grid_field:
+    -
+      id: mcl87q73
+      name: Logout
+      caption: out
+      icon: arrows-horizontal-expand
+      media:
+        - form/banner/1743377994.png
+    -
+      id: mcl87o88
+      name: Login
+      caption: Login
+      icon: add-col-before
+      media:
+        - form/banner/1743960525.jpeg
