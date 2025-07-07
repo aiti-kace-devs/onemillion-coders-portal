@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class AdmissionRejection extends Model
 {
+    use CrudTrait;
     use HasFactory;
     protected $table = 'admission_rejections';
     public $timestamps = false;

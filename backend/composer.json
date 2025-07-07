@@ -11,6 +11,10 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "backpack/crud": "^6.8",
+        "backpack/permissionmanager": "^7.2",
+        "backpack/pro": "^2.2",
+        "backpack/theme-tabler": "^1.2",
         "barryvdh/laravel-debugbar": "^3.7",
         "doctrine/dbal": "^3.9",
         "geo-sot/laravel-env-editor": "^3.1",
@@ -36,6 +40,7 @@
         "yajra/laravel-datatables-oracle": "^12.1"
     },
     "require-dev": {
+        "backpack/generators": "^4.0",
         "fakerphp/faker": "^1.9.1",
         "laravel/breeze": "^2.0",
         "laravel/pint": "^1.0",
@@ -94,5 +99,11 @@
         }
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": {
+        "backpack": {
+            "type": "composer",
+            "url": "https://repo.backpackforlaravel.com/"
+        }
+    }
 }

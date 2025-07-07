@@ -42,7 +42,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             // \App\Http\Middleware\PageBuilderMiddleware::class,
-            \Spatie\Csp\AddCspHeaders::class,
+            // \Spatie\Csp\AddCspHeaders::class,
         ],
 
         'api' => [
@@ -72,7 +72,7 @@ class Kernel extends HttpKernel
         'theme' => \Qirolab\Theme\Middleware\ThemeMiddleware::class,
         'apikey.check' => \App\Http\Middleware\CheckAPIKey::class,
         'admin.super' => \App\Http\Middleware\SuperAdmin::class,
-        'page.builder' => \App\Http\Middleware\PageBuilderMiddleware::class,
+        // 'page.builder' => \App\Http\Middleware\PageBuilderMiddleware::class,
         'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
         'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,

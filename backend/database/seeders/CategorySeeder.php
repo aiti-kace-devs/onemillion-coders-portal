@@ -15,11 +15,11 @@ class CategorySeeder extends Seeder
      */
     public function run()
     {
-        $category=[
-                'name'=>'General Knowledge',
-                'status'=>'1'
+        $category = [
+            'name' => 'General Knowledge',
+            'status' => '1'
         ];
 
-        Oex_category::create($category);
+        // Oex_category::createOrFirst($category);
     }
 }

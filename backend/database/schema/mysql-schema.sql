@@ -625,6 +625,19 @@ CREATE TABLE `roles` (
   UNIQUE KEY `roles_name_guard_name_unique` (`name`,`guard_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `runway_uris`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `runway_uris` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `uri` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `model_type` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `model_id` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `sms_templates`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -898,6 +911,18 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `programme_id`,
  1 AS `centre_id`*/;
 SET character_set_client = @saved_cs_client;
+DROP TABLE IF EXISTS `versions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `versions` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `version` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `versions_version_unique` (`version`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `vw_admitted_student_contact`;
 /*!50001 DROP VIEW IF EXISTS `vw_admitted_student_contact`*/;
 SET @saved_cs_client     = @@character_set_client;
@@ -1213,3 +1238,5 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (58,'2025_05_02_150
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (59,'2025_05_09_210137_create_report_views',15);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (60,'2025_05_21_183218_create_attendance_views',16);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (62,'2025_07_01_223832_statamic_auth_tables',17);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (63,'2021_05_04_162552_create_runway_uris_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (64,'2025_07_02_191137_add_version_table',18);

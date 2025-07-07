@@ -107,7 +107,7 @@
                                             <label class="col-md-4 col-form-label text-md-right">Courses</label>
                                             <div class="col-md-8">
                                                 <select name="courses[]" class="form-control select2" multiple
-                                                        data-placeholder="Select courses to assign">
+                                                    data-placeholder="Select courses to assign">
                                                     @foreach ($courses as $course)
                                                         <option value="{{ $course->id }}"
                                                             {{ $admin->assignedCourses->contains($course->id) ? 'selected' : '' }}>
@@ -163,7 +163,8 @@
                                                                             <div class="col-md-4 mb-2">
                                                                                 <div class="form-check">
                                                                                     <input class="form-check-input"
-                                                                                        type="checkbox" name="permissions[]"
+                                                                                        type="checkbox"
+                                                                                        name="permissions[]"
                                                                                         value="{{ $perm['name'] }}"
                                                                                         id="perm_{{ $perm['id'] }}"
                                                                                         {{ $perm['selected'] ? 'checked' : '' }}>

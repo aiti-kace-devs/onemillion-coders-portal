@@ -44,5 +44,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton('SMSLogger', function ($app) {
             return new \App\Logging\SMSLogger();
         });
+
+        $this->app->bind(
+            \Backpack\PermissionManager\app\Http\Controllers\UserCrudController::class, //this is package controller
+            \App\Http\Controllers\Admin\UserCrudController::class //this should be your own controller
+        );
     }
 }

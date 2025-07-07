@@ -192,7 +192,6 @@ return [
     */
 
     'aliases' => [
-
         'App' => Illuminate\Support\Facades\App::class,
         'Arr' => Illuminate\Support\Arr::class,
         'Artisan' => Illuminate\Support\Facades\Artisan::class,
@@ -235,4 +234,5 @@ return [
 
     ],
 
+    'version' => env('APP_VERSION', '1.0.0'),
 ];

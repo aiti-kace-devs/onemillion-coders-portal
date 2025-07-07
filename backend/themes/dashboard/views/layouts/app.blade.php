@@ -141,8 +141,8 @@
                         <!-- Add icons to the links using the .nav-icon class
                with font-awesome or any other icon font library -->
                         <li class="nav-item">
-                            <a href="{{ url('admin/dashboard') }}"
-                                class="nav-link @if (request()->is('admin/dashboard')) active @endif">
+                            <a href="{{ url('admins/dashboard') }}"
+                                class="nav-link @if (request()->is('admins/dashboard')) active @endif">
                                 <i class="nav-icon fas fa-tachometer-alt"></i>
                                 <p>
                                     Dashboard
@@ -232,7 +232,8 @@
                             </li>
                         @endcan
 
-                        @canany(['student.read', 'student.bulk-sms', 'student.admit', 'student.bulk-email', 'student.shortlist'])
+                        @canany(['student.read', 'student.bulk-sms', 'student.admit', 'student.bulk-email',
+                            'student.shortlist'])
                             <li class="nav-item">
                                 <a href="{{ url('admin/manage_students') }}"
                                     class="nav-link @if (request()->is('admin/manage_students')) active @endif">
