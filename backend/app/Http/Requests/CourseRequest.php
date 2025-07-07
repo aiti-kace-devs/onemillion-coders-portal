@@ -25,7 +25,12 @@ class CourseRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'name' => 'required|min:5|max:255'
+            'branch_id' => 'required',
+            'centre_id' => 'required',
+            'programme_id' => 'required',
+            'duration' => 'required',
+            'start_date' => 'sometimes',
+            'end_date' => 'sometimes',
         ];
     }
 
@@ -37,8 +42,8 @@ class CourseRequest extends FormRequest
     public function attributes()
     {
         return [
-            //
-        ];
+                //
+            ];
     }
 
     /**
@@ -49,7 +54,10 @@ class CourseRequest extends FormRequest
     public function messages()
     {
         return [
-            //
+            'branch_id.required' => 'The branch field is required.',
+            'centre_id.required' => 'The centre field is required.',
+            'programme_id.required' => 'The programme field is required.',
+            'duration.required' => 'The duration field is required.',
         ];
     }
 }

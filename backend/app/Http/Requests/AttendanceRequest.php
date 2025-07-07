@@ -25,7 +25,9 @@ class AttendanceRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'name' => 'required|min:5|max:255'
+            'user_id' => 'required|exists:users,userId',
+            'course_id' => 'required|exists:courses,id',
+            'date' => 'required|date|before_or_equal:' . now()->toDateString(),
         ];
     }
 
@@ -37,8 +39,8 @@ class AttendanceRequest extends FormRequest
     public function attributes()
     {
         return [
-            //
-        ];
+                //
+            ];
     }
 
     /**
@@ -49,7 +51,7 @@ class AttendanceRequest extends FormRequest
     public function messages()
     {
         return [
-            //
-        ];
+                //
+            ];
     }
 }

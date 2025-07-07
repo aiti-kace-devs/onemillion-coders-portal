@@ -25,8 +25,8 @@ class CentreRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'name' => 'required|min:5|max:255'
-        ];
+            'branch_id' => 'required',
+            'title' => 'required',        ];
     }
 
     /**
@@ -49,7 +49,7 @@ class CentreRequest extends FormRequest
     public function messages()
     {
         return [
-            //
+            'branch_id.required' => 'The branch field is required.',
         ];
     }
 }

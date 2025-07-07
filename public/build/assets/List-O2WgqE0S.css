@@ -1,0 +1,1 @@
+#data_table tbody tr>td:not(:last-child){cursor:pointer}
