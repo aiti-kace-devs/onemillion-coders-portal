@@ -15,8 +15,8 @@ defineProps({
     type: String,
   },
   user: {
-    type: Object
-  }
+    type: Object,
+  },
 });
 
 const user = usePage().props.auth.user;
@@ -41,11 +41,9 @@ const cardVerified = computed(() => !!user.verification_date);
 <template>
   <section>
     <header>
-      <h2 class="text-lg font-medium text-gray-900">Profile Information</h2>   
-      
-      <p v-if="detailsUpdated"
-        class="text-sm text-green-600"
-      >
+      <h2 class="text-lg font-medium text-gray-900">Profile Information</h2>
+
+      <p v-if="detailsUpdated" class="text-sm text-green-600">
         You have already updated your details
       </p>
 
@@ -114,7 +112,7 @@ const cardVerified = computed(() => !!user.verification_date);
             class="inline-flex items-center px-3 border border-r-0 text-sm rounded-l-sm h-10"
             id="ghcard-addon"
             :class="
-              detailsUpdated
+              cardVerified
                 ? 'cursor-not-allowed bg-gray-200 text-gray-700 border-green-600'
                 : 'bg-gray-50 text-gray-500 border-red-600'
             "
@@ -129,7 +127,7 @@ const cardVerified = computed(() => !!user.verification_date);
             :disabled="detailsUpdated"
             :class="{
               'border-l-0 border-green-600': cardVerified,
-              'border-l-0 border-red-600': cardVerified,
+              'border-l-0 border-red-600': !cardVerified,
               'rounded-none rounded-r-sm': form.card_type === 'ghcard',
             }"
             placeholder="123456789-1"
