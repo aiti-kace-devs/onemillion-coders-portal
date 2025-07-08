@@ -93,7 +93,7 @@ const user = auth?.user || {};
           role="navigation"
         >
           <SidebarNavLink
-            :active="route().current('student.profile.*')"
+            :active="route().current('student.profile.edit')"
             :href="route('student.profile.edit')"
             :label="'Profile'"
           >
@@ -101,8 +101,8 @@ const user = auth?.user || {};
           </SidebarNavLink>
 
           <SidebarNavLink
-            :href="route('student.dashboard')"
-            :active="route().current('student.*')"
+            :href="route('student.session.index')"
+            :active="route().current('student.session.*')"
             :label="'Session'"
           >
             <span class="material-symbols-outlined">schedule</span>

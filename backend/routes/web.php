@@ -459,10 +459,15 @@ Route::prefix('admins')
 // Student section routes
 Route::prefix('student')->name('student.')->group(function () {
     // Profile route
-    Route::middleware(['auth:web'])->group(function () {
-        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::middleware(['auth:web'])->name('profile.')->group(function () {
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('destroy');
+    });
+
+    // Session route
+    Route::middleware(['auth', 'is_admitted'])->prefix('session')->name('session.')->group(function () {
+        Route::get('/', [StudentOperation::class, 'select_session_view'])->name('index');
     });
 });
 
