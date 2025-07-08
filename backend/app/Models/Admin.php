@@ -52,6 +52,11 @@ class Admin extends Authenticatable
         return $this->belongsToMany(Course::class, 'admin_course', 'admin_id', 'course_id')->select('courses.*');
     }
 
+    public function courses()
+    {
+        return $this->assignedCourses();
+    }
+
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new ResetPasswordNotification($token));

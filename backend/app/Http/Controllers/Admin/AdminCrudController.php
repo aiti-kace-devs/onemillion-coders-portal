@@ -21,7 +21,7 @@ class AdminCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -33,45 +33,166 @@ class AdminCrudController extends CrudController
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
-
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+        CRUD::setFromDb();
+        // Add any custom columns or logic here if needed
     }
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
     protected function setupCreateOperation()
     {
         CRUD::setValidation(AdminRequest::class);
-        CRUD::setFromDb(); // set fields from db columns.
-
-        /**
-         * Fields can be defined using the fluent syntax:
-         * - CRUD::field('price')->type('number');
-         */
+        CRUD::setFromDb();
+        // Add custom fields if needed
+        // Add a model event for after save to handle roles, permissions, courses, is_super
+        CRUD::addField([
+            'name' => 'roles',
+            'type' => 'select2_multiple',
+            'entity' => 'roles',
+            'model' => 'Spatie\\Permission\\Models\\Role',
+            'attribute' => 'name',
+            'pivot' => true,
+        ]);
+        CRUD::addField([
+            'name' => 'permissions',
+            'type' => 'select2_multiple',
+            'entity' => 'permissions',
+            'model' => 'Spatie\\Permission\\Models\\Permission',
+            'attribute' => 'name',
+            'pivot' => true,
+        ]);
+        CRUD::addField([
+            'name' => 'courses',
+            'type' => 'select2_multiple',
+            'entity' => 'assignedCourses',
+            'model' => 'App\\Models\\Course',
+            'attribute' => 'course_name',
+            'pivot' => true,
+        ]);
+        CRUD::addField([
+            'name' => 'is_super',
+            'type' => 'checkbox',
+            'label' => 'Super Admin',
+        ]);
+        // Hash password and handle custom logic after save
+        CRUD::operation('create', function () {
+            \Event::listen('eloquent.created: App\\Models\\Admin', function ($admin) {
+                if (request()->filled('password')) {
+                    $admin->password = \Illuminate\Support\Facades\Hash::make(request('password'));
+                }
+                $admin->is_super = request()->has('is_super') ? true : false;
+                $admin->save();
+                if (request()->has('roles')) {
+                    $admin->syncRoles(request('roles'));
+                }
+                if (request()->has('permissions')) {
+                    $admin->syncPermissions(request('permissions'));
+                }
+                if (request()->has('courses')) {
+                    $admin->assignedCourses()->sync(request('courses'));
+                }
+            });
+        });
     }
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */
     protected function setupUpdateOperation()
     {
-        $this->setupCreateOperation();
+        CRUD::setValidation(AdminRequest::class);
+        CRUD::setFromDb();
+        // Add custom fields if needed (same as in setupCreateOperation)
+        CRUD::addField([
+            'name' => 'roles',
+            'type' => 'select2_multiple',
+            'entity' => 'roles',
+            'model' => 'Spatie\\Permission\\Models\\Role',
+            'attribute' => 'name',
+            'pivot' => true,
+        ]);
+        CRUD::addField([
+            'name' => 'permissions',
+            'type' => 'select2_multiple',
+            'entity' => 'permissions',
+            'model' => 'Spatie\\Permission\\Models\\Permission',
+            'attribute' => 'name',
+            'pivot' => true,
+        ]);
+        CRUD::addField([
+            'name' => 'courses',
+            'type' => 'select2_multiple',
+            'entity' => 'assignedCourses',
+            'model' => 'App\\Models\\Course',
+            'attribute' => 'course_name',
+            'pivot' => true,
+        ]);
+        CRUD::addField([
+            'name' => 'is_super',
+            'type' => 'checkbox',
+            'label' => 'Super Admin',
+        ]);
+        // Hash password and handle custom logic after update
+        CRUD::operation('update', function () {
+            \Event::listen('eloquent.updated: App\\Models\\Admin', function ($admin) {
+                if (request()->filled('password')) {
+                    $admin->password = \Illuminate\Support\Facades\Hash::make(request('password'));
+                    $admin->save();
+                }
+                $admin->is_super = request()->has('is_super') ? true : false;
+                $admin->save();
+                if (request()->has('roles')) {
+                    $admin->syncRoles(request('roles'));
+                }
+                if (request()->has('permissions')) {
+                    $admin->syncPermissions(request('permissions'));
+                }
+                if (request()->has('courses')) {
+                    $admin->assignedCourses()->sync(request('courses'));
+                }
+            });
+        });
+    }
+
+    // No need for setupDeleteOperation unless you want to add custom logic before/after delete
+    // Keep only custom endpoints that are not standard CRUD
+    // Toggle is_super admin status
+    public function is_super_admin_status($id)
+    {
+        $admin = \App\Models\Admin::where('id', $id)->first();
+        $admin->is_super = $admin->is_super == 1 ? 0 : 1;
+        $admin->update();
+    }
+
+    // Get admin's assigned courses
+    public function getAdminCourses(\App\Models\Admin $admin)
+    {
+        return response()->json($admin->assignedCourses->pluck('id'));
+    }
+
+    // Update admin's assigned courses
+    public function updateAdminCourses(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'admin_id' => 'required|exists:admins,id',
+            'courses' => 'array',
+            'courses.*' => 'exists:courses,id',
+        ]);
+        $admin = \App\Models\Admin::find($request->admin_id);
+        $admin->assignedCourses()->sync($request->courses);
+        return response()->json(['success' => true]);
     }
 }

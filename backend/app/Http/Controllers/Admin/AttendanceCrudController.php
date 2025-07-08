@@ -18,10 +18,14 @@ class AttendanceCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+    use \App\Http\Controllers\Traits\AttendanceQRCodeTrait;
+    use \App\Http\Controllers\Traits\AttendanceRecordTrait;
+    use \App\Http\Controllers\Traits\AttendanceConfirmTrait;
+    use \App\Http\Controllers\Traits\AttendanceViewRemoveTrait;
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -33,7 +37,7 @@ class AttendanceCrudController extends CrudController
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
@@ -49,7 +53,7 @@ class AttendanceCrudController extends CrudController
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
@@ -66,12 +70,46 @@ class AttendanceCrudController extends CrudController
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    // Example: Add endpoints or methods for trait logic
+    public function generateQRCodeData(AttendanceRequest $request)
+    {
+        $data = $request->validate($request->rulesForQRCode());
+        return response()->json($this->generateQRCodeDataLogic($data));
+    }
+
+    public function recordAttendance(AttendanceRequest $request)
+    {
+        $data = $request->validate($request->rulesForRecordAttendance());
+        $result = $this->recordAttendanceLogic($data['scanned_data']);
+        return response()->json($result);
+    }
+
+    public function confirmAttendance(AttendanceRequest $request)
+    {
+        $data = $request->validate($request->rulesForConfirmAttendance());
+        $result = $this->confirmAttendanceLogic($data, auth()->user());
+        return response()->json($result);
+    }
+
+    public function viewAttendance()
+    {
+        $userId = auth()->user()->userId;
+        $attendance = $this->viewAttendanceLogic($userId);
+        return response()->json(['attendance' => $attendance]);
+    }
+
+    public function removeAttendance($id)
+    {
+        $result = $this->removeAttendanceLogic($id);
+        return response()->json($result);
     }
 }

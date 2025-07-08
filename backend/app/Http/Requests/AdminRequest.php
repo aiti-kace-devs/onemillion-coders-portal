@@ -24,10 +24,25 @@ class AdminRequest extends FormRequest
      */
     public function rules()
     {
+        $adminId = $this->route('id') ?? $this->route('admin'); // 'id' or 'admin' depending on your route
+        $isUpdate = $this->isMethod('PUT') || $this->isMethod('PATCH');
+
+        if ($isUpdate && $adminId) {
+            $rules = [
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:admins,email,' . $adminId,
+            ];
+            if ($this->filled('password')) {
+                $rules['password'] = 'string|min:8';
+            }
+            return $rules;
+        }
+
+        // Default: create rules
         return [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:admins',
-            'password' => 'required|string|min:8'
+            'password' => 'required|string|min:8',
         ];
     }
 
@@ -39,8 +54,8 @@ class AdminRequest extends FormRequest
     public function attributes()
     {
         return [
-            //
-        ];
+                //
+            ];
     }
 
     /**
@@ -51,7 +66,7 @@ class AdminRequest extends FormRequest
     public function messages()
     {
         return [
-            //
-        ];
+                //
+            ];
     }
 }
