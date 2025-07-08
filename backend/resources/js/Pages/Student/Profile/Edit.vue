@@ -3,17 +3,55 @@ import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
 import UpdatePasswordForm from "./Partials/UpdatePasswordForm.vue";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm.vue";
 import Modal from "@/Components/Modal.vue";
+import PrimaryButton from "@/Components/PrimaryButton.vue";
 import { Head } from "@inertiajs/vue3";
+import { ref, watch } from "vue";
 
-defineProps({
-  mustVerifyEmail: {
-    type: Boolean,
-  },
-  status: {
-    type: String,
-  },
+const props = defineProps({
   user: Object,
 });
+
+const qrCodeModal = ref(false);
+
+watch(qrCodeModal, (newVal) => {
+  if (newVal) {
+    setTimeout(() => {
+      const qrcodeContainer = document.getElementById("qrcode");
+      if (qrcodeContainer) {
+        qrcodeContainer.innerHTML = ""; // Clear previous QR code
+        const innerWidth = Math.floor(window.innerWidth * (7 / 9));
+        const width = innerWidth > 400 ? 400 : innerWidth;
+        const qrcode = new QRCode(qrcodeContainer, {
+          text: props.user.userId, // or user.userId
+          width: width,
+          height: width,
+          colorDark: "black",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H,
+          quietZone: 20,
+          logo: "../../assets/images/logo-bt.png",
+          logoWidth: 170,
+          logoHeight: 80,
+        });
+        window._qrcode = qrcode;
+      }
+    }, 0);
+  }
+});
+
+const showQRCodeModal = () => {
+  qrCodeModal.value = true;
+};
+
+const closeQRCodeModal = () => {
+  qrCodeModal.value = false;
+};
+
+const downloadQRCode = () => {
+  if (window._qrcode) {
+    window._qrcode.download(`StudentName-${props.user.userId}`);
+  }
+};
 </script>
 
 <template>
@@ -26,11 +64,11 @@ defineProps({
 
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-        <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+        <div v-if="user.isAdmitted" class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
           <div class="flex flex-col md:flex-row items-center gap-6 relative">
             <div class="rounded-full shadow w-24 h-24 overflow-hidden">
               <img
-                src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT7eIctknfvw2DNDOUAbE75S8yicWnxyInS2A&s"
+                :src="`/assets/images/Oval.png`"
                 class="h-full w-full object-cover rounded-full"
                 alt="profile photo"
               />
@@ -43,7 +81,9 @@ defineProps({
               <div class="text-sm text-gray-400">{{ user.selected_session }} Session</div>
             </div>
             <button
-              class="w-14 h-14 flex justify-center items-center bg-gray-100 hover:bg-gray-200 rounded-full p-2 shadow text-gray-600 focus:outline-none"
+              @click="showQRCodeModal"
+              type="button"
+              class="w-14 h-14 flex justify-center items-center bg-gray-100 hover:bg-gray-200 rounded-full p-2 shadow text-gray-800 focus:outline-none"
             >
               <span class="material-symbols-outlined"> qr_code </span>
             </button>
@@ -51,12 +91,7 @@ defineProps({
         </div>
 
         <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-          <UpdateProfileInformationForm
-            :must-verify-email="mustVerifyEmail"
-            :status="status"
-            :user="user"
-            class="max-w-xl"
-          />
+          <UpdateProfileInformationForm  class="max-w-xl" :user="user" />
         </div>
 
         <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
@@ -66,25 +101,23 @@ defineProps({
     </div>
 
     <Modal
-      :show="true"
+      :show="qrCodeModal"
       :closeable="true"
-      :modalTitle="'student ID'"
-      @close="false"
+      @close="closeQRCodeModal"
       :maxWidth="'lg'"
       :bgColor="'bg-transparent text-white'"
     >
-      <div class="flex justify-center mt-4">
-        <p class="text-lg">Are you sure you want to delete this form?</p>
-      </div>
+      <div id="qrcode" class="flex justify-center mt-4"></div>
 
       <div class="flex justify-center mt-6 gap-4">
-
-        <button
+        <PrimaryButton
+          @click="downloadQRCode"
+          id="downloadQRCode"
           type="button"
           class="block items-center px-4 py-2 bg-gray-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-400 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:cursor-not-allowed"
         >
           Download
-        </button>
+        </PrimaryButton>
       </div>
     </Modal>
   </AuthenticatedLayout>

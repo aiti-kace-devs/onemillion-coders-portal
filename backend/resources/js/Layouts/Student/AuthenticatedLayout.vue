@@ -101,6 +101,14 @@ const user = auth?.user || {};
           </SidebarNavLink>
 
           <SidebarNavLink
+            :href="route('student.dashboard')"
+            :active="route().current('student.*')"
+            :label="'Session'"
+          >
+            <span class="material-symbols-outlined">schedule</span>
+          </SidebarNavLink>
+
+          <SidebarNavLink
             :active="route().current('student.profile.edit')"
             :href="route('student.profile.edit')"
             :label="'Profile'"
@@ -108,13 +116,6 @@ const user = auth?.user || {};
             <span class="material-symbols-outlined">person</span>
           </SidebarNavLink>
 
-          <SidebarNavLink
-            :href="route('student.dashboard')"
-            :active="route().current('student.*')"
-            :label="'Sessions'"
-          >
-            <span class="material-symbols-outlined">schedule</span>
-          </SidebarNavLink>
 
           <SidebarNavLink
             :href="route('admin.form.index')"

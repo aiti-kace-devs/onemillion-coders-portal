@@ -13,11 +13,46 @@ class ProfileUpdateRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\Rule|array|string>
      */
+   
+    protected function prepareForValidation()
+    {
+        if ($this->input('card_type') === 'ghcard' && $this->ghcard && !str_starts_with($this->ghcard, 'GHA-')) {
+            $this->merge([
+                'ghcard' => 'GHA-' . $this->ghcard,
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($this->user()->id)],
+            'name' => 'sometimes|string|regex:/^[\pL\s\-\' ]+$/u|min:5|max:255|min:4',
+            'gender' => 'sometimes|in:male,female',
+            'mobile_no' => 'sometimes|string|phone',
+            'network_type' => 'sometimes|in:mtn,telecel,airteltigo',
+            'card_type' => 'sometimes|in:ghcard,voters_id,drivers_license,passport',
+            'ghcard' => [
+                'required',
+                Rule::when(
+                    $this->input('card_type') === 'ghcard',
+                    [
+                        'max:16',
+                        'regex:/^GHA-[0-9]{9}-[0-9]{1}$/',
+                        Rule::unique('users', 'ghcard')->ignore($this->user()->id),
+                    ],
+                    [
+                        'max:20',
+                        Rule::unique('users', 'ghcard')->ignore($this->user()->id),
+                    ]
+                ),
+            ],
+        ];
+    }
+
+    public function attributes()
+    {
+        return [
+            'ghcard' => 'Card ID',
         ];
     }
 }

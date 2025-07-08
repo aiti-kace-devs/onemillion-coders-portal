@@ -18,8 +18,8 @@ const props = defineProps({
 
 const classes = computed(() =>
   props.active
-    ? "flex gap-x-2 p-1.5 items-center cursor-pointer bg-gray-700 text-white font-medium rounded-sm peer capitalize"
-    : "flex gap-x-2 p-1.5 items-center cursor-pointer peer capitalize font-medium text-gray-500 hover:text-gray-700"
+    ? "flex gap-x-2 p-1.5 items-center cursor-pointer bg-gray-700 text-white text-sm rounded-sm peer capitalize"
+    : "flex gap-x-2 p-1.5 items-center cursor-pointer peer capitalize text-gray-500 hover:text-gray-700"
 );
 </script>
 
