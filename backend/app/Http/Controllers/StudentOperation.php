@@ -21,7 +21,9 @@ use App\Jobs\AdmitStudentJob;
 use App\Jobs\CreateStudentAdmissionJob;
 use App\Jobs\TestSubmittedJob;
 use App\Models\AdmissionRejection;
+use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class StudentOperation extends Controller
 {
@@ -334,28 +336,28 @@ class StudentOperation extends Controller
         ]);
     }
 
-    public function select_session_view($user_id)
+    public function select_session_view(Request $request)
     {
-        $admission = UserAdmission::where('user_id', $user_id)->firstOrFail();
-        $user = User::select('id', 'name', 'userId')->where('userId', $user_id)->first();
+        $user = $request->user()->only(['id', 'name', 'userId']);
+        $admission = UserAdmission::where('user_id', $user['userId'])->firstOrFail();
+        $course = Course::find($admission->course_id);
+        $sessions = CourseSession::where('course_id', $course->id)->get();
+        $confirmed = false;
+        $session = CourseSession::where('id', $admission->session)->first();
 
-        // if ($admission->confirmed) {
-        //     return view('student.session-select.index', [
-        //         'confirmed' => true,
-        //         'user' => $user,
-        //         'session' => CourseSession::where('id', $admission->session)->first(),
-        //     ]);
-        // }
-        $courseDetails = Course::find($admission->course_id);
-        $sessions = CourseSession::where('course_id', $courseDetails->id)->get();
-        // $sessions->each(function($s){
-        //     $used = UserAdmission::where('session', $s->id)->whereNotNull('confirmed')->count();
+        return Inertia::render('Student/Session/Index', compact(
+            'user',
+            'admission',
+            'course',
+            'sessions',
+            'confirmed',
+            'session'
+        ));
 
-        // });
         return view('student.session-select.index', [
             'user' => $user,
             'sessions' => $sessions,
-            'course' => $courseDetails,
+            'course' => $course,
             'confirmed' => false,
             'admission' => $admission,
             'session' => CourseSession::where('id', $admission->session)->first(),
@@ -521,21 +523,22 @@ class StudentOperation extends Controller
         }
     }
 
-    public function delete_admission($user_id, Request $request)
+    public function delete_admission(User $user)
     {
-        $delete_user_admission = UserAdmission::where('user_id', $user_id)->first();
+        $delete_user_admission = UserAdmission::where('user_id', $user->userId)->first();
 
         if ($delete_user_admission) {
             $delete_user_admission->delete();
+
             AdmissionRejection::create([
-                'user_id' => $user_id,
+                'user_id' => $user->userId,
                 'course_id' => $delete_user_admission->course_id,
                 'rejected_at' => now(),
             ]);
 
-            User::where('userId', $user_id)->update(['shortlist' => 0]);
+            $user->update(['shortlist' => 0]);
 
-            return response()->json(['message' => 'User admission and shortlisted deleted successfully.'], 200);
+            return Redirect::route('student.profile.edit');
         } else {
             return response()->json(['message' => 'User admission not found.'], 404);
         }
@@ -590,7 +593,7 @@ class StudentOperation extends Controller
                 'ghcard' => 'GHA-' . $request->ghcard,
             ]);
         } else {
-            $rules['ghcard'] = ['sometimes', 'string', 'max:20', Rule::unique('users','ghcard')->ignore($user->id)];
+            $rules['ghcard'] = ['sometimes', 'string', 'max:20', Rule::unique('users', 'ghcard')->ignore($user->id)];
         }
 
         $validatedData = $request->validate($rules, [], ['ghcard' => 'Card number']);

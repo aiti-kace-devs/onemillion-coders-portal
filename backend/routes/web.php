@@ -466,8 +466,9 @@ Route::prefix('student')->name('student.')->group(function () {
     });
 
     // Session route
-    Route::middleware(['auth', 'is_admitted'])->prefix('session')->name('session.')->group(function () {
+    Route::middleware(['auth:web', 'is_admitted'])->prefix('session')->name('session.')->group(function () {
         Route::get('/', [StudentOperation::class, 'select_session_view'])->name('index');
+        Route::delete('/{user}', [StudentOperation::class, 'delete_admission'])->name('destroy');
     });
 });
 

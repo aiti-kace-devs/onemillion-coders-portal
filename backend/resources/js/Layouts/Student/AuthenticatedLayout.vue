@@ -105,7 +105,7 @@ const user = auth?.user || {};
             :active="route().current('student.session.*')"
             :label="'Session'"
           >
-            <span class="material-symbols-outlined">schedule</span>
+            <span class="material-symbols-outlined"> calendar_clock </span>
           </SidebarNavLink>
 
           <SidebarNavLink
@@ -115,7 +115,6 @@ const user = auth?.user || {};
           >
             <span class="material-symbols-outlined">person</span>
           </SidebarNavLink>
-
 
           <SidebarNavLink
             :href="route('admin.form.index')"

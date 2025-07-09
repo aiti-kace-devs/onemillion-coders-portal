@@ -27,7 +27,7 @@ class ProfileController extends Controller
             ->join('courses', 'user_admission.course_id', '=', 'courses.id')
             ->first();
 
-        $user->isAdmitted = $user->isAdmitted();
+        $user['isAdmitted'] = $user?->isAdmitted();
 
         return Inertia::render('Student/Profile/Edit', [
             'user' => $user
@@ -48,7 +48,7 @@ class ProfileController extends Controller
         if ($user->isDirty('name') && !$user->previous_name) {
             $user->previous_name = $user->getOriginal('name');
         }
-        
+
         if ($validated['name'] == $user->previous_name) {
             $user->previous_name = null;
         }

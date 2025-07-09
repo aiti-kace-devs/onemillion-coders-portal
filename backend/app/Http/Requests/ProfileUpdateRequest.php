@@ -29,10 +29,11 @@ class ProfileUpdateRequest extends FormRequest
             'name' => 'sometimes|string|regex:/^[\pL\s\-\' ]+$/u|min:5|max:255|min:4',
             'gender' => 'sometimes|in:male,female',
             'mobile_no' => 'sometimes|string|phone',
+            'email' => 'sometimes','email', Rule::unique('users', 'email')->ignore($this->user()->id),
             'network_type' => 'sometimes|in:mtn,telecel,airteltigo',
             'card_type' => 'sometimes|in:ghcard,voters_id,drivers_license,passport',
             'ghcard' => [
-                'required',
+                'sometimes',
                 Rule::when(
                     $this->input('card_type') === 'ghcard',
                     [
