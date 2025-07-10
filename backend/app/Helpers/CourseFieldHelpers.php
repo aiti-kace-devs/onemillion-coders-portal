@@ -18,11 +18,11 @@ trait CourseFieldHelpers
 
 
 
-    public static function addOngoingCoursesFilter(): void
+    public static function addOngoingCoursesFilter(string $label): void
 {
     CRUD::filter('ongoing')
         ->type('simple')
-        ->label('Ongoing Courses')
+        ->label($label)
         ->whenActive(function () {
             CRUD::addClause('whereDate', 'start_date', '<=', now()->toDateString());
             CRUD::addClause('whereDate', 'end_date', '>=', now()->toDateString());
