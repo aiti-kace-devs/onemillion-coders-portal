@@ -10,6 +10,7 @@ use App\Models\Programme;
 use App\Models\Course;
 use App\Models\Branch;
 use App\Models\Centre;
+use App\Models\User;
 use App\Models\CourseSession;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\DB;
@@ -482,6 +483,76 @@ public static function programmeStatisticsWidget()
 
 
 
+
+    public static function userStatisticsWidget()
+{
+    $totalUsers = User::count();
+
+    $admittedUsers = User::whereExists(function ($query) {
+        $query->select(\DB::raw(1))
+            ->from('user_admission')
+            ->whereColumn('user_admission.user_id', 'users.userId')
+            ->whereNotNull('user_admission.confirmed');
+    })->count();
+
+    $shortlistedUsers = User::where('shortlist', 1)->count();
+
+    $todaysAdmittedUsers = User::whereExists(function ($query) {
+        $query->select(\DB::raw(1))
+            ->from('user_admission')
+            ->whereColumn('user_admission.user_id', 'users.userId')
+            ->whereDate('user_admission.confirmed', today());
+    })->count();
+
+    $getPercent = function ($count) use ($totalUsers) {
+        return $totalUsers > 0 ? round(($count / $totalUsers) * 100) : 0;
+    };
+
+    Widget::add([
+        'type' => 'div',
+        'class' => 'row mb-4',
+        'content' => [
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($totalUsers),
+                'description' => 'Total Students',
+                'value' => number_format($totalUsers),
+                'progressClass' => 'progress-bar bg-primary',
+                'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                'hint' => 'All registered students in the system.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($admittedUsers),
+                'description' => 'Admitted Students',
+                'value' => number_format($admittedUsers),
+                'progressClass' => 'progress-bar bg-primary',
+                'hint' => 'Students with confirmed admission.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($shortlistedUsers),
+                'description' => 'Shortlisted Students',
+                'value' => number_format($shortlistedUsers),
+                'progressClass' => 'progress-bar bg-primary',
+                'hint' => 'Students marked as shortlisted.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($todaysAdmittedUsers),
+                'description' => "Today's Admitted Students",
+                'value' => number_format($todaysAdmittedUsers),
+                'progressClass' => 'progress-bar bg-primary',
+                'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                'hint' => 'Students admitted today.',
+            ],
+        ]
+    ]);
+}
 
 
 

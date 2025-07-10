@@ -107,17 +107,13 @@ class FilterHelper
     public static function addBooleanColumn(string $columnName, string $permissionName, string $label = null)
     {
         $user = backpack_user();
-
         if (!$user) {
             return;
         }
-
         if (!$user->can($permissionName)) {
             return;
         }
-  
         $label = $label ?? strtoupper(str_replace('_', ' ', $columnName));
-
         CRUD::addColumn([
             'name' => $columnName,
             'label' => $label,
@@ -249,4 +245,56 @@ public static function addBooleanFilter(string $columnName, ?string $permissionN
             CRUD::addClause('whereBetween', 'expires', [$from, $to]);
         });
     }
+
+
+
+
+
+
+
+
+    public static function addAgeRangeFilter(string $label = 'Age Group')
+{
+    CRUD::addFilter([
+        'name'  => 'age_range',
+        'type'  => 'dropdown',
+        'label' => $label,
+    ], [
+        '15-19' => '15 - 19 years',
+        '20-24' => '20 - 24 years',
+        '25-35' => '25 - 35 years',
+        '36-45' => '36 - 45 years',
+        '45+'   => '45+ years',
+    ],
+    function ($value) {
+        CRUD::addClause('where', 'age', 'LIKE', '%' . $value . '%');
+    });
+}
+
+
+
+
+
+    public static function addGenderFilter(string $label = 'Gender')
+{
+    CRUD::addFilter([
+        'name'  => 'gender',
+        'type'  => 'dropdown',
+        'label' => $label,
+    ], [
+        'male' => 'Male',
+        'female' => 'Female',
+    ], function ($value) {
+        CRUD::addClause('where', 'gender', $value);
+    });
+}
+
+
+
+
+
+
+
+
+
 }

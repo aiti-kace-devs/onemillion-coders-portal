@@ -62,10 +62,25 @@ trait UserFieldHelpers
         $this->addTitleColumn();
         $this->addGenderColumn();
         $this->addAgeColumn();
-        // $this->addPhoneColumn();
         $this->addCourseField();
+        $this->addConfirmedAdmissionColumn();
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
+        $this->addPhoneColumn();
+    }
 
+
+    public function setupShowStudentColumns(): void
+    {
+        $this->addFullNameColumn();
+        $this->addEmailColumn();
+        $this->addGenderColumn();
+        $this->addPhoneColumn();
+        $this->addAgeColumn();
+        $this->addCourseField();
+        $this->addConfirmedAdmissionColumn();
+        FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
+        CRUD::column('created_at');
+        
     }
 
     public function setupProfileColumns()
