@@ -6,6 +6,7 @@
 <x-backpack::menu-item title="Admission rejections" icon="la la-question" :link="backpack_url('admission-rejection')" />
 <x-backpack::menu-item title="App configs" icon="la la-question" :link="backpack_url('app-config')" />
 <x-backpack::menu-item title="Attendances" icon="la la-question" :link="backpack_url('attendance')" />
+<x-backpack::menu-item title="Scan or Generate QR Code" icon="la la-qrcode" :link="backpack_url('qr-scanner')" />
 <x-backpack::menu-item title="Branches" icon="la la-question" :link="backpack_url('branch')" />
 <x-backpack::menu-item title="Centres" icon="la la-question" :link="backpack_url('centre')" />
 <x-backpack::menu-item title="Courses" icon="la la-question" :link="backpack_url('course')" />

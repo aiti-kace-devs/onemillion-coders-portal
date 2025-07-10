@@ -19,7 +19,7 @@ trait AttendanceQRCodeTrait
             'date' => $data['date'],
             'online' => $data['online'] ?? false,
         ]);
-        $toAdd = $data['validity'] ?? 30;
+        $toAdd = isset($data['validity']) ? (int)$data['validity'] : 30;
         $expiration = Carbon::now()->addMinutes($toAdd)->timestamp;
         $issuer = 'attendance_app';
         $token = Token::create($dataToEncode, $secret, $expiration, $issuer);

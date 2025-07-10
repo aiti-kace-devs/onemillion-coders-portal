@@ -42,6 +42,15 @@ Route::group([
     Route::get('course/ajax-list', 'CourseCrudController@ajaxList');
     Route::get('course-session/ajax-list', 'CourseSessionCrudController@ajaxList');
     Route::post('user/bulk-admit', 'UserCrudController@bulkAdmit');
+    Route::get('qr-scanner', 'AttendanceCrudController@setupScanQrCodePage')->name('qr-scanner');
+
+    // Custom routes for AttendanceCrudController non-CRUD methods
+    Route::get('attendance/qr-scanner', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupScanQrCodePage'])->name('attendance.qr-scanner');
+    Route::post('attendance/generate_qrcode', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupGenerateQrCodeData'])->name('attendance.generate_qrcode');
+    Route::post('attendance/confirm_attendance', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupConfirmAttendance'])->name('attendance.confirm_attendance');
+    Route::post('attendance/record_attendance', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupRecordAttendance'])->name('attendance.record_attendance');
+    Route::get('attendance/view_attendance', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupViewAttendance'])->name('attendance.view_attendance');
+    Route::delete('attendance/remove_attendance/{id}', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupRemoveAttendance'])->name('attendance.remove_attendance');
 }); // this should be the absolute last line of this file
 
 /**
