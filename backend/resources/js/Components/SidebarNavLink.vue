@@ -15,11 +15,11 @@ const props = defineProps({
     type: Boolean,
   },
 });
-
+''
 const classes = computed(() =>
   props.active
-    ? "flex gap-x-2 p-1.5 items-center cursor-pointer bg-gray-700 text-white text-sm rounded-sm peer capitalize"
-    : "flex gap-x-2 p-1.5 items-center cursor-pointer peer capitalize text-gray-500 hover:text-gray-700"
+    ? "flex gap-2 p-1.5 items-center cursor-pointer capitalize bg-gray-700 rounded-sm text-white peer"
+    : "flex gap-2 p-1.5 items-center cursor-pointer capitalize text-gray-500 hover:text-gray-700 peer"
 );
 </script>
 
@@ -29,7 +29,7 @@ const classes = computed(() =>
       <slot />
 
       <div
-        class="flex-1 flex justify-between items-center hidden group-hover/sidebar-container:block group"
+        class="flex-1 flex justify-between items-center text-sm font-medium whitespace-nowrap group-[.sidebar-collapsed]/container:hidden group"
       >
         <p>{{ label }}</p>
       </div>

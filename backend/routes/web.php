@@ -458,16 +458,22 @@ Route::prefix('admins')
 
 // Student section routes
 Route::prefix('student')->name('student.')->group(function () {
-    // Profile route
-    Route::middleware(['auth:web'])->name('profile.')->group(function () {
-        Route::get('/profile', [ProfileController::class, 'edit'])->name('edit');
-        Route::patch('/profile', [ProfileController::class, 'update'])->name('update');
-        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('destroy');
+
+    Route::middleware(['auth:web'])->group(function () {
+        // Profile route
+        Route::prefix('profile')->name('profile.')->group(function () {
+            Route::get('/', [ProfileController::class, 'edit'])->name('edit');
+            Route::patch('/', [ProfileController::class, 'update'])->name('update');
+        });
+
+        // Application status route
+        Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
     });
 
     // Session route
     Route::middleware(['auth:web', 'is_admitted'])->prefix('session')->name('session.')->group(function () {
         Route::get('/', [StudentOperation::class, 'select_session_view'])->name('index');
+        Route::post('/', [StudentOperation::class, 'confirm_session'])->name('store');
         Route::delete('/{user}', [StudentOperation::class, 'delete_admission'])->name('destroy');
     });
 });

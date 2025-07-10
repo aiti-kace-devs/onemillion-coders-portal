@@ -33,23 +33,21 @@ const user = auth?.user || {};
 </script>
 
 <template>
-  <div class="flex min-h-screen">
+  <div
+    class="group/container min-h-screen flex gap-4"
+    :class="isSidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-not-collapsed'"
+  >
     <!-- Sidebar -->
     <div
-      class="group/sidebar-container relative"
+      class="fixed z-[1002] h-full w-2/3 lg:w-64 border-gray-200 bg-white duration-300 transition-transform ease-in-out lg:translate-x-0 group-[.sidebar-collapsed]/container:w-[70px] border-r shadow-md"
+      :class="isSidebarCollapsed ? '-translate-x-full max-lg:block' : 'translate-x-0 max-lg:block'"
       @mouseenter="isSidebarCollapsed = false"
       @mouseleave="isSidebarCollapsed = true"
       @click.away="isSidebarCollapsed = true"
     >
-      <aside
-        class="fixed h-full bg-white border-r shadow-md flex flex-col transition-all duration-300 ease-in-out z-[1002] overflow-hidden"
-        :class="{
-          'w-0 lg:w-[70px]': isSidebarCollapsed,
-          'w-2/3 lg:w-64': !isSidebarCollapsed,
-        }"
-        aria-label="Sidebar Navigation"
+      <div
+        class="h-[calc(100vh-100px)] overflow-hidden group-[.sidebar-collapsed]/container:overflow-visible"
       >
-        <!-- Logo -->
         <div
           class="p-2 lg:py-2 lg:px-0 flex items-start justify-between lg:flex-none w-full"
         >
@@ -60,7 +58,7 @@ const user = auth?.user || {};
                   ? '/assets/images/logo-short.png'
                   : '/assets/images/logo-bt.png'
               "
-              class="h-16 transition-all duration-300 mx-auto group-hover/sidebar-container:ml-2"
+              class="h-16 transition-all duration-300 mx-auto group-[.sidebar-not-collapsed]/container:ml-2"
             />
           </Link>
           <!-- Close button for sidebar (visible on small screens) -->
@@ -87,11 +85,7 @@ const user = auth?.user || {};
           </button>
         </div>
 
-        <!-- Navigation -->
-        <nav
-          class="flex-1 flex-col py-4 space-y-2 h-[calc(100vh-80px)] overflow-x-hidden overflow-y-auto"
-          role="navigation"
-        >
+        <nav class="grid w-full space-y-2">
           <SidebarNavLink
             :active="route().current('student.profile.edit')"
             :href="route('student.profile.edit')"
@@ -106,6 +100,14 @@ const user = auth?.user || {};
             :label="'Session'"
           >
             <span class="material-symbols-outlined"> calendar_clock </span>
+          </SidebarNavLink>
+
+          <SidebarNavLink
+            :href="route('student.application-status')"
+            :active="route().current('student.application-status')"
+            :label="'Application status'"
+          >
+            <span class="material-symbols-outlined"> contract </span>
           </SidebarNavLink>
 
           <SidebarNavLink
@@ -124,7 +126,7 @@ const user = auth?.user || {};
             <span class="material-symbols-outlined">ballot</span>
           </SidebarNavLink>
         </nav>
-      </aside>
+      </div>
     </div>
 
     <!-- Main Content -->
