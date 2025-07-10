@@ -85,7 +85,7 @@ const user = auth?.user || {};
           </button>
         </div>
 
-        <nav class="grid w-full space-y-2">
+        <nav class="mt-3 grid w-full space-y-2">
           <SidebarNavLink
             :active="route().current('student.profile.edit')"
             :href="route('student.profile.edit')"
