@@ -22,6 +22,11 @@ class CourseSession extends Model
         'link'
     ];
 
+    public function course()
+    {
+        return $this->belongsTo(Course::class, 'course_id', 'id');
+    }
+
     protected static function boot()
     {
         parent::boot();
@@ -30,7 +35,21 @@ class CourseSession extends Model
             if (empty($model->uuid)) {
                 $model->uuid = (string) Str::uuid();
             }
+
+            $model->setSessionName();
         });
+
+        static::updating(function ($model) {
+            $model->setSessionName();
+        });
+    }
+
+    public function setSessionName()
+    {
+        $course = $this->course()->first();
+        if ($course) {
+            $this->name = "{$course->course_name} - {$this->session} Session";
+        }
     }
 
     public function slotLeft()

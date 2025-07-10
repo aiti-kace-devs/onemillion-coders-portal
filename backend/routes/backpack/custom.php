@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\Admin\Api\CentreController;
 // --------------------------
 // Custom Backpack Routes
 // --------------------------
@@ -17,6 +17,9 @@ Route::group([
     'namespace' => 'App\Http\Controllers\Admin',
 ], function () { // custom admin routes
     Route::crud('admin', 'AdminCrudController');
+    // In routes/backpack/custom.php
+    Route::get('api/centre-by-branch', [CentreController::class, 'filterByBranch']);
+    Route::crud('role', 'RoleCrudController');
     Route::crud('admission-rejection', 'AdmissionRejectionCrudController');
     Route::crud('app-config', 'AppConfigCrudController');
     Route::crud('attendance', 'AttendanceCrudController');

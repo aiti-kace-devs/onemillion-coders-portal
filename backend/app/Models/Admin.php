@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+
+
+use App\Http\Controllers\Traits\CustomTimestamps;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -14,7 +17,7 @@ use Spatie\Permission\Traits\HasRoles;
 class Admin extends Authenticatable
 {
     use CrudTrait;
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, CustomTimestamps;
     protected $guard = 'admin';
 
     protected $guard_name = 'admin';
@@ -61,4 +64,13 @@ class Admin extends Authenticatable
     {
         $this->notify(new ResetPasswordNotification($token));
     }
+
+
+    public function getNameWithEmail()
+{
+    return $this->name . ' (' . $this->email . ')';
+}
+
+
+
 }

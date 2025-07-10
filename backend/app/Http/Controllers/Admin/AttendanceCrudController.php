@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\AttendanceRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use App\Helpers\WidgetHelper;
+use App\Helpers\FilterHelper;
+use App\Models\Course;
+use App\Helpers\CourseFieldHelpers;
 /**
  * Class AttendanceCrudController
  * @package App\Http\Controllers\Admin
@@ -13,6 +16,8 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class AttendanceCrudController extends CrudController
 {
+
+    use CourseFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -33,6 +38,14 @@ class AttendanceCrudController extends CrudController
         CRUD::setModel(\App\Models\Attendance::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/attendance');
         CRUD::setEntityNameStrings('attendance', 'attendances');
+
+        CRUD::denyAccess('create');
+        CRUD::denyAccess('delete');
+        CRUD::denyAccess('update');
+
+        $this->crud->operation('list', function () {
+            WidgetHelper::attendanceWidgets();
+        });
     }
 
     /**
@@ -43,12 +56,12 @@ class AttendanceCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
-
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+        CRUD::column('user_id')->label('Student')->linkTo('user.show');
+        $this->courseColumn('course', 'course_name');
+        CRUD::column('date');
+        $this->addCourseField();
+        FilterHelper::addDateRangeFilter('date', 'Date');
+        CRUD::enableExportButtons();
     }
 
     /**

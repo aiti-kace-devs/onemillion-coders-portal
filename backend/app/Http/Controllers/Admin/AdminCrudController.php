@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\AdminRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use App\Helpers\UserFieldHelpers;
+use App\Helpers\WidgetHelper;
 /**
  * Class AdminCrudController
  * @package App\Http\Controllers\Admin
@@ -13,6 +14,9 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class AdminCrudController extends CrudController
 {
+
+    use \App\SearchableCRUD;
+    use UserFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -29,6 +33,13 @@ class AdminCrudController extends CrudController
         CRUD::setModel(\App\Models\Admin::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/admin');
         CRUD::setEntityNameStrings('admin', 'admins');
+
+        $this->setSearchableColumns(['email', 'name']);
+        $this->setSearchResultAttributes(['id', 'email', 'name']);
+
+        $this->crud->operation('list', function () {
+            WidgetHelper::adminStatisticsWidget();
+        });
     }
 
     /**
@@ -39,8 +50,11 @@ class AdminCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb();
-        // Add any custom columns or logic here if needed
+        // CRUD::setFromDb();
+        $this->setupUserColumns();
+        $this->setupUserFilters();
+        CRUD::removeColumn('permissions');
+        CRUD::enableExportButtons();
     }
 
     /**
@@ -49,60 +63,29 @@ class AdminCrudController extends CrudController
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
-    protected function setupCreateOperation()
+
+    public function setupCreateOperation()
     {
-        CRUD::setValidation(AdminRequest::class);
-        CRUD::setFromDb();
-        // Add custom fields if needed
-        // Add a model event for after save to handle roles, permissions, courses, is_super
-        CRUD::addField([
-            'name' => 'roles',
-            'type' => 'select2_multiple',
-            'entity' => 'roles',
-            'model' => 'Spatie\\Permission\\Models\\Role',
-            'attribute' => 'name',
-            'pivot' => true,
-        ]);
-        CRUD::addField([
-            'name' => 'permissions',
-            'type' => 'select2_multiple',
-            'entity' => 'permissions',
-            'model' => 'Spatie\\Permission\\Models\\Permission',
-            'attribute' => 'name',
-            'pivot' => true,
-        ]);
-        CRUD::addField([
-            'name' => 'courses',
-            'type' => 'select2_multiple',
-            'entity' => 'assignedCourses',
-            'model' => 'App\\Models\\Course',
-            'attribute' => 'course_name',
-            'pivot' => true,
-        ]);
-        CRUD::addField([
-            'name' => 'is_super',
-            'type' => 'checkbox',
-            'label' => 'Super Admin',
-        ]);
-        // Hash password and handle custom logic after save
-        CRUD::operation('create', function () {
-            \Event::listen('eloquent.created: App\\Models\\Admin', function ($admin) {
-                if (request()->filled('password')) {
-                    $admin->password = \Illuminate\Support\Facades\Hash::make(request('password'));
-                }
-                $admin->is_super = request()->has('is_super') ? true : false;
-                $admin->save();
-                if (request()->has('roles')) {
-                    $admin->syncRoles(request('roles'));
-                }
-                if (request()->has('permissions')) {
-                    $admin->syncPermissions(request('permissions'));
-                }
-                if (request()->has('courses')) {
-                    $admin->assignedCourses()->sync(request('courses'));
-                }
-            });
-        });
+
+        // $this->crud->removeSaveAction('save_and_back');
+        // $this->crud->removeSaveAction('save_and_new');
+        // $this->crud->removeSaveAction('save_and_preview');
+        // $this->crud->removeSaveAction('save_and_edit');
+
+        $this->setupUserFields();
+        $this->crud->setValidation(AdminRequest::class);
+    }
+
+
+    public function setupShowOperation()
+    {
+        $this->setupUserColumns();
+        $entry = $this->crud->getCurrentEntry();
+
+        if ($entry->userProfile) {
+            $this->setupProfileColumns();
+        }
+        
     }
 
     /**
@@ -113,58 +96,7 @@ class AdminCrudController extends CrudController
      */
     protected function setupUpdateOperation()
     {
-        CRUD::setValidation(AdminRequest::class);
-        CRUD::setFromDb();
-        // Add custom fields if needed (same as in setupCreateOperation)
-        CRUD::addField([
-            'name' => 'roles',
-            'type' => 'select2_multiple',
-            'entity' => 'roles',
-            'model' => 'Spatie\\Permission\\Models\\Role',
-            'attribute' => 'name',
-            'pivot' => true,
-        ]);
-        CRUD::addField([
-            'name' => 'permissions',
-            'type' => 'select2_multiple',
-            'entity' => 'permissions',
-            'model' => 'Spatie\\Permission\\Models\\Permission',
-            'attribute' => 'name',
-            'pivot' => true,
-        ]);
-        CRUD::addField([
-            'name' => 'courses',
-            'type' => 'select2_multiple',
-            'entity' => 'assignedCourses',
-            'model' => 'App\\Models\\Course',
-            'attribute' => 'course_name',
-            'pivot' => true,
-        ]);
-        CRUD::addField([
-            'name' => 'is_super',
-            'type' => 'checkbox',
-            'label' => 'Super Admin',
-        ]);
-        // Hash password and handle custom logic after update
-        CRUD::operation('update', function () {
-            \Event::listen('eloquent.updated: App\\Models\\Admin', function ($admin) {
-                if (request()->filled('password')) {
-                    $admin->password = \Illuminate\Support\Facades\Hash::make(request('password'));
-                    $admin->save();
-                }
-                $admin->is_super = request()->has('is_super') ? true : false;
-                $admin->save();
-                if (request()->has('roles')) {
-                    $admin->syncRoles(request('roles'));
-                }
-                if (request()->has('permissions')) {
-                    $admin->syncPermissions(request('permissions'));
-                }
-                if (request()->has('courses')) {
-                    $admin->assignedCourses()->sync(request('courses'));
-                }
-            });
-        });
+        $this->setupUserFields(false);
     }
 
     // No need for setupDeleteOperation unless you want to add custom logic before/after delete

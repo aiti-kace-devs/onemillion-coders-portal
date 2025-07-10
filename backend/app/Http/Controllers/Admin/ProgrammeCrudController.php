@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\ProgrammeRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use App\Helpers\GeneralFieldsAndColumns;
+use App\Helpers\CourseFieldHelpers;
+use App\Helpers\WidgetHelper;
+use App\Helpers\FilterHelper;
 /**
  * Class ProgrammeCrudController
  * @package App\Http\Controllers\Admin
@@ -13,6 +16,8 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class ProgrammeCrudController extends CrudController
 {
+    use GeneralFieldsAndColumns;
+    use CourseFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -29,6 +34,10 @@ class ProgrammeCrudController extends CrudController
         CRUD::setModel(\App\Models\Programme::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/programme');
         CRUD::setEntityNameStrings('programme', 'programmes');
+
+        $this->crud->operation('list', function () {
+            WidgetHelper::programmeStatisticsWidget();
+        });
     }
 
     /**
@@ -39,12 +48,24 @@ class ProgrammeCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
+        CRUD::column('title')->type('textarea');
+        CRUD::column('duration');
+        CRUD::column('start_date');
+        CRUD::column('end_date');
+        FilterHelper::addBooleanColumn('status', 'status');
+        FilterHelper::addBooleanFilter('status', 'Status');
+        FilterHelper::addDateRangeFilter('created_at', 'Created At');
+        CRUD::enableExportButtons();
+    }
 
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+
+    protected function setupShowOperation()
+    {
+        CRUD::column('title')->type('textarea');
+        CRUD::column('duration');
+        CRUD::column('start_date');
+        CRUD::column('end_date');
+        CRUD::column('status')->type('boolean');
     }
 
     /**
@@ -56,12 +77,45 @@ class ProgrammeCrudController extends CrudController
     protected function setupCreateOperation()
     {
         CRUD::setValidation(ProgrammeRequest::class);
-        CRUD::setFromDb(); // set fields from db columns.
+                CRUD::addField([
+            'name' => 'title',
+            'label' => 'Title',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
 
-        /**
-         * Fields can be defined using the fluent syntax:
-         * - CRUD::field('price')->type('number');
-         */
+        CRUD::addField([
+    'name' => 'duration',
+    'label' => 'Duration',
+    'type' => 'select_from_array',
+    'options' => [
+        '1 Week' => '1 Week',
+        '2 Week' => '2 Weeks',
+        '3 Weeks' => '3 Weeks',
+        '4 Weeks' => '4 Weeks',
+        '1 Month' => '1 Month',
+        '2 Months' => '2 Months',
+        '3 Months' => '3 Months',
+        '4 Months' => '4 Months',
+    ],
+    'wrapper' => ['class' => 'form-group col-6'],
+]);
+
+        CRUD::addField([
+            'name' => 'start_date',
+            'label' => 'Start Date',
+            'type'      => 'date',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+        CRUD::addField([
+            'name' => 'end_date',
+            'label' => 'End Date',
+            'type'      => 'date',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
     }
 
     /**

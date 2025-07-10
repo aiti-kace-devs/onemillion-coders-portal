@@ -25,9 +25,13 @@ class AppConfigRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'name' => 'required|min:5|max:255'
+            'key' => 'required|string|min:3|max:255',
+            'value' => 'required|integer',
+            'type' => 'required|string|in:string,integer,boolean,array,json', // optionally restrict to known types
+            'is_cached' => 'nullable|boolean',
         ];
     }
+
 
     /**
      * Get the validation attributes that apply to the request.

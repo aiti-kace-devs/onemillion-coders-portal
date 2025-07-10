@@ -29,8 +29,9 @@ class AdminRequest extends FormRequest
 
         if ($isUpdate && $adminId) {
             $rules = [
-                'name' => 'required|string|max:255',
+                'name' => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z0-9\s.,_\'"-]+$/'],
                 'email' => 'required|string|email|max:255|unique:admins,email,' . $adminId,
+                'password' => 'required|string|min:8',
             ];
             if ($this->filled('password')) {
                 $rules['password'] = 'string|min:8';
@@ -40,7 +41,7 @@ class AdminRequest extends FormRequest
 
         // Default: create rules
         return [
-            'name' => 'required|string|max:255',
+            'name' => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z0-9\s.,_\'"-]+$/'],
             'email' => 'required|string|email|max:255|unique:admins',
             'password' => 'required|string|min:8',
         ];

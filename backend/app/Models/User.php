@@ -57,6 +57,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'shortlist' => 'boolean',
     ];
 
     public function isAdmitted()
@@ -126,4 +127,10 @@ class User extends Authenticatable
     {
         $this->notify(new ResetPasswordNotification($token));
     }
+
+    public function getNameWithEmail()
+{
+    return $this->name . ' (' . $this->email . ')';
+}
+
 }

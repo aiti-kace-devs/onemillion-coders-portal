@@ -16,6 +16,10 @@ class Branch extends Model
         'status'
     ];
 
+
+    protected $casts = [ // Add this for automatic type casting
+        'status' => 'boolean',
+    ];
     public function centre(){
         return $this->hasMany(Centre::class);
     }

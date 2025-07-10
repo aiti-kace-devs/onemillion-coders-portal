@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\UserRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use App\Helpers\UserFieldHelpers;
+use App\Helpers\WidgetHelper;
+use App\Helpers\FilterHelper;
+use App\Models\Course;
 /**
  * Class UserCrudController
  * @package App\Http\Controllers\Admin
@@ -13,6 +16,8 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class UserCrudController extends CrudController
 {
+    use \App\SearchableCRUD;
+    use UserFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -40,19 +45,12 @@ class UserCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
-
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
-
+        $this->setupStudentColumns();
         // Disable responsive table
         // CRUD::disableResponsiveTable();
-
+        FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
         // Add export options
         CRUD::enableExportButtons();
-
         // Add custom views
         $this->runCustomViews([
             'setupStudentsWithAdmissionView' => 'Students with Admission',

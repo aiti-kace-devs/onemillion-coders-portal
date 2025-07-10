@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\BranchRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use App\Helpers\GeneralFieldsAndColumns;
+use App\Helpers\FilterHelper;
+use App\Helpers\WidgetHelper;
 /**
  * Class BranchCrudController
  * @package App\Http\Controllers\Admin
@@ -13,6 +15,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class BranchCrudController extends CrudController
 {
+    use GeneralFieldsAndColumns;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -29,6 +32,10 @@ class BranchCrudController extends CrudController
         CRUD::setModel(\App\Models\Branch::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/branch');
         CRUD::setEntityNameStrings('branch', 'branches');
+
+        $this->crud->operation('list', function () {
+            WidgetHelper::branchStatisticsWidget();
+        });
     }
 
     /**
@@ -39,12 +46,17 @@ class BranchCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
+        CRUD::column('title');
+        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::column('created_at');
+        FilterHelper::addBooleanFilter('status');
+        FilterHelper::addDateRangeFilter('created_at', 'Created At');
+        CRUD::enableExportButtons();
+    }
 
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+    protected function setupShowOperation()
+    {
+        $this->setupListOperation();
     }
 
     /**
@@ -56,12 +68,8 @@ class BranchCrudController extends CrudController
     protected function setupCreateOperation()
     {
         CRUD::setValidation(BranchRequest::class);
-        CRUD::setFromDb(); // set fields from db columns.
-
-        /**
-         * Fields can be defined using the fluent syntax:
-         * - CRUD::field('price')->type('number');
-         */
+        CRUD::field('title')->type('text');
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
     }
 
     /**

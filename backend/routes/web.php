@@ -4,10 +4,12 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\StudentOperation;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Admin\RegisteredUserController;
+use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\AppConfigController;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\Traits\AttendanceQRCodeTrait;
+use App\Http\Controllers\Traits\AttendanceConfirmTrait;
+use App\Http\Controllers\Traits\AttendanceViewRemoveTrait;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CentreController;
 use App\Http\Controllers\ClassScheduleController;
@@ -213,13 +215,13 @@ Route::prefix('admins')
             });
 
             Route::middleware('permission:attendance.read')->group(function () {
-                Route::post('/confirm_attendance', [AttendanceController::class, 'confirmAttendance'])->middleware('permission:attendance.create');
+                Route::post('/confirm_attendance', [AttendanceConfirmTrait::class, 'confirmAttendance'])->middleware('permission:attendance.create');
                 Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])->name('viewAttendanceByDate');
-                Route::get('/remove-attendance/{id}', [AttendanceController::class, 'removeAttendance'])
+                Route::get('/remove-attendance/{id}', [AttendanceViewRemoveTrait::class, 'removeAttendance'])
                     ->name('remove-attendance')
                     ->middleware('permission:attendance.delete');
                 Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page'])->middleware('permission:attendance.create');
-                Route::post('/generate_qrcode', [AttendanceController::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
+                Route::post('/generate_qrcode', [AttendanceQRCodeTrait::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
                 Route::get('/scan_qrcode', [AdminController::class, 'scan_qrcode_page'])->middleware('permission:attendance.create');
                 Route::get('/verification', [AdminController::class, 'verification_page'])->name('verification');
                 Route::get('/verify_details', [AdminController::class, 'verifyDetails'])->name('verify-details');
@@ -506,6 +508,43 @@ Route::prefix('admins')
 // });
 
 // require __DIR__ . '/auth.php';
+
+
+
+Route::get('admin/roles/permissions', function (Request $request) {
+    $roleIds = $request->input('role_ids', []);
+
+    // Ensure $roleIds is an array
+    if (!is_array($roleIds)) {
+        $roleIds = [$roleIds];
+    }
+
+    // Filter out empty values and convert to integers
+    $roleIds = array_filter(array_map('intval', $roleIds));
+
+    if (empty($roleIds)) {
+        return response()->json([]);
+    }
+
+    try {
+        // Get unique permission IDs for the selected roles
+        $permissionIds = \Spatie\Permission\Models\Permission::whereHas('roles', function ($q) use ($roleIds) {
+            $q->whereIn('roles.id', $roleIds);
+        })->pluck('id')->unique()->values()->toArray();
+
+        // Convert to integers to ensure consistency
+        $permissionIds = array_map('intval', $permissionIds);
+
+        return response()->json($permissionIds);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Failed to fetch permissions'], 500);
+    }
+})->middleware(['web', 'admin']);
+
+
+
+
+
 
 require __DIR__ . '/backpack/custom.php';
 require __DIR__ . '/admin.php';

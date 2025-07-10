@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\CourseSessionRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use App\Helpers\WidgetHelper;
+use App\Helpers\FilterHelper;
+use App\Models\Course;
+use App\Helpers\CourseFieldHelpers;
 /**
  * Class CourseSessionCrudController
  * @package App\Http\Controllers\Admin
@@ -13,6 +16,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class CourseSessionCrudController extends CrudController
 {
+    use CourseFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -29,6 +33,10 @@ class CourseSessionCrudController extends CrudController
         CRUD::setModel(\App\Models\CourseSession::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-session');
         CRUD::setEntityNameStrings('course session', 'course sessions');
+
+        $this->crud->operation('list', function () {
+            WidgetHelper::courseSessionStatisticsWidget();
+        });
     }
 
     /**
@@ -39,14 +47,31 @@ class CourseSessionCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
-
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+        CRUD::column('name')->type('textarea');
+        CRUD::column('limit');
+        CRUD::column('course_time');
+        // $this->courseColumn('course', 'course_name');
+        CRUD::column('session');
+        CRUD::column('created_at');
+        // FilterHelper::addBooleanColumn('status', 'status');
+        $this->courseFilter('course_id');
+        $this->upcomingCourseSessionsFilter();
+        // FilterHelper::addBooleanFilter('status', 'Status');
+        FilterHelper::addDateRangeFilter('created_at', 'Created At');
+        CRUD::enableExportButtons();
     }
 
+
+    protected function setupShowOperation()
+    {
+        CRUD::column('name')->type('textarea');
+        CRUD::column('limit');
+        CRUD::column('course_time');
+        $this->courseColumn('course', 'course_name');
+        CRUD::column('session');
+        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::column('created_at');
+    }
     /**
      * Define what happens when the Create operation is loaded.
      *
@@ -56,12 +81,7 @@ class CourseSessionCrudController extends CrudController
     protected function setupCreateOperation()
     {
         CRUD::setValidation(CourseSessionRequest::class);
-        CRUD::setFromDb(); // set fields from db columns.
-
-        /**
-         * Fields can be defined using the fluent syntax:
-         * - CRUD::field('price')->type('number');
-         */
+        $this->courseSessionFields();
     }
 
     /**

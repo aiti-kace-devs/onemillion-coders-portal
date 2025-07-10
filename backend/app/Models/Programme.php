@@ -19,6 +19,10 @@ class Programme extends Model
         'status'
     ];
 
+    protected $casts = [
+        'status' => 'boolean',
+    ];
+
     public function centre(){
         return $this->belongsToMany(Centre::class, 'courses');
     }

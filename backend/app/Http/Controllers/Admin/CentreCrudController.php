@@ -5,7 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\CentreRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use App\Models\Branch;
+use App\Models\Centre;
+use App\Helpers\GeneralFieldsAndColumns;
+use Illuminate\Http\Request;
+use App\Helpers\FilterHelper;
+use App\Helpers\WidgetHelper;
 /**
  * Class CentreCrudController
  * @package App\Http\Controllers\Admin
@@ -13,6 +18,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class CentreCrudController extends CrudController
 {
+    use GeneralFieldsAndColumns;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -29,6 +35,10 @@ class CentreCrudController extends CrudController
         CRUD::setModel(\App\Models\Centre::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/centre');
         CRUD::setEntityNameStrings('centre', 'centres');
+
+        $this->crud->operation('list', function () {
+            WidgetHelper::centreStatisticsWidget();
+        });
     }
 
     /**
@@ -39,14 +49,20 @@ class CentreCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
-
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+        CRUD::column('title')->type('textarea');
+        CRUD::column('branch_id')->label('Branch')->linkTo('branch.show');
+        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::column('created_at');
+        FilterHelper::addBooleanFilter('status');
+        FilterHelper::addDateRangeFilter('created_at', 'Created At');
+        CRUD::enableExportButtons();
     }
 
+
+    protected function setupShowOperation()
+    {
+        $this->setupListOperation();
+    }
     /**
      * Define what happens when the Create operation is loaded.
      * 
@@ -56,12 +72,28 @@ class CentreCrudController extends CrudController
     protected function setupCreateOperation()
     {
         CRUD::setValidation(CentreRequest::class);
-        CRUD::setFromDb(); // set fields from db columns.
+        CRUD::addField([
+            'name' => 'title',
+            'label' => 'Title',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
 
-        /**
-         * Fields can be defined using the fluent syntax:
-         * - CRUD::field('price')->type('number');
-         */
+CRUD::addField([
+    'name'        => 'branch_id',
+    'label'       => 'Branch',
+    'type'        => 'select',
+    'entity'      => 'branch',
+    'model'       => Branch::class,
+    'attribute'   => 'title',
+    'allows_null' => true,
+    'default'     => null,
+    'wrapper'     => ['class' => 'form-group col-6'],
+]);
+
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+
     }
 
     /**
@@ -74,4 +106,22 @@ class CentreCrudController extends CrudController
     {
         $this->setupCreateOperation();
     }
+
+
+
+
+    public function filterByBranch(Request $request)
+    {
+        $term = $request->input('term');
+        $branchId = $request->input('branch_id');
+
+        return Centre::where('branch_id', $branchId)
+            ->when($term, fn($q) => $q->where('title', 'like', "%$term%"))
+            ->get()
+            ->map(fn($centre) => ['id' => $centre->id, 'text' => $centre->title]);
+    }
+
+
+
+    
 }

@@ -19,9 +19,14 @@ class Centre extends Model
         'status'
     ];
 
+    protected $casts = [
+        'status' => 'boolean',
+    ];
+
+
     public function branch()
     {
-        return $this->belongsTo(Branch::class);
+        return $this->belongsTo(Branch::class, 'branch_id', 'id');
     }
 
     public function programme()

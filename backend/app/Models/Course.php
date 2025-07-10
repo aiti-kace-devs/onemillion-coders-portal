@@ -14,6 +14,7 @@ class Course extends Model
     use \StatamicRadPack\Runway\Traits\HasRunwayResource;
 
     protected $fillable = [
+        'branch_id', 
         'centre_id',
         'programme_id',
         'course_name',
@@ -22,6 +23,10 @@ class Course extends Model
         'start_date',
         'end_date',
         'status',
+    ];
+
+    protected $casts = [
+        'status' => 'boolean',
     ];
 
     public function centre()
@@ -58,4 +63,45 @@ class Course extends Model
             return $query->whereIn('courses.id', $user->assignedCourses()->pluck('id')->toArray());
         }
     }
+
+
+    protected static function booted()
+{
+    static::saving(function ($course) {
+        $durations = [
+            '1 Week' => 5,
+            '1 week' => 5,
+            '2 Weeks' => 10,
+            '2 weeks' => 10,
+            '3 Weeks' => 15,
+            '3 weeks' => 15,
+            '4 Weeks' => 20,
+            '4 weeks' => 20,
+            '1 Month' => 20,
+            '1 month' => 20,
+            '2 Months' => 40,
+            '2 months' => 40,
+            '3 Months' => 90,
+            '3 months' => 90,
+            '4 Months' => 120,
+            '4 months' => 120,
+        ];
+        $course->no_of_days = $durations[$course->duration] ?? null;
+
+        $programme = $course->programme()->first();
+        $centre = $course->centre()->with('branch')->first();
+        $branch = $centre?->branch;
+
+        $course->course_name = $programme && $branch
+            ? "{$programme->title} - ({$branch->title})"
+            : $course->course_name;
+
+        $course->location = $branch?->title;
+    });
+}
+
+
+
+
+
 }

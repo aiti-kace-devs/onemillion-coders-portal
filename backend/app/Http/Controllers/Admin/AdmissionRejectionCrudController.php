@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\AdmissionRejectionRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use App\Helpers\WidgetHelper;
+use App\Helpers\FilterHelper;
+use App\Helpers\CourseFieldHelpers;
+use App\Models\Course;
 /**
  * Class AdmissionRejectionCrudController
  * @package App\Http\Controllers\Admin
@@ -13,6 +16,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class AdmissionRejectionCrudController extends CrudController
 {
+    use CourseFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -29,6 +33,10 @@ class AdmissionRejectionCrudController extends CrudController
         CRUD::setModel(\App\Models\AdmissionRejection::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/admission-rejection');
         CRUD::setEntityNameStrings('admission rejection', 'admission rejections');
+
+        $this->crud->operation('list', function () {
+            WidgetHelper::admissionRejectionWidgets();
+        });
     }
 
     /**
@@ -39,14 +47,24 @@ class AdmissionRejectionCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
-        CRUD::denyAccess(['create', 'update']);
 
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+        CRUD::column('user_id')->label('Student')->linkTo('user.show');
+        
+        CRUD::column('rejected_at');
+        $this->courseFilter('course_id');
+        $this->addCourseField();
+        FilterHelper::addDateRangeFilter('rejected_at', 'Rejected At');
+        CRUD::enableExportButtons();
+        CRUD::denyAccess(['create', 'update']);
     }
+
+
+    public function setupShowOperation()
+    {
+        $this->setupListOperation();
+        
+    }
+
 
     /**
      * Define what happens when the Create operation is loaded.
