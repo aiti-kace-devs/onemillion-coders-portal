@@ -6,7 +6,8 @@ use App\Http\Requests\OexCategoryRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\FilterHelper;
-// use App\Helpers\GeneralFieldsAndColumns;
+use App\Helpers\WidgetHelper;
+use App\Helpers\GeneralFieldsAndColumns;
 /**
  * Class OexCategoryCrudController
  * @package App\Http\Controllers\Admin
@@ -14,7 +15,7 @@ use App\Helpers\FilterHelper;
  */
 class OexCategoryCrudController extends CrudController
 {
-    // use GeneralFieldsAndColumns;
+    use GeneralFieldsAndColumns;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -31,6 +32,10 @@ class OexCategoryCrudController extends CrudController
         CRUD::setModel(\App\Models\OexCategory::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/category');
         CRUD::setEntityNameStrings('category', 'categories');
+
+        $this->crud->operation('list', function () {
+            WidgetHelper::categorytatisticsWidget();
+        });
     }
 
     /**

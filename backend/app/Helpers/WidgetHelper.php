@@ -12,6 +12,7 @@ use App\Models\Branch;
 use App\Models\Centre;
 use App\Models\User;
 use App\Models\CourseSession;
+use App\Models\OexCategory;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\DB;
 class WidgetHelper
@@ -162,6 +163,66 @@ class WidgetHelper
             'content' => $widgets,
         ]);
     }
+
+
+
+
+public static function categorytatisticsWidget()
+{
+    $totalCategories = OexCategory::count();
+    $activeCategories = OexCategory::where('status', 1)->count();
+    $inactiveCategories = OexCategory::where('status', 0)->count();
+    $recentCategories = OexCategory::whereDate('created_at', '>=', now()->subDays(30))->count();
+
+    $getPercent = function ($count) use ($totalCategories) {
+        return $totalCategories > 0 ? round(($count / $totalCategories) * 100) : 0;
+    };
+
+    Widget::add([
+        'type' => 'div',
+        'class' => 'row mb-4',
+        'content' => [
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($totalCategories),
+                'description' => 'Total Categories',
+                'value' => number_format($totalCategories),
+                'progressClass' => 'progress-bar bg-primary',
+                'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                'hint' => 'All registered Categories.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($activeCategories),
+                'description' => 'Active Categories',
+                'value' => number_format($activeCategories),
+                'progressClass' => 'progress-bar bg-success',
+                'hint' => 'Categories currently active.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($inactiveCategories),
+                'description' => 'Inactive Categories',
+                'value' => number_format($inactiveCategories),
+                'progressClass' => 'progress-bar bg-danger',
+                'hint' => 'Categories currently inactive.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($recentCategories),
+                'description' => 'New Categories (30 Days)',
+                'value' => number_format($recentCategories),
+                'progressClass' => 'progress-bar bg-primary',
+                'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                'hint' => 'Categories added in the last 30 days.',
+            ],
+        ],
+    ]);
+}
 
 
 
