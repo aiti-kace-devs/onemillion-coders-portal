@@ -476,6 +476,17 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::post('/', [StudentOperation::class, 'confirm_session'])->name('store');
         Route::delete('/{user}', [StudentOperation::class, 'delete_admission'])->name('destroy');
     });
+
+    Route::middleware('is_admitted:true')->group(function () {
+        // Profile route
+        Route::prefix('attendance')->name('attendance.')->group(function () {
+            Route::get('/', [AttendanceController::class, 'viewAttendance'])->name('show');
+            Route::post('/', [AttendanceController::class, 'recordAttendance'])->name('record');
+        });
+
+        // Application status route
+        Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
+    });
 });
 
 /* Student section routes */

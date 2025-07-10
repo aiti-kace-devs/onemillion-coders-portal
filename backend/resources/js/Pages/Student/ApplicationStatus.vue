@@ -38,7 +38,7 @@ function closeRevokeModal() {
 
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-        <div class="p-6 bg-white shadow sm:rounded-lg">
+        <div v-if="props.user_admission && props.user_admission.confirmed" class="p-6 bg-white shadow sm:rounded-lg">
           <div
             class="inline-flex space-x-2 items-center text-green-600 font-semibold text-lg"
           >

@@ -111,11 +111,11 @@ const user = auth?.user || {};
           </SidebarNavLink>
 
           <SidebarNavLink
-            :active="route().current('student.profile.edit')"
-            :href="route('student.profile.edit')"
-            :label="'Profile'"
+            :active="route().current('student.attendance.show')"
+            :href="route('student.attendance.show')"
+            :label="'Attendance'"
           >
-            <span class="material-symbols-outlined">person</span>
+            <span class="material-symbols-outlined">rule</span>
           </SidebarNavLink>
 
           <SidebarNavLink

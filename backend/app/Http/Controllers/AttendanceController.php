@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Attendance;
 use ReallySimpleJWT\Token;
 use App\Jobs\UpdateAttendanceOnSheetJob;
+use Inertia\Inertia;
 
 class AttendanceController extends Controller
 {
@@ -224,11 +225,18 @@ class AttendanceController extends Controller
     public function viewAttendance()
     {
         $userId = Auth::user()->userId;
-        $attendance = Attendance::select('attendances.*', 'courses.created_at as course_created', 'courses.course_name')
+        $attendances = Attendance::select('attendances.*', 'courses.created_at as course_created', 'courses.course_name')
             ->where('user_id', $userId)
             ->join('courses', 'courses.id', 'attendances.course_id')
             ->orderBy('date', 'desc')
             ->get();
+
+        $totalSessions = Attendance::select('attendances.*', 'courses.created_at as course_created', 'courses.course_name')
+            ->join('courses', 'courses.id', 'attendances.course_id')
+            ->orderBy('date', 'desc')
+            ->count();
+
+        return Inertia::render('Student/Attendance', compact('attendances', 'totalSessions'));
 
         return view('student.attendance', compact('attendance'));
     }
