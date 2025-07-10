@@ -132,6 +132,44 @@ class FilterHelper
 
 
 
+        public static function addGenericRelationshipColumn(string $name, string $label, string $pathName, string $columnName = null)
+{
+    CRUD::addColumn([
+        'name' => $name,
+        'label' => $label,
+        'type' => 'closure',
+        'function' => function($entry) use ($name, $pathName, $columnName) {
+            if ($entry->$name) {
+                $url = backpack_url($pathName . '/' . $entry->$name->id . '/show');
+                return '<a href="' . $url . '">' . e($entry->$name->$columnName) . '</a>';
+            }
+            return '';
+        },
+        'escaped' => false,
+    ]);
+}
+
+
+
+
+        public static function addCategoryColumn()
+{
+    CRUD::addColumn([
+        'name' => 'categoryRelation',
+        'label' => 'Category',
+        'type' => 'closure',
+        'function' => function($entry) {
+            if ($entry->categoryRelation) {
+                $url = backpack_url( 'category/' . $entry->categoryRelation->id . '/show');
+                return '<a href="' . $url . '">' . e($entry->categoryRelation->name) . '</a>';
+            }
+            return '';
+        },
+        'escaped' => false,
+    ]);
+}
+
+
 
 public static function addBooleanFilter(string $columnName, ?string $permissionName = null, ?string $label = null)
 {

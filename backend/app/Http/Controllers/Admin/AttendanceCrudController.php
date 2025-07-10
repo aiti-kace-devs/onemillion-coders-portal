@@ -57,7 +57,7 @@ class AttendanceCrudController extends CrudController
     protected function setupListOperation()
     {
         CRUD::column('user_id')->label('Student')->linkTo('user.show');
-        $this->courseColumn('course', 'course_name');
+        FilterHelper::addGenericRelationshipColumn('course', 'Course', 'course', 'course_name');
         CRUD::column('date');
         $this->addCourseField();
         FilterHelper::addDateRangeFilter('date', 'Date');

@@ -50,7 +50,7 @@ class CourseSessionCrudController extends CrudController
         CRUD::column('name')->type('textarea');
         CRUD::column('limit');
         CRUD::column('course_time');
-        // $this->courseColumn('course', 'course_name');
+        // FilterHelper::addGenericRelationshipColumn('course', 'Course', 'course', 'course_name');
         CRUD::column('session');
         CRUD::column('created_at');
         // FilterHelper::addBooleanColumn('status', 'status');
@@ -67,7 +67,7 @@ class CourseSessionCrudController extends CrudController
         CRUD::column('name')->type('textarea');
         CRUD::column('limit');
         CRUD::column('course_time');
-        $this->courseColumn('course', 'course_name');
+        FilterHelper::addGenericRelationshipColumn('course', 'Course', 'course', 'course_name');
         CRUD::column('session');
         FilterHelper::addBooleanColumn('status', 'status');
         CRUD::column('created_at');

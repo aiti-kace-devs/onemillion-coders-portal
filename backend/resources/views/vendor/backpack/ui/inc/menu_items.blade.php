@@ -12,7 +12,7 @@
 <x-backpack::menu-item title="Admission rejections" icon="la la-times-circle" :link="backpack_url('admission-rejection')" />
 <x-backpack::menu-item title="Attendances" icon="la la-calendar-check" :link="backpack_url('attendance')" />
 <x-backpack::menu-item title="Branches" icon="la la-code-branch" :link="backpack_url('branch')" />
-<x-backpack::menu-item title="Categories" icon="la la-folder" :link="backpack_url('oex-category')" />
+<x-backpack::menu-item title="Categories" icon="la la-folder" :link="backpack_url('category')" />
 <x-backpack::menu-item title="Centres" icon="la la-building" :link="backpack_url('centre')" />
 <x-backpack::menu-item title="Courses" icon="la la-book" :link="backpack_url('course')" />
 <x-backpack::menu-item title="Course sessions" icon="la la-clock" :link="backpack_url('course-session')" />

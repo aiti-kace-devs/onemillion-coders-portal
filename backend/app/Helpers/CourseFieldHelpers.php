@@ -199,24 +199,6 @@ CRUD::addField([
 }
 
 
-    protected function courseColumn(string $pathName, string $columnName = null)
-{
-    CRUD::addColumn([
-        'name' => 'course',
-        'label' => 'Course',
-        'type' => 'closure',
-        'function' => function($entry) use ($pathName, $columnName) {
-            if ($entry->course) {
-                $url = backpack_url($pathName . '/' . $entry->course->id . '/show');
-                return '<a href="' . $url . '">' . e($entry->course->$columnName) . '</a>';
-            }
-            return '-';
-        },
-        'escaped' => false,
-    ]);
-}
-
-
 
     public function addCourseField(): void
     {
