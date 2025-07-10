@@ -12,14 +12,14 @@
 <x-backpack::menu-item title="Admission rejections" icon="la la-times-circle" :link="backpack_url('admission-rejection')" />
 <x-backpack::menu-item title="Attendances" icon="la la-calendar-check" :link="backpack_url('attendance')" />
 <x-backpack::menu-item title="Branches" icon="la la-code-branch" :link="backpack_url('branch')" />
+<x-backpack::menu-item title="Categories" icon="la la-folder" :link="backpack_url('oex-category')" />
 <x-backpack::menu-item title="Centres" icon="la la-building" :link="backpack_url('centre')" />
 <x-backpack::menu-item title="Courses" icon="la la-book" :link="backpack_url('course')" />
 <x-backpack::menu-item title="Course sessions" icon="la la-clock" :link="backpack_url('course-session')" />
 <x-backpack::menu-item title="Email templates" icon="la la-envelope-open-text" :link="backpack_url('email-template')" />
 <x-backpack::menu-item title="Forms" icon="la la-wpforms" :link="backpack_url('form')" />
 <x-backpack::menu-item title="Form responses" icon="la la-poll" :link="backpack_url('form-response')" />
-<x-backpack::menu-item title="Oex categories" icon="la la-folder" :link="backpack_url('oex-category')" />
-<x-backpack::menu-item title="Oex exam masters" icon="la la-file-signature" :link="backpack_url('oex-exam-master')" />
+<x-backpack::menu-item title="Manage Exams" icon="la la-file-signature" :link="backpack_url('oex-exam-master')" />
 <x-backpack::menu-item title="Oex question masters" icon="la la-question-circle" :link="backpack_url('oex-question-master')" />
 <x-backpack::menu-item title="Oex results" icon="la la-chart-bar" :link="backpack_url('oex-result')" />
 <x-backpack::menu-item title="Periods" icon="la la-calendar-alt" :link="backpack_url('period')" />

@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\OexExamMasterRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use App\Helpers\UserFieldHelpers;
+use App\Helpers\WidgetHelper;
+use App\Helpers\FilterHelper;
+// use App\Helpers\GeneralFieldsAndColumns;
 /**
  * Class OexExamMasterCrudController
  * @package App\Http\Controllers\Admin
@@ -13,6 +16,9 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class OexExamMasterCrudController extends CrudController
 {
+    use \App\SearchableCRUD;
+    use UserFieldHelpers;
+    // use GeneralFieldsAndColumns;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -28,7 +34,7 @@ class OexExamMasterCrudController extends CrudController
     {
         CRUD::setModel(\App\Models\OexExamMaster::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/oex-exam-master');
-        CRUD::setEntityNameStrings('oex exam master', 'oex exam masters');
+        CRUD::setEntityNameStrings('manage exam', 'manage exams');
     }
 
     /**
@@ -39,7 +45,12 @@ class OexExamMasterCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
+        CRUD::column('title');
+        // CRUD::column('category')->label('Category')->linkTo('branch.show');
+        CRUD::column('passmark');
+        CRUD::column('exam_date');
+        CRUD::column('exam_duration');
+        FilterHelper::addBooleanColumn('status', 'status');
 
         /**
          * Columns can be defined using the fluent syntax:
