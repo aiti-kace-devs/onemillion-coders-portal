@@ -302,7 +302,9 @@
                     <button onclick="copyToClipBoard(this)" class="btn btn-info" data-link="${data['url']}">Click to copy link</button>
                     <button type="button" class="btn btn-info" id="maximizeQR">Maximize QR Code</button>
                 </div>
-                <h3>This Code Expires In <span  id="timer" class="js-timeout">${values['validity']}: 00</span>. A new code will re-generate automatically </h3>
+                <div class="text-center mb-2">
+                    <h3>This Code Expires In <span id="timer" class="js-timeout">${values['validity']}: 00</span>. A new code will re-generate automatically</h3>
+                </div>
                 <br>`)
             codeIinterval = setInterval(generateCode, 1000 * 60 * values['validity']);
             countdown();
