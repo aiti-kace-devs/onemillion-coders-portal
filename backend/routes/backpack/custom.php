@@ -44,6 +44,11 @@ Route::group([
     Route::post('user/bulk-admit', 'UserCrudController@bulkAdmit');
     Route::get('qr-scanner', 'AttendanceCrudController@setupScanQrCodePage')->name('qr-scanner');
 
+    // Bulk actions for UserCrudController
+    Route::post('user/send-bulk-email', 'UserCrudController@sendBulkEmail');
+    Route::post('user/send-bulk-sms', 'UserCrudController@sendBulkSMS');
+    Route::post('user/shortlist-students', 'UserCrudController@saveShortlistedStudents');
+
     // Custom routes for AttendanceCrudController non-CRUD methods
     Route::get('attendance/qr-scanner', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupScanQrCodePage'])->name('attendance.qr-scanner');
     Route::post('attendance/generate_qrcode', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupGenerateQrCodeData'])->name('attendance.generate_qrcode');

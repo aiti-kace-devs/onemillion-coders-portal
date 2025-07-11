@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\UserRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use App\Http\Controllers\Admin\Traits\BulkStudentActionsTrait;
+use Illuminate\Http\Request;
 
 /**
  * Class UserCrudController
@@ -13,6 +15,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class UserCrudController extends CrudController
 {
+    use BulkStudentActionsTrait;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -61,6 +64,9 @@ class UserCrudController extends CrudController
             'setupStudentsWithExamResultsView' => 'Students with Exam Results',
             'setupShortlistedStudentsView' => 'Shortlisted Students',
         ]);
+
+        // Add bulk action buttons
+        CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
     }
 
     /**
@@ -336,6 +342,10 @@ class UserCrudController extends CrudController
                 return 'N/A';
             }
         ]);
+
+        // Add row actions only for this view
+        CRUD::addButton('line', 'view_results', 'view', 'crud::buttons.view_results');
+        CRUD::addButton('line', 'reset_result', 'view', 'crud::buttons.reset_result');
     }
 
     /**
@@ -477,4 +487,6 @@ class UserCrudController extends CrudController
             ], 500);
         }
     }
+
+    // Remove the proxy methods for AJAX endpoints, as the trait methods are used directly.
 }
