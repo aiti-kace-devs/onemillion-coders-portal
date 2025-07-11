@@ -33,6 +33,7 @@ class User extends Authenticatable
         'mobile_no',
         'password',
         'userId',
+        'card_type',
         'ghcard',
         'gender',
         'network_type',

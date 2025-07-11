@@ -13,6 +13,10 @@ const props = defineProps({
     type: String,
     default: "2xl",
   },
+  bgColor: {
+    type: String,
+    default: "bg-white"
+  },
   closeable: {
     type: Boolean,
     default: true,
@@ -93,8 +97,8 @@ const maxWidthClass = computed(() => {
         >
           <div
             v-show="show"
-            class="mb-6 p-5 bg-white rounded-sm overflow-hidden shadow-sm transform transition-all sm:w-full sm:mx-auto"
-            :class="maxWidthClass"
+            class="mb-6 p-5 rounded-sm overflow-hidden shadow-sm transform transition-all sm:w-full sm:mx-auto"
+            :class="maxWidthClass, bgColor"
           >
             <div class="flex justify-between items-center mb-6">
               <p class="text-xl font-normal capitalize">{{ props.modalTitle }}</p>

@@ -21,7 +21,9 @@ use App\Jobs\AdmitStudentJob;
 use App\Jobs\CreateStudentAdmissionJob;
 use App\Jobs\TestSubmittedJob;
 use App\Models\AdmissionRejection;
+use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class StudentOperation extends Controller
 {
@@ -69,9 +71,13 @@ class StudentOperation extends Controller
     // application status
     public function application_status()
     {
-        $user_exam = user_exam::where('user_id', Auth::user()->id)->first();
-        $user_admission = UserAdmission::where('user_id', Auth::user()->userId)->first();
+        $user = Auth::user();
+
+        $user_exam = user_exam::where('user_id', $user->id)->first();
+        $user_admission = UserAdmission::where('user_id', $user->userId)->first();
         // dd($exam_submitted, $data);
+
+        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_exam', 'user_admission'));
 
         return view('student.application-status', compact('user_exam', 'user_admission'));
     }
@@ -334,56 +340,70 @@ class StudentOperation extends Controller
         ]);
     }
 
-    public function select_session_view($user_id)
+    public function select_session_view(Request $request)
     {
-        $admission = UserAdmission::where('user_id', $user_id)->firstOrFail();
-        $user = User::select('id', 'name', 'userId')->where('userId', $user_id)->first();
+        $user = $request->user()->only(['id', 'name', 'userId']);
+        $admission = UserAdmission::where('user_id', $user['userId'])->firstOrFail();
+        $course = Course::find($admission->course_id);
+        $sessions = CourseSession::where('course_id', $course->id)->get();
 
-        // if ($admission->confirmed) {
-        //     return view('student.session-select.index', [
-        //         'confirmed' => true,
-        //         'user' => $user,
-        //         'session' => CourseSession::where('id', $admission->session)->first(),
-        //     ]);
-        // }
-        $courseDetails = Course::find($admission->course_id);
-        $sessions = CourseSession::where('course_id', $courseDetails->id)->get();
-        // $sessions->each(function($s){
-        //     $used = UserAdmission::where('session', $s->id)->whereNotNull('confirmed')->count();
+        $sessions = $sessions->map(function ($session) {
+            $session->slotLeft = $session->slotLeft();
+            return $session;
+        });
 
-        // });
-        return view('student.session-select.index', [
-            'user' => $user,
-            'sessions' => $sessions,
-            'course' => $courseDetails,
-            'confirmed' => false,
-            'admission' => $admission,
-            'session' => CourseSession::where('id', $admission->session)->first(),
-        ]);
+        $session = CourseSession::where('id', $admission->session)->first();
+
+        return Inertia::render('Student/Session', compact(
+            'user',
+            'admission',
+            'course',
+            'sessions',
+            'session'
+        ));
     }
 
-    public function confirm_session(Request $request, $user_id)
+    public function confirm_session(Request $request)
     {
-        try {
-            $data = $request->validate([
-                'session_id' => 'required|exists:course_sessions,id',
-            ]);
+        $user = $request->user();
 
-            $admission = UserAdmission::where('user_id', $user_id)->firstOrFail();
+        $data = $request->validate(
+            [
+                'session_id' => 'required|exists:course_sessions,id',
+            ],
+            [],
+            [
+                'session_id' => 'session',
+            ]
+        );
+
+        try {
+            $admission = UserAdmission::where('user_id', $user->userId)->firstOrFail();
             $changingSession = $admission->confirmed && $admission->session;
 
             if ($changingSession && !config(ALLOW_SESSION_CHANGE, false)) {
-                return redirect(url('student/select-session/' . $user_id))->with([
+
+                return redirect()->back()->with([
                     'flash' => 'Unable to change session at this time. Contact administrator',
                     'key' => 'error',
                 ]);
+
+                // return redirect(url('student/select-session/' . $user->userId))->with([
+                //     'flash' => 'Unable to change session at this time. Contact administrator',
+                //     'key' => 'error',
+                // ]);
             }
 
             $courseDetails = Course::find($admission->course_id);
             $session = CourseSession::where('course_id', $courseDetails->id)->where('id', $data['session_id'])->first();
 
             if (!$session) {
-                return redirect(url('student/select-session/' . $user_id))->with([
+                // return redirect(url('student/select-session/' . $user->userId))->with([
+                //     'flash' => 'Unable to confirm session. Try again later',
+                //     'key' => 'error',
+                // ]);
+
+                return redirect()->back()->with([
                     'flash' => 'Unable to confirm session. Try again later',
                     'key' => 'error',
                 ]);
@@ -392,7 +412,12 @@ class StudentOperation extends Controller
             $slotLeft = $session->slotLeft();
 
             if ($slotLeft < 1) {
-                return redirect(url('student/select-session/' . $user_id))->with([
+                // return redirect(url('student/select-session/' . $user->userId))->with([
+                //     'flash' => 'Unable to confirm session. No slots available',
+                //     'key' => 'error',
+                // ]);
+
+                return redirect()->back()->with([
                     'flash' => 'Unable to confirm session. No slots available',
                     'key' => 'error',
                 ]);
@@ -407,16 +432,33 @@ class StudentOperation extends Controller
             if (!$changingSession) {
                 AdmitStudentJob::dispatch($admission);
             }
-            return redirect(url('student/select-session/' . $user_id))->with([
+            // return redirect(url('student/select-session/' . $user->userId))->with([
+            //     'flash' => $changingSession ? 'Session changed successfully' : 'Confirmation successful',
+            //     'key' => 'success',
+            // ]);
+
+            return redirect()->back()->with([
                 'flash' => $changingSession ? 'Session changed successfully' : 'Confirmation successful',
                 'key' => 'success',
             ]);
         } catch (\Exception $e) {
             Log::error($e);
-            return redirect(url('student/select-session/' . $user_id))->with([
+            // return redirect(url('student/select-session/' . $user->userId))->with([
+            //     'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
+            //     'key' => 'error',
+            // ]);
+
+            return redirect()->back()->with([
                 'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
                 'key' => 'error',
             ]);
+
+            // return response()->json([
+            //     'status' => [
+            //         'key' => 'error',
+            //         'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later'
+            //     ]
+            // ]);
         }
     }
 
@@ -521,21 +563,22 @@ class StudentOperation extends Controller
         }
     }
 
-    public function delete_admission($user_id, Request $request)
+    public function delete_admission(User $user)
     {
-        $delete_user_admission = UserAdmission::where('user_id', $user_id)->first();
+        $delete_user_admission = UserAdmission::where('user_id', $user->userId)->first();
 
         if ($delete_user_admission) {
             $delete_user_admission->delete();
+
             AdmissionRejection::create([
-                'user_id' => $user_id,
+                'user_id' => $user->userId,
                 'course_id' => $delete_user_admission->course_id,
                 'rejected_at' => now(),
             ]);
 
-            User::where('userId', $user_id)->update(['shortlist' => 0]);
+            $user->update(['shortlist' => 0]);
 
-            return response()->json(['message' => 'User admission and shortlisted deleted successfully.'], 200);
+            return Redirect::route('student.application-status');
         } else {
             return response()->json(['message' => 'User admission not found.'], 404);
         }
@@ -590,7 +633,7 @@ class StudentOperation extends Controller
                 'ghcard' => 'GHA-' . $request->ghcard,
             ]);
         } else {
-            $rules['ghcard'] = ['sometimes', 'string', 'max:20', Rule::unique('users','ghcard')->ignore($user->id)];
+            $rules['ghcard'] = ['sometimes', 'string', 'max:20', Rule::unique('users', 'ghcard')->ignore($user->id)];
         }
 
         $validatedData = $request->validate($rules, [], ['ghcard' => 'Card number']);

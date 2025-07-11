@@ -4,8 +4,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="apple-touch-icon" sizes="76x76" href="{{ asset('assets') }}/images/logo.png">
-    <link rel="icon" type="image/png" href="{{ asset('assets') }}/images/logo.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="{{ asset('assets') }}/images/logo-short.png">
+    <link rel="icon" type="image/png" href="{{ asset('assets') }}/images/logo-short.png">
     @cspMetaTag(\App\Helpers\BasePolicy::class)
     <meta property="csp-nonce" content="{{ csp_nonce() }}">
     <title inertia>{{ config('app.name', 'Laravel') }}</title>
@@ -14,7 +14,9 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
     <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300" />
+
+        
 
     <!-- CSS -->
     <link rel="stylesheet" type="text/css" href="/DataTables-1.13.8/css/jquery.dataTables.css">
@@ -42,6 +44,9 @@
     <script @nonce src="{{ asset('assets') }}/js/core/bootstrap.min.js"></script>
     <script @nonce src="{{ asset('assets') }}/plugins/toastr/toastr.min.js"></script>
     <script @nonce type="text/javascript" src="/DataTables-1.13.8/js/jquery.dataTables.js"></script>
+    <script @nonce src="{{ asset('assets/js/jquery.inputmask.bundle.min.js') }}"></script>
+    <script @nonce src="{{ asset('assets/js/easy.qrcode.min.js') }}"></script>
+
     {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"
         integrity="sha512-VEd+nq25CkR676O+pLBnDW09R7VQX9Mdiij052gVCp5yVH3jGtH70Ho/UUv4mJDsEdTvqRCFZg0NKGiojGnUCw=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script> --}}
