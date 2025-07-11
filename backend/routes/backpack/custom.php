@@ -31,7 +31,7 @@ Route::group([
     Route::crud('form', 'FormCrudController');
     Route::crud('form-response', 'FormResponseCrudController');
     Route::crud('category', 'OexCategoryCrudController');
-    Route::crud('oex-exam-master', 'OexExamMasterCrudController');
+    Route::crud('manage-exam', 'OexExamMasterCrudController');
     Route::crud('oex-question-master', 'OexQuestionMasterCrudController');
     Route::crud('oex-result', 'OexResultCrudController');
     Route::crud('period', 'PeriodCrudController');

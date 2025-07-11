@@ -19,7 +19,7 @@
 <x-backpack::menu-item title="Email templates" icon="la la-envelope-open-text" :link="backpack_url('email-template')" />
 <x-backpack::menu-item title="Forms" icon="la la-wpforms" :link="backpack_url('form')" />
 <x-backpack::menu-item title="Form responses" icon="la la-poll" :link="backpack_url('form-response')" />
-<x-backpack::menu-item title="Manage Exams" icon="la la-file-signature" :link="backpack_url('oex-exam-master')" />
+<x-backpack::menu-item title="Manage Exams" icon="la la-file-signature" :link="backpack_url('manage-exam')" />
 <x-backpack::menu-item title="Oex question masters" icon="la la-question-circle" :link="backpack_url('oex-question-master')" />
 <x-backpack::menu-item title="Oex results" icon="la la-chart-bar" :link="backpack_url('oex-result')" />
 <x-backpack::menu-item title="Periods" icon="la la-calendar-alt" :link="backpack_url('period')" />

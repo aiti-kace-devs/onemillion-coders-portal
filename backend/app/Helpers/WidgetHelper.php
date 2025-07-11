@@ -12,6 +12,7 @@ use App\Models\Branch;
 use App\Models\Centre;
 use App\Models\User;
 use App\Models\CourseSession;
+use App\Models\OexExamMaster;
 use App\Models\OexCategory;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\DB;
@@ -540,7 +541,63 @@ public static function programmeStatisticsWidget()
 
 
 
+    public static function manageExamStatisticsWidget()
+{
+    $totalExams = OexExamMaster::count();
+    $activeExams = OexExamMaster::where('status', 1)->count();
+    $inactiveExams = OexExamMaster::where('status', 0)->count();
+    $ongoingExams = OexExamMaster::whereDate('exam_date', '>=', now())
+        ->count();
 
+    $getPercent = function ($count) use ($totalExams) {
+        return $totalExams > 0 ? round(($count / $totalExams) * 100) : 0;
+    };
+
+    Widget::add([
+        'type' => 'div',
+        'class' => 'row mb-4',
+        'content' => [
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($totalExams),
+                'description' => 'Total Exams',
+                'value' => number_format($totalExams),
+                'progressClass' => 'progress-bar bg-primary',
+                'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                'hint' => 'All registered Exams.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($activeExams),
+                'description' => 'Active Exams',
+                'value' => number_format($activeExams),
+                'progressClass' => 'progress-bar bg-success',
+                'hint' => 'Exams marked as active.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($inactiveExams),
+                'description' => 'Inactive Exams',
+                'value' => number_format($inactiveExams),
+                'progressClass' => 'progress-bar bg-danger',
+                'hint' => 'Exams marked as inactive.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($ongoingExams),
+                'description' => 'Ongoing Exams',
+                'value' => number_format($ongoingExams),
+                'progressClass' => 'progress-bar bg-primary',
+                'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                'hint' => 'Exams currently in session.',
+            ],
+        ],
+    ]);
+}
 
 
 

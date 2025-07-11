@@ -79,7 +79,15 @@ class FilterHelper
 
 
 
-
+    public static function addOngoingExamsFilter(string $label): void
+{
+    CRUD::filter('ongoing')
+        ->type('simple')
+        ->label($label)
+        ->whenActive(function () {
+            CRUD::addClause('whereDate', 'exam_date', '>=', now()->toDateString());
+        });
+}
 
     public static function addDateRangeFilter($columnName, $label = null, array $pickerOptions = [])
     {
