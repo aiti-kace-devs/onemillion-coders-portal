@@ -12,7 +12,7 @@ trait CustomTimestamps
      */
     public function getCreatedAtColumn()
     {
-        return 'created_on';
+        return 'created_at';
     }
 
     /**
@@ -22,6 +22,6 @@ trait CustomTimestamps
      */
     public function getUpdatedAtColumn()
     {
-        return 'updated_on';
+        return 'updated_at';
     }
 }

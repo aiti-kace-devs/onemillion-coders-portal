@@ -84,7 +84,7 @@ class OexQuestionMasterCrudController extends CrudController
             'type' => 'textarea',
             'escaped' => false,
         ]);
-        CRUD::column('ans')->type('text');
+        CRUD::column('ans')->type('textarea');
         FilterHelper::addBooleanColumn('status', 'status');
 
         if ($examId) {
@@ -94,8 +94,13 @@ class OexQuestionMasterCrudController extends CrudController
         FilterHelper::addNullableColumnFilter('ans', 'Answers');
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
+        CRUD::enableExportButtons();
     }
 
+    protected function setupShowOperation()
+    {
+        $this->setupListOperation();
+    }
     /**
      * Define what happens when the Create operation is loaded.
      * 
