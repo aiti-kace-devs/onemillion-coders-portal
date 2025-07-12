@@ -55,6 +55,17 @@ class CourseSessionCrudController extends CrudController
         CRUD::column('created_at');
         // FilterHelper::addBooleanColumn('status', 'status');
         $this->courseFilter('course_id');
+        FilterHelper::addSelectFilter(
+            'session',
+            'Filter Session',
+            [
+                'Morning' => 'Morning',
+                'Afternoon' => 'Afternoon',
+                'Evening' => 'Evening',
+                'Fullday' => 'Fullday',
+            ],
+            'select2_multiple'
+        );
         $this->upcomingCourseSessionsFilter();
         // FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');

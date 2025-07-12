@@ -91,7 +91,7 @@ class OexQuestionMasterCrudController extends CrudController
             $this->crud->addClause('where', 'exam_id', $examId);
         }
 
-        FilterHelper::addNullableColumnFilter('ans', 'Answers');
+        FilterHelper::addNullableColumnFilter('ans', 'Filter Answers');
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
