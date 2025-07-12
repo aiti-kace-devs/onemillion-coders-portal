@@ -172,6 +172,7 @@ CRUD::addField([
         'Morning' => 'Morning',
         'Afternoon' => 'Afternoon',
         'Evening' => 'Evening',
+        'Fullday' => 'Fullday',
     ],
     'wrapper' => ['class' => 'form-group col-6'],
 ]);
