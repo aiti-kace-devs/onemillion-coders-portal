@@ -1,0 +1,83 @@
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: title
+            field:
+              type: text
+              required: true
+              validate:
+                - required
+          -
+            handle: content
+            field:
+              type: markdown
+              localizable: true
+          -
+            handle: sections
+            field:
+              type: replicator
+              display: Sections
+              instructions: 'The blocks used for this page'
+              sets:
+                new_set_group:
+                  display: 'New Set Group'
+                  sets:
+                    section:
+                      display: Section
+                      icon: addon-boxes-stack
+                      fields:
+                        -
+                          handle: name
+                          field:
+                            placeholder: 'Block Name'
+                            type: text
+                            display: Name
+                            instructions: 'The block name'
+                            validate:
+                              - required
+                              - alpha_dash
+                        -
+                          handle: caption
+                          field:
+                            type: text
+                            display: Caption
+                        -
+                          handle: description
+                          field:
+                            type: text
+                            display: Description
+                        -
+                          handle: section_items
+                          field:
+                            type: entries
+                            display: 'Section Items'
+                            instructions: 'The collection items for this block'
+                            sortable: false
+                            validate:
+                              - required
+                            listable: true
+  sidebar:
+    display: Sidebar
+    sections:
+      -
+        fields:
+          -
+            handle: slug
+            field:
+              type: slug
+              localizable: true
+              validate: 'max:200'
+          -
+            handle: parent
+            field:
+              type: entries
+              collections:
+                - pages
+              max_items: 1
+              listable: false
+              localizable: true
+title: Page

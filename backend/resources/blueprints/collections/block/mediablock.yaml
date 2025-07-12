@@ -1,0 +1,40 @@
+title: MediaBlock
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: title
+            field:
+              type: text
+              required: true
+              validate:
+                - required
+          -
+            handle: content
+            field:
+              max_files: 1
+              min_files: 1
+              mode: grid
+              container: public
+              type: assets
+              display: content
+              validate:
+                - required
+          -
+            import: details
+          -
+            import: button
+  sidebar:
+    display: Sidebar
+    sections:
+      -
+        fields:
+          -
+            handle: slug
+            field:
+              type: slug
+              localizable: true
+              validate: 'max:200'

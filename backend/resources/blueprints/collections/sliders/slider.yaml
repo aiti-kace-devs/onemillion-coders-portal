@@ -1,4 +1,3 @@
-hide: true
 tabs:
   main:
     display: Main
@@ -13,19 +12,24 @@ tabs:
               validate:
                 - required
           -
-            handle: items
+            handle: content
             field:
-              type: replicator
-              display: Items
-              sets:
-                new_set_group:
-                  display: 'New Set Group'
-                  sets:
-                    new_set:
-                      display: 'New Set'
-                      fields:
-                        -
-                          import: details
+              type: markdown
+              localizable: true
+          -
+            handle: media
+            field:
+              max_files: 1
+              container: google_cloud
+              type: assets
+              display: Media
+              folder: uploads
+          -
+            import: button
+            prefix: slider_
+          -
+            import: details
+            prefix: slider_
   sidebar:
     display: Sidebar
     sections:

@@ -1,0 +1,42 @@
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: logo
+            field:
+              type: replicator
+              display: Logo
+              sets:
+                new_set_group:
+                  display: 'New Set Group'
+                  sets:
+                    logo:
+                      display: Logo
+                      fields:
+                        -
+                          handle: name
+                          field:
+                            type: text
+                            display: Name
+                        -
+                          handle: caption
+                          field:
+                            type: text
+                            display: Caption
+                        -
+                          handle: media
+                          field:
+                            max_files: 1
+                            min_files: 1
+                            container: google_cloud
+                            folder: uploads
+                            type: assets
+                            display: Media
+                        -
+                          handle: link
+                          field:
+                            type: link
+                            display: Link

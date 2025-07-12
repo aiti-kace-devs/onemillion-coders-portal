@@ -1,0 +1,4 @@
+title: 'Google Cloud'
+disk: gcs
+allow_uploads: true
+create_folders: true

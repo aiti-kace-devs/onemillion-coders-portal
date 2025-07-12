@@ -62,11 +62,11 @@ RUN chmod +x /usr/local/bin/start-nginx
 # Application setup
 WORKDIR /var/www/html
 COPY composer.json composer.lock ./
-# COPY composerauth.json ./auth.json
+COPY composerauth.json ./auth.json
 
 # Install dependencies and optimize
-ENV CACHE_STORE=memcached
-ENV SESSION_DRIVER=memcached
+# ENV CACHE_STORE=memcached
+# ENV SESSION_DRIVER=memcached
 
 # Run composer install. This layer will only be rebuilt if composer.json/lock changes.
 # Add --no-scripts if you don't need composer scripts to run here (e.g., Laravel's post-install-cmd)
