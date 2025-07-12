@@ -13,6 +13,7 @@ use App\Models\Centre;
 use App\Models\User;
 use App\Models\CourseSession;
 use App\Models\OexExamMaster;
+use App\Models\OexQuestionMaster;
 use App\Models\OexCategory;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\DB;
@@ -598,6 +599,87 @@ public static function programmeStatisticsWidget()
         ],
     ]);
 }
+
+
+
+
+
+
+
+
+    public static function manageQuestionStatisticsWidget($examId = null)
+{
+    $questionQuery = OexQuestionMaster::query();
+    if ($examId) {
+        $questionQuery->where('exam_id', $examId);
+    }
+
+    $totalQuestions = $questionQuery->count();
+
+    $activeQuestion = (clone $questionQuery)->where('status', 1)->count();
+    $inactiveQuestion = (clone $questionQuery)->where('status', 0)->count();
+    $questionWithoutAnswers = (clone $questionQuery)->whereNull('ans')->count();
+
+    
+
+    $getPercent = function ($count) use ($totalQuestions) {
+        return $totalQuestions > 0 ? round(($count / $totalQuestions) * 100) : 0;
+    };
+
+    Widget::add([
+        'type' => 'div',
+        'class' => 'row mb-4',
+        'content' => [
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($totalQuestions),
+                'description' => 'Total Questions',
+                'value' => number_format($totalQuestions),
+                'progressClass' => 'progress-bar bg-primary',
+                'wrapper' => [
+                    'style' => 'background-color:rgb(40, 127, 167);',
+                ],
+                'hint' => 'All registered Questions.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($activeQuestion),
+                'description' => 'Active Questions',
+                'value' => number_format($activeQuestion),
+                'progressClass' => 'progress-bar bg-success',
+                'hint' => 'Questions marked as active.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($inactiveQuestion),
+                'description' => 'Inactive Questions',
+                'value' => number_format($inactiveQuestion),
+                'progressClass' => 'progress-bar bg-danger',
+                'hint' => 'Questions marked as inactive.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($questionWithoutAnswers),
+                'description' => 'Questions without Answers',
+                'value' => number_format($questionWithoutAnswers),
+                'progressClass' => 'progress-bar bg-primary',
+                'wrapper' => [
+                    'style' => 'background-color:rgb(40, 127, 167);',
+                ],
+                'hint' => 'Questions without Answers.',
+            ],
+        ],
+    ]);
+}
+
+
+
+
+
+
+
+
+
 
 
 

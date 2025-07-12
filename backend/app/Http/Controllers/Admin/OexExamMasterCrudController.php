@@ -58,6 +58,8 @@ class OexExamMasterCrudController extends CrudController
         FilterHelper::addOngoingExamsFilter('Ongoing Exams');
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
+        $this->crud->addButtonFromView('line', 'custom_action', 'custom_action', 'end');
+
         CRUD::enableExportButtons();
     }
 
@@ -134,4 +136,7 @@ class OexExamMasterCrudController extends CrudController
     {
         $this->setupCreateOperation();
     }
+
+
+
 }
