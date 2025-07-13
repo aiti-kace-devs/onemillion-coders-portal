@@ -116,8 +116,8 @@
 @push('after_scripts')
     <!-- jQuery (must be first) -->
     <script src="{{ url('assets/plugins/jquery/jquery.min.js') }}"></script>
-    <!-- Bootstrap Bundle -->
-    <script src="{{ url('assets/plugins/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <!-- Bootstrap 5 Bundle (includes Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Bootstrap Multiselect (CDN) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/1.1.2/js/bootstrap-multiselect.min.js"></script>
     <!-- QR Scanner and QR Code -->

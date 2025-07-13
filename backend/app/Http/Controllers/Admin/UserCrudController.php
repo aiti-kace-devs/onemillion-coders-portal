@@ -53,6 +53,9 @@ class UserCrudController extends CrudController
         // Disable responsive table
         // CRUD::disableResponsiveTable();
 
+        // Enable bulk operations
+        CRUD::enableBulkActions();
+
         // Add export options
         CRUD::enableExportButtons();
 
@@ -102,6 +105,9 @@ class UserCrudController extends CrudController
      */
     public function setupStudentsWithAdmissionView()
     {
+        // Enable bulk operations for this view
+        CRUD::enableBulkActions();
+
         // Filter students who have admission records with session
         CRUD::setQuery(\App\Models\User::whereHas('admissions', function ($query) {
             $query->whereNotNull('session');
@@ -163,6 +169,9 @@ class UserCrudController extends CrudController
      */
     public function setupStudentsWithoutExamResultsView()
     {
+        // Enable bulk operations for this view
+        CRUD::enableBulkActions();
+
         // Filter students who don't have exam results
         CRUD::setQuery(\App\Models\User::whereDoesntHave('examResults'));
 
@@ -204,6 +213,9 @@ class UserCrudController extends CrudController
      */
     public function setupStudentsYetToAcceptAdmissionView()
     {
+        // Enable bulk operations for this view
+        CRUD::enableBulkActions();
+
         // Filter students who have admission records but session_id is null
         CRUD::setQuery(\App\Models\User::whereHas('admissions', function ($query) {
             $query->whereNull('session');
@@ -276,6 +288,9 @@ class UserCrudController extends CrudController
      */
     public function setupStudentsWithExamResultsView()
     {
+        // Enable bulk operations for this view
+        CRUD::enableBulkActions();
+
         // Filter students who have exam results
         CRUD::setQuery(\App\Models\User::whereHas('examResults'));
 
@@ -353,6 +368,9 @@ class UserCrudController extends CrudController
      */
     public function setupShortlistedStudentsView()
     {
+        // Enable bulk operations for this view
+        CRUD::enableBulkActions();
+
         // Filter students who are shortlisted (shortlist = 1)
         CRUD::setQuery(\App\Models\User::where('shortlist', 1));
 
