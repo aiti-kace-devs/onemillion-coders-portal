@@ -311,28 +311,28 @@ class StudentOperation extends Controller
         return view('student.view_amswer', $data);
     }
 
-    public function reset_exam($exam_id, $user_id)
-    {
-        $user = User::findOrFail($user_id);
-        $user->created_at = Carbon::now()->toDateTimeString();
-        $user->updated_at = Carbon::now()->toDateTimeString();
-        $user->save();
+    // public function reset_exam($exam_id, $user_id)
+    // {
+    //     $user = User::findOrFail($user_id);
+    //     $user->created_at = Carbon::now()->toDateTimeString();
+    //     $user->updated_at = Carbon::now()->toDateTimeString();
+    //     $user->save();
 
-        user_exam::updateOrCreate(
-            [
-                'user_id' => $user_id,
-                'exam_id' => $exam_id,
-            ],
-            ['started' => null, 'submitted' => null, 'exam_joined' => 0, 'std_status' => 1],
-        );
+    //     user_exam::updateOrCreate(
+    //         [
+    //             'user_id' => $user_id,
+    //             'exam_id' => $exam_id,
+    //         ],
+    //         ['started' => null, 'submitted' => null, 'exam_joined' => 0, 'std_status' => 1],
+    //     );
 
-        Oex_result::where('user_id', $user_id)->where('exam_id', $exam_id)->delete();
+    //     Oex_result::where('user_id', $user_id)->where('exam_id', $exam_id)->delete();
 
-        return redirect(url('admin/manage_students'))->with([
-            'flash' => 'Exam reset successfully',
-            'key' => 'success',
-        ]);
-    }
+    //     return redirect(url('admin/manage_students'))->with([
+    //         'flash' => 'Exam reset successfully',
+    //         'key' => 'success',
+    //     ]);
+    // }
 
     public function select_session_view($user_id)
     {

@@ -56,6 +56,11 @@ Route::group([
     Route::post('attendance/record_attendance', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupRecordAttendance'])->name('attendance.record_attendance');
     Route::get('attendance/view_attendance', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupViewAttendance'])->name('attendance.view_attendance');
     Route::delete('attendance/remove_attendance/{id}', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupRemoveAttendance'])->name('attendance.remove_attendance');
+
+    // View Results for a student (admin panel, Backpack)
+    Route::get('admin_view_result/{id}', 'UserCrudController@viewResult');
+    // Reset Result for a student (admin panel, Backpack)
+    Route::get('reset-exam/{exam_id}/student/{user_id}', 'UserCrudController@resetResult')->name('results.reset');
 }); // this should be the absolute last line of this file
 
 /**

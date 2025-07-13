@@ -506,5 +506,68 @@ class UserCrudController extends CrudController
         }
     }
 
+    /**
+     * Show the exam result for a student (Backpack admin panel)
+     */
+    public function viewResult($id)
+    {
+        $student = \App\Models\User::find($id);
+        if (!$student) {
+            return back()->with(['flash' => 'Student not found.', 'key' => 'error']);
+        }
+
+        // Get the latest exam result for the student
+        $latestResult = $student->examResults()->latest()->first();
+        if (!$latestResult) {
+            return back()->with(['flash' => 'No exam results found for this student.', 'key' => 'error']);
+        }
+
+        // Get the related exam info
+        $exam = $latestResult->exam ?? null;
+        if (!$exam) {
+            return back()->with(['flash' => 'Exam information not found.', 'key' => 'error']);
+        }
+
+        $data = [
+            'result_info' => $latestResult,
+            'student_info' => $student,
+            'exam_info' => $exam,
+        ];
+        return view('vendor.backpack.crud.admin_view_result', $data);
+    }
+
+    /**
+     * Reset the exam result for a student (Backpack admin panel)
+     */
+    public function resetResult($exam_id, $user_id)
+    {
+        $user = \App\Models\User::findOrFail($user_id);
+        if (!$user) {
+            return back()->with(['flash' => 'Student not found.', 'key' => 'error']);
+        }
+        $exam = \App\Models\OexExamMaster::find($exam_id);
+        if (!$exam) {
+            return back()->with(['flash' => 'Exam not found.', 'key' => 'error']);
+        }
+
+        $user->updated_at = now();
+        $user->save();
+
+        \App\Models\UserExam::updateOrCreate(
+            [
+                'user_id' => $user_id,
+                'exam_id' => $exam_id,
+            ],
+            ['started' => null, 'submitted' => null, 'exam_joined' => 0, 'std_status' => 1],
+        );
+
+        \App\Models\OexResult::where('user_id', $user_id)->where('exam_id', $exam_id)->delete();
+
+        return redirect()->back()->with([
+            'flash' => 'Exam reset successfully',
+            'key' => 'success',
+        ]);
+    }
+
     // Remove the proxy methods for AJAX endpoints, as the trait methods are used directly.
 }
