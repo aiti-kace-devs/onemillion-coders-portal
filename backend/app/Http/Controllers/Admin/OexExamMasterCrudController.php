@@ -10,7 +10,7 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\OexCategory;
 use App\Helpers\CourseFieldHelpers;
-/** 
+/**
  * Class OexExamMasterCrudController
  * @package App\Http\Controllers\Admin
  * @property-read \Backpack\CRUD\app\Library\CrudPanel\CrudPanel $crud
@@ -27,7 +27,7 @@ class OexExamMasterCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -43,7 +43,7 @@ class OexExamMasterCrudController extends CrudController
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
@@ -55,6 +55,15 @@ class OexExamMasterCrudController extends CrudController
         CRUD::column('exam_date');
         CRUD::column('exam_duration');
         FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'question_link',
+            'label' => 'Number of Questions',
+            'type' => 'view',
+            'view' => 'vendor.backpack.crud.columns.count_link',
+            'count_field' => 'questions_count',
+            'route' => 'question-master',
+            'query_param' => 'exam_id',
+        ]);
         FilterHelper::addOngoingExamsFilter('Ongoing Exams');
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
@@ -71,7 +80,7 @@ class OexExamMasterCrudController extends CrudController
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
@@ -113,7 +122,7 @@ class OexExamMasterCrudController extends CrudController
             'type'      => 'number',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
- 
+
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
 
 
@@ -128,7 +137,7 @@ class OexExamMasterCrudController extends CrudController
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */
