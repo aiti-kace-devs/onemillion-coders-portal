@@ -79,7 +79,15 @@ class FilterHelper
 
 
 
-
+    public static function addOngoingExamsFilter(string $label): void
+{
+    CRUD::filter('ongoing')
+        ->type('simple')
+        ->label($label)
+        ->whenActive(function () {
+            CRUD::addClause('whereDate', 'exam_date', '>=', now()->toDateString());
+        });
+}
 
     public static function addDateRangeFilter($columnName, $label = null, array $pickerOptions = [])
     {
@@ -107,17 +115,13 @@ class FilterHelper
     public static function addBooleanColumn(string $columnName, string $permissionName, string $label = null)
     {
         $user = backpack_user();
-
         if (!$user) {
             return;
         }
-
         if (!$user->can($permissionName)) {
             return;
         }
-  
         $label = $label ?? strtoupper(str_replace('_', ' ', $columnName));
-
         CRUD::addColumn([
             'name' => $columnName,
             'label' => $label,
@@ -134,6 +138,44 @@ class FilterHelper
     }
 
 
+
+
+        public static function addGenericRelationshipColumn(string $name, string $label, string $pathName, string $columnName = null)
+{
+    CRUD::addColumn([
+        'name' => $name,
+        'label' => $label,
+        'type' => 'closure',
+        'function' => function($entry) use ($name, $pathName, $columnName) {
+            if ($entry->$name) {
+                $url = backpack_url($pathName . '/' . $entry->$name->id . '/show');
+                return '<a href="' . $url . '">' . e($entry->$name->$columnName) . '</a>';
+            }
+            return '';
+        },
+        'escaped' => false,
+    ]);
+}
+
+
+
+
+        public static function addCategoryColumn()
+{
+    CRUD::addColumn([
+        'name' => 'categoryRelation',
+        'label' => 'Category',
+        'type' => 'closure',
+        'function' => function($entry) {
+            if ($entry->categoryRelation) {
+                $url = backpack_url( 'category/' . $entry->categoryRelation->id . '/show');
+                return '<a href="' . $url . '">' . e($entry->categoryRelation->name) . '</a>';
+            }
+            return '';
+        },
+        'escaped' => false,
+    ]);
+}
 
 
 
@@ -249,4 +291,56 @@ public static function addBooleanFilter(string $columnName, ?string $permissionN
             CRUD::addClause('whereBetween', 'expires', [$from, $to]);
         });
     }
+
+
+
+
+
+
+
+
+    public static function addAgeRangeFilter(string $label = 'Age Group')
+{
+    CRUD::addFilter([
+        'name'  => 'age_range',
+        'type'  => 'dropdown',
+        'label' => $label,
+    ], [
+        '15-19' => '15 - 19 years',
+        '20-24' => '20 - 24 years',
+        '25-35' => '25 - 35 years',
+        '36-45' => '36 - 45 years',
+        '45+'   => '45+ years',
+    ],
+    function ($value) {
+        CRUD::addClause('where', 'age', 'LIKE', '%' . $value . '%');
+    });
+}
+
+
+
+
+
+    public static function addGenderFilter(string $label = 'Gender')
+{
+    CRUD::addFilter([
+        'name'  => 'gender',
+        'type'  => 'dropdown',
+        'label' => $label,
+    ], [
+        'male' => 'Male',
+        'female' => 'Female',
+    ], function ($value) {
+        CRUD::addClause('where', 'gender', $value);
+    });
+}
+
+
+
+
+
+
+
+
+
 }

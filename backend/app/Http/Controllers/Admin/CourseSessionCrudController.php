@@ -50,11 +50,22 @@ class CourseSessionCrudController extends CrudController
         CRUD::column('name')->type('textarea');
         CRUD::column('limit');
         CRUD::column('course_time');
-        // $this->courseColumn('course', 'course_name');
+        // FilterHelper::addGenericRelationshipColumn('course', 'Course', 'course', 'course_name');
         CRUD::column('session');
         CRUD::column('created_at');
         // FilterHelper::addBooleanColumn('status', 'status');
         $this->courseFilter('course_id');
+        FilterHelper::addSelectFilter(
+            'session',
+            'Filter Session',
+            [
+                'Morning' => 'Morning',
+                'Afternoon' => 'Afternoon',
+                'Evening' => 'Evening',
+                'Fullday' => 'Fullday',
+            ],
+            'select2_multiple'
+        );
         $this->upcomingCourseSessionsFilter();
         // FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
@@ -67,7 +78,7 @@ class CourseSessionCrudController extends CrudController
         CRUD::column('name')->type('textarea');
         CRUD::column('limit');
         CRUD::column('course_time');
-        $this->courseColumn('course', 'course_name');
+        FilterHelper::addGenericRelationshipColumn('course', 'Course', 'course', 'course_name');
         CRUD::column('session');
         FilterHelper::addBooleanColumn('status', 'status');
         CRUD::column('created_at');

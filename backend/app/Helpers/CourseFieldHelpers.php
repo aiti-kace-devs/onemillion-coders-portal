@@ -9,6 +9,7 @@ use App\Models\Centre;
 use App\Models\Programme;
 use App\Models\Branch;
 use App\Models\Course;
+use App\Models\UserAdmission;
 trait CourseFieldHelpers
 {
 
@@ -17,11 +18,11 @@ trait CourseFieldHelpers
 
 
 
-    public static function addOngoingCoursesFilter(): void
+    public static function addOngoingCoursesFilter(string $label): void
 {
     CRUD::filter('ongoing')
         ->type('simple')
-        ->label('Ongoing Courses')
+        ->label($label)
         ->whenActive(function () {
             CRUD::addClause('whereDate', 'start_date', '<=', now()->toDateString());
             CRUD::addClause('whereDate', 'end_date', '>=', now()->toDateString());
@@ -171,6 +172,7 @@ CRUD::addField([
         'Morning' => 'Morning',
         'Afternoon' => 'Afternoon',
         'Evening' => 'Evening',
+        'Fullday' => 'Fullday',
     ],
     'wrapper' => ['class' => 'form-group col-6'],
 ]);
@@ -198,24 +200,6 @@ CRUD::addField([
 }
 
 
-    protected function courseColumn(string $pathName, string $columnName = null)
-{
-    CRUD::addColumn([
-        'name' => 'course',
-        'label' => 'Course',
-        'type' => 'closure',
-        'function' => function($entry) use ($pathName, $columnName) {
-            if ($entry->course) {
-                $url = backpack_url($pathName . '/' . $entry->course->id . '/show');
-                return '<a href="' . $url . '">' . e($entry->course->$columnName) . '</a>';
-            }
-            return '-';
-        },
-        'escaped' => false,
-    ]);
-}
-
-
 
     public function addCourseField(): void
     {
@@ -235,6 +219,8 @@ CRUD::addField([
     } 
 
 
+
+
     public static function courseFilter(string $columnName): void
 {
     $coursesArray = Course::orderBy('course_name')->pluck('course_name', 'id')->toArray();
@@ -249,6 +235,124 @@ CRUD::addField([
 }
 
 
+
+
+    public static function addConfirmedAdmissionFilter(string $label = 'Admission Status')
+{
+    CRUD::addFilter([
+        'name'  => 'confirmed_admission',
+        'type'  => 'dropdown',
+        'label' => $label,
+    ],
+    [
+        1 => 'Admitted',
+        0 => 'Not Admitted',
+    ],
+    function ($value) {
+        if ($value == 1) {
+            CRUD::addClause('whereExists', function ($query) {
+                $query->select(\DB::raw(1))
+                    ->from('user_admission')
+                    ->whereColumn('user_admission.user_id', 'users.userId')
+                    ->whereNotNull('user_admission.confirmed')
+                    ->groupBy('user_admission.user_id')
+                    ->havingRaw('COUNT(*) = 1');
+            });
+        } elseif ($value == 0) {
+            CRUD::addClause('whereNotExists', function ($query) {
+                $query->select(\DB::raw(1))
+                    ->from('user_admission')
+                    ->whereColumn('user_admission.user_id', 'users.userId')
+                    ->whereNotNull('user_admission.confirmed');
+            });
+        }
+    });
+}
+
+
+
+
+    public static function addAdmittedAtFilter(string $label = 'Admitted At')
+{
+    CRUD::addFilter([
+        'name' => 'admitted_at',
+        'type' => 'date_range',
+        'label' => $label,
+        'date_range_options' => [
+            'format' => 'YYYY-MM-DD',
+            'showDropdowns' => true,
+        ]
+    ],
+    false,
+    function ($value) {
+        $dates = json_decode($value);
+
+        CRUD::addClause('whereExists', function ($query) use ($dates) {
+            $query->select(\DB::raw(1))
+                ->from('user_admission')
+                ->whereColumn('user_admission.user_id', 'users.userId')
+                ->whereNotNull('user_admission.confirmed')
+                ->whereBetween('user_admission.confirmed', [
+                    $dates->from,
+                    $dates->to,
+                ]);
+        });
+    });
+}
+
+
+protected static function getAdmissionLocations(): array
+{
+    return UserAdmission::query()
+        ->whereNotNull('location')
+        ->distinct()
+        ->pluck('location', 'location')
+        ->toArray();
+}
+
+
+
+    public static function addAdmissionLocationFilter(string $label = 'Admission Location')
+{
+    CRUD::addFilter([
+        'name'  => 'admission_location',
+        'type'  => 'dropdown',
+        'label' => $label,
+    ],
+    self::getAdmissionLocations(),
+    function ($value) {
+        CRUD::addClause('whereExists', function ($query) use ($value) {
+            $query->select(\DB::raw(1))
+                ->from('user_admission')
+                ->whereColumn('user_admission.user_id', 'users.userId')
+                ->where('user_admission.location', $value);
+        });
+    });
+}
+
+
+
+
+
+    public static function addConfirmedAdmissionColumn(string $label = 'Admitted')
+{
+    CRUD::addColumn([
+        'name' => 'confirmed_admission',
+        'label' => $label,
+        'type' => 'closure',
+        'function' => function ($entry) {
+            $count = UserAdmission::where('user_id', $entry->userId)
+                ->whereNotNull('confirmed')
+                ->count();
+
+            if ($count === 1) {
+                return '<span>✅</span>';
+            }
+            return '<span class="badge bg-danger">No</span>';
+        },
+        'escaped' => false,
+    ]);
+}
 
 
 

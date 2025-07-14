@@ -35,11 +35,17 @@ class UserCrudController extends CrudController
         CRUD::setModel(\App\Models\User::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/user');
         CRUD::setEntityNameStrings('student', 'students');
+
+        CRUD::denyAccess('create');
+        CRUD::denyAccess('update');
+        $this->crud->operation('list', function () {
+            WidgetHelper::userStatisticsWidget();
+        });
     }
 
     /**
      * Define what happens when the List operation is loaded.
-     *
+     * 
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
@@ -48,7 +54,13 @@ class UserCrudController extends CrudController
         $this->setupStudentColumns();
         // Disable responsive table
         // CRUD::disableResponsiveTable();
+        $this->courseFilter('registered_course');
+        $this->addConfirmedAdmissionFilter();
         FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
+        FilterHelper::addAgeRangeFilter();
+        FilterHelper::addGenderFilter();
+        $this->addAdmissionLocationFilter();
+        $this->addAdmittedAtFilter();
         // Add export options
         CRUD::enableExportButtons();
         // Add custom views
@@ -61,6 +73,10 @@ class UserCrudController extends CrudController
         ]);
     }
 
+    protected function setupShowOperation()
+    {
+        $this->setupShowStudentColumns();
+    }
     /**
      * Define what happens when the Create operation is loaded.
      *

@@ -56,9 +56,11 @@ class CourseCrudController extends CrudController
         FilterHelper::addBooleanColumn('status', 'status');
         // CRUD::column('programme_id')->label('Programme')->linkTo('programme.show');
         $this->courseFilter('id');
-        $this->addOngoingCoursesFilter();
+        FilterHelper::addDateRangeFilter('start_date', 'Start Date');
+        $this->addOngoingCoursesFilter('Ongoing Courses');
         FilterHelper::addBooleanFilter('status', 'Status');
-        FilterHelper::addDateRangeFilter('created_at', 'Created At');
+        FilterHelper::addDateRangeFilter('end_date', 'End Date');
+        // FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
     }
 

@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Api\CentreController;
+use App\Http\Controllers\Admin\OexQuestionMasterCrudController;
 // --------------------------
 // Custom Backpack Routes
 // --------------------------
@@ -19,6 +20,8 @@ Route::group([
     Route::crud('admin', 'AdminCrudController');
     // In routes/backpack/custom.php
     Route::get('api/centre-by-branch', [CentreController::class, 'filterByBranch']);
+    Route::get('admin/exam/{exam_id}/add-question', [OexQuestionMasterCrudController::class, 'addQuestion'])
+    ->name('admin.exam.add-question');    
     Route::crud('role', 'RoleCrudController');
     Route::crud('admission-rejection', 'AdmissionRejectionCrudController');
     Route::crud('app-config', 'AppConfigCrudController');
@@ -30,9 +33,9 @@ Route::group([
     Route::crud('email-template', 'EmailTemplateCrudController');
     Route::crud('form', 'FormCrudController');
     Route::crud('form-response', 'FormResponseCrudController');
-    Route::crud('oex-category', 'OexCategoryCrudController');
-    Route::crud('oex-exam-master', 'OexExamMasterCrudController');
-    Route::crud('oex-question-master', 'OexQuestionMasterCrudController');
+    Route::crud('category', 'OexCategoryCrudController');
+    Route::crud('manage-exam', 'OexExamMasterCrudController');
+    Route::crud('question-master', 'OexQuestionMasterCrudController');
     Route::crud('oex-result', 'OexResultCrudController');
     Route::crud('period', 'PeriodCrudController');
     Route::crud('programme', 'ProgrammeCrudController');

@@ -14,4 +14,9 @@ class Oex_category extends Model
     protected $primaryKey="id";
 
     protected $fillable=['name','status'];
+
+
+    protected $casts = [
+        'status' => 'boolean',
+    ];
 }

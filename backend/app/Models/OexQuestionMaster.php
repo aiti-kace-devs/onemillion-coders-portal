@@ -11,12 +11,6 @@ class OexQuestionMaster extends Model
     use CrudTrait;
     use HasFactory;
 
-    /*
-    |--------------------------------------------------------------------------
-    | GLOBAL VARIABLES
-    |--------------------------------------------------------------------------
-    */
-
     protected $table = 'oex_question_masters';
     // protected $primaryKey = 'id';
     // public $timestamps = false;
@@ -24,33 +18,26 @@ class OexQuestionMaster extends Model
     // protected $fillable = [];
     // protected $hidden = [];
 
-    /*
-    |--------------------------------------------------------------------------
-    | FUNCTIONS
-    |--------------------------------------------------------------------------
-    */
+    protected $fillable=['exam_set_id','questions','ans', 'options','status','exam_id'];
+    protected $casts = [
+        'status' => 'boolean',
+        'options' => 'array',
+    ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | RELATIONS
-    |--------------------------------------------------------------------------
-    */
+    public function exam()
+    {
+        return $this->belongsTo(OexExamMaster::class, 'exam_id', 'id');
+    }
 
-    /*
-    |--------------------------------------------------------------------------
-    | SCOPES
-    |--------------------------------------------------------------------------
-    */
 
-    /*
-    |--------------------------------------------------------------------------
-    | ACCESSORS
-    |--------------------------------------------------------------------------
-    */
+    public function setOptionsAttribute($value)
+    {
+        $this->attributes['options'] = json_encode($value);
+    }
 
-    /*
-    |--------------------------------------------------------------------------
-    | MUTATORS
-    |--------------------------------------------------------------------------
-    */
+    public function getOptionsAttribute($value)
+    {
+        return json_decode($value, true);
+    }
+
 }

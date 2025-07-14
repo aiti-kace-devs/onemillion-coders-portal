@@ -6,6 +6,7 @@ use App\Http\Requests\AppConfigRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\GeneralFieldsAndColumns;
+use App\Helpers\FilterHelper;
 /**
  * Class AppConfigCrudController
  * @package App\Http\Controllers\Admin
@@ -43,8 +44,10 @@ class AppConfigCrudController extends CrudController
         CRUD::column('key')->type('textarea')->label('Name');
         CRUD::column('type')->type('text')->label('Type');
         CRUD::column('value')->label('Value');
-        CRUD::column('is_cached')->label('Is Cached');
+        FilterHelper::addBooleanColumn('is_cached', 'Is Cached');
         CRUD::column('created_at');
+        FilterHelper::addBooleanFilter('is_cached');
+        FilterHelper::addDateRangeFilter('created_at', 'Created At');
     }
 
     /**
