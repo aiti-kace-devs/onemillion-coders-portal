@@ -1,5 +1,0 @@
-{
-    "require": {
-        "spatie/laravel-google-cloud-storage": "^2.3"
-    }
-}
