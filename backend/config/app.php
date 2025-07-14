@@ -1,5 +1,8 @@
 <?php
 
+use Illuminate\Support\Str;
+
+
 return [
 
     /*
@@ -235,4 +238,9 @@ return [
     ],
 
     'version' => env('APP_VERSION', '1.0.0'),
+    'super_admin_email' => env('SUPER_ADMIN_EMAIL', 'admin@test.com'),
+    'super_admin_password' => env('SUPER_ADMIN_PASSWORD', Str::random()),
+    'super_admin_name' => env('SUPER_ADMIN_NAME', 'Super Admin'),
+
+
 ];
