@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
     libmemcached-dev \
     libzip-dev \
     libssl-dev \
+    mysql-client \
     libpq-dev zlib1g-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath pcntl posix \
