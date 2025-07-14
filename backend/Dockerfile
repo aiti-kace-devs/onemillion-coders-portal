@@ -76,7 +76,7 @@ RUN composer install --no-dev --optimize-autoloader --no-scripts \
 COPY . .
 
 RUN chown -R www-data:www-data /var/www/html \
-    && mkdir -p  bootstrap/cache storage/framework/sessions storage/app/public/basset storage/logs \
+    && mkdir -p  bootstrap/cache storage/framework/sessions storage/app/public/basset storage/logs storage/statamic \
     && mkdir -p  bootstrap/cache storage/framework/views \
     && mkdir -p  bootstrap/cache storage/framework/cache \
     && chmod -R 775 storage bootstrap/cache
