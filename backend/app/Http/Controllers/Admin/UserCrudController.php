@@ -14,7 +14,9 @@ use App\Models\CourseSession;
 use App\Models\UserAdmission;
 use App\Models\Course;
 use App\Models\User;
-
+use App\Helpers\UserFieldHelpers;
+use App\Helpers\WidgetHelper;
+use App\Helpers\FilterHelper;
 /**
  * Class UserCrudController
  * @package App\Http\Controllers\Admin
@@ -25,6 +27,8 @@ class UserCrudController extends CrudController
     use BulkStudentActionsTrait;
     use ShortlistActionsTrait;
     use ShortlistRowActionsTrait;
+    use \App\SearchableCRUD;
+    use UserFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -42,6 +46,12 @@ class UserCrudController extends CrudController
         CRUD::setModel(\App\Models\User::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/user');
         CRUD::setEntityNameStrings('student', 'students');
+
+        // CRUD::denyAccess('create');
+        // CRUD::denyAccess('update');
+        $this->crud->operation('list', function () {
+            WidgetHelper::userStatisticsWidget();
+        });
     }
 
     /**
@@ -54,11 +64,13 @@ class UserCrudController extends CrudController
     {
         CRUD::setFromDb(); // set columns from db columns.
 
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
-
+        $this->courseFilter('registered_course');
+        $this->addConfirmedAdmissionFilter();
+        FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
+        FilterHelper::addAgeRangeFilter();
+        FilterHelper::addGenderFilter();
+        $this->addAdmissionLocationFilter();
+        $this->addAdmittedAtFilter();
         // Disable responsive table
         // CRUD::disableResponsiveTable();
 
