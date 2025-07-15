@@ -62,7 +62,8 @@ class UserCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
+        // CRUD::setFromDb(); // set columns from db columns.
+        $this->setupStudentColumns();
 
         $this->courseFilter('registered_course');
         $this->addConfirmedAdmissionFilter();
