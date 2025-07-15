@@ -102,7 +102,7 @@ class AdminCrudController extends CrudController
     // No need for setupDeleteOperation unless you want to add custom logic before/after delete
     // Keep only custom endpoints that are not standard CRUD
     // Toggle is_super admin status
-    public function is_super_admin_status($id)
+    public function setupIsSuperAdminStatus($id)
     {
         $admin = \App\Models\Admin::where('id', $id)->first();
         $admin->is_super = $admin->is_super == 1 ? 0 : 1;
@@ -110,13 +110,13 @@ class AdminCrudController extends CrudController
     }
 
     // Get admin's assigned courses
-    public function getAdminCourses(\App\Models\Admin $admin)
+    public function setupGetAdminCourses(\App\Models\Admin $admin)
     {
         return response()->json($admin->assignedCourses->pluck('id'));
     }
 
     // Update admin's assigned courses
-    public function updateAdminCourses(\Illuminate\Http\Request $request)
+    public function setupUpdateAdminCourses(\Illuminate\Http\Request $request)
     {
         $request->validate([
             'admin_id' => 'required|exists:admins,id',

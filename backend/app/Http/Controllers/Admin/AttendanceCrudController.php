@@ -9,6 +9,7 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\Course;
 use App\Helpers\CourseFieldHelpers;
+
 /**
  * Class AttendanceCrudController
  * @package App\Http\Controllers\Admin
@@ -93,36 +94,46 @@ class AttendanceCrudController extends CrudController
     }
 
     // Example: Add endpoints or methods for trait logic
-    public function generateQRCodeData(AttendanceRequest $request)
+    public function setupGenerateQrCodeData(AttendanceRequest $request)
     {
-        $data = $request->validate($request->rulesForQRCode());
+        $data = $request->validated();
         return response()->json($this->generateQRCodeDataLogic($data));
     }
 
-    public function recordAttendance(AttendanceRequest $request)
+    public function setupRecordAttendance(AttendanceRequest $request)
     {
-        $data = $request->validate($request->rulesForRecordAttendance());
+        $data = $request->validated();
         $result = $this->recordAttendanceLogic($data['scanned_data']);
         return response()->json($result);
     }
 
-    public function confirmAttendance(AttendanceRequest $request)
+    public function setupConfirmAttendance(AttendanceRequest $request)
     {
-        $data = $request->validate($request->rulesForConfirmAttendance());
+        $data = $request->validated();
         $result = $this->confirmAttendanceLogic($data, auth()->user());
         return response()->json($result);
     }
 
-    public function viewAttendance()
+    public function setupViewAttendance()
     {
         $userId = auth()->user()->userId;
         $attendance = $this->viewAttendanceLogic($userId);
         return response()->json(['attendance' => $attendance]);
     }
 
-    public function removeAttendance($id)
+    public function setupRemoveAttendance($id)
     {
         $result = $this->removeAttendanceLogic($id);
         return response()->json($result);
+    }
+
+    public function setupScanQrCodePage()
+    {
+        // $courses = auth('admin')->user()->assignedCourses()->get();
+        $courses = Course::myAssignedCourses()->get()->groupBy('location');
+
+        return view('vendor.backpack.ui.qr-scanner', [
+            'groupedCourses' => $courses,
+        ]);
     }
 }

@@ -24,41 +24,30 @@ class AttendanceRequest extends FormRequest
      */
     public function rules()
     {
-        return [
-            'user_id' => 'required|exists:users,userId',
-            'course_id' => 'required|exists:courses,id',
-            'date' => 'required|date|before_or_equal:' . now()->toDateString(),
-        ];
-    }
-
-    /**
-     * Validation for generating QR code data.
-     */
-    public function rulesForQRCode()
-    {
-        return [
-            'course_id' => 'required|exists:courses,id',
-            'date' => 'required|date|before_or_equal:' . now()->toDateString(),
-            'online' => 'sometimes',
-            'validity' => 'sometimes|integer|min:1',
-        ];
-    }
-
-    /**
-     * Validation for recording attendance (scanned_data).
-     */
-    public function rulesForRecordAttendance()
-    {
-        return [
-            'scanned_data' => 'required|string',
-        ];
-    }
-
-    /**
-     * Validation for confirming attendance.
-     */
-    public function rulesForConfirmAttendance()
-    {
+        // If this is a QR code generation request
+        if ($this->routeIs('attendance.generate_qrcode')) {
+            return [
+                'course_id' => 'required|exists:courses,id',
+                'date' => 'required|date|before_or_equal:' . now()->toDateString(),
+                'online' => 'sometimes',
+                'validity' => 'sometimes|integer|min:1',
+            ];
+        }
+        // If this is a record attendance request
+        if ($this->routeIs('attendance.record_attendance')) {
+            return [
+                'scanned_data' => 'required|string',
+            ];
+        }
+        // If this is a confirm attendance request
+        if ($this->routeIs('attendance.confirm_attendance')) {
+            return [
+                'user_id' => 'required|exists:users,userId',
+                'course_id' => 'required|exists:courses,id',
+                'date' => 'required|date|before_or_equal:' . now()->toDateString(),
+            ];
+        }
+        // Default: CRUD validation
         return [
             'user_id' => 'required|exists:users,userId',
             'course_id' => 'required|exists:courses,id',
