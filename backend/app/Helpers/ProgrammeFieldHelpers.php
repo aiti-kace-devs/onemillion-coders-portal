@@ -51,6 +51,24 @@ trait ProgrammeFieldHelpers
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
+        CRUD::addField([
+            'name' => 'course_category_id',
+            'label' => 'Course Category',
+            'type' => 'select2',
+            'entity' => 'category',
+            'attribute' => 'title',
+            'model' => CourseCategory::class,
+            'allows_null' => false,
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+        MediaHelper::getMediaSelector(
+            name: 'coverImage',
+            disk_options: MediaHelper::getArticleImagesDiskOptions(),
+            label: 'Cover Image',
+            value: $entry->coverImage->file ?? '',
+        );
+
 
         CRUD::addField([
             'name' => 'description',
@@ -58,7 +76,6 @@ trait ProgrammeFieldHelpers
             'type'      => 'textarea',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
-
 
 
         CRUD::addField([
@@ -83,7 +100,7 @@ trait ProgrammeFieldHelpers
         //         '3 Months' => '3 Months',
         //         '4 Months' => '4 Months',
         //     ],
-        //     'wrapper' => ['class' => 'form-group col-6'],
+            // 'wrapper' => ['class' => 'form-group col-6'],
         // ]);
 
         CRUD::addField([
@@ -100,23 +117,6 @@ trait ProgrammeFieldHelpers
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
-        CRUD::addField([
-            'name' => 'course_category_id',
-            'label' => 'Course Category',
-            'type' => 'select2',
-            'entity' => 'category',
-            'attribute' => 'title',
-            'model' => CourseCategory::class,
-            'allows_null' => false,
-            'wrapper' => ['class' => 'form-group col-6'],
-        ]);
-
-        MediaHelper::getMediaSelector(
-            name: 'coverImage',
-            disk_options: MediaHelper::getArticleImagesDiskOptions(),
-            label: 'Cover Image',
-            value: $entry->coverImage->file ?? ''
-        );
 
         CRUD::addField([
             'name' => 'overview',
@@ -127,7 +127,7 @@ trait ProgrammeFieldHelpers
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
 
-        $this->addFieldsToTab('General Info', true, ['title', 'sub_title', 'description', 'status', 'course_category_id']);
+        $this->addFieldsToTab('General Info', true, ['title', 'sub_title', 'coverImage', 'course_category_id', 'status', 'description']);
         $this->addFieldsToTab('Course Duration', true, ['duration', 'start_date', 'end_date']);
         $this->addFieldsToTab('Course Overview', true, ['overview']);
 }

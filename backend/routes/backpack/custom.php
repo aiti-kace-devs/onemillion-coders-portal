@@ -18,6 +18,9 @@ Route::group([
     'namespace' => 'App\Http\Controllers\Admin',
 ], function () { // custom admin routes
     Route::crud('admin', 'AdminCrudController');
+    Route::get('/filemanager', function () {
+        return view('admin.filemanager.index');
+    });
     // In routes/backpack/custom.php
     Route::get('api/centre-by-branch', [CentreController::class, 'filterByBranch']);
     Route::get('admin/exam/{exam_id}/add-question', [OexQuestionMasterCrudController::class, 'addQuestion'])
