@@ -11,26 +11,28 @@ tabs:
               required: true
               validate:
                 - required
+              display: Name
           -
-            handle: content
+            handle: profession
             field:
-              type: markdown
-              localizable: true
-              escape_markup: true
+              type: text
+              display: Profession
           -
-            handle: media
+            handle: image
             field:
               max_files: 1
+              min_files: 1
               container: google_cloud
-              type: assets
-              display: Media
               folder: uploads
+              type: assets
+              display: Image
           -
-            import: button
-            prefix: slider_
-          -
-            import: details
-            prefix: slider_
+            handle: message
+            field:
+              type: textarea
+              display: Message
+              validate:
+                - required
   sidebar:
     display: Sidebar
     sections:
@@ -42,4 +44,4 @@ tabs:
               type: slug
               localizable: true
               validate: 'max:200'
-title: Slider
+title: Testimony

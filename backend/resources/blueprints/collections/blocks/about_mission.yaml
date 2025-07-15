@@ -1,3 +1,4 @@
+title: 'About Mission'
 tabs:
   main:
     display: Main
@@ -14,23 +15,18 @@ tabs:
           -
             handle: content
             field:
-              type: markdown
-              localizable: true
               escape_markup: true
+              type: markdown
+              display: Content
           -
-            handle: media
+            handle: images
             field:
-              max_files: 1
+              max_files: 3
+              min_files: 1
               container: google_cloud
-              type: assets
-              display: Media
               folder: uploads
-          -
-            import: button
-            prefix: slider_
-          -
-            import: details
-            prefix: slider_
+              type: assets
+              display: Images
   sidebar:
     display: Sidebar
     sections:
@@ -42,4 +38,3 @@ tabs:
               type: slug
               localizable: true
               validate: 'max:200'
-title: Slider

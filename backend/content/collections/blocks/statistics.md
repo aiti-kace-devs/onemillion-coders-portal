@@ -8,22 +8,28 @@ text_data_description: '<p>One Million Coders is Ghana&#039;s premier tech educa
 metrics:
   -
     id: mcxje41r
-    number: 300K
+    number: 306K
     description: Graduates
     type: metric
     enabled: true
   -
     id: mcxjrllw
-    number: '21,344'
-    description: Youth
+    number: '138,693'
+    description: 'Youth In Work'
     type: metric
     enabled: true
   -
     id: mcxjrqrf
-    number: 150000+
-    description: Ghanaians
+    number: '21,726'
+    description: 'Youth Starting Ventures'
     type: metric
     enabled: true
-updated_by: 6
-updated_at: 1752161685
+  -
+    id: md4g35m4
+    number: '70,553'
+    description: 'Youth In Jobs created Through Entrepreneurship'
+    type: metric
+    enabled: true
+updated_by: 11
+updated_at: 1752579322
 ---

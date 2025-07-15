@@ -1,3 +1,4 @@
+title: About
 tabs:
   main:
     display: Main
@@ -12,25 +13,26 @@ tabs:
               validate:
                 - required
           -
-            handle: content
-            field:
-              type: markdown
-              localizable: true
-              escape_markup: true
-          -
-            handle: media
-            field:
-              max_files: 1
-              container: google_cloud
-              type: assets
-              display: Media
-              folder: uploads
+            import: button
+            prefix: first_
           -
             import: button
-            prefix: slider_
+            prefix: second_
           -
             import: details
-            prefix: slider_
+            prefix: about_
+          -
+            handle: metric_caption
+            field:
+              type: text
+              display: 'Metric Caption'
+              width: 50
+          -
+            handle: metric_value
+            field:
+              type: text
+              display: 'Metric Value'
+              width: 50
   sidebar:
     display: Sidebar
     sections:
@@ -42,4 +44,3 @@ tabs:
               type: slug
               localizable: true
               validate: 'max:200'
-title: Slider
