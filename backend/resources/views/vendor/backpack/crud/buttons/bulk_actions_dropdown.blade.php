@@ -4,12 +4,12 @@
     </button>
     <ul class="dropdown-menu" aria-labelledby="bulkActionsDropdown">
         <li>
-            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#bulkEmailModal">
+            <a class="dropdown-item" href="#" id="bulkEmailBtn">
                 <i class="la la-envelope text-primary"></i> Send Emails
             </a>
         </li>
         <li>
-            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#bulkSMSModal">
+            <a class="dropdown-item" href="#" id="bulkSMSBtn">
                 <i class="la la-sms text-success"></i> Send SMS
             </a>
         </li>
@@ -94,6 +94,17 @@
                 alert(xhr.responseJSON?.message || 'Failed to send SMS.');
             }
         });
+    });
+
+    // Open Bulk Email modal
+    $('#bulkEmailBtn').on('click', function(e) {
+        e.preventDefault();
+        $('#bulkEmailModal').appendTo('body').modal('show');
+    });
+    // Open Bulk SMS modal
+    $('#bulkSMSBtn').on('click', function(e) {
+        e.preventDefault();
+        $('#bulkSMSModal').appendTo('body').modal('show');
     });
 
     // Bulk Shortlist

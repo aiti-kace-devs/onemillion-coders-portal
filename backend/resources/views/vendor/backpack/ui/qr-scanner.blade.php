@@ -244,8 +244,10 @@
             },
         );
 
+        let $qrcodeDiv = null;
         function startScanner() {
-            $('#qrcode').hide();
+            // Detach the QR code div from the DOM when starting the scanner
+            $qrcodeDiv = $('#qrcode').detach();
             $('#scanner').show();
             stopCodeGeneration();
 
@@ -258,13 +260,26 @@
         function stopScanner() {
             try {
                 $('#scanner').hide();
+                // Re-append the QR code div to its original parent if it was detached
+                if ($qrcodeDiv) {
+                    // Find the parent row and re-append
+                    $('.row.g-3.flex.justify-content-center.align-tems-center').prepend($qrcodeDiv);
+                    $qrcodeDiv.show();
+                    $qrcodeDiv = null;
+                }
                 qrScanner.stop();
             } catch (e) {}
         }
 
         async function generateCode() {
             this.stopScanner();
-            stopCodeGeneration()
+            stopCodeGeneration();
+            // Re-append the QR code div to its original parent if it was detached
+            if ($qrcodeDiv) {
+                $('.row.g-3.flex.justify-content-center.align-tems-center').prepend($qrcodeDiv);
+                $qrcodeDiv.show();
+                $qrcodeDiv = null;
+            }
             const values = getFormValues();
             qrcodeElem.show();
             qrcodeElem.html('');
