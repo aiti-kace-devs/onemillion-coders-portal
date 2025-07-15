@@ -17,7 +17,7 @@ class Branch extends Model
     ];
 
 
-    protected $casts = [ // Add this for automatic type casting
+    protected $casts = [
         'status' => 'boolean',
     ];
     public function centre(){

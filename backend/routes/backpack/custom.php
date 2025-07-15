@@ -48,6 +48,8 @@ Route::group([
     Route::get('course/ajax-list', 'CourseCrudController@ajaxList');
     Route::get('course-session/ajax-list', 'CourseSessionCrudController@ajaxList');
     Route::post('user/bulk-admit', 'UserCrudController@bulkAdmit');
+    Route::crud('course-category', 'CourseCategoryCrudController');
+    Route::crud('course-module', 'CourseModuleCrudController');
 }); // this should be the absolute last line of this file
 
 /**
