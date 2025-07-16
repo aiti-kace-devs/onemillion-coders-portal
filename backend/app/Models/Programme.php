@@ -13,9 +13,15 @@ class Programme extends Model
 
     protected $fillable = [
         'title',
+        'sub_title',
         'duration',
         'start_date',
         'end_date',
+        'description',
+        'overview',
+        'prerequisites',
+        'cover_image_id',
+        'course_category_id',
         'status'
     ];
 
@@ -25,5 +31,15 @@ class Programme extends Model
 
     public function centre(){
         return $this->belongsToMany(Centre::class, 'courses');
+    }
+
+    public function category(){
+
+        return $this->belongsTo(CourseCategory::class, 'course_category_id');
+    }
+
+    public function coverImage()
+    {
+        return $this->belongsTo(Media::class, 'cover_image_id');
     }
 }

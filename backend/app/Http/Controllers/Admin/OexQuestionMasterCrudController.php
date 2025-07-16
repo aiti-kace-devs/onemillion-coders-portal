@@ -31,7 +31,7 @@ class OexQuestionMasterCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -45,11 +45,15 @@ class OexQuestionMasterCrudController extends CrudController
            WidgetHelper::manageQuestionStatisticsWidget($examId);
         });
 
+        if (request()->has('exam_id')) {
+            $this->crud->addClause('where', 'exam_id', request()->get('exam_id'));
+        }
+
     }
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
@@ -103,7 +107,7 @@ class OexQuestionMasterCrudController extends CrudController
     }
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
@@ -184,45 +188,45 @@ class OexQuestionMasterCrudController extends CrudController
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */
     protected function setupUpdateOperation()
 {
     $this->setupCreateOperation();
-    
+
     $entry = $this->crud->getCurrentEntry();
-    
+
     $this->crud->modifyField('questions', [
         'default' => $entry->questions ?? ''
     ]);
-    
+
     $this->crud->modifyField('options1', [
         'default' => $entry->options['option1'] ?? ''
     ]);
-    
+
     $this->crud->modifyField('options2', [
         'default' => $entry->options['option2'] ?? ''
     ]);
-    
+
     $this->crud->modifyField('options3', [
         'default' => $entry->options['option3'] ?? ''
     ]);
-    
+
     $this->crud->modifyField('options4', [
         'default' => $entry->options['option4'] ?? ''
     ]);
-    
+
     $selectedAnswer = $this->determineSelectedAnswer($entry);
     $this->crud->modifyField('ans', [
         'default' => $selectedAnswer
     ]);
-    
+
     $this->crud->modifyField('status', [
         'default' => $entry->status ?? false
     ]);
-    
+
 
 }
 
@@ -275,15 +279,15 @@ class OexQuestionMasterCrudController extends CrudController
     {
         $request = $this->crud->getRequest();
         $this->crud->validateRequest();
-        
+
         $transformed = $this->transformRequestData($request);
-        
+
         $exam_id = $request->input('exam_id');
         if (!$exam_id) {
             \Alert::error('Exam ID is required')->flash();
             return back()->withInput();
         }
-        
+
         OexQuestionMaster::create([
             'exam_id' => $exam_id,
             'exam_set_id' => 1,
@@ -301,12 +305,12 @@ class OexQuestionMasterCrudController extends CrudController
     {
         $request = $this->crud->getRequest();
         $this->crud->validateRequest();
-        
+
         $transformed = $this->transformRequestData($request);
         $entry = $this->crud->getCurrentEntry();
-        
+
         $exam_id = $request->input('exam_id', $entry->exam_id);
-        
+
         $entry->update([
             'exam_id' => $exam_id,
             'exam_set_id' => 1,

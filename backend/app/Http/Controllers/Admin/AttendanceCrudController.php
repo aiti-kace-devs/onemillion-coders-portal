@@ -9,6 +9,7 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\Course;
 use App\Helpers\CourseFieldHelpers;
+
 /**
  * Class AttendanceCrudController
  * @package App\Http\Controllers\Admin
@@ -37,10 +38,10 @@ class AttendanceCrudController extends CrudController
     {
         CRUD::setModel(\App\Models\Attendance::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/attendance');
-        CRUD::setEntityNameStrings('attendance', 'attendances');
+        CRUD::setEntityNameStrings('view attendance list', 'view attendance list');
 
         CRUD::denyAccess('create');
-        CRUD::denyAccess('delete');
+        CRUD::denyAccess('show');
         CRUD::denyAccess('update');
 
         $this->crud->operation('list', function () {
@@ -57,10 +58,28 @@ class AttendanceCrudController extends CrudController
     protected function setupListOperation()
     {
         CRUD::column('user_id')->label('Student')->linkTo('user.show');
+        FilterHelper::addGenericRelationshipColumn('user', 'Email', 'user', 'email');
         FilterHelper::addGenericRelationshipColumn('course', 'Course', 'course', 'course_name');
+        CRUD::addColumn([
+            'name' => 'courseSession.session',
+            'label' => 'Session',
+            'type' => 'text',
+        ]);
+
         CRUD::column('date');
-        $this->addCourseField();
-        FilterHelper::addDateRangeFilter('date', 'Date');
+        $this->courseFilter('course_id');
+        $sessions = \App\Models\CourseSession::select('session')
+            ->distinct()
+            ->pluck('session', 'session')
+            ->toArray();
+
+        FilterHelper::addSelectFilter('session', 'Filter Session', $sessions, 'select2', function($value) {
+            CRUD::addClause('whereHas', 'courseSession', function($query) use ($value) {
+                $query->where('course_sessions.session', $value);
+            });
+        });
+
+        FilterHelper::addDateRangeFilter('date', 'Filter BY Date');
         CRUD::enableExportButtons();
     }
 
@@ -93,36 +112,46 @@ class AttendanceCrudController extends CrudController
     }
 
     // Example: Add endpoints or methods for trait logic
-    public function generateQRCodeData(AttendanceRequest $request)
+    public function setupGenerateQrCodeData(AttendanceRequest $request)
     {
-        $data = $request->validate($request->rulesForQRCode());
+        $data = $request->validated();
         return response()->json($this->generateQRCodeDataLogic($data));
     }
 
-    public function recordAttendance(AttendanceRequest $request)
+    public function setupRecordAttendance(AttendanceRequest $request)
     {
-        $data = $request->validate($request->rulesForRecordAttendance());
+        $data = $request->validated();
         $result = $this->recordAttendanceLogic($data['scanned_data']);
         return response()->json($result);
     }
 
-    public function confirmAttendance(AttendanceRequest $request)
+    public function setupConfirmAttendance(AttendanceRequest $request)
     {
-        $data = $request->validate($request->rulesForConfirmAttendance());
+        $data = $request->validated();
         $result = $this->confirmAttendanceLogic($data, auth()->user());
         return response()->json($result);
     }
 
-    public function viewAttendance()
+    public function setupViewAttendance()
     {
         $userId = auth()->user()->userId;
         $attendance = $this->viewAttendanceLogic($userId);
         return response()->json(['attendance' => $attendance]);
     }
 
-    public function removeAttendance($id)
+    public function setupRemoveAttendance($id)
     {
         $result = $this->removeAttendanceLogic($id);
         return response()->json($result);
+    }
+
+    public function setupScanQrCodePage()
+    {
+        // $courses = auth('admin')->user()->assignedCourses()->get();
+        $courses = Course::myAssignedCourses()->get()->groupBy('location');
+
+        return view('vendor.backpack.ui.qr-scanner', [
+            'groupedCourses' => $courses,
+        ]);
     }
 }

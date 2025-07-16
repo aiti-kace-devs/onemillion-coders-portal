@@ -6,9 +6,11 @@ use App\Http\Requests\ProgrammeRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\GeneralFieldsAndColumns;
-use App\Helpers\CourseFieldHelpers;
+use App\Helpers\ProgrammeFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
+
+
 /**
  * Class ProgrammeCrudController
  * @package App\Http\Controllers\Admin
@@ -17,7 +19,7 @@ use App\Helpers\FilterHelper;
 class ProgrammeCrudController extends CrudController
 {
     use GeneralFieldsAndColumns;
-    use CourseFieldHelpers;
+    use ProgrammeFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -49,6 +51,7 @@ class ProgrammeCrudController extends CrudController
     protected function setupListOperation()
     {
         CRUD::column('title')->type('textarea');
+        FilterHelper::addGenericRelationshipColumn('category', 'Course Category', 'course-category', 'title');
         CRUD::column('duration');
         CRUD::column('start_date');
         CRUD::column('end_date');
@@ -64,11 +67,7 @@ class ProgrammeCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        CRUD::column('title')->type('textarea');
-        CRUD::column('duration');
-        CRUD::column('start_date');
-        CRUD::column('end_date');
-        CRUD::column('status')->type('boolean');
+        $this->setupShowCommonFields();
     }
 
     /**
@@ -80,45 +79,9 @@ class ProgrammeCrudController extends CrudController
     protected function setupCreateOperation()
     {
         CRUD::setValidation(ProgrammeRequest::class);
-                CRUD::addField([
-            'name' => 'title',
-            'label' => 'Title',
-            'type'      => 'text',
-            'wrapper' => ['class' => 'form-group col-6'],
-        ]);
 
-        CRUD::addField([
-    'name' => 'duration',
-    'label' => 'Duration',
-    'type' => 'select_from_array',
-    'options' => [
-        '1 Week' => '1 Week',
-        '2 Week' => '2 Weeks',
-        '3 Weeks' => '3 Weeks',
-        '4 Weeks' => '4 Weeks',
-        '1 Month' => '1 Month',
-        '2 Months' => '2 Months',
-        '3 Months' => '3 Months',
-        '4 Months' => '4 Months',
-    ],
-    'wrapper' => ['class' => 'form-group col-6'],
-]);
+        $this->setupCommonFields();
 
-        CRUD::addField([
-            'name' => 'start_date',
-            'label' => 'Start Date',
-            'type'      => 'date',
-            'wrapper' => ['class' => 'form-group col-6'],
-        ]);
-
-        CRUD::addField([
-            'name' => 'end_date',
-            'label' => 'End Date',
-            'type'      => 'date',
-            'wrapper' => ['class' => 'form-group col-6'],
-        ]);
-
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
     }
 
     /**

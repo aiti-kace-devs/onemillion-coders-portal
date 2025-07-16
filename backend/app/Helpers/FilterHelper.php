@@ -34,7 +34,7 @@ class FilterHelper
             ->values([
                 '' => 'All Records',
                 'has_value' => "Has $label",
-                'no_value' => "No $label"
+                'no_value' => "Not $label"
             ])
             ->whenActive(function ($value) use ($columnName) {
                 if ($value === 'has_value') {
@@ -140,16 +140,16 @@ class FilterHelper
 
 
 
-        public static function addGenericRelationshipColumn(string $name, string $label, string $pathName, string $columnName = null)
+        public static function addGenericRelationshipColumn(string $methodName, string $label, string $pathName, string $columnName = null)
 {
     CRUD::addColumn([
-        'name' => $name,
+        'name' => $methodName,
         'label' => $label,
         'type' => 'closure',
-        'function' => function($entry) use ($name, $pathName, $columnName) {
-            if ($entry->$name) {
-                $url = backpack_url($pathName . '/' . $entry->$name->id . '/show');
-                return '<a href="' . $url . '">' . e($entry->$name->$columnName) . '</a>';
+        'function' => function($entry) use ($methodName, $pathName, $columnName) {
+            if ($entry->$methodName) {
+                $url = backpack_url($pathName . '/' . $entry->$methodName->id . '/show');
+                return '<a href="' . $url . '">' . e($entry->$methodName->$columnName) . '</a>';
             }
             return '';
         },

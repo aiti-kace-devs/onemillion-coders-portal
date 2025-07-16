@@ -25,7 +25,8 @@ class SmsTemplateRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'name' => 'required|min:5|max:255'
+            'name' => 'required|string|max:255|unique:sms_templates,name',
+            'content' => 'required|string',
         ];
     }
 
@@ -37,8 +38,8 @@ class SmsTemplateRequest extends FormRequest
     public function attributes()
     {
         return [
-            //
-        ];
+                //
+            ];
     }
 
     /**
@@ -49,7 +50,7 @@ class SmsTemplateRequest extends FormRequest
     public function messages()
     {
         return [
-            //
-        ];
+                //
+            ];
     }
 }

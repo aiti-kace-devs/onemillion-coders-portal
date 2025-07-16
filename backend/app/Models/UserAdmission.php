@@ -19,4 +19,14 @@ class UserAdmission extends Model
     {
         return $this->belongsTo(Course::class, 'course_id');
     }
+
+    public function courseSession()
+    {
+        return $this->belongsTo(CourseSession::class, 'session');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'userId');
+    }
 }
