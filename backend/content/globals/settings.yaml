@@ -1,4 +1,27 @@
 title: 'Social Media'
 data:
-  name: Footer
-  value: Footer
+  social_media:
+    -
+      id: md57o43b
+      name: Facebook
+      url: 'https://www.facebook.com/'
+      type: media_item
+      enabled: true
+    -
+      id: md57pgml
+      name: X(twitter)
+      url: 'https://x.com/home'
+      type: media_item
+      enabled: true
+    -
+      id: md57q9i4
+      name: LinkedIn
+      url: 'https://linkedin.com/'
+      type: media_item
+      enabled: true
+    -
+      id: md57qvmv
+      name: Instagram
+      url: 'https://instagram.com/'
+      type: media_item
+      enabled: true

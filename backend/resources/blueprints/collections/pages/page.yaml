@@ -16,6 +16,7 @@ tabs:
             field:
               type: markdown
               localizable: true
+              escape_markup: true
           -
             handle: sections
             field:

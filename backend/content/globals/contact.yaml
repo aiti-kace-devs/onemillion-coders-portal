@@ -1,0 +1,22 @@
+title: 'Contact Us'
+data:
+  contact_us:
+    -
+      id: md57c68y
+      name: Address
+      icon_field: arrows-shrink
+      value: 'MoCDTI Building, Accra, Ghana'
+      type: contact
+      enabled: true
+    -
+      id: md57dvoe
+      name: Email
+      value: info@moc.gov.gh
+      type: contact
+      enabled: true
+    -
+      id: md57emvo
+      name: Phone
+      value: '(+233) -302-666465'
+      type: contact
+      enabled: true

@@ -12,16 +12,24 @@ tabs:
               validate:
                 - required
           -
-            handle: content
+            handle: image
             field:
-              type: markdown
-              localizable: true
-              escape_markup: true
+              max_files: 1
+              min_files: 1
+              container: google_cloud
+              folder: uploads
+              type: assets
+              display: Image
           -
-            handle: block_items
+            handle: caption
             field:
-              type: entries
-              display: 'Block Items'
+              type: text
+              display: Caption
+          -
+            handle: tag
+            field:
+              type: taggable
+              display: Tag
   sidebar:
     display: Sidebar
     sections:
@@ -33,4 +41,4 @@ tabs:
               type: slug
               localizable: true
               validate: 'max:200'
-title: Block
+title: Gallery

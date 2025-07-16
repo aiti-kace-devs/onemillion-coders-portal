@@ -12,16 +12,17 @@ tabs:
               validate:
                 - required
           -
-            handle: content
+            handle: answer
             field:
               type: markdown
               localizable: true
+              display: Answer
               escape_markup: true
           -
-            handle: block_items
+            handle: tag
             field:
-              type: entries
-              display: 'Block Items'
+              type: taggable
+              display: Tag
   sidebar:
     display: Sidebar
     sections:
@@ -33,4 +34,4 @@ tabs:
               type: slug
               localizable: true
               validate: 'max:200'
-title: Block
+title: Faq
