@@ -466,9 +466,15 @@ Route::prefix('student')->name('student.')->group(function () {
             Route::patch('/', [ProfileController::class, 'update'])->name('update');
         });
 
+        // Exam route
+        Route::get('/join-exam/{id}', [StudentOperation::class, 'join_exam'])->name('join-exam');
+        Route::post('/start-exam', [StudentOperation::class, 'start_exam'])->name('start-exam');
+        Route::post('/submit-exam', [StudentOperation::class, 'submit_questions'])->name('submit-exam');
+
         // Application status route
         Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
     });
+
 
     // Session route
     Route::middleware(['auth:web', 'is_admitted'])->prefix('session')->name('session.')->group(function () {
@@ -483,9 +489,6 @@ Route::prefix('student')->name('student.')->group(function () {
             Route::get('/', [AttendanceController::class, 'viewAttendance'])->name('show');
             Route::post('/', [AttendanceController::class, 'recordAttendance'])->name('record');
         });
-
-        // Application status route
-        Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
     });
 });
 
@@ -504,7 +507,7 @@ Route::prefix('student')
 
         Route::middleware(['auth:web'])->group(function () {
             Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');
-            Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
+            // Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
             // Route::get('/profile', [StudentOperation::class, 'profile'])->name('profile')->middleware('is_not_admitted');
             Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course')->middleware('is_not_admitted');
             Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course')->middleware('is_not_admitted');

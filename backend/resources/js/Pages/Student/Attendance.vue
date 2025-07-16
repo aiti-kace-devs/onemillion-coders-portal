@@ -60,9 +60,9 @@ onMounted(async () => {
                 >{{ attendancePercent }}%</span
               >
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-4">
+            <div class="w-full bg-gray-200 rounded-full h-3">
               <div
-                class="bg-green-600 h-4 rounded-full transition-all duration-500"
+                class="bg-green-600 h-3 rounded-full transition-all duration-500"
                 :style="{ width: attendancePercent + '%' }"
               ></div>
             </div>

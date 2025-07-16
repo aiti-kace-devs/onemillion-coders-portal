@@ -7,6 +7,14 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  method: {
+    type: String,
+    default: "get",
+  },
+  as: {
+    type: String,
+    default: "a",
+  },
   label: {
     type: String,
     required: true,
@@ -15,7 +23,7 @@ const props = defineProps({
     type: Boolean,
   },
 });
-''
+
 const classes = computed(() =>
   props.active
     ? "flex gap-2 p-1.5 items-center cursor-pointer capitalize bg-gray-700 rounded-sm text-white peer"
@@ -25,7 +33,7 @@ const classes = computed(() =>
 
 <template>
   <div class="px-4 group/item">
-    <Link :href="href" :class="classes">
+    <Link :href="href" :method="method" :as="as" :class="classes">
       <slot />
 
       <div

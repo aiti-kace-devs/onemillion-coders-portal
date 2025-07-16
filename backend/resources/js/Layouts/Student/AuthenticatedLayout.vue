@@ -40,7 +40,11 @@ const user = auth?.user || {};
     <!-- Sidebar -->
     <div
       class="fixed z-[1002] h-full w-2/3 lg:w-64 border-gray-200 bg-white duration-300 transition-transform ease-in-out lg:translate-x-0 group-[.sidebar-collapsed]/container:w-[70px] border-r shadow-md"
-      :class="isSidebarCollapsed ? '-translate-x-full max-lg:block' : 'translate-x-0 max-lg:block'"
+      :class="
+        isSidebarCollapsed
+          ? '-translate-x-full max-lg:block'
+          : 'translate-x-0 max-lg:block'
+      "
       @mouseenter="isSidebarCollapsed = false"
       @mouseleave="isSidebarCollapsed = true"
       @click.away="isSidebarCollapsed = true"
@@ -87,6 +91,22 @@ const user = auth?.user || {};
 
         <nav class="mt-3 grid w-full space-y-2">
           <SidebarNavLink
+            :active="route().current('student.dashboard')"
+            :href="route('student.dashboard')"
+            :label="'Overview'"
+          >
+            <span class="material-symbols-outlined">dashboard</span>
+          </SidebarNavLink>
+
+          <!-- <SidebarNavLink
+            :active="route().current('student.profile.edit')"
+            :href="route('student.profile.edit')"
+            :label="'Aptitude Test'"
+          >
+            <span class="material-symbols-outlined">quiz</span>
+          </SidebarNavLink> -->
+
+          <SidebarNavLink
             :active="route().current('student.profile.edit')"
             :href="route('student.profile.edit')"
             :label="'Profile'"
@@ -119,11 +139,12 @@ const user = auth?.user || {};
           </SidebarNavLink>
 
           <SidebarNavLink
-            :href="route('admin.form.index')"
-            :active="route().current('admin.form.*')"
-            :label="'Forms'"
+            :href="route('logout')"
+            :label="'Log Out'"
+            :method="'post'"
+            :as="'button'"
           >
-            <span class="material-symbols-outlined">ballot</span>
+            <span class="material-symbols-outlined">logout</span>
           </SidebarNavLink>
         </nav>
       </div>
@@ -165,54 +186,6 @@ const user = auth?.user || {};
           >
             <slot name="header" />
           </div>
-        </div>
-
-        <div class="relative">
-          <Dropdown align="right" width="48">
-            <template #trigger>
-              <span class="inline-flex rounded-md">
-                <button
-                  type="button"
-                  class="inline-flex items-center p-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-transparent hover:text-gray-700 focus:outline-none transition ease-in-out duration-150"
-                  aria-haspopup="true"
-                  aria-expanded="false"
-                >
-                  <span class="material-symbols-outlined"> account_circle </span>
-
-                  <svg
-                    class="-me-0.5 h-4 w-4"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                </button>
-              </span>
-            </template>
-
-            <template #content>
-              <DropdownLink
-                :href="route('student.profile.edit')"
-                class="inline-flex items-center"
-              >
-                <span class="material-symbols-outlined me-1"> person </span> Profile
-              </DropdownLink>
-              <DropdownLink
-                :href="route('logout')"
-                method="post"
-                as="button"
-                class="inline-flex items-center"
-              >
-                <span class="material-symbols-outlined me-1"> logout </span>
-                Log Out
-              </DropdownLink>
-            </template>
-          </Dropdown>
         </div>
       </header>
 

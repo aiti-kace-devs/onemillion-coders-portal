@@ -25,8 +25,6 @@ form.defaults({
   session_id: "",
 });
 
-const revokeForm = useForm({});
-
 const selectKey = ref(0);
 
 const submit = () => {
