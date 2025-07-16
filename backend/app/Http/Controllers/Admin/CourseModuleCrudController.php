@@ -5,7 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\CourseModuleRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use App\Models\Programme;
+use App\Helpers\GeneralFieldsAndColumns;
+use App\Helpers\FilterHelper;
+use App\Helpers\CourseFieldHelpers;
+use App\Helpers\WidgetHelper;
 /**
  * Class CourseModuleCrudController
  * @package App\Http\Controllers\Admin
@@ -13,6 +17,8 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class CourseModuleCrudController extends CrudController
 {
+    use GeneralFieldsAndColumns;
+    use CourseFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -29,6 +35,10 @@ class CourseModuleCrudController extends CrudController
         CRUD::setModel(\App\Models\CourseModule::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-module');
         CRUD::setEntityNameStrings('course module', 'course modules');
+
+        $this->crud->operation('list', function () {
+            WidgetHelper::courseModuleStatisticsWidget();
+        });
     }
 
     /**
@@ -39,14 +49,19 @@ class CourseModuleCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
-
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+        CRUD::column('title')->type('textarea');
+        FilterHelper::addGenericRelationshipColumn('programme', 'Course', 'programme', 'title');
+        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::column('created_at');
+        $this->addProgrammeFilter('programme_id');
+        FilterHelper::addBooleanFilter('status', 'Status');
+        FilterHelper::addDateRangeFilter('created_at', 'Created Date');
     }
 
+    protected function setupShowOperation()
+    {
+        $this->setupListOperation();
+    }
     /**
      * Define what happens when the Create operation is loaded.
      * 
@@ -56,12 +71,33 @@ class CourseModuleCrudController extends CrudController
     protected function setupCreateOperation()
     {
         CRUD::setValidation(CourseModuleRequest::class);
-        CRUD::setFromDb(); // set fields from db columns.
+        CRUD::addField(field: [
+            'name' => 'title',
+            'label' => 'Title',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
 
-        /**
-         * Fields can be defined using the fluent syntax:
-         * - CRUD::field('price')->type('number');
-         */
+        CRUD::addField([
+            'name' => 'description',
+            'label' => 'description',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+        CRUD::addField([
+            'name' => 'programme_id',
+            'label' => 'Programme',
+            'type' => 'select2',
+            'entity' => 'programme',
+            'attribute' => 'title',
+            'model' => Programme::class,
+            'allows_null' => false,
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+
     }
 
     /**

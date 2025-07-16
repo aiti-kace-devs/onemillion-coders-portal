@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\FormRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use App\Helpers\FilterHelper;
 /**
  * Class FormCrudController
  * @package App\Http\Controllers\Admin
@@ -39,12 +39,9 @@ class FormCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
-
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+        CRUD::column('title')->type('textarea');
+        FilterHelper::addBooleanColumn('active', 'status');
+        CRUD::column('created_at');
     }
 
     /**

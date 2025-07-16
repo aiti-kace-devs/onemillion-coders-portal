@@ -34,7 +34,7 @@ class FilterHelper
             ->values([
                 '' => 'All Records',
                 'has_value' => "Has $label",
-                'no_value' => "No $label"
+                'no_value' => "Not $label"
             ])
             ->whenActive(function ($value) use ($columnName) {
                 if ($value === 'has_value') {

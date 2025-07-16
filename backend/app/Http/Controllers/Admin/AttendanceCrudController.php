@@ -38,10 +38,10 @@ class AttendanceCrudController extends CrudController
     {
         CRUD::setModel(\App\Models\Attendance::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/attendance');
-        CRUD::setEntityNameStrings('attendance', 'attendances');
+        CRUD::setEntityNameStrings('view attendance list', 'view attendance list');
 
         CRUD::denyAccess('create');
-        CRUD::denyAccess('delete');
+        CRUD::denyAccess('show');
         CRUD::denyAccess('update');
 
         $this->crud->operation('list', function () {
@@ -58,10 +58,28 @@ class AttendanceCrudController extends CrudController
     protected function setupListOperation()
     {
         CRUD::column('user_id')->label('Student')->linkTo('user.show');
+        FilterHelper::addGenericRelationshipColumn('user', 'Email', 'user', 'email');
         FilterHelper::addGenericRelationshipColumn('course', 'Course', 'course', 'course_name');
+        CRUD::addColumn([
+            'name' => 'courseSession.session',
+            'label' => 'Session',
+            'type' => 'text',
+        ]);
+
         CRUD::column('date');
-        $this->addCourseField();
-        FilterHelper::addDateRangeFilter('date', 'Date');
+        $this->courseFilter('course_id');
+        $sessions = \App\Models\CourseSession::select('session')
+            ->distinct()
+            ->pluck('session', 'session')
+            ->toArray();
+
+        FilterHelper::addSelectFilter('session', 'Filter Session', $sessions, 'select2', function($value) {
+            CRUD::addClause('whereHas', 'courseSession', function($query) use ($value) {
+                $query->where('course_sessions.session', $value);
+            });
+        });
+
+        FilterHelper::addDateRangeFilter('date', 'Filter BY Date');
         CRUD::enableExportButtons();
     }
 

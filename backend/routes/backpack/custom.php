@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Api\CentreController;
 use App\Http\Controllers\Admin\OexQuestionMasterCrudController;
+use App\Http\Controllers\Admin\StudentVerificationCrudController;
 // --------------------------
 // Custom Backpack Routes
 // --------------------------
@@ -46,6 +47,7 @@ Route::group([
     Route::crud('user', 'UserCrudController');
     Route::crud('user-admission', 'UserAdmissionCrudController');
     Route::crud('user-exam', 'UserExamCrudController');
+    Route::post('/admin/student-verification/{id}/reset', [StudentVerificationCrudController::class, 'resetVerification'])->name('student-verification.reset');
 
     // Custom AJAX routes for bulk admit modal
     Route::get('course/ajax-list', 'CourseCrudController@ajaxList');
@@ -84,6 +86,7 @@ Route::group([
     Route::get('admin_view_result/{id}', 'UserCrudController@viewResult');
     // Reset Result for a student (admin panel, Backpack)
     Route::get('reset-exam/{exam_id}/student/{user_id}', 'UserCrudController@resetResult')->name('results.reset');
+    Route::crud('student-verification', 'StudentVerificationCrudController');
 }); // this should be the absolute last line of this file
 
 /**

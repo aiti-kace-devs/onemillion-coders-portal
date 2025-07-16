@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\CourseCategoryRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use App\Helpers\GeneralFieldsAndColumns;
+use App\Helpers\FilterHelper;
+use App\Helpers\WidgetHelper;
 
 /**
  * Class CourseCategoryCrudController
@@ -13,6 +16,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class CourseCategoryCrudController extends CrudController
 {
+    use GeneralFieldsAndColumns;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -29,6 +33,10 @@ class CourseCategoryCrudController extends CrudController
         CRUD::setModel(\App\Models\CourseCategory::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-category');
         CRUD::setEntityNameStrings('course category', 'course categories');
+
+        $this->crud->operation('list', function () {
+            WidgetHelper::courseCategoryStatisticsWidget();
+        });
     }
 
     /**
@@ -39,12 +47,12 @@ class CourseCategoryCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
-
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+        CRUD::column('title')->type('textarea');
+        CRUD::column('description')->type('textarea');
+        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::column('created_at');
+        FilterHelper::addBooleanFilter('status', 'Status');
+        FilterHelper::addDateRangeFilter('created_at', 'Created Date');
     }
 
     /**
@@ -56,12 +64,22 @@ class CourseCategoryCrudController extends CrudController
     protected function setupCreateOperation()
     {
         CRUD::setValidation(CourseCategoryRequest::class);
-        CRUD::setFromDb(); // set fields from db columns.
+        CRUD::addField(field: [
+            'name' => 'title',
+            'label' => 'Title',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
 
-        /**
-         * Fields can be defined using the fluent syntax:
-         * - CRUD::field('price')->type('number');
-         */
+        CRUD::addField([
+            'name' => 'description',
+            'label' => 'description',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+
     }
 
     /**
