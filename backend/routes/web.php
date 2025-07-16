@@ -460,6 +460,9 @@ Route::prefix('admins')
 Route::prefix('student')->name('student.')->group(function () {
 
     Route::middleware(['auth:web'])->group(function () {
+        // Dashboard route
+        Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');   
+
         // Profile route
         Route::prefix('profile')->name('profile.')->group(function () {
             Route::get('/', [ProfileController::class, 'edit'])->name('edit');
@@ -467,6 +470,7 @@ Route::prefix('student')->name('student.')->group(function () {
         });
 
         // Exam route
+        Route::get('/exam', [StudentOperation::class, 'exam'])->name('exam.index');
         Route::get('/join-exam/{id}', [StudentOperation::class, 'join_exam'])->name('join-exam');
         Route::post('/start-exam', [StudentOperation::class, 'start_exam'])->name('start-exam');
         Route::post('/submit-exam', [StudentOperation::class, 'submit_questions'])->name('submit-exam');
@@ -506,15 +510,15 @@ Route::prefix('student')
             ->middleware(['auth', 'is_admitted']);
 
         Route::middleware(['auth:web'])->group(function () {
-            Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');
+            // Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');
             // Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
             // Route::get('/profile', [StudentOperation::class, 'profile'])->name('profile')->middleware('is_not_admitted');
-            Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course')->middleware('is_not_admitted');
+            Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course');
             Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course')->middleware('is_not_admitted');
 
-            Route::get('/exam', [StudentOperation::class, 'exam']);
-            Route::get('/join_exam/{id}', [StudentOperation::class, 'join_exam']);
-            Route::post('/submit_questions', [StudentOperation::class, 'submit_questions']);
+            // Route::get('/exam', [StudentOperation::class, 'exam']);
+            // Route::get('/join_exam/{id}', [StudentOperation::class, 'join_exam']);
+            // Route::post('/submit_questions', [StudentOperation::class, 'submit_questions']);
             Route::get('/show_result/{id}', [StudentOperation::class, 'show_result']);
             Route::get('/apply_exam/{id}', [StudentOperation::class, 'apply_exam']);
             // Route::get('/view_result/{id}', [StudentOperation::class, 'view_result']);

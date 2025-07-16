@@ -8,6 +8,7 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  flash: Object,
 });
 
 const user = computed(() => usePage().props.auth?.user || {});
@@ -63,22 +64,20 @@ const overallProgress = computed(() =>
 </script>
 
 <template>
-  <Head title="Dashboard" />
+  <Head title="Exam" />
   <AuthenticatedLayout>
     <template #header>
-      <h2 class="font-semibold text-xl text-gray-800 leading-tight">Dashboard</h2>
+      <h2 class="font-semibold text-xl text-gray-800 leading-tight">Exam</h2>
     </template>
 
     <div class="pt-3">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <div>
-          <h2 class="font-bold text-2xl text-gray-800 leading-tight">
-            Welcome, {{ user.name }}!
-          </h2>
-        </div>
-
         <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          <Link v-for="(exam, key) in examList" :key="exam.exam_id" :href="route('student.join-exam', exam.exam_id)">
+          <Link
+            v-for="(exam, key) in examList"
+            :key="exam.exam_id"
+            :href="route('student.join-exam', exam.exam_id)"
+          >
             <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
               <!-- Status badge -->
               <span

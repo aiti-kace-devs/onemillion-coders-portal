@@ -19,12 +19,6 @@ const toggleSidebar = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
 
-const hardRedirect = (url, event) => {
-  window.location.href = url;
-  // event.stopPropagation();
-  event.stopImmediatePropagation();
-  return false;
-};
 
 // Get the current route name for active link highlighting
 const { auth, component } = usePage().props;
@@ -98,13 +92,13 @@ const user = auth?.user || {};
             <span class="material-symbols-outlined">dashboard</span>
           </SidebarNavLink>
 
-          <!-- <SidebarNavLink
-            :active="route().current('student.profile.edit')"
-            :href="route('student.profile.edit')"
-            :label="'Aptitude Test'"
+          <SidebarNavLink
+            :active="route().current('student.exam.index')"
+            :href="route('student.exam.index')"
+            :label="'Exam'"
           >
             <span class="material-symbols-outlined">quiz</span>
-          </SidebarNavLink> -->
+          </SidebarNavLink>
 
           <SidebarNavLink
             :active="route().current('student.profile.edit')"
@@ -136,6 +130,14 @@ const user = auth?.user || {};
             :label="'Attendance'"
           >
             <span class="material-symbols-outlined">rule</span>
+          </SidebarNavLink>
+
+          <SidebarNavLink
+            :active="route().current('student.attendance.show')"
+            :href="route('student.attendance.show')"
+            :label="'Assessment'"
+          >
+            <span class="material-symbols-outlined">rate_review</span>
           </SidebarNavLink>
 
           <SidebarNavLink

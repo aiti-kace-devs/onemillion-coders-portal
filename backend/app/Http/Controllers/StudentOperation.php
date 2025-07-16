@@ -47,7 +47,7 @@ class StudentOperation extends Controller
 
         //     return view('student.dashboard', $data);
 
-        $exams['portal_exams'] = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
+        $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
             ->join('users', 'users.id', '=', 'user_exams.user_id')
             ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
@@ -102,16 +102,29 @@ class StudentOperation extends Controller
             return redirect(route('student.profile.edit'));
         }
 
-        $student_info = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.title', 'oex_exam_masters.exam_date', 'users.created_at as registered'])
+        // $student_info = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.title', 'oex_exam_masters.exam_date', 'users.created_at as registered'])
+        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
+        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
+        //     ->orderBy('user_exams.exam_id', 'desc')
+        //     ->where('user_exams.user_id', Auth::user()->id)
+        //     ->where('user_exams.std_status', '1')
+        //     ->get()
+        //     ->toArray();
+
+        // return view('student.exam', ['student_info' => $student_info]);
+
+        $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
+            ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
             ->join('users', 'users.id', '=', 'user_exams.user_id')
             ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
             ->orderBy('user_exams.exam_id', 'desc')
+            ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
             ->where('user_exams.user_id', Auth::user()->id)
             ->where('user_exams.std_status', '1')
             ->get()
             ->toArray();
 
-        return view('student.exam', ['student_info' => $student_info]);
+        return Inertia::render('Student/Exam', compact('exams'));
     }
 
     //join exam page
@@ -132,7 +145,7 @@ class StudentOperation extends Controller
             ->first();
 
         if ($user_exam && $user_exam->submitted) {
-            return redirect(url('student/exam'))->with([
+            return redirect(route('student.exam.index'))->with([
                 'flash' => 'Unable to take exam. Test already submitted',
                 'key' => 'error',
             ]);
@@ -153,7 +166,7 @@ class StudentOperation extends Controller
         $userCreatedAtPlusDeadlineDays = $userCreatedAt->addDays(config(EXAM_DEADLINE_AFTER_REGISTRATION, 2));
 
         if (!$userCreatedAtPlusDeadlineDays->isBefore($now)) {
-            return redirect(url('student/exam'))->with([
+            return redirect(route('student.exam.index'))->with([
                 'flash' => 'Unable to take exam. Time to take exams has elapsed',
                 'key' => 'error',
             ]);
@@ -171,8 +184,8 @@ class StudentOperation extends Controller
             $user_exam->submitted = now();
             $user_exam->update();
 
-            return redirect(url('student/exam'))->with([
-                'flash' => 'Unable to take exam. Exam duration time has elapsed. ' . $usedTime . ' mins has passed since user started exams.',
+            return redirect(route('student.exam.index'))->with([
+                'flash' => 'Unable to take exam. Exam duration time has elapsed. ' . $usedTime . ' mins has passed since user started exams',
                 'key' => 'error',
             ]);
         }
@@ -180,7 +193,7 @@ class StudentOperation extends Controller
 
         return Inertia::render('Student/JoinExam', compact('questions', 'exam', 'usedTime'));
 
-        return view('student.join_exam', ['question' => $questions, 'exam' => $exam, 'usedTime' => $usedTime]);
+        // return view('student.join_exam', ['question' => $questions, 'exam' => $exam, 'usedTime' => $usedTime]);
     }
 
     // start exam
@@ -220,7 +233,7 @@ class StudentOperation extends Controller
             $total = $res->yes_ans + $res->no_ans;
             $percentage = round(($yes_ans / $total) * 100);
 
-            return redirect(url('student/exam'))->with([
+            return redirect(route('student.exam.index'))->with([
                 // 'flash' => "Test already submitted on this exam. Submission Date: {$std_info->submitted} .Result: {$percentage}% ({$yes_ans}/{$total})",
                 'flash' => "Test already submitted on this exam. Submission Date: {$std_info->submitted}",
                 'key' => 'info',
@@ -277,13 +290,11 @@ class StudentOperation extends Controller
         // GoogleSheets::updateGoogleSheets($userId, ['result' => $storedResult->yes_ans]);
         TestSubmittedJob::dispatch($user, $res);
 
-        return redirect()->route('student.dashboard');
-
-        // return redirect(url('student/exam'))->with([
-        //     // 'flash' => "Test submitted successfully. Result: {$percentage}%  {$yes_ans}/{$total}",
-        //     'flash' => 'Test submitted successfully.',
-        //     'key' => 'success',
-        // ]);
+        return redirect(route('student.exam.index'))->with([
+            // 'flash' => "Test submitted successfully. Result: {$percentage}%  {$yes_ans}/{$total}",
+            'flash' => 'Test submitted successfully.',
+            'key' => 'success',
+        ]);
     }
 
     //Applying for exam
