@@ -41,7 +41,10 @@ class AppConfigRequest extends FormRequest
     public function attributes()
     {
         return [
-            //
+           'key' => 'configuration key',
+            'type' => 'value type',
+            'value' => 'configuration value',
+            'is_cached' => 'cache setting',
         ];
     }
 
@@ -53,7 +56,13 @@ class AppConfigRequest extends FormRequest
     public function messages()
     {
         return [
-            //
+              'key.required' => 'Configuration key is required.',
+            'key.unique' => 'This configuration key already exists.',
+            'key.max' => 'Configuration key cannot exceed 255 characters.',
+            'type.required' => 'Value type is required.',
+            'type.in' => 'Please select a valid value type.',
+            'is_cached.required' => 'Cache setting is required.',
+            'is_cached.boolean' => 'Cache setting must be enabled or disabled.',
         ];
     }
 }

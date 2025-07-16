@@ -42,7 +42,12 @@ class CourseRequest extends FormRequest
     public function attributes()
     {
         return [
-                //
+                'branch_id' => 'Branch name',
+                'centre_id' => 'center name',
+                'programme_id' => 'Programme name',
+                'duration' => 'Course duration',
+                'start_date' => 'Start date',
+                'end_date' => 'End date'
             ];
     }
 

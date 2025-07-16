@@ -25,7 +25,10 @@ class ProgrammeRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'name' => 'required|min:5|max:255'
+           'title' => 'required',
+            'duration' => 'required',
+            'start_date' => 'sometimes',
+            'end_date' => 'sometimes',
         ];
     }
 
@@ -37,7 +40,10 @@ class ProgrammeRequest extends FormRequest
     public function attributes()
     {
         return [
-            //
+            'title' => 'Programme title',
+            'duration' => 'Programme duration',
+            'start_date' => 'Start date',
+            'end_date' => 'End date'
         ];
     }
 
@@ -49,7 +55,8 @@ class ProgrammeRequest extends FormRequest
     public function messages()
     {
         return [
-            //
+            'title.required' => 'The programme title is required.',
+            'title.duration' => 'The programme duration is required.',
         ];
     }
 }

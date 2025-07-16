@@ -25,7 +25,8 @@ class OexCategoryRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'name' => 'required|min:5|max:255'
+           'name' => 'required',
+            'status' => 'nullable|boolean',
         ];
     }
 
@@ -37,7 +38,8 @@ class OexCategoryRequest extends FormRequest
     public function attributes()
     {
         return [
-            //
+           'name' => 'category name',
+            'status' => 'status',
         ];
     }
 
@@ -49,7 +51,8 @@ class OexCategoryRequest extends FormRequest
     public function messages()
     {
         return [
-            //
+          'name.required' => 'The category name is required.',
+            'status.boolean' => 'The status must be true or false.',
         ];
     }
 }

@@ -25,7 +25,11 @@ class CourseSessionRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'name' => 'required|min:5|max:255'
+           'course_id' => ['required', 'exists:courses,id'],
+            'limit' => ['required', 'numeric', 'min:0'],
+            'course_time' => ['required', 'string', 'max:100'],
+            'session' => ['required', 'string', 'max:100'],
+            'link' => ['nullable', 'url'],
         ];
     }
 
@@ -37,7 +41,12 @@ class CourseSessionRequest extends FormRequest
     public function attributes()
     {
         return [
-            //
+            'course_id' => 'Course name',
+            'course_time' => ' Course duration',
+            'limit' => 'session limit',
+            'link' => 'Course link',
+            'session' => 'Course session'
+
         ];
     }
 
@@ -49,7 +58,10 @@ class CourseSessionRequest extends FormRequest
     public function messages()
     {
         return [
-            //
+            'course_id' => 'Course name is required',
+            'course_time' => ' Course duration is required',
+            'limit' => 'Session limit is required',
+            'session' => 'Session is required'
         ];
     }
 }

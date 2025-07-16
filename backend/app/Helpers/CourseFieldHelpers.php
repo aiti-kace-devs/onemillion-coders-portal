@@ -216,7 +216,7 @@ CRUD::addField([
             },
             'escaped' => false,
         ]);
-    } 
+    }
 
 
 
