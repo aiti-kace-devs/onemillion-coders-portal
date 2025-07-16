@@ -136,7 +136,7 @@ class SetupApplication extends Command
         if ($current[0] !== $previous[0]) {
             return [
                 ['migrate', '--force'],
-                // 'basset:fresh',
+                'basset:fresh',
                 ['db:seed', '--force'],
                 // 'optimize:clear',
                 // 'optimize',
