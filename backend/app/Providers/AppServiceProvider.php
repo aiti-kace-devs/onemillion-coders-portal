@@ -49,5 +49,18 @@ class AppServiceProvider extends ServiceProvider
             \Backpack\PermissionManager\app\Http\Controllers\UserCrudController::class, //this is package controller
             \App\Http\Controllers\Admin\UserCrudController::class //this should be your own controller
         );
+
+        // View composer for $mailable in Backpack modals
+        \View::composer([
+            'admin.send-bulk-email',
+            'vendor.backpack.crud.modals.bulk_email',
+        ], function ($view) {
+            // Replace this with your actual mailables logic
+            $view->with('mailable', [
+                'WelcomeMail',
+                'ReminderMail',
+                'NewsletterMail',
+            ]);
+        });
     }
 }
