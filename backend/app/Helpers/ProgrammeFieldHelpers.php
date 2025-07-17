@@ -33,8 +33,23 @@ trait ProgrammeFieldHelpers
 
 
 
-    protected function setupCommonFields()
+    protected function setupCreateFields()
 {
+
+        $programme = $this->crud->getCurrentEntry() ?? null;
+        $courseModules = [];
+
+        if ($programme) {
+            $courseModules = $programme->courseModules()
+                ->get(['title', 'description', 'status'])
+                ->map(function ($module) {
+                    return [
+                        'title' => $module->title,
+                        'description' => $module->description,
+                        'status' => $module->status,
+                    ];
+                })->toArray();
+        }
 
         CRUD::addField([
             'name' => 'title',
@@ -42,7 +57,6 @@ trait ProgrammeFieldHelpers
             'type'      => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
-
 
         CRUD::addField([
             'name' => 'sub_title',
@@ -86,22 +100,6 @@ trait ProgrammeFieldHelpers
             'hint' => 'eg 3  Week or 120 hrs'
         ]);
 
-        // CRUD::addField([
-        //     'name' => 'duration',
-        //     'label' => 'Duration',
-        //     'type' => 'select_from_array',
-        //     'options' => [
-        //         '1 Week' => '1 Week',
-        //         '2 Week' => '2 Weeks',
-        //         '3 Weeks' => '3 Weeks',
-        //         '4 Weeks' => '4 Weeks',
-        //         '1 Month' => '1 Month',
-        //         '2 Months' => '2 Months',
-        //         '3 Months' => '3 Months',
-        //         '4 Months' => '4 Months',
-        //     ],
-            // 'wrapper' => ['class' => 'form-group col-6'],
-        // ]);
 
         CRUD::addField([
             'name' => 'start_date',
@@ -119,6 +117,37 @@ trait ProgrammeFieldHelpers
 
 
         CRUD::addField([
+            'name' => 'course_modules',
+            'label' => 'Course Modules',
+            'type' => 'repeatable',
+            'fields' => [
+                [
+                    'name' => 'title',
+                    'type' => 'text',
+                    'label' => 'Module Title',
+                    'wrapper' => ['class' => 'form-group col-6'],
+                ],
+                [
+                    'name' => 'description',
+                    'type' => 'text',
+                    'label' => 'Module Description',
+                    'wrapper' => ['class' => 'form-group col-6'],
+                ],
+                [
+                    'name' => 'status',
+                    'type' => 'boolean',
+                    'label' => 'Active?',
+                    'default' => true,
+                ],
+            ],
+            'new_item_label' => 'Add Module',
+            'init_rows' => 0,
+            'value' => $courseModules,
+        ]);
+
+
+
+        CRUD::addField([
             'name' => 'overview',
             'label' => 'Overview',
             'type'      => 'tinymce',
@@ -127,8 +156,9 @@ trait ProgrammeFieldHelpers
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
 
-        $this->addFieldsToTab('General Info', true, ['title', 'sub_title', 'coverImage', 'course_category_id', 'status', 'description']);
+        $this->addFieldsToTab('Course Info', true, ['title', 'sub_title', 'coverImage', 'course_category_id', 'status', 'description']);
         $this->addFieldsToTab('Course Duration', true, ['duration', 'start_date', 'end_date']);
+        $this->addFieldsToTab('Course Module', true, ['course_modules']);
         $this->addFieldsToTab('Course Overview', true, ['overview']);
 }
 
@@ -137,56 +167,56 @@ trait ProgrammeFieldHelpers
 
 
     protected function setupShowCommonFields()
-{
-        CRUD::addColumn([
-            'name' => 'title',
-            'type' => 'textarea',
-            'escaped' => false,
-        ]);
-        CRUD::addColumn([
-            'name' => 'sub_title',
-            'type' => 'textarea',
-            'escaped' => false,
-        ]);
-        CRUD::addColumn([
-            'name' => 'description',
-            'type' => 'textarea',
-            'escaped' => false,
-        ]);
-        // FilterHelper::addBooleanFilter('status', 'Status');
-        // FilterHelper::addGenericRelationshipColumn('category', 'Course Category', 'course-category', 'title');
-        // CRUD::addColumn('created_on');
-        // CRUD::addColumn('updated_on');
-        // CRUD::addColumn('duration');
-        // CRUD::addColumn('start_date');
-        // CRUD::addColumn('end_date');
-        // CRUD::addColumn([
-        //     'name' => 'overview',
-        //     'type' => 'tinymce',
-        //     'escaped' => false,
-        // ]);
-        
+    {
+            CRUD::addColumn([
+                'name' => 'title',
+                'type' => 'textarea',
+                'escaped' => false,
+            ]);
+            CRUD::addColumn([
+                'name' => 'sub_title',
+                'type' => 'textarea',
+                'escaped' => false,
+            ]);
+            CRUD::addColumn([
+                'name' => 'description',
+                'type' => 'textarea',
+                'escaped' => false,
+            ]);
+            // FilterHelper::addBooleanFilter('status', 'Status');
+            // FilterHelper::addGenericRelationshipColumn('category', 'Course Category', 'course-category', 'title');
+            // CRUD::addColumn('created_on');
+            // CRUD::addColumn('updated_on');
+            // CRUD::addColumn('duration');
+            // CRUD::addColumn('start_date');
+            // CRUD::addColumn('end_date');
+            // CRUD::addColumn([
+            //     'name' => 'overview',
+            //     'type' => 'tinymce',
+            //     'escaped' => false,
+            // ]);
+            
 
-        $this->addFieldsToTab('General', false, [
-            'title',
-            'sub_title',
-            'description',
-            // 'status',
-            // 'course_category_id',
-            // 'created_on',
-            // 'updated_on',
-        ]);
+            $this->addFieldsToTab('General', false, [
+                'title',
+                'sub_title',
+                'description',
+                // 'status',
+                // 'course_category_id',
+                // 'created_on',
+                // 'updated_on',
+            ]);
 
-        // $this->addFieldsToTab('Duration', false, [
-        //     'duration',
-        //     'start_date',
-        //     'end_date'
-        // ]);
+            // $this->addFieldsToTab('Duration', false, [
+            //     'duration',
+            //     'start_date',
+            //     'end_date'
+            // ]);
 
-        // $this->addFieldsToTab('Overview', false, ['overview']);
+            // $this->addFieldsToTab('Overview', false, ['overview']);
 
 
-}
+    }
 
 
 

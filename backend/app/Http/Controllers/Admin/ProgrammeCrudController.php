@@ -9,7 +9,7 @@ use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\ProgrammeFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
-
+use App\Models\CourseModule;
 
 /**
  * Class ProgrammeCrudController
@@ -21,8 +21,12 @@ class ProgrammeCrudController extends CrudController
     use GeneralFieldsAndColumns;
     use ProgrammeFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation {
+        store as traitStore;
+    }
+    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation {
+        update as traitUpdate;
+    }
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
@@ -80,7 +84,7 @@ class ProgrammeCrudController extends CrudController
     {
         CRUD::setValidation(ProgrammeRequest::class);
 
-        $this->setupCommonFields();
+        $this->setupCreateFields();
 
     }
 
@@ -94,4 +98,41 @@ class ProgrammeCrudController extends CrudController
     {
         $this->setupCreateOperation();
     }
+
+
+
+    public function store()
+    {
+        $response = $this->traitStore();
+        $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
+        return $response;
+    }
+
+
+
+    public function update()
+    {
+        $response = $this->traitUpdate();
+        $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
+        return $response;
+    }
+
+
+
+
+    protected function handleCourseModules($programme, $modules = [])
+    {
+        CourseModule::where('programme_id', $programme->id)->delete();
+        foreach ($modules as $module) {
+            if (!empty($module['title'])) {
+                CourseModule::create([
+                    'programme_id' => $programme->id,
+                    'title' => $module['title'],
+                    'description' => $module['description'] ?? null,
+                    'status' => isset($module['status']) ? $module['status'] : true,
+                ]);
+            }
+        }
+    }
+
 }

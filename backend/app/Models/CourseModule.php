@@ -11,12 +11,6 @@ class CourseModule extends Model
     use CrudTrait;
     use HasFactory;
 
-    /*
-    |--------------------------------------------------------------------------
-    | GLOBAL VARIABLES
-    |--------------------------------------------------------------------------
-    */
-
     protected $table = 'course_modules';
     // protected $primaryKey = 'id';
     // public $timestamps = false;
