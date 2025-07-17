@@ -27,7 +27,6 @@
         "qirolab/laravel-themer": "^2.0",
         "rbdwllr/reallysimplejwt": "^5.0",
         "spatie/laravel-csp": "^2.10",
-        "spatie/laravel-medialibrary": "^11.13",
         "spatie/laravel-google-cloud-storage": "^2.3",
         "spatie/laravel-permission": "^6.16",
         "spatie/laravel-query-builder": "^6.3",
