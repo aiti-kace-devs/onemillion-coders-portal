@@ -1,0 +1,12 @@
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            import: button
+            prefix: popup_
+          -
+            import: details
+            prefix: popup_

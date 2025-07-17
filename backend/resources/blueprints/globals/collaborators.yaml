@@ -1,0 +1,49 @@
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: name
+            field:
+              type: text
+              display: Name
+          -
+            handle: description
+            field:
+              type: textarea
+              display: Description
+          -
+            handle: collaborators
+            field:
+              type: replicator
+              display: Collaborators
+              sets:
+                new_set_group:
+                  display: 'New Set Group'
+                  sets:
+                    collaborator:
+                      display: Collaborator
+                      fields:
+                        -
+                          handle: name
+                          field:
+                            type: text
+                            display: Name
+                            width: 50
+                        -
+                          handle: image
+                          field:
+                            max_files: 1
+                            min_files: 1
+                            container: google_cloud
+                            folder: uploads
+                            type: assets
+                            display: Image
+                            width: 50
+                        -
+                          handle: url
+                          field:
+                            type: link
+                            display: Url

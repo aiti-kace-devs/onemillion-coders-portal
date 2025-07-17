@@ -1,8 +1,8 @@
 steps:
-  # - name: gcr.io/cloud-builders/gcloud
-  #   id: copy-composer-auth
-  #   entrypoint: 'bash'
-  #   args: [ '-c', "gcloud secrets versions access latest --secret=COMPOSER_AUTH --format='get(payload.data)' | tr '_-' '/+' | base64 -d > backend/composerauth.json" ]
+  - name: gcr.io/cloud-builders/gcloud
+    id: copy-composer-auth
+    entrypoint: 'bash'
+    args: [ '-c', "gcloud secrets versions access latest --secret=COMPOSER_AUTH --format='get(payload.data)' | tr '_-' '/+' | base64 -d > backend/composerauth.json" ]
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     dir: 'backend'

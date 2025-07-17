@@ -1,0 +1,40 @@
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: contact_us
+            field:
+              type: replicator
+              display: 'Contact Us'
+              sets:
+                new_set_group:
+                  display: 'New Set Group'
+                  sets:
+                    contact:
+                      display: Contact
+                      fields:
+                        -
+                          handle: name
+                          field:
+                            type: text
+                            display: Name
+                            width: 33
+                            validate:
+                              - required
+                        -
+                          handle: icon_field
+                          field:
+                            type: icon
+                            display: Icon
+                            width: 25
+                        -
+                          handle: value
+                          field:
+                            type: text
+                            display: Value
+                            width: 33
+                            validate:
+                              - required

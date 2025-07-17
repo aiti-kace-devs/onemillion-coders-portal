@@ -5,10 +5,35 @@ tabs:
       -
         fields:
           -
-            handle: grid_field
+            handle: quick_links
             field:
-              type: grid
-              display: 'Grid Field'
-              fields:
-                -
-                  import: details
+              type: replicator
+              display: 'Quick Links'
+              sets:
+                new_set_group:
+                  display: 'New Set Group'
+                  sets:
+                    quick_link:
+                      display: 'Quick Link'
+                      fields:
+                        -
+                          handle: name
+                          field:
+                            type: text
+                            display: Name
+                            validate:
+                              - required
+                            width: 50
+                        -
+                          handle: caption
+                          field:
+                            type: text
+                            display: Caption
+                            width: 50
+                        -
+                          handle: link
+                          field:
+                            type: link
+                            display: Link
+                            validate:
+                              - required

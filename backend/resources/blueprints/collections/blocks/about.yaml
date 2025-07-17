@@ -1,0 +1,46 @@
+title: About
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: title
+            field:
+              type: text
+              required: true
+              validate:
+                - required
+          -
+            import: button
+            prefix: first_
+          -
+            import: button
+            prefix: second_
+          -
+            import: details
+            prefix: about_
+          -
+            handle: metric_caption
+            field:
+              type: text
+              display: 'Metric Caption'
+              width: 50
+          -
+            handle: metric_value
+            field:
+              type: text
+              display: 'Metric Value'
+              width: 50
+  sidebar:
+    display: Sidebar
+    sections:
+      -
+        fields:
+          -
+            handle: slug
+            field:
+              type: slug
+              localizable: true
+              validate: 'max:200'
