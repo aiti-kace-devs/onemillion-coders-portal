@@ -35,27 +35,28 @@
         },
         props: {
             errors: Object,
+            admissionForm: Object,
         },
         data() {
             const selections = ref([]);
             const fileInput = ref(null);
 
             const imageConfig = ref({
-                image: null,
-                isDirty: true,
-                preview: null,
-                original: null,
+                image: this.admissionForm.image,
+                isDirty: false,
+                preview: this.admissionForm.image,
+                original: this.admissionForm.image,
             });
 
             const form = useForm({
-                title: null,
-                description: null,
-                image: imageConfig.image,
-                code: null,
-                message_when_inactive: null,
-                message_after_registration: null,
-                active: 1,
-                schema: [],
+                title: this.admissionForm.title,
+                description: this.admissionForm.description,
+                image: this.admissionForm.image,
+                code: this.admissionForm.code,
+                message_when_inactive: this.admissionForm.message_when_inactive,
+                message_after_registration: this.admissionForm.message_after_registration,
+                active: this.admissionForm.active,
+                schema: this.admissionForm.schema ?? [],
             });
 
             return {
@@ -63,8 +64,28 @@
                 imageConfig,
                 fileInput,
                 selections,
-                editContent: false,
+                editContent: true,
             };
+        },
+        mounted() {
+            this.admissionForm.schema.forEach((schema) => {
+                const newField = {
+                    id: `field_${this.selections.length + 1}`, // Unique ID
+                    label: `Field ${this.selections.length + 1}`, // Default label
+                    title: schema.title,
+                    description: schema.description,
+                    type: schema.type, // Default type
+                    placeholder: "Question", // Placeholder
+                    options: schema.options, // Options for dropdown/select fields
+                    rules: schema.rules ?? null,
+                    validators: {
+                        required: schema.validators.required ?? false,
+                        unique: schema.validators.unique ?? false,
+                    },
+                };
+
+                this.selections.push(newField);
+            });
         },
         watch: {
             selections: {
@@ -83,10 +104,10 @@
                     label: `Field ${this.selections.length + 1}`, // Default label
                     title: null,
                     description: null,
-                    type: "text",
+                    type: "text", // Default type
                     placeholder: "Question", // Placeholder
-                    options: null,
-                    rules: '',
+                    options: null, // Options for dropdown/select fields
+                    rules: null,
                     validators: {
                         required: false,
                         unique: false,
@@ -98,6 +119,7 @@
                 this.form.clearErrors("schema");
             },
             removeSelection(index) {
+                // Remove the field at the specified index
                 this.selections.splice(index, 1);
             },
             changeSelectionType(index) {
@@ -119,20 +141,24 @@
                 this.selections[swapIndex] = temp;
             },
             submit() {
-                this.form.post(route("admin.form.store"), {
-                    data: {
+                this.form.post(
+                    route("admin.form.update", {
+                        form: this.admissionForm.uuid,
                         isDirty: this.imageConfig.isDirty,
-                    },
-                    onSuccess: () => {
-                        toastr.success("Form successfully saved");
-                        this.resetForm();
-                    },
-                    onError: (errors) => {
-                        toastr.error("Something went wrong");
-                    },
-                });
+                        _method: "put",
+                    }), {
+                        onSuccess: () => {
+                            toastr.success("Form successfully updated");
+                            this.resetForm();
+                        },
+                        onError: (errors) => {
+                            toastr.error("Something went wrong");
+                        },
+                    }
+                );
             },
             resetForm() {
+                // Clear form and selections after successful submission
                 this.form.reset();
                 this.form.clearErrors();
                 this.selections = [];
@@ -179,7 +205,7 @@
 
 <template>
 
-    <Head title="Forms | Create Form" />
+    <Head title="Forms | Edit Form" />
 
     <AuthenticatedLayout>
         <template #header>
@@ -188,7 +214,7 @@
                 <span class="material-symbols-outlined text-gray-400">
                     keyboard_arrow_right
                 </span>
-                Create Form
+                Edit Form
             </div>
         </template>
 
@@ -260,17 +286,17 @@
                                                 <InputLabel for="code" value="Unique Code"
                                                     :required="true" />
                                                 <TextInput id="code" type="text" class="w-full"
-                                                    v-model="form.code" :placeholder="'Unique Code'" autocomplete="code"
+                                                    v-model="form.code" :placeholder="'Code'" autocomplete="code"
                                                     :class="{ 'border-red-600': form.errors.code }" />
                                                 <InputError :message="form.errors.code" />
                                             </div>
                                             <!-- message after registration -->
                                             <div>
                                                 <InputLabel for="message_after_registration"
-                                                    value="Message After Submission" :required="true" />
+                                                    value="Message After Registration" :required="true" />
                                                 <TextInput id="message_after_registration" type="text" class="w-full"
                                                     v-model="form.message_after_registration"
-                                                    :placeholder="'Message After Submission'"
+                                                    :placeholder="'Message After Registration'"
                                                     :class="{
                                                         'border-red-600': form.errors.message_after_registration,
                                                     }" />
@@ -357,17 +383,6 @@
                                                         <InputError
                                                             :message="form.errors[`schema.${row}.description`]" />
                                                     </div>
-
-                                                    <div class="col-span-2">
-                                                        <TextInput :id="selection.id" type="text" class="w-full"
-                                                            v-model="selection.rules"
-                                                            :placeholder="selection.placeholder"
-                                                            :class="{
-                                                                'border-red-600': form.errors[`schema.${row}.rules`],
-                                                            }" />
-                                                        <InputError :message="form.errors[`schema.${row}.rules`]" />
-                                                    </div>
-
                                                 </div>
 
                                                 <div>
@@ -377,8 +392,8 @@
                                 selection.type
                               )
                             ">
-                                                        <TextInput :id="selection.id" type="text"
-                                                            class="w-full" v-model="selection.options"
+                                                        <TextInput :id="selection.id" type="text" class="w-full"
+                                                            v-model="selection.options"
                                                             :placeholder="(selection.type == 'file' ? 'File type' : 'Options') +
                                                             ' (comma-separated)'"
                                                             :class="{
@@ -394,6 +409,20 @@
 
                                                         <InputError :message="form.errors[`schema.${row}.options`]" />
                                                     </div>
+                                                </div>
+
+                                                <div class="col-span-2">
+                                                    <TextInput :id="selection.id" type="text" class="w-full"
+                                                        v-model="selection.rules"
+                                                        placeholder="Validation Rules"
+                                                        :class="{
+                                                            'border-red-600': form.errors[`schema.${row}.rules`],
+                                                        }" />
+
+                                                    <p class="text-sm text-gray-600">
+                                                        Check out rules <a target="_blank" class="text-blue-600" href="https://laravel.com/docs/11.x/validation#available-validation-rules">here</a>
+                                                    </p>
+                                                    <InputError :message="form.errors[`schema.${row}.rules`]" />
                                                 </div>
 
                                                 <div class="flex justify-between items-center">
@@ -474,7 +503,7 @@
 
                                             <div>
                                                 <PrimaryButton type="submit" :disabled="form.processing"
-                                                    :class="{ 'opacity-25': form.processing }">save
+                                                    :class="{ 'opacity-25': form.processing }">update
                                                 </PrimaryButton>
                                             </div>
                                         </div>

@@ -19,4 +19,9 @@ class UserAdmission extends Model
     {
         return $this->belongsTo(Course::class, 'course_id');
     }
+    public function hasAttendance()
+    {
+        return Attendance::where('user_id', $this->user_id);
+    }
+
 }

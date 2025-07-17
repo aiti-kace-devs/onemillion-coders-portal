@@ -1,70 +1,111 @@
 <script>
-    import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-    import {
-        Head,
-        useForm
-    } from "@inertiajs/vue3";
-    import LinkButton from "@/Components/LinkButton.vue";
-    import PrimaryButton from "@/Components/PrimaryButton.vue";
-    import TextInput from "@/Components/TextInput.vue";
-    import InputError from "@/Components/InputError.vue";
-    import InputLabel from "@/Components/InputLabel.vue";
-    import {
-        ref
-    } from "vue";
-    import SelectInput from "@/Components/SelectInput.vue";
-    import Checkbox from "@/Components/Checkbox.vue";
-    import DangerButton from "@/Components/DangerButton.vue";
-    import TextAreaInput from "@/Components/TextAreaInput.vue";
-    import FileInput from "@/Components/FileInput.vue";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { Head, useForm } from "@inertiajs/vue3";
+import { ref } from "vue";
+import PrimaryButton from "@/Components/PrimaryButton.vue";
+import TextInput from "@/Components/TextInput.vue";
+import InputError from "@/Components/InputError.vue";
+import InputLabel from "@/Components/InputLabel.vue";
+import SelectInput from "@/Components/SelectInput.vue";
+import Checkbox from "@/Components/Checkbox.vue";
+import FileInput from "@/Components/FileInput.vue";
+import TextAreaInput from "@/Components/TextAreaInput.vue";
+import DangerButton from "@/Components/DangerButton.vue";
 
-    export default {
-        components: {
-            AuthenticatedLayout,
-            Head,
-            LinkButton,
-            PrimaryButton,
-            TextInput,
-            InputError,
-            InputLabel,
-            SelectInput,
-            Checkbox,
-            DangerButton,
-            TextAreaInput,
-            FileInput,
-        },
-        props: {
-            errors: Object,
-        },
-        data() {
-            const selections = ref([]);
-            const fileInput = ref(null);
+export default {
+  components: {
+    AuthenticatedLayout,
+    Head,
+    PrimaryButton,
+    DangerButton,
+    TextInput,
+    InputError,
+    InputLabel,
+    SelectInput,
+    Checkbox,
+    FileInput,
+    TextAreaInput,
+  },
+  props: {
+    isCreateMethod: Boolean,
+    errors: Object,
+    admissionForm: Object,
+  },
+  data() {
+    const selections = ref([]);
+    const fileInput = ref(null);
 
-            const imageConfig = ref({
-                image: null,
-                isDirty: true,
-                preview: null,
-                original: null,
+    const imageConfig = ref({
+      image: this.admissionForm?.image ?? null,
+      isDirty: this.isCreateMethod ?? false,
+      preview: this.admissionForm?.image ?? null,
+      original: this.admissionForm?.image ?? null,
+    });
+
+    const form = useForm({
+      type: this.admissionForm?.type ?? "",
+      title: this.admissionForm?.title ?? null,
+      description: this.admissionForm?.description ?? null,
+      image: this.admissionForm?.image ?? null,
+      code: this.admissionForm?.code ?? null,
+      message_when_inactive: this.admissionForm?.message_when_inactive ?? null,
+      message_after_registration: this.admissionForm?.message_after_registration ?? null,
+      active: this.admissionForm?.active ?? null,
+      schema: this.admissionForm?.schema ?? [],
+    });
+
+    return {
+      form,
+      imageConfig,
+      fileInput,
+      selections,
+    };
+  },
+  computed: {
+    // Determine mode
+    mode() {
+      return this.isCreateMethod ? "Create" : "Edit";
+    },
+    submitMethod() {
+      return this.isCreateMethod ? "post" : "put";
+    },
+    submitButtonText() {
+      return this.isCreateMethod ? "save" : "update";
+    },
+    submitRoute() {
+      return this.isCreateMethod
+        ? route("admin.form.store")
+        : route("admin.form.update", {
+            form: this.admissionForm.id,
+            isDirty: this.imageConfig.isDirty,
+            _method: "put",
+          });
+    },
+    successMessage() {
+      return this.isCreateMethod
+        ? "Form successfully saved"
+        : "Form successfully updated";
+    },
+  },
+  mounted() {
+            this.admissionForm?.schema.forEach((schema) => {
+                const newField = {
+                    id: `field_${this.selections.length + 1}`, // Unique ID
+                    label: `Field ${this.selections.length + 1}`, // Default label
+                    title: schema.title,
+                    description: schema.description,
+                    type: schema.type, // Default type
+                    placeholder: "Question", // Placeholder
+                    options: schema?.options ?? null, // Options for dropdown/select fields
+                    rules: schema.rules ?? '',
+                    validators: {
+                        required: schema.validators.required ?? false,
+                        unique: schema.validators.unique ?? false,
+                    },
+                };
+
+                this.selections.push(newField);
             });
-
-            const form = useForm({
-                title: null,
-                description: null,
-                image: imageConfig.image,
-                code: null,
-                message_when_inactive: null,
-                message_after_registration: null,
-                active: 1,
-                schema: [],
-            });
-
-            return {
-                form,
-                imageConfig,
-                fileInput,
-                selections,
-                editContent: false,
-            };
         },
         watch: {
             selections: {
@@ -75,8 +116,8 @@
                 deep: true,
             },
         },
-        methods: {
-            addSelection() {
+  methods: {
+    addSelection() {
                 // Add a new field with default values
                 const newField = {
                     id: `field_${this.selections.length + 1}`, // Unique ID
@@ -118,81 +159,76 @@
                 this.selections[index] = this.selections[swapIndex];
                 this.selections[swapIndex] = temp;
             },
-            submit() {
-                this.form.post(route("admin.form.store"), {
-                    data: {
-                        isDirty: this.imageConfig.isDirty,
-                    },
-                    onSuccess: () => {
-                        toastr.success("Form successfully saved");
-                        this.resetForm();
-                    },
-                    onError: (errors) => {
-                        toastr.error("Something went wrong");
-                    },
-                });
-            },
-            resetForm() {
-                this.form.reset();
-                this.form.clearErrors();
-                this.selections = [];
-            },
 
-            handleImageOnChange(event) {
-                const file = event.target.files[0];
-                if (!file) return;
+    handleImageOnChange(event) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-                this.previewImage(file);
-                this.imageConfig.image = file;
-                this.imageConfig.isDirty = true;
-                this.form.image = file;
-            },
-            previewImage(file) {
-                // Use FileReader to read the file and generate a data URL
-                const reader = new FileReader();
+      this.previewImage(file);
+      this.imageConfig.image = file;
+      this.imageConfig.isDirty = true;
+      this.form.image = file;
+    },
+    previewImage(file) {
+      // Use FileReader to read the file and generate a data URL
+      const reader = new FileReader();
 
-                reader.onload = (e) => {
-                    this.imageConfig.preview = e.target.result;
-                };
+      reader.onload = (e) => {
+        this.imageConfig.preview = e.target.result;
+      };
 
-                reader.readAsDataURL(file);
-            },
-            removeImage() {
-                this.imageConfig.preview = null;
-                this.imageConfig.image = null;
-                this.imageConfig.isDirty = false;
-                this.resetInput();
-            },
-            restoreImage() {
-                this.imageConfig.preview = this.imageConfig.original;
-                this.imageConfig.image = null;
-                this.imageConfig.isDirty = false;
-            },
-            resetInput() {
-                if (this.fileInput) {
-                    this.fileInput = ""; // Clear file input
-                }
-            },
+      reader.readAsDataURL(file);
+    },
+    removeImage() {
+      this.imageConfig.preview = null;
+      this.imageConfig.image = null;
+      this.imageConfig.isDirty = false;
+      this.resetInput();
+    },
+    restoreImage() {
+      this.imageConfig.preview = this.imageConfig.original;
+      this.imageConfig.image = null;
+      this.imageConfig.isDirty = false;
+    },
+    resetInput() {
+      if (this.fileInput) {
+        this.fileInput = ""; // Clear file input
+      }
+    },
+    submit() {
+      this.form.post(this.submitRoute, {
+        onSuccess: () => {
+          toastr.success(this.successMessage);
+          this.resetForm();
         },
-    };
+        onError: (errors) => {
+          toastr.error("Something went wrong");
+        },
+      });
+    },
+    resetForm() {
+      this.form.reset();
+      this.form.clearErrors();
+    },
+  },
+};
 </script>
 
 <template>
+  <Head :title="'Forms | ' + this.mode + ' Form'" />
 
-    <Head title="Forms | Create Form" />
+  <AuthenticatedLayout>
+    <template #header>
+      <div class="flex items-center">
+        Forms
+        <span class="material-symbols-outlined text-gray-400">
+          keyboard_arrow_right
+        </span>
+        {{ this.mode }} Form
+      </div>
+    </template>
 
-    <AuthenticatedLayout>
-        <template #header>
-            <div class="flex items-center">
-                Forms
-                <span class="material-symbols-outlined text-gray-400">
-                    keyboard_arrow_right
-                </span>
-                Create Form
-            </div>
-        </template>
-
-        <div class="py-12">
+    <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-transparent overflow-hidden shadow-none sm:rounded-lg">
                     <div class="p-6">
@@ -245,7 +281,7 @@
                                                     </div>
 
                                                     <!-- Restore Button -->
-                                                    <div v-if="this.editContent && imageConfig.isDirty">
+                                                    <div v-if="this.mode == 'Edit' && imageConfig.isDirty">
                                                         <button @click="restoreImage"
                                                             class="py-2 px-4 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">
                                                             Restore Original
@@ -486,5 +522,5 @@
                 </div>
             </div>
         </div>
-    </AuthenticatedLayout>
+     </AuthenticatedLayout>
 </template>
