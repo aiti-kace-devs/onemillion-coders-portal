@@ -461,7 +461,7 @@ Route::prefix('student')->name('student.')->group(function () {
 
     Route::middleware(['auth:web'])->group(function () {
         // Dashboard route
-        Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');   
+        Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');
 
         // Profile route
         Route::prefix('profile')->name('profile.')->group(function () {
@@ -477,6 +477,14 @@ Route::prefix('student')->name('student.')->group(function () {
 
         // Application status route
         Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
+
+
+        // Course assessment route
+        Route::prefix('assessment')->name('assessment.')->group(function () {
+            Route::get('/', [StudentOperation::class, 'questionnaire'])->name('questionnaire.index');
+            Route::get('/{code}', [StudentOperation::class, 'take_questionnaire'])->name('questionnaire.take_questionnaire');
+            Route::post('/{code}', [StudentOperation::class, 'store_questionnaire'])->name('questionnaire.store');
+        });
     });
 
 
