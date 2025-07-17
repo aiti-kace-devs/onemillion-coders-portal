@@ -178,7 +178,7 @@ return [
         App\Providers\EventServiceProvider::class,
         // App\Providers\HorizonServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        GeoSot\EnvEditor\ServiceProvider::class,
+        // GeoSot\EnvEditor\ServiceProvider::class,
         App\Providers\AppConfigServiceProvider::class,
 
     ],
@@ -237,7 +237,7 @@ return [
 
     ],
 
-    'version' => env('APP_VERSION', '1.0.0'),
+    'version' => '3.3.0',
     'super_admin_email' => env('SUPER_ADMIN_EMAIL', 'admin@test.com'),
     'super_admin_password' => env('SUPER_ADMIN_PASSWORD', Str::random()),
     'super_admin_name' => env('SUPER_ADMIN_NAME', 'Super Admin'),
