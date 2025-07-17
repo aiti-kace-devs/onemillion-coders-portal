@@ -24,11 +24,11 @@ class FilterHelper
      * @param string|null $label
      * @return void
      */
-    public static function addNullableColumnFilter(string $columnName, string $label = null)
+    public static function addNullableColumnFilter(string $filterName, string $columnName, string $label = null)
     {
         $label = $label ?? ucwords(str_replace('_', ' ', $columnName));
 
-        CRUD::filter($columnName)
+        CRUD::filter($filterName)
             ->type('dropdown')
             ->label($label)
             ->values([
@@ -44,6 +44,7 @@ class FilterHelper
                 }
             });
     }
+
 
 
 

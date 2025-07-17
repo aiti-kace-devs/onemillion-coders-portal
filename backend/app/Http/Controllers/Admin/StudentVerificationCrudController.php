@@ -83,7 +83,7 @@ class StudentVerificationCrudController extends CrudController
 
         CRUD::addButton('line', 'verification_status', 'view', 'crud::buttons.verification_status');
         $this->courseFilter('registered_course');
-        FilterHelper::addNullableColumnFilter('verification_date', 'Verified');
+        FilterHelper::addNullableColumnFilter('verification_status', 'verification_date', 'Verified');
         $admins = Admin::whereIn('id', function ($query) {
         $query->select('verified_by')
             ->from('users')
@@ -98,7 +98,7 @@ class StudentVerificationCrudController extends CrudController
             ->whenActive(function ($value) {
                 CRUD::addClause('where', 'verified_by', $value);
             });
-
+        FilterHelper::addDateRangeFilter('verification_date', 'Verification Date');
         CRUD::enableExportButtons();
     }
 

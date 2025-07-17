@@ -39,12 +39,14 @@ class EmailTemplateCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
-
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+        CRUD::column('name')->type('textarea');
+        CRUD::addColumn([
+            'name' => 'content',
+            'label' => 'Content',
+            'type' => 'text',
+            'escaped' => false,
+        ]);
+        CRUD::column('created_at');
     }
 
     /**
@@ -56,12 +58,12 @@ class EmailTemplateCrudController extends CrudController
     protected function setupCreateOperation()
     {
         CRUD::setValidation(EmailTemplateRequest::class);
-        CRUD::setFromDb(); // set fields from db columns.
-
-        /**
-         * Fields can be defined using the fluent syntax:
-         * - CRUD::field('price')->type('number');
-         */
+        CRUD::field('name')->type('text');
+        CRUD::addField([
+            'name' => 'content',
+            'label' => 'Content',
+            'type'      => 'tinymce',
+        ]);
     }
 
     /**
