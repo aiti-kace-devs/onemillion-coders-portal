@@ -128,7 +128,7 @@ class StudentOperation extends Controller
             ->get()
             ->toArray();
 
-        return Inertia::render('Student/Exam', compact('exams'));
+        return Inertia::render('Student/Exam/Index', compact('exams'));
     }
 
     //join exam page
@@ -159,7 +159,7 @@ class StudentOperation extends Controller
         $now = Carbon::now();
 
         if (!$now->isAfter(new Carbon($exam->exam_date))) {
-            return redirect(url('student/exam'))->with([
+            return redirect(route('student.exam.index'))->with([
                 'flash' => 'Unable to take exam. Exam deadline was ' . $exam->exam_date,
                 'key' => 'error',
             ]);
@@ -195,7 +195,7 @@ class StudentOperation extends Controller
         }
         // dd($question->pluck("id"));
 
-        return Inertia::render('Student/JoinExam', compact('questions', 'exam', 'usedTime'));
+        return Inertia::render('Student/Exam/JoinExam', compact('questions', 'exam', 'usedTime'));
 
         // return view('student.join_exam', ['question' => $questions, 'exam' => $exam, 'usedTime' => $usedTime]);
     }
@@ -722,9 +722,13 @@ class StudentOperation extends Controller
     {
         $questionnaires = Questionnaire::where('active', true)->orderBy('title')->get();
 
-        foreach ($questionnaires as $questionnaire) {
-            $questionnaire['is_submitted'] = \Auth::user()->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->where('is_submitted', true)->exists();
-        }
+        $questionnaires = $questionnaires->map(function ($questionnaire) {
+            $questionnaire['is_submitted'] = Auth::user()->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->where('is_submitted', true)->exists();
+
+            return $questionnaire;
+        });
+
+        return Inertia::render('Student/Assessment/Index', compact('questionnaires'));
 
         return view('student.questionnaire', compact('questionnaires'));
     }
@@ -734,7 +738,7 @@ class StudentOperation extends Controller
         $questionnaire = Questionnaire::where('code', $code)->first();
 
         if (!$questionnaire) {
-            return redirect(route('student.questionnaire.index'))->with(
+            return redirect(route('student.assessment.index'))->with(
                 [
                     'flash' => 'Questionnaire not found.',
                     'key' => 'error',
@@ -745,7 +749,7 @@ class StudentOperation extends Controller
         $user = \Auth::user();
 
         if (!$user->isAdmitted() && !$user->hasAttendance()) {
-            return redirect(route('student.questionnaire.index'))->with(
+            return redirect(route('student.assessment.index'))->with(
                 [
                     'flash' => 'You are not allowed to access this form.',
                     'key' => 'error',
@@ -758,9 +762,9 @@ class StudentOperation extends Controller
         $hasSubmitted = $userQuestionnaireResponse->is_submitted ?? false;
 
         if ($hasSubmitted) {
-            return redirect(route('student.questionnaire.index'))->with(
+            return redirect(route('student.assessment.index'))->with(
                 [
-                    'flash' => 'You have already taken this questionnaire.',
+                    'flash' => 'You have already taken this assessment.',
                     'key' => 'error',
                 ]
             );
@@ -778,6 +782,8 @@ class StudentOperation extends Controller
         $responses = $userQuestionnaireResponse['response_data'] ?? [];
 
         $instructorQuestions = collect($questionnaire->schema)->where('type', 'instructors')->first()['questions'] ?? [];
+
+        return Inertia::render('Student/Assessment/TakeQuestionnaire', compact('questionnaire', 'hasSubmitted', 'instructors', 'instructorQuestions', 'responses'));
 
         return view('student.take_questionnaire', compact('questionnaire', 'hasSubmitted', 'instructors', 'instructorQuestions', 'responses'));
     }
@@ -837,7 +843,7 @@ class StudentOperation extends Controller
             $customMessages['response_data.instructors.*.exists'] = 'The selected instructor is invalid.';
         } else {
             foreach ($schema as $field) {
-                $fieldKey = "response_data.{$field['field_name']}";
+                $fieldKey = $field['field_name'];
 
                 $rules = [];
 

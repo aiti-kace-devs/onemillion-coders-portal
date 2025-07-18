@@ -69,7 +69,7 @@
                                 <form
                                     method="POST"
                                     class="questionnaireForm"
-                                    action="{{ route('student.questionnaire.store',  $questionnaire->code) }}"
+                                    action="{{ route('student.assessment.store',  $questionnaire->code) }}"
                                     enctype="multipart/form-data">
                                     @csrf
 
@@ -116,7 +116,7 @@
                                 <form
                                     method="POST"
                                     class="questionnaireForm"
-                                    action="{{ route('student.questionnaire.store',  $questionnaire->code) }}"
+                                    action="{{ route('student.assessment.store',  $questionnaire->code) }}"
                                     enctype="multipart/form-data">
                                     @csrf
 

@@ -133,8 +133,8 @@ const user = auth?.user || {};
           </SidebarNavLink>
 
           <SidebarNavLink
-            :active="route().current('student.attendance.show')"
-            :href="route('student.attendance.show')"
+            :active="route().current('student.assessment.*')"
+            :href="route('student.assessment.index')"
             :label="'Assessment'"
           >
             <span class="material-symbols-outlined">rate_review</span>

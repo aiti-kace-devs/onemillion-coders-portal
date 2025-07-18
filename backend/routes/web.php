@@ -519,9 +519,9 @@ Route::prefix('student')->name('student.')->group(function () {
 
         // Course assessment route
         Route::prefix('assessment')->name('assessment.')->group(function () {
-            Route::get('/', [StudentOperation::class, 'questionnaire'])->name('questionnaire.index');
-            Route::get('/{code}', [StudentOperation::class, 'take_questionnaire'])->name('questionnaire.take_questionnaire');
-            Route::post('/{code}', [StudentOperation::class, 'store_questionnaire'])->name('questionnaire.store');
+            Route::get('/', [StudentOperation::class, 'questionnaire'])->name('index');
+            Route::get('/{code}', [StudentOperation::class, 'take_questionnaire'])->name('take-questionnaire');
+            Route::post('/{code}', [StudentOperation::class, 'store_questionnaire'])->name('store');
         });
     });
 
@@ -576,10 +576,10 @@ Route::prefix('student')
             Route::post('/update-details', [StudentOperation::class, 'updateDetails'])->name('updateDetails')->middleware('is_admitted');
 
 
-            // questionnaire routes
-            Route::get('/questionnaire', [StudentOperation::class, 'questionnaire'])->name('questionnaire.index');
-            Route::get('/questionnaire/{code}', [StudentOperation::class, 'take_questionnaire'])->name('questionnaire.take_questionnaire');
-            Route::post('/questionnaire/{code}', [StudentOperation::class, 'store_questionnaire'])->name('questionnaire.store');
+            // // questionnaire routes
+            // Route::get('/questionnaire', [StudentOperation::class, 'questionnaire'])->name('questionnaire.index');
+            // Route::get('/questionnaire/{code}', [StudentOperation::class, 'take_questionnaire'])->name('questionnaire.take_questionnaire');
+            // Route::post('/questionnaire/{code}', [StudentOperation::class, 'store_questionnaire'])->name('questionnaire.store');
 
 
             // Route::get('/ateendance', [StudentOperation::class, 'view_result']);
