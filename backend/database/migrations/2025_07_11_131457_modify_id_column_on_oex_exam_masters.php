@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE oex_exam_masters MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT;");
+        // DB::statement("ALTER TABLE oex_exam_masters MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT;");
     }
 
     /**
@@ -19,6 +19,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE oex_exam_masters MODIFY COLUMN id BIGINT UNSIGNED NOT NULL;");
+        // DB::statement("ALTER TABLE oex_exam_masters MODIFY COLUMN id BIGINT UNSIGNED NOT NULL;");
     }
 };
