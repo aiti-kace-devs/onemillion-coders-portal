@@ -720,7 +720,7 @@ class StudentOperation extends Controller
 
     public function questionnaire()
     {
-        $questionnaires = Questionnaire::where('active', true)->orderBy('title')->get();
+        $questionnaires = Questionnaire::where('active', true)->latest()->get();
 
         $questionnaires = $questionnaires->map(function ($questionnaire) {
             $questionnaire['is_submitted'] = Auth::user()->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->where('is_submitted', true)->exists();
@@ -814,7 +814,7 @@ class StudentOperation extends Controller
         ];
 
         $customMessages = [
-            'response_data.required' => 'The form responses are required.',
+            'response_data.required' => 'The assessment responses are required.',
         ];
 
         $formattedData = [];
@@ -843,7 +843,7 @@ class StudentOperation extends Controller
             $customMessages['response_data.instructors.*.exists'] = 'The selected instructor is invalid.';
         } else {
             foreach ($schema as $field) {
-                $fieldKey = $field['field_name'];
+                $fieldKey = "response_data.{$field['field_name']}";
 
                 $rules = [];
 
@@ -884,17 +884,8 @@ class StudentOperation extends Controller
             }
         }
 
-
-        $validator = Validator::make($request->all(), $validationRules, $customMessages, $attributes);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'error' => $validator->errors()->toArray()
-            ], 422);
-        }
-
-        $validated = $validator->validated();
-
+        $validated = $request->validate($validationRules, $customMessages, $attributes);
+      
         // Load existing draft or create new one
         $draft = QuestionnaireResponse::firstOrCreate(
             [
@@ -935,21 +926,24 @@ class StudentOperation extends Controller
 
         $isSubmitted =  count($remainingSections) === 0 && count($yetToComplete) === 0;
 
+        // dd(count($remainingSections), count($yetToComplete));
         // Save the updated response_data
         $draft->update([
             'response_data' => $existing,
             'is_submitted' => $isSubmitted,
         ]);
 
+        if($isSubmitted){
+            return Redirect::route('student.assessment.index');
+            dd('hereSub');
+        }
+
         return response()->json([
             'status' => true,
             'progress' => [
-                'is_submitted' => $isSubmitted,
-                'redirect_url' => route('student.questionnaire.index'),
                 'next_section' => !$isSubmitted ? ($remainingSections[0] ?? null) : null,
                 'next_instructor' => $isInstructorQuestions || $isInstructorSelect ? ($yetToComplete[0] ?? false) : false,
                 'instructor_button_text' => ($sectionIndex >= $totalSections - 1 && count($yetToComplete) === 1) ? 'Submit' : 'Save & Next',
-                'instructor_selected' => $isInstructorSelect,
             ],
         ]);
     }

@@ -17,16 +17,18 @@ const props = defineProps({
 
 const activeTab = ref("section-0");
 const loadingTab = ref(null);
+const loading = ref(false);
 const formErrors = reactive({});
 const instructorButtonText = reactive({});
 
 // Form state
-const sectionForm = useForm({
+const sectionForm = reactive({
   selected_instructors: props.responses?.selected_instructors || [],
   sections: props.questionnaire.schema.map(
-    (_, i) => props.responses?.sections?.[i] || {}
+    (section) => props.responses?.[section.type] || {}
   ),
 });
+
 const instructorForm = reactive({});
 props.instructors.forEach((inst) => {
   instructorForm[inst.id] = props.responses?.instructors?.[inst.id] || {};
@@ -37,57 +39,62 @@ function setActiveTab(tab) {
 }
 
 async function submitSectionForm(i, section) {
+  // console.log(section)
+  loading.value = true;
   loadingTab.value = `section-${i}`;
   formErrors[`section-${i}`] = {};
   try {
     const payload = {
       section: i,
+      response_data: section.type === 'instructors' ? sectionForm.selected_instructors : sectionForm.sections[i],
     };
-
-    const { data } = await axios
-      .post(route("student.assessment.store", props.questionnaire.code), payload);
-      // .then((response) => [handleProgress(data.progress)])
-      // .catch((error) => console.log(error));
-
-    // const { data } = await axios.post(props.storeUrl, payload);
-
-    console.log(data)
+    const { data } = await axios.post(
+      route("student.assessment.store", props.questionnaire.code),
+      payload
+    );
+    handleProgress(data.progress)
   } catch (err) {
     if (err.response && err.response.status === 422) {
-      formErrors[`section-${i}`] = err.response.data.error || {};
+      formErrors[`section-${i}`] = err.response.data.errors || {};
     }
   } finally {
+    loading.value = false;
     loadingTab.value = null;
   }
 }
 
 async function submitInstructorForm(instructorId) {
+  loading.value = true;
   loadingTab.value = `instructor-${instructorId}`;
   formErrors[`instructor-${instructorId}`] = {};
   try {
     const payload = {
       section: `instructor-${instructorId}`,
-      ...instructorForm[instructorId],
+      response_data: instructorForm[instructorId],
       instructor_id: instructorId,
     };
-    const { data } = await axios.post(props.storeUrl, payload);
-    if (data.progress?.instructor_button_text) {
-      instructorButtonText[instructorId] = data.progress.instructor_button_text;
-    }
+    
+    const { data } = await axios.post(
+      route("student.assessment.store", props.questionnaire.code),
+      payload
+    );
+
     handleProgress(data.progress);
   } catch (err) {
     if (err.response && err.response.status === 422) {
-      formErrors[`instructor-${instructorId}`] = err.response.data.error || {};
+      formErrors[`instructor-${instructorId}`] = err.response.data.errors || {};
     }
   } finally {
+    loading.value = false;
     loadingTab.value = null;
   }
 }
 
 function handleProgress(progress) {
   if (progress.next_instructor) {
+    instructorButtonText[progress.next_instructor] = progress.instructor_button_text;
     setActiveTab(`instructor-${progress.next_instructor}`);
-  } else if (progress.next_section !== undefined) {
+  } else {
     setActiveTab(`section-${progress.next_section}`);
   }
 }
@@ -156,24 +163,21 @@ function handleProgress(progress) {
                 class="space-y-4"
               >
                 <div>
-                  <label class="block text-lg font-semibold mb-2"
-                    >Review Instructor: {{ instructor.name }}</label
-                  >
+                  <p class="block text-lg font-semibold mb-2"
+                    >Review Instructor: {{ instructor.name }}</p>
                 </div>
                 <QuestionInput
-                  :hide-label="true"
                   section-title="instructors"
                   :section-questions="instructorQuestions"
                   :section-index="0"
                   :instructors="instructors"
-                  :responses="responses.instructors?.[instructor.id] || {}"
                   v-model="instructorForm[instructor.id]"
                   :errors="formErrors['instructor-' + instructor.id] || {}"
                 />
-                <input type="hidden" name="instructor_id" :value="instructor.id" />
                 <div class="pt-4">
                   <PrimaryButton
-                    :loading="loadingTab === `instructor-${instructor.id}`"
+                    :loading="loadingTab === `instructor-${instructor.id}` || loading"
+                    :disabled="loading"
                     type="submit"
                     class="w-full md:w-auto"
                   >
@@ -199,6 +203,7 @@ function handleProgress(progress) {
                   <InstructorSelect
                     :instructors="instructors"
                     v-model="sectionForm.selected_instructors"
+                    :responses="responses.selected_instructors?.[i] || {}"
                     :errors="formErrors['section-' + i] || {}"
                   />
                 </div>
@@ -208,14 +213,14 @@ function handleProgress(progress) {
                     :section-questions="section.questions"
                     :section-index="i"
                     :instructors="section.type === 'instructors' ? instructors : []"
-                    :responses="responses.sections?.[i] || {}"
                     v-model="sectionForm.sections[i]"
                     :errors="formErrors['section-' + i] || {}"
                   />
                 </div>
                 <div class="pt-4">
                   <PrimaryButton
-                    :loading="loadingTab === `section-${i}`"
+                    :loading="loadingTab === `section-${i}` || loading"
+                    :disabled="loading"
                     type="submit"
                     class="w-full md:w-auto"
                   >

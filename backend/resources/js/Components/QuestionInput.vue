@@ -12,27 +12,23 @@ const props = defineProps({
     type: Array,
     default: [],
   },
-  hideLabel: {
-    type: Boolean,
-    default: false,
-  },
   sectionIndex: {
     type: [Number, String],
     default: 0,
   },
-  sectionTitle: { 
-    type: String, 
-    default: "" 
+  sectionTitle: {
+    type: String,
+    default: "",
   },
-  responses: { 
+  responses: {
     type: Object,
-     default: {}
-     },
-  instructors: { 
+    default: {},
+  },
+  instructors: {
     type: Array,
-     default: [] 
-    },
-  errors:  Object,
+    default: [],
+  },
+  errors: Object,
   modelValue: { type: Object, default: () => ({}) },
 });
 
@@ -108,7 +104,7 @@ function onRadioComponentChange(question, option, checked) {
 <template>
   <div>
     <div v-for="(question, index) in sectionQuestions" :key="index" class="mb-6">
-      <div v-if="!hideLabel" class="mb-2">
+      <div class="mb-2">
         <p>
           {{ question.title
           }}<span class="text-red-600" v-if="question.validators?.required">*</span>
@@ -139,8 +135,7 @@ function onRadioComponentChange(question, option, checked) {
               :id="fieldId(index) + '-opt-' + idx"
               :name="fieldName(question) + '[]'"
               :value="option"
-              :checked="isChecked(question, option)"
-              @update:checked="(val) => onCheckboxComponentChange(question, option, val)"
+              v-model:checked="localValue[question.field_name]"
             />
             <label :for="fieldId(index) + '-opt-' + idx" class="ml-2 text-base">
               {{ capitalize(option) }}
@@ -150,7 +145,6 @@ function onRadioComponentChange(question, option, checked) {
       </template>
 
       <template v-else-if="question.type === 'radio'">
-        {{ localValue }}
         <div class="flex flex-wrap gap-4">
           <div
             v-for="(option, idx) in options(question)"
@@ -161,7 +155,7 @@ function onRadioComponentChange(question, option, checked) {
               :id="fieldId(index) + '-opt-' + idx"
               :name="fieldName(question)"
               :value="option"
-              v-model:checked="localValue[fieldName(question)]"
+              v-model:checked="localValue[question.field_name]"
             />
             <label
               :for="fieldId(index) + '-opt-' + idx"
@@ -177,7 +171,10 @@ function onRadioComponentChange(question, option, checked) {
         {{ question.description }}
       </div>
 
-      <InputError :message="errors?.[question.field_name]?.[0] || ''" />
+      <InputError
+        :message="errors?.[`response_data.${question.field_name}`]?.[0] || ''"
+      />
     </div>
   </div>
+
 </template>
