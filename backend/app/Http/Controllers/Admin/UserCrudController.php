@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
+use Illuminate\Support\Facades\View;
 /**
  * Class UserCrudController
  * @package App\Http\Controllers\Admin
@@ -62,6 +63,7 @@ class UserCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        View::share('mailable', \App\Helpers\MailerHelper::getMailableClasses());
         // CRUD::setFromDb(); // set columns from db columns.
         $this->setupStudentColumns();
 

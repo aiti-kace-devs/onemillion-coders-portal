@@ -20,7 +20,7 @@
         </li>
     </ul>
 </div>
-@include('vendor.backpack.crud.modals.bulk_email')
+@include('vendor.backpack.crud.modals.bulk_email', ['mailable' => $mailable])
 @include('vendor.backpack.crud.modals.bulk_sms')
 
 @push('after_scripts')
