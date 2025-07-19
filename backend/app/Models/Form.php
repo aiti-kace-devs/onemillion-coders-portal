@@ -59,4 +59,11 @@ class Form extends Model
     {
         return $this->hasMany(FormResponse::class);
     }
+
+
+    public function getPreviewButton()
+    {
+        return '<a href="'.route('forms.preview', $this->id).'" target="_blank" class="btn btn-sm btn-primary"><i class="la la-eye"></i>Custom Preview</a>';
+    }
+
 }
