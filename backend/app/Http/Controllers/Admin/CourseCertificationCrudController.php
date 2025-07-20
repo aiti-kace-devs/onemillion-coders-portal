@@ -37,7 +37,7 @@ class CourseCertificationCrudController extends CrudController
         CRUD::setEntityNameStrings('course certification', 'course certifications');
 
         $this->crud->operation('list', function () {
-            WidgetHelper::courseModuleStatisticsWidget();
+            WidgetHelper::courseCertificationStatisticsWidget();
         });
     }
 
