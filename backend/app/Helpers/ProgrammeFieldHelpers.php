@@ -95,13 +95,21 @@ trait ProgrammeFieldHelpers
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
-        MediaHelper::getMediaSelector(
-            name: 'coverImage',
-            disk_options: MediaHelper::getArticleImagesDiskOptions(),
-            label: 'Cover Image',
-            value: $entry->coverImage->file ?? '',
-        );
+        // MediaHelper::getMediaSelector(
+        //     name: 'coverImage',
+        //     disk_options: MediaHelper::getArticleImagesDiskOptions(),
+        //     label: 'Cover Image',
+        //     value: $entry->coverImage->file ?? '',
+        // );
 
+
+        CRUD::addField([
+            'name' => 'image',
+            'label' => 'Cover Image URL',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+            'hint' => 'Copy and paste image URL eg. https://cdn.msme.gikace.org/media/image/partners/undp-logo.png'
+        ]);
 
         CRUD::addField([
             'name' => 'start_date',
@@ -232,7 +240,7 @@ trait ProgrammeFieldHelpers
         $this->addOverviewField();
 
 
-        $this->addFieldsToTab('Info', true, ['title', 'sub_title', 'coverImage', 'start_date', 'end_date', 'duration', 'course_category_id', 'status', 'level', 'job_responsible']);
+        $this->addFieldsToTab('Info', true, ['title', 'sub_title', 'image', 'start_date', 'end_date', 'duration', 'course_category_id', 'status', 'level', 'job_responsible']);
         $this->addFieldsToTab('Module', true, ['course_modules']);
         $this->addFieldsToTab('Certification', true, ['course_certification']);
         $this->addFieldsToTab('Prerequisites', true, ['prerequisites']);

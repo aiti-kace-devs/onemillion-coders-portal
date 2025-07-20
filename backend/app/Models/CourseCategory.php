@@ -11,12 +11,6 @@ class CourseCategory extends Model
     use CrudTrait;
     use HasFactory;
 
-    /*
-    |--------------------------------------------------------------------------
-    | GLOBAL VARIABLES
-    |--------------------------------------------------------------------------
-    */
-
     protected $table = 'course_categories';
     // protected $primaryKey = 'id';
     // public $timestamps = false;
@@ -31,6 +25,5 @@ class CourseCategory extends Model
     protected $casts = [
         'status' => 'boolean',
     ];
-
 
 }

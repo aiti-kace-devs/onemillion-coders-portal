@@ -57,6 +57,11 @@ use Illuminate\Support\Str;
 // // Route::post('form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
 // routes/web.php
 Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
+Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
+Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
+Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
+Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
 Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
