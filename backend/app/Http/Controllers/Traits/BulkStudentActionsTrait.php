@@ -39,7 +39,7 @@ trait BulkStudentActionsTrait
         SendBulkEmailJob::dispatch($validated);
 
         return response()->json([
-            'flash' => 'SMS sending initiated successfully!',
+            'flash' => 'Email sending initiated successfully!',
             'key' => 'success',
         ]);
     }

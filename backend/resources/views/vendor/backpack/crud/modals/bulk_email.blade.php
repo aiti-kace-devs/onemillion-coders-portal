@@ -1,4 +1,5 @@
-<div class="modal fade" id="bulkEmailModal" tabindex="-1" role="dialog" aria-labelledby="bulkEmailModalLabel" aria-hidden="true">
+<div class="modal fade" id="bulkEmailModal" tabindex="-1" role="dialog" aria-labelledby="bulkEmailModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -7,30 +8,26 @@
             </div>
             <div class="modal-body">
                 <form id="bulkEmailForm">
-                    <div class="form-group mb-3">
-                        <label for="email_subject">Subject</label>
-                        <input type="text" class="form-control" name="subject" id="email_subject" placeholder="Email Subject" required>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label for="email_template">Select Template To Use</label>
-                        <select name="template" id="email_template" class="form-control">
-                            <option value="" selected></option>
-                            @if(isset($mailable) && is_array($mailable))
-                                @foreach ($mailable as $mailer)
-                                    <option value="{{ $mailer }}">{{ $mailer }}</option>
-                                @endforeach
-                            @endif
-                        </select>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label for="email_message">Or Write Message</label>
-                        <textarea id="email_message" name="message" class="form-control wysiwyg" rows="6" placeholder="Write your message here..."></textarea>
-                    </div>
+                    <input type="hidden" id="bulkEmailStudentIds" name="student_ids">
+                    <label for="subject">Subject</label>
+                    <input type="text" class="form-control mb-3" name="subject" id="email_subject"
+                        placeholder="Email Subject">
+                    <label for="subject">Select Template To Use</label>
+                    <select name="email_template" id="email_template" class="form-control">
+                        <option value="" selected></option>
+                        @foreach ($mailable as $mailer)
+                            <option>{{ $mailer }}</option>
+                        @endforeach
+                    </select>
+
+                    <label for="message">Or Write Message</label>
+                    <x-wysiwyg></x-wysiwyg>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button id="bulk-email-modal-submit" type="button" class="btn btn-primary">Send</button>
+                <button id="bulk-email-modal-submit" type="submit" class="btn btn-primary"
+                    form="bulkEmailForm">Send</button>
             </div>
         </div>
     </div>
