@@ -86,6 +86,7 @@ Route::group([
     // Reset Result for a student (admin panel, Backpack)
     Route::get('reset-exam/{exam_id}/student/{user_id}', 'UserCrudController@resetResult')->name('results.reset');
     Route::crud('student-verification', 'StudentVerificationCrudController');
+    Route::crud('course-certification', 'CourseCertificationCrudController');
 }); // this should be the absolute last line of this file
 
 /**

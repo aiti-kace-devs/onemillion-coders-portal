@@ -46,7 +46,7 @@ class FormCrudController extends CrudController
         CRUD::column('title')->type('textarea');
         FilterHelper::addBooleanColumn('active', 'status');
         CRUD::column('created_at');
-        $this->crud->addButtonFromView('line', 'custom_preview', 'custom_preview', 'beginning');
+        // $this->crud->addButtonFromView('line', 'custom_preview', 'custom_preview', 'beginning');
     }
 
     protected function setupShowOperation()

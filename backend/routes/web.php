@@ -15,6 +15,7 @@ use App\Http\Controllers\Traits\AttendanceViewRemoveTrait;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CentreController;
 use App\Http\Controllers\Admin\Api\FormPreviewController;
+use App\Http\Controllers\Admin\Api\CourseProgrammeController;
 use App\Http\Controllers\ClassScheduleController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\FormController;
@@ -55,7 +56,7 @@ use Illuminate\Support\Str;
 // // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
 // // Route::post('form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
 // routes/web.php
-
+Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
 Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');

@@ -10,6 +10,7 @@ use App\Helpers\ProgrammeFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\CourseModule;
+use App\Models\CourseCertification;
 
 /**
  * Class ProgrammeCrudController
@@ -103,20 +104,24 @@ class ProgrammeCrudController extends CrudController
 
     public function store()
     {
+        $this->crud->setRequest($this->handleOverviewData());
         $response = $this->traitStore();
         $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
+        $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
         return $response;
     }
+
 
 
 
     public function update()
     {
+        $this->crud->setRequest($this->handleOverviewData());
         $response = $this->traitUpdate();
         $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
+        $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
         return $response;
     }
-
 
 
 
@@ -133,6 +138,41 @@ class ProgrammeCrudController extends CrudController
                 ]);
             }
         }
+    }
+
+
+    protected function handleCourseCertification($programme, $certificates = [])
+    {
+        CourseCertification::where('programme_id', $programme->id)->delete();
+        foreach ($certificates as $certificate) {
+            if (!empty($certificate['title'])) {
+                CourseCertification::create([
+                    'programme_id' => $programme->id,
+                    'title' => $certificate['title'],
+                    'type' => $certificate['type'],
+                    'description' => $certificate['description'] ?? null,
+                    'status' => isset($certificate['status']) ? $certificate['status'] : true,
+                ]);
+            }
+        }
+    }
+
+
+
+    protected function handleOverviewData()
+    {
+        $request = $this->crud->getRequest();
+        
+        $overview = $request->input('overview', []);
+        
+        $processedOverview = [
+            'what_you_will_learn' => array_values(array_filter($overview['what_you_will_learn'] ?? [])),
+            'why_choose_this_course' => array_values(array_filter($overview['why_choose_this_course'] ?? []))
+        ];
+        
+        $request->merge(['overview' => $processedOverview]);
+        
+        return $request;
     }
 
 }

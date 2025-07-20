@@ -178,7 +178,7 @@ return [
         App\Providers\EventServiceProvider::class,
         // App\Providers\HorizonServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        GeoSot\EnvEditor\ServiceProvider::class,
+        // GeoSot\EnvEditor\ServiceProvider::class,
         App\Providers\AppConfigServiceProvider::class,
 
     ],

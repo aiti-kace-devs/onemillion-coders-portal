@@ -6,7 +6,7 @@ use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class CourseCategory extends Model
+class CourseCertification extends Model
 {
     use CrudTrait;
     use HasFactory;
@@ -17,13 +17,17 @@ class CourseCategory extends Model
     |--------------------------------------------------------------------------
     */
 
-    protected $table = 'course_categories';
+    protected $table = 'course_certifications';
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
+    // protected $fillable = [];
+    // protected $hidden = [];
     protected $fillable = [
         'title',
+        'programme_id',
         'description',
+        'type',
         'status'
     ];
 
@@ -33,4 +37,8 @@ class CourseCategory extends Model
     ];
 
 
+    public function programme()
+    {
+        return $this->belongsTo(Programme::class);
+    }
 }

@@ -20,6 +20,9 @@ class Programme extends Model
         'description',
         'overview',
         'prerequisites',
+        'image',
+        'level',
+        'job_responsible',
         'cover_image_id',
         'course_category_id',
         'status'
@@ -27,6 +30,7 @@ class Programme extends Model
 
     protected $casts = [
         'status' => 'boolean',
+        'overview' => 'array'
     ];
 
     public function centre(){
@@ -39,6 +43,11 @@ class Programme extends Model
     }
 
 
+    public function courseCertification()
+    {
+        return $this->hasMany(CourseCertification::class, 'programme_id');
+    }
+
     public function category(){
 
         return $this->belongsTo(CourseCategory::class, 'course_category_id');
@@ -48,4 +57,28 @@ class Programme extends Model
     {
         return $this->belongsTo(Media::class, 'cover_image_id');
     }
+
+
+    protected static function booted()
+    {
+        static::saving(function ($programme) {
+            $overview = request('overview', []);
+            
+            $whatYouWillLearn = is_array($overview['what_you_will_learn'] ?? null) 
+                ? array_filter($overview['what_you_will_learn'])
+                : [];
+            
+            $whyChoose = is_array($overview['why_choose_this_course'] ?? null)
+                ? array_filter($overview['why_choose_this_course'])
+                : [];
+            
+            $programme->overview = [
+                'what_you_will_learn' => $whatYouWillLearn,
+                'why_choose_this_course' => $whyChoose
+            ];
+        });
+    }
+
+
+
 }
