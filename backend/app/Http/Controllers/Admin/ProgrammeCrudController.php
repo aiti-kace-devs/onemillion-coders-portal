@@ -9,7 +9,8 @@ use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\ProgrammeFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
-
+use App\Models\CourseModule;
+use App\Models\CourseCertification;
 
 /**
  * Class ProgrammeCrudController
@@ -21,8 +22,12 @@ class ProgrammeCrudController extends CrudController
     use GeneralFieldsAndColumns;
     use ProgrammeFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation {
+        store as traitStore;
+    }
+    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation {
+        update as traitUpdate;
+    }
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
@@ -80,7 +85,7 @@ class ProgrammeCrudController extends CrudController
     {
         CRUD::setValidation(ProgrammeRequest::class);
 
-        $this->setupCommonFields();
+        $this->setupCreateFields();
 
     }
 
@@ -94,4 +99,80 @@ class ProgrammeCrudController extends CrudController
     {
         $this->setupCreateOperation();
     }
+
+
+
+    public function store()
+    {
+        $this->crud->setRequest($this->handleOverviewData());
+        $response = $this->traitStore();
+        $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
+        $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
+        return $response;
+    }
+
+
+
+
+    public function update()
+    {
+        $this->crud->setRequest($this->handleOverviewData());
+        $response = $this->traitUpdate();
+        $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
+        $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
+        return $response;
+    }
+
+
+
+    protected function handleCourseModules($programme, $modules = [])
+    {
+        CourseModule::where('programme_id', $programme->id)->delete();
+        foreach ($modules as $module) {
+            if (!empty($module['title'])) {
+                CourseModule::create([
+                    'programme_id' => $programme->id,
+                    'title' => $module['title'],
+                    'description' => $module['description'] ?? null,
+                    'status' => isset($module['status']) ? $module['status'] : true,
+                ]);
+            }
+        }
+    }
+
+
+    protected function handleCourseCertification($programme, $certificates = [])
+    {
+        CourseCertification::where('programme_id', $programme->id)->delete();
+        foreach ($certificates as $certificate) {
+            if (!empty($certificate['title'])) {
+                CourseCertification::create([
+                    'programme_id' => $programme->id,
+                    'title' => $certificate['title'],
+                    'type' => $certificate['type'],
+                    'description' => $certificate['description'] ?? null,
+                    'status' => isset($certificate['status']) ? $certificate['status'] : true,
+                ]);
+            }
+        }
+    }
+
+
+
+    protected function handleOverviewData()
+    {
+        $request = $this->crud->getRequest();
+        
+        $overview = $request->input('overview', []);
+        
+        $processedOverview = [
+            'what_you_will_learn' => array_values(array_filter($overview['what_you_will_learn'] ?? [])),
+            'why_choose_this_course' => array_values(array_filter($overview['why_choose_this_course'] ?? []))
+        ];
+        
+        $request->merge(['overview' => $processedOverview]);
+        
+        return $request;
+    }
+
 }

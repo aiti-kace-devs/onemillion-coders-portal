@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Requests\FormRequest;
+use App\Http\Requests\RegistrationFormRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\FilterHelper;
+use App\Helpers\StudentFormFieldHelpers;
 /**
  * Class FormCrudController
  * @package App\Http\Controllers\Admin
@@ -13,6 +14,7 @@ use App\Helpers\FilterHelper;
  */
 class FormCrudController extends CrudController
 {
+    use StudentFormFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -29,6 +31,8 @@ class FormCrudController extends CrudController
         CRUD::setModel(\App\Models\Form::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/form');
         CRUD::setEntityNameStrings('form', 'forms');
+
+        // CRUD::denyAccess('show');
     }
 
     /**
@@ -42,7 +46,16 @@ class FormCrudController extends CrudController
         CRUD::column('title')->type('textarea');
         FilterHelper::addBooleanColumn('active', 'status');
         CRUD::column('created_at');
+        // $this->crud->addButtonFromView('line', 'custom_preview', 'custom_preview', 'beginning');
     }
+
+    protected function setupShowOperation()
+    {
+        CRUD::set('show.setFromDb', true);
+
+        CRUD::addButtonFromModelFunction('line', 'preview_form', 'getPreviewButton', 'beginning');
+    }
+
 
     /**
      * Define what happens when the Create operation is loaded.
@@ -52,13 +65,8 @@ class FormCrudController extends CrudController
      */
     protected function setupCreateOperation()
     {
-        CRUD::setValidation(FormRequest::class);
-        CRUD::setFromDb(); // set fields from db columns.
-
-        /**
-         * Fields can be defined using the fluent syntax:
-         * - CRUD::field('price')->type('number');
-         */
+        CRUD::setValidation(RegistrationFormRequest::class);
+        $this->setupCreateRegistrationFormFields();
     }
 
     /**

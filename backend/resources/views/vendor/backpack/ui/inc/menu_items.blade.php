@@ -64,3 +64,5 @@
     <x-backpack::menu-dropdown-item title="Permissions" icon="la la-key" :link="backpack_url('permission')" />
 </x-backpack::menu-dropdown> -->
 
+
+<x-backpack::menu-item title="Course certifications" icon="la la-question" :link="backpack_url('course-certification')" />

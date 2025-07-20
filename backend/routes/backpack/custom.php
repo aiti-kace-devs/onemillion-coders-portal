@@ -22,7 +22,6 @@ Route::group([
     Route::get('/filemanager', function () {
         return view('admin.filemanager.index');
     });
-    // In routes/backpack/custom.php
     Route::get('api/centre-by-branch', [CentreController::class, 'filterByBranch']);
     Route::get('admin/exam/{exam_id}/add-question', [OexQuestionMasterCrudController::class, 'addQuestion'])
     ->name('admin.exam.add-question');    
@@ -87,6 +86,7 @@ Route::group([
     // Reset Result for a student (admin panel, Backpack)
     Route::get('reset-exam/{exam_id}/student/{user_id}', 'UserCrudController@resetResult')->name('results.reset');
     Route::crud('student-verification', 'StudentVerificationCrudController');
+    Route::crud('course-certification', 'CourseCertificationCrudController');
 }); // this should be the absolute last line of this file
 
 /**

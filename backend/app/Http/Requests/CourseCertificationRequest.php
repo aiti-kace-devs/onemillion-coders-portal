@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class ProgrammeRequest extends FormRequest
+class CourseCertificationRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,10 +25,7 @@ class ProgrammeRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'overview.what_you_will_learn' => 'sometimes|array',
-            // 'overview.what_you_will_learn.*' => 'string|max:255',
-            // 'overview.why_choose_this_course' => 'sometimes|array',
-            // 'overview.why_choose_this_course.*' => 'string|max:255',
+            // 'name' => 'required|min:5|max:255'
         ];
     }
 
