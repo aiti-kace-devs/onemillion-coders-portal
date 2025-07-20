@@ -1,10 +1,11 @@
 <!-- jQuery (must be loaded before Toastr and custom scripts) -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <!-- Toastr CSS and JS -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <div class="dropdown d-inline-block">
-    <button class="btn btn-primary dropdown-toggle" type="button" id="shortlistActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+    <button class="btn btn-primary dropdown-toggle" type="button" id="shortlistActionsDropdown" data-bs-toggle="dropdown"
+        aria-expanded="false">
         <i class="la la-list"></i> Shortlist Actions
     </button>
     <ul class="dropdown-menu" aria-labelledby="shortlistActionsDropdown">
@@ -14,124 +15,31 @@
             </a>
         </li>
         <li>
-            <a class="dropdown-item" href="#" id="sendBulkEmailBtn">
+            <a class="dropdown-item" href="#" id="bulkEmailBtn">
                 <i class="la la-envelope text-success"></i> Send Emails
             </a>
         </li>
         <li>
-            <a class="dropdown-item" href="#" id="sendBulkSMSBtn">
+            <a class="dropdown-item" href="#" id="bulkSMSBtn">
                 <i class="la la-sms text-warning"></i> Send SMS
             </a>
         </li>
         <li>
-            <a class="dropdown-item" href="#" id="admitShortlistedBtn">
+            <a class="dropdown-item" href="#" id="admit-selected">
                 <i class="la la-user-check text-primary"></i> Admit Students
             </a>
         </li>
     </ul>
 </div>
-@include('admin.send-bulk-email')
-<!-- @include('admin.send_bulk_sms') -->
+@include('vendor.backpack.crud.modals.bulk_email', ['mailable' => $mailable])
+@include('vendor.backpack.crud.modals.bulk_sms')
+@include('vendor.backpack.crud.modals.choose_shortlist')
+@include('vendor.backpack.crud.modals.admit')
 
-
-<x-modal id="shortlisted_students" title="Copy and Paste Shortlisted Student Emails" size="modal-lg">
-    <label for="email_list">Paste Emails/Phonenumbers Here</label>
-    <textarea class="form-control mb-3" name="email_list" id="email_list" rows="10"
-        placeholder="Paste emails/numbers, one per line..."></textarea>
-
-    <x-slot name="footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button id="shortlist-modal-submit" type="button" class="btn btn-primary">Submit</button>
-    </x-slot>
-</x-modal>
-
-
-
-
-
-<div class="modal fade" id="admitModal" role="dialog">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title">Admit Student</h4>
-                <button type="button" class="close" data-dismiss="modal">×</button>
-            </div>
-            <div class="modal-body">
-                <form action="{{ url('/admin/admit') }}" name="admit_form" method="POST">
-                    {{ csrf_field() }}
-                    <input id="user_id" name="user_id" type="hidden" class="form-control" required>
-                    {{-- <input name="user_ids[]" type="hidden" class="form-control"> --}}
-
-                    <input id="change" name="change" value="false" type="hidden" class="form-control"
-                        required>
-                    <div class="form-group">
-                        <label for="course_id" class="form-label">Select Course</label>
-                        <select id="course_id" name="course_id" class="form-control" required>
-                            <option value="">Choose One Course</option>
-                            @foreach ($courses as $id => $name)
-                                <option value="{{ $id }}">{{ $name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-
-                    <div class="form-group">
-                        <label for="session_id" class="form-label">Choose Session</label>
-                        <select id="session_id" name="session_id" class="form-control"
-                            @if (empty($sessions)) disabled @endif>
-                            @if (empty($sessions))
-                                <option value="">No sessions available</option>
-                            @else
-                                <option value="">Choose One Session</option>
-                                @foreach ($sessions as $session)
-                                    <option data-course="{{ $session->course_id }}" value="{{ $session->id }}">
-                                        {{ $session->name }}</option>
-                                @endforeach
-                            @endif
-                        </select>
-                        @if (empty($sessions))
-                            <small class="text-muted">Sessions are not configured. Please contact support.</small>
-                        @endif
-                    </div>
-                    <div class="form-group">
-                        <button class="btn btn-primary"
-                            @if (empty($sessions)) disabled @endif>Admit</button>
-                    </div>
-
-
-                    {{-- <div class="form-group">
-                        <button class="btn btn-primary" @if (empty($sessions)) disabled @endif>Admit</button>
-                    </div> --}}
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
-<x-modal id="bulk-sms-modal" title="Send Bulk SMS TESTING" size="modal-lg">
-
-    <label for="sms_template">Select Template To Use</label>
-    <select name="sms_template" id="sms_template" class="form-control">
-        <option value="" selected disabled>Loading templates...</option>
-    </select>
-
-    <br>
-
-    <label for="sms_message">Or Write Message</label>
-    <textarea class="form-control mb-3" name="sms_message" id="sms_message" placeholder="Type your SMS message here..."></textarea>
-
-    <x-slot name="footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button id="modal-submit" type="button" class="btn btn-primary">Submit</button>
-    </x-slot>
-</x-modal>
-
-@push('after_scripts')
+@basset('js')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script type="text/javascript" src="{{ url('assets/js/jquery-multiselect.min.js') }}"></script>
-<script @nonce>
+<script>
+    // --- BEGIN: Bulk Shortlist Actions JS ---
     $(document).on('click', '.admit-btn', function() {
         const user_id = $(this).data('id');
         const course_id = $(this).data('course_id');
@@ -145,6 +53,11 @@
     window.openAdmitModal = function(user_id, course_id = null, session_id = null, callback = null) {
         // console.log('Opening admit modal with:', { id, course_id, session_id });
         try {
+            // Ensure the modal is appended to body
+            var $modal = $('#admitModal');
+            if ($modal.length) {
+                $modal.appendTo('body');
+            }
             $('#admitModal #user_id').val(user_id);
             $('#admitModal #course_id').val(course_id);
             $('#admitModal #session_id').val(session_id);
@@ -177,550 +90,72 @@
         }
     };
 
-    $(document).ready(function() {
+    $(document).on('click', '.admit-btn', function() {
+        console.log('Admit button clicked');
 
-        $('select[multiple][data-filter]').multiSelect({
-            selectableHeader: "<div class='multi-select-legend'>Available Options</div>",
-            selectionHeader: "<div class='multi-select-legend'>Selected Options</div>",
-            afterSelect: function(values) {
-                updateDataTable();
-            },
-            afterDeselect: function(values) {
-                updateDataTable();
-            }
-        });
-
-        var table = $('#studentsTable').DataTable({
-            dom: 'Bfrtip',
-            buttons: [{
-                extend: 'csv',
-                text: '<i class="fas fa-file-csv"></i> Export CSV',
-                className: 'btn btn-success',
-                title: 'Students_Export_' + new Date().toISOString().slice(0, 10),
-                exportOptions: {
-                    columns: [1, 2, 3, 4, 5]
-                }
-            }],
-            processing: true,
-            serverSide: true,
-            ajax: {
-                url: "{{ route('admin.shortlisted_students') }}",
-                type: "GET",
-                data: function(d) {
-                    d.draw = d.draw;
-                    d.start = d.start;
-                    d.length = d.length;
-                    isFilterApplied = false;
-
-                    $('select[multiple][data-filter]').each(function() {
-                        var filterName = $(this).data('filter');
-                        var selected = $(this).val();
-                        if (selected && selected.length > 0 && !selected.includes("0")) {
-                            d[filterName] = selected;
-                            isFilterApplied = true;
-                        }
-                    });
-                    if ($('#studentSearch').val()) {
-                        d['filter[search_term]'] = $('#studentSearch').val();
-                        isFilterApplied = true;
-                    }
-                },
-                dataSrc: function(json) {
-                    allFilteredIds = json.all_filtered_ids || [];
-                    return json.data;
-                },
-                error: function(xhr, error, thrown) {
-                    console.log("AJAX Error:", xhr.responseText);
-                    $('#studentsTable tbody').html(
-                        '<tr><td colspan="7" class="text-center text-danger">Error loading data. Please try again.</td></tr>'
-                    );
-                }
-            },
-            columns: [{
-                    data: 'checkbox',
-                    name: 'checkbox',
-                    orderable: false,
-                    searchable: false,
-                    render: function(data, type, row) {
-                        return '<input type="checkbox" class="student-checkbox crud_bulk_actions_line_checkbox" value="' + row.userId + '" data-primary-key-value="' + row.userId + '" ' +
-                            (isFilterApplied ? 'checked' : '') + '>';
-                    }
-                },
-                {
-                    data: null,
-                    name: 'name',
-                    render: function(data, type, row) {
-                        return row.name + ' (' + row.email + ')';
-                    }
-                },
-                {
-                    data: 'admitted',
-                    name: 'admitted',
-                    render: function(data, type, row) {
-                        if (data) {
-                            return '<span class="badge badge-primary">Admitted</span>';
-                        } else {
-                            return '<span class="badge badge-danger">Not Admitted</span>';
-                        }
-                    }
-                },
-                {
-                    data: 'shortlist',
-                    name: 'shortlist',
-                    render: function(data, type, row) {
-                        return '<span class="badge badge-success">Shortlisted</span>';
-                    }
-                },
-                {
-                    data: 'course_name',
-                    name: 'course_name',
-                    render: function(data, type, row) {
-                        return data ? data : 'N/A';
-                    }
-                },
-                {
-                    data: 'session_name',
-                    name: 'session_name',
-                    render: function(data, type, row) {
-                        return data ? data : 'N/A';
-                    }
-                },
-
-                {
-                    data: 'actions',
-                    name: 'actions',
-                    orderable: false,
-                    searchable: false,
-                    render: function(data, type, row) {
-                        var actionDropdown = '<div class="dropdown">' +
-                            '<button class="btn btn-info dropdown-toggle" type="button" id="actionDropdown_' +
-                            row.userId +
-                            '" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">' +
-                            'Action' +
-                            '</button>' +
-                            '<div class="dropdown-menu" aria-labelledby="actionDropdown_' + row
-                            .userId + '">';
-
-                        if (!row.admitted) {
-                            actionDropdown +=
-                                '<a class="dropdown-item admit-btn" href="javascript:void(0);" data-id="' +
-                                row.userId + '">Admit</a>';
-                        } else {
-                            actionDropdown +=
-                                '<a class="dropdown-item admit-btn" href="javascript:void(0);" data-id="' +
-                                row.userId +
-                                '" data-course_id="' + (row.course_id || '') +
-                                '" data-session_id="' + (row.session_id || '') +
-                                '">Change Admission</a>';
-
-                            if (row.session_name) {
-                                actionDropdown += '<a class="dropdown-item" href="' +
-                                    "{{ url('student/select-session') }}" + '/' + row.userId +
-                                    '" target="_blank">Choose Session</a>';
-                            }
-
-                            if (row.session_name) {
-                                actionDropdown +=
-                                    '<a class="dropdown-item delete-admission" href="javascript:void(0);" data-userid="' +
-                                    row.userId + '">Delete Admission</a>';
-                            }
-                        }
-
-                        actionDropdown += '</div></div>';
-
-                        return actionDropdown;
-                    }
-                }
-            ],
-            columnDefs: [{
-                    targets: 0,
-                    width: "5%"
-                },
-                {
-                    targets: -1,
-                    width: "15%"
-                }
-            ],
-            order: [
-                [1, 'asc']
-            ],
-            drawCallback: function(settings) {
-                if (isFilterApplied) {
-                    $('.student-checkbox').prop('checked', true);
-                    manuallySelectedIds = [...allFilteredIds];
-                } else {
-                    manuallySelectedIds = [];
-                }
-                var allChecked = $('.student-checkbox:not(:checked)').length === 0;
-                $('#select-all').prop('checked', allChecked);
-            }
-        });
-
-        var allFilteredIds = [];
-        var manuallySelectedIds = [];
-        var isFilterApplied = false;
-        var debounceTimer;
-
-
-
-
-
-
-
-        $(document).on('click', '.admit-btn', function() {
-            console.log('Admit button clicked');
-
-            var userId = $(this).data('userId');
-            var course_id = $(this).data('course_id') || null;
-            var session_id = $(this).data('session_id') || null;
-            if (!userId) {
-                console.error('No user ID found for admit button');
-                return;
-            }
-            if (typeof window.openAdmitModal === 'function') {
-                window.openAdmitModal(userId, course_id, session_id);
-            } else {
-                console.error('openAdmitModal is not defined');
-            }
-        });
-
-        $('#studentSearch').on('keyup', function() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(function() {
-                table.ajax.reload();
-            }, 500);
-        });
-
-        $('select[multiple][data-filter]').on('change', function() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(function() {
-                table.ajax.reload();
-            }, 300);
-        });
-
-        $('#clear-filters').click(function() {
-            $('select[multiple][data-filter]').each(function() {
-                $(this).val(['0']);
-                $(this).multiSelect('deselect_all');
-                $(this).multiSelect('select', '0');
-            });
-            $('#studentSearch').val('');
-            table.ajax.reload();
-            $('#select-all').prop('checked', false);
-            manuallySelectedIds = [];
-        });
-
-        $(document).on('change', '.student-checkbox', function() {
-            var studentId = $(this).val();
-            if ($(this).is(':checked')) {
-                if (!manuallySelectedIds.includes(studentId)) {
-                    manuallySelectedIds.push(studentId);
-                }
-            } else {
-                manuallySelectedIds = manuallySelectedIds.filter(userId => userId != studentId);
-            }
-            var allChecked = $('.student-checkbox:not(:checked)').length === 0;
-            $('#select-all').prop('checked', allChecked);
-        });
-
-        $('#select-all').change(function() {
-            var isChecked = $(this).prop('checked');
-            $('.student-checkbox').prop('checked', isChecked);
-            if (isChecked) {
-                manuallySelectedIds = [...allFilteredIds];
-            } else {
-                manuallySelectedIds = [];
-            }
-        });
-
-        $('#admit-selected').click(function() {
-            var selectedIds = manuallySelectedIds.length > 0 ? manuallySelectedIds : allFilteredIds;
-            if (!selectedIds || selectedIds.length === 0) {
-                toastr.warning('No students selected or no students match your filters');
-                return;
-            }
-
-            var btn = $(this);
-            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
-            // console.log('Student IDs: ', selectedIds)
-
-
-            Swal.fire({
-                title: 'Admit Students?',
-                text: `You are about to admit ${selectedIds.length} students. Continue?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, admit them',
-                cancelButtonText: 'Cancel',
-                showDenyButton: true,
-                denyButtonText: 'Yes, but change admission',
-                customClass: {
-                    denyButton: 'btn btn-primary',
-                    confirmButton: 'btn btn-success'
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                        url: "{{ route('admin.admit_student') }}",
-                        type: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                        },
-                        data: {
-                            student_ids: selectedIds
-                        },
-                        success: function(response) {
-                            toastr.success(response.message ||
-                                'Students admitted successfully!');
-                            table.ajax.reload();
-                            manuallySelectedIds = [];
-                        },
-                        error: function(xhr) {
-                            toastr.error(xhr.responseJSON?.message ||
-                                'Failed to admit students.');
-                            console.error(xhr.responseText);
-                        },
-                        complete: function() {
-                            btn.prop('disabled', false).html('Admit Students');
-                        }
-                    });
-                } else if (result.isDenied) {
-                    openAdmitModal('', null, null, function() {
-                        // $('#user_ids').val(JSON.stringify(selectedIds));
-                        // Clear any existing input elements with the same name
-                        const arrayInputName = 'user_ids';
-                        $(`input[name="${arrayInputName}[]"]`).remove();
-
-                        // Create multiple hidden input elements, one for each value in the array
-                        selectedIds.forEach(function(id) {
-                            if (id)
-                                $('<input>')
-                                .attr('type', 'hidden')
-                                .attr('name', arrayInputName +
-                                    '[]') // Append '[]' to the name
-                                .attr('value', id)
-                                .appendTo(
-                                    'form[name="admit_form"]'
-                                ); // Append to the form
-                        });
-
-                        $('[name="admit_form"]').submit();
-                    });
-                } else {
-                    btn.prop('disabled', false).html('Admit Students');
-                }
-            });
-        });
-
-        $('#admitModal #course_id').on('change', function() {
-            var courseId = $(this).val();
-            $('#admitModal #session_id option').each(function() {
-                $(this).toggle($(this).attr('data-course') === courseId || !$(this).attr(
-                    'data-course'));
-            });
-        });
-
-        var modal = $('#bulk-email-modal');
-        $(modal).on('modalAction', function(event) {
-
-            const message = event.detail.message;
-            const subject = event.detail.subject;
-            const template = event.detail.template;
-            if (!subject || (!message && !template)) {
-                toastr.error('You need a message/template and a subject');
-                return;
-            }
-            var selectedIds = manuallySelectedIds.length > 0 ? manuallySelectedIds : allFilteredIds;
-            $.ajax({
-                url: "{{ route('admin.send_bulk_email') }}",
-                type: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                data: {
-                    student_ids: selectedIds,
-                    subject,
-                    message,
-                    template
-                },
-                success: function(response) {
-                    toastr.success(response.message ||
-                        'Emails transfer initiated successfully!');
-                    $(modal).modal('hide');
-                },
-                error: function(xhr) {
-                    toastr.error(xhr.responseJSON?.message || 'Failed to send emails.');
-                    console.error(xhr.responseText);
-                }
-            });
-        });
-
-        function updateDataTable() {
-            $('#studentsTable').DataTable().ajax.reload();
+        var userId = $(this).data('userId');
+        var course_id = $(this).data('course_id') || null;
+        var session_id = $(this).data('session_id') || null;
+        if (!userId) {
+            console.error('No user ID found for admit button');
+            return;
         }
-
-
-
-        $(document).ready(function() {
-            const modal = $('#bulk-sms-modal');
-            const templateSelect = $('#sms_template');
-            const messageBox = $('#sms_message');
-
-            // Load templates when the modal opens
-            modal.on('show.bs.modal', function() {
-
-                templateSelect.empty().append(
-                    '<option selected disabled>Loading templates...</option>');
-
-                $.get("{{ route('admin.fetch.sms.template') }}", function(templates) {
-                    templateSelect.empty().append(
-                        '<option value="" disabled selected>Select a template</option>'
-                    );
-
-                    $.each(templates, function(index, template) {
-                        const option = $('<option></option>')
-                            .val(template.id)
-                            .text(template.name)
-                            .data('content', template
-                                .content); // store SMS content
-                        templateSelect.append(option);
-                    });
-                }).fail(function() {
-                    toastr.error('Failed to load SMS templates.');
-                    templateSelect.empty().append(
-                        '<option value="" disabled selected>Unable to load templates</option>'
-                    );
-                });
-            });
-
-            // When a template is selected, auto-fill the message box
-            templateSelect.on('change', function() {
-                const selectedOption = $(this).find('option:selected');
-                const content = selectedOption.data('content');
-                if (content) {
-                    messageBox.val(content);
-                }
-            });
-
-            // Submit button handler
-            $(document).on('click', '#modal-submit', function() {
-                const message = messageBox.val();
-                //const subject = $('#sms_subject').val();
-                const template = templateSelect.val();
-
-                const modalActionEvent = new CustomEvent('modalAction', {
-                    detail: {
-                        message,
-                        // subject,
-                        template,
-                        modalId: 'bulk-sms-modal',
-                    },
-                    bubbles: true,
-                    cancelable: true,
-                });
-
-                document.getElementById('bulk-sms-modal').dispatchEvent(modalActionEvent);
-            });
-
-            // Handle actual AJAX submission
-            modal.on('modalAction', function(event) {
-                const {
-                    message,
-                    subject,
-                    template
-                } = event.detail;
-
-                if ((!message && !template)) {
-                    toastr.error('You need a message/template and a subject');
-                    return;
-                }
-
-                //const selectedIds = typeof manuallySelectedIds !== 'undefined' && manuallySelectedIds.length > 0 ? manuallySelectedIds: allFilteredIds;
-
-                var selectedIds = manuallySelectedIds.length > 0 ? manuallySelectedIds :
-                    allFilteredIds;
-                if (!selectedIds || selectedIds.length === 0) {
-                    toastr.warning('No students selected or no students match your filters');
-                    return;
-                }
-                console.log('Student IDs: ', selectedIds)
-
-                $.ajax({
-                    url: "{{ route('admin.send_bulk_sms') }}",
-                    type: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
-                    },
-                    data: {
-                        student_ids: selectedIds,
-                        //subject,
-                        message,
-                        //template
-                    },
-                    success: function(response) {
-                        toastr.success(response.message ||
-                            'SMS transfer initiated successfully!');
-                        modal.modal('hide');
-                    },
-                    error: function(xhr) {
-                        toastr.error(xhr.responseJSON?.message ||
-                            'Failed to send SMS to students.');
-                    }
-                });
-            });
-        });
-
-
-
-
-
-
-
-        $(document).on('click', '.delete-admission', function(e) {
-            e.preventDefault();
-            const userId = $(this).data('userid');
-            const deleteUrl = "{{ url('admin/delete-student-admission') }}/" + userId;
-
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "Are you sure you want to remove this student from the shortlist and delete their admission?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Proceed with deletion via AJAX
-                    $.ajax({
-                        url: deleteUrl,
-                        type: 'DELETE',
-                        headers: {
-                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                        },
-                        success: function(response) {
-                            toastr.success(response.message ||
-                                'Admission deleted successfully!');
-                            table.ajax.reload();
-                        },
-                        error: function(xhr) {
-                            toastr.error(xhr.responseJSON?.message ||
-                                'Failed to delete admission.');
-                            console.error(xhr.responseText);
-                        }
-                    });
-                }
-            });
-        });
-
-
-
-
-
-
+        if (typeof window.openAdmitModal === 'function') {
+            window.openAdmitModal(userId, course_id, session_id);
+        } else {
+            console.error('openAdmitModal is not defined');
+        }
     });
 
+    $('#chooseShortlistBtn').on('click', function(e) {
+        e.preventDefault();
+        $('#chooseShortlistModal').appendTo('body').modal('show');
+    });
+
+    $('#bulkEmailBtn').on('click', function(e) {
+        e.preventDefault();
+        $('#bulkEmailModal').appendTo('body').modal('show');
+    });
+    // Open Bulk SMS modal
+    $('#bulkSMSBtn').on('click', function(e) {
+        e.preventDefault();
+        $('#bulkSMSModal').appendTo('body').modal('show');
+    });
+
+    // Variables to track selected IDs
+    var allFilteredIds = [];
+    var manuallySelectedIds = [];
+    var isFilterApplied = false;
+    var debounceTimer;
+
+    // Checkbox logic using Backpack's checkboxes
+    $(document).on('change', '.crud_bulk_checkbox', function() {
+        var studentId = $(this).val();
+        if ($(this).is(':checked')) {
+            if (!manuallySelectedIds.includes(studentId)) {
+                manuallySelectedIds.push(studentId);
+            }
+        } else {
+            manuallySelectedIds = manuallySelectedIds.filter(userId => userId != studentId);
+        }
+        var allChecked = $('.crud_bulk_checkbox:not(:checked)').length === 0;
+        $('#crud_bulk_checkbox_all').prop('checked', allChecked);
+    });
+
+    $('#crud_bulk_checkbox_all').change(function() {
+        var isChecked = $(this).prop('checked');
+        $('.crud_bulk_checkbox').prop('checked', isChecked);
+        if (isChecked) {
+            // If you have a way to get all IDs, set them here
+            manuallySelectedIds = $('.crud_bulk_checkbox').map(function() {
+                return $(this).val();
+            }).get();
+        } else {
+            manuallySelectedIds = [];
+        }
+    });
+
+    // Shortlist modal submit logic
     $(document).on('click', '#shortlist-modal-submit', function() {
         const rawEmails = $('#email_list').val();
         const emailList = rawEmails
@@ -729,7 +164,6 @@
             .filter(email => email !== '');
 
         if (emailList.length === 0) {
-            toastr.error('Please paste at least one valid email address/ phonenumber.');
             toastr.error('Please paste at least one valid email address/ phonenumber.');
             return;
         }
@@ -753,20 +187,16 @@
             return;
         }
 
-
         $.ajax({
-            url: "{{ route('admin.save_shortlisted_students') }}",
+            url: "{{ route('bulk-students.shortlist') }}",
             type: 'POST',
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
             },
             data: dataToSend,
-            data: dataToSend,
             success: function(response) {
                 toastr.success(response.message || 'Users updated successfully.');
                 $('#shortlisted_students').modal('hide');
-
-                // Reload after short delay
                 setTimeout(() => {
                     location.reload();
                 }, 1500);
@@ -776,6 +206,285 @@
             }
         });
     });
-</script>
 
-@endpush
+    $('#admit-selected').click(function() {
+        var selectedIds = (typeof crud !== 'undefined' && crud.checkedItems && crud.checkedItems.length > 0) ?
+            crud.checkedItems :
+            (manuallySelectedIds.length > 0 ? manuallySelectedIds : allFilteredIds);
+        if (!selectedIds || selectedIds.length === 0) {
+            toastr.warning('No students selected or no students match your filters');
+            return;
+        }
+
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+        // console.log('Student IDs: ', selectedIds)
+
+
+        Swal.fire({
+            title: 'Admit Students?',
+            text: `You are about to admit ${selectedIds.length} students. Continue?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, admit them',
+            cancelButtonText: 'Cancel',
+            showDenyButton: true,
+            denyButtonText: 'Yes, but change admission',
+            customClass: {
+                denyButton: 'btn btn-primary',
+                confirmButton: 'btn btn-success'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: "{{ route('user.admit-student') }}",
+                    type: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    data: {
+                        user_ids: selectedIds
+                    },
+                    success: function(response) {
+                        toastr.success(response.message ||
+                            'Students admitted successfully!');
+                        table.ajax.reload();
+                        manuallySelectedIds = [];
+                    },
+                    error: function(xhr) {
+                        toastr.error(xhr.responseJSON?.message ||
+                            'Failed to admit students.');
+                        console.error(xhr.responseText);
+                    },
+                    complete: function() {
+                        btn.prop('disabled', false).html('Admit Students');
+                    }
+                });
+            } else if (result.isDenied) {
+                openAdmitModal('', null, null, function() {
+                    // $('#user_ids').val(JSON.stringify(selectedIds));
+                    // Clear any existing input elements with the same name
+                    const arrayInputName = 'user_ids';
+                    $(`input[name="${arrayInputName}[]"]`).remove();
+
+                    // Create multiple hidden input elements, one for each value in the array
+                    selectedIds.forEach(function(id) {
+                        if (id)
+                            $('<input>')
+                            .attr('type', 'hidden')
+                            .attr('name', arrayInputName +
+                                '[]') // Append '[]' to the name
+                            .attr('value', id)
+                            .appendTo(
+                                'form[name="admit_form"]'
+                            ); // Append to the form
+                    });
+
+                    $('[name="admit_form"]').submit();
+                });
+            } else {
+                btn.prop('disabled', false).html('Admit Students');
+            }
+        });
+    });
+
+    $('#admitModal #course_id').on('change', function() {
+        var courseId = $(this).val();
+        $('#admitModal #session_id option').each(function() {
+            $(this).toggle($(this).attr('data-course') === courseId || !$(this).attr(
+                'data-course'));
+        });
+    });
+
+    // Bulk Email modal logic
+    $('#bulkEmailForm').on('submit', function(e) {
+        e.preventDefault();
+        let ids = getSelectedStudentIds();
+        let data = $(this).serializeArray();
+        if (!selectAllAcrossPages && ids.length === 0) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'No students selected',
+                    text: 'Select students first!'
+                });
+            } else {
+                alert('Select students first!');
+            }
+            return;
+        }
+        if (!selectAllAcrossPages) {
+            ids.forEach(function(id) {
+                data.push({
+                    name: 'student_ids[]',
+                    value: id
+                });
+            });
+        }
+        addSelectAllFlag(data);
+        $.ajax({
+            url: "{{ route('bulk-email.send') }}",
+            method: 'POST',
+            data: data,
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            success: function(resp) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: resp.message || 'Emails sent successfully!'
+                    }).then(() => window.location.reload());
+                }
+                if (typeof toastr !== 'undefined') {
+                    toastr.success(resp.message || 'Emails sent successfully!');
+                }
+                var modal = bootstrap.Modal.getInstance(document.getElementById('bulkEmailModal'));
+                if (modal) modal.hide();
+            },
+            error: function(xhr) {
+                let errorMsg = xhr.responseJSON?.message || 'Failed to send emails.';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: errorMsg
+                    });
+                }
+                if (typeof toastr !== 'undefined') {
+                    toastr.error(errorMsg);
+                }
+            }
+        });
+    });
+
+    // Bulk SMS modal logic
+    $(document).ready(function() {
+        const modal = $('#bulkSMSModal');
+        const templateSelect = $('#sms_template');
+        const messageBox = $('#sms_message');
+
+        modal.on('show.bs.modal', function() {
+            templateSelect.empty().append(
+                '<option selected disabled>Loading templates...</option>');
+            $.get("{{ route('sms-template.fetch') }}", function(templates) {
+                templateSelect.empty().append(
+                    '<option value="" disabled selected>Select a template</option>'
+                );
+                $.each(templates, function(index, template) {
+                    const option = $('<option></option>')
+                        .val(template.id)
+                        .text(template.name)
+                        .data('content', template.content);
+                    templateSelect.append(option);
+                });
+            }).fail(function() {
+                toastr.error('Failed to load SMS templates.');
+                templateSelect.empty().append(
+                    '<option value="" disabled selected>Unable to load templates</option>'
+                );
+            });
+        });
+
+        templateSelect.on('change', function() {
+            const selectedOption = $(this).find('option:selected');
+            const content = selectedOption.data('content');
+            if (content) {
+                messageBox.val(content);
+            }
+        });
+
+        $(document).on('click', '#modal-submit', function() {
+            const message = messageBox.val();
+            const template = templateSelect.val();
+            const modalActionEvent = new CustomEvent('modalAction', {
+                detail: {
+                    message,
+                    template,
+                    modalId: 'bulkSMSModal',
+                },
+                bubbles: true,
+                cancelable: true,
+            });
+            document.getElementById('bulkSMSModal').dispatchEvent(modalActionEvent);
+        });
+
+        modal.on('modalAction', function(event) {
+            const {
+                message,
+                subject,
+                template
+            } = event.detail;
+            if ((!message && !template)) {
+                toastr.error('You need a message/template and a subject');
+                return;
+            }
+            var selectedIds = manuallySelectedIds.length > 0 ? manuallySelectedIds : allFilteredIds;
+            // if (!selectedIds || selectedIds.length === 0) {
+            //     toastr.warning('No students selected or no students match your filters');
+            //     return;
+            // }
+            $.ajax({
+                url: "{{ route('bulk-sms.send') }}",
+                type: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                },
+                data: {
+                    student_ids: selectedIds,
+                    message,
+                },
+                success: function(response) {
+                    toastr.success(response.message ||
+                        'SMS transfer initiated successfully!');
+                    modal.modal('hide');
+                },
+                error: function(xhr) {
+                    toastr.error(xhr.responseJSON?.message ||
+                        'Failed to send SMS to students.');
+                }
+            });
+        });
+    });
+
+    // Delete admission logic
+    $(document).on('click', '.delete-admission-btn', function(e) {
+        e.preventDefault();
+        const userId = $(this).data('userid');
+        const deleteUrl = "/admin/user/delete-admission/" + userId;
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "Are you sure you want to remove this student from the shortlist and delete their admission?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: deleteUrl,
+                    type: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        toastr.success(response.message ||
+                            'Admission deleted successfully!');
+                        // Optionally reload or update the UI
+                        location.reload();
+                    },
+                    error: function(xhr) {
+                        toastr.error(xhr.responseJSON?.message ||
+                            'Failed to delete admission.');
+                        console.error(xhr.responseText);
+                    }
+                });
+            }
+        });
+    });
+    // --- END: Bulk Shortlist Actions JS ---
+</script>
+@endbasset

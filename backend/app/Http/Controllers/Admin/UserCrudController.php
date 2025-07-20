@@ -713,5 +713,15 @@ class UserCrudController extends CrudController
         return response()->json(['count' => $count]);
     }
 
+    public function admitStudent(Request $request)
+    {
+        return $this->admitStudent($request);
+    }
+
+    public function deleteAdmission($user_id, Request $request)
+    {
+        return $this->deleteAdmission($user_id, $request);
+    }
+
     // Remove the proxy methods for AJAX endpoints, as the trait methods are used directly.
 }

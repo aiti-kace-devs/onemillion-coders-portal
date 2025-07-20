@@ -1,7 +1,8 @@
 @extends(backpack_view('blank'))
 @section('title', 'Scan QR Code')
 @section('content')
-    <style @nonce>
+    @basset('css')
+    <style>
         canvas {
             height: 400px;
             width: 400px;
@@ -31,6 +32,7 @@
             }
         }
     </style>
+    @endbasset
     <div class="content-wrapper">
         <!-- Content Header (Page header) -->
         <div class="content-header">
@@ -114,6 +116,7 @@
 
 
 @push('after_scripts')
+    @basset('js')
     <!-- jQuery (must be first) -->
     <script src="{{ url('assets/plugins/jquery/jquery.min.js') }}"></script>
     <!-- Bootstrap 5 Bundle (includes Popper) -->
@@ -492,4 +495,5 @@
         }
         $(document).on('click', '#maximizeQR', maximizeQRCode);
     </script>
+    @endbasset
 @endpush

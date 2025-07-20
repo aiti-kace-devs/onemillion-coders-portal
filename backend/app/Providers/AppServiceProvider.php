@@ -62,5 +62,14 @@ class AppServiceProvider extends ServiceProvider
                 'NewsletterMail',
             ]);
         });
+
+        \View::composer('vendor.backpack.crud.modals.bulk_email', function ($view) {
+            $view->with('mailable', \App\Helpers\MailerHelper::getMailableClasses());
+        });
+
+        \View::composer('vendor.backpack.crud.modals.admit', function ($view) {
+            $view->with('courses', \App\Models\Course::pluck('course_name', 'id')->toArray());
+            $view->with('sessions', \App\Models\CourseSession::all());
+        });
     }
 }
