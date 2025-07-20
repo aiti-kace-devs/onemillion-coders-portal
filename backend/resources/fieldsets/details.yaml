@@ -41,7 +41,6 @@ fields:
   -
     handle: description
     field:
-      remove_empty_nodes: false
-      type: bard
+      escape_markup: true
+      type: markdown
       display: Description
-      save_html: true

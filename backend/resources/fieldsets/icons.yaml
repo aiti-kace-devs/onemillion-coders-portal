@@ -1,0 +1,11 @@
+title: Icons
+fields:
+  -
+    handle: icon
+    field:
+      options:
+        -
+          key: 'fas fa-phone'
+          value: Phone
+      type: select
+      display: Icon

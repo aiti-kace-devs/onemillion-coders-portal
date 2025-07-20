@@ -113,7 +113,7 @@ class StatamicEntryApiController extends Controller
         ]);
 
         $fields = $request->input('fields');
-        $includeRelated = $request->input('include_related') ?? 'sections.section_items';
+        $includeRelated = $request->input('include_related') ?? 'sections.section_items.pathways.sections.section_items';
         $relationshipFields = $includeRelated ? array_map('trim', explode(',', $includeRelated)) : [];
 
         $entry = \Statamic\Facades\Entry::query()
@@ -246,7 +246,8 @@ class StatamicEntryApiController extends Controller
                                         ->filter()
                                         ->values()
                                         ->all();
-                                }
+
+                                    }
                                 return $blockWithRelated;
                             }, $fieldValue);
                         } else {

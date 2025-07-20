@@ -7,6 +7,6 @@ slider_button_text: 'Get Certified'
 slider_button_colour: '#f9a825'
 slider_button_link: /protection-sup-course
 updated_by: 11
-updated_at: 1752576226
-slider_description: '<p>Become a certified expert in data protection and privacy. Lead organizations in compliance with global data protection regulations.</p>'
+updated_at: 1753043183
+slider_description: 'Become a certified expert in data protection and privacy. Lead organizations in compliance with global data protection regulations.'
 ---

@@ -4,7 +4,7 @@ blueprint: textdatablock
 title: 'Homepage Statistics'
 text_data_name: 'Empowering Dreams, Building Futures'
 text_data_caption: "TRANSFORMING AFRICA'S FUTURE"
-text_data_description: '<p>One Million Coders is Ghana&#039;s premier tech education initiative, empowering young Africans with cutting-edge skills in cybersecurity, data protection, and emerging technologies</p>'
+text_data_description: "One Million Coders is Ghana's premier tech education initiative, empowering young Africans with cutting-edge skills in cybersecurity, data protection, and emerging technologies"
 metrics:
   -
     id: mcxje41r
@@ -31,5 +31,5 @@ metrics:
     type: metric
     enabled: true
 updated_by: 11
-updated_at: 1752579322
+updated_at: 1753043483
 ---
