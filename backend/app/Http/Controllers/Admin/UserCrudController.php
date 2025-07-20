@@ -89,9 +89,6 @@ class UserCrudController extends CrudController
             'setupStudentsWithExamResultsView' => 'Students with Exam Results',
             'setupShortlistedStudentsView' => 'Shortlisted Students',
         ]);
-
-        // Add bulk action buttons
-        CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
     }
 
     /**
@@ -131,9 +128,11 @@ class UserCrudController extends CrudController
         CRUD::enableBulkActions();
 
         // Filter students who have admission records with session
-        CRUD::setQuery(\App\Models\User::whereHas('admissions', function ($query) {
-            $query->whereNotNull('session');
-        }));
+        CRUD::setQuery(
+            \App\Models\User::whereHas('admissions', function ($query) {
+                $query->whereNotNull('session');
+            }),
+        );
 
         // Add a custom column to show admission status
         CRUD::addColumn([
@@ -143,7 +142,7 @@ class UserCrudController extends CrudController
             'value' => function ($entry) {
                 $admission = $entry->admissions()->whereNotNull('session')->first();
                 return $admission ? 'Admitted' : 'Not Admitted';
-            }
+            },
         ]);
 
         // Add admission date column
@@ -154,7 +153,7 @@ class UserCrudController extends CrudController
             'value' => function ($entry) {
                 $admission = $entry->admissions()->whereNotNull('session')->first();
                 return $admission ? $admission->created_at : null;
-            }
+            },
         ]);
 
         // Add course column
@@ -168,7 +167,7 @@ class UserCrudController extends CrudController
                     return $admission->course->course_name ?? 'N/A';
                 }
                 return 'N/A';
-            }
+            },
         ]);
 
         // Add exam score column
@@ -182,7 +181,7 @@ class UserCrudController extends CrudController
                     return $latestResult->result . '%';
                 }
                 return 'N/A';
-            }
+            },
         ]);
     }
 
@@ -204,7 +203,7 @@ class UserCrudController extends CrudController
             'type' => 'text',
             'value' => function ($entry) {
                 return 'No Exam Results';
-            }
+            },
         ]);
 
         // Add a column to show if student has taken exams
@@ -215,7 +214,7 @@ class UserCrudController extends CrudController
             'value' => function ($entry) {
                 $examsTaken = $entry->userExams()->count();
                 return $examsTaken > 0 ? $examsTaken . ' exam(s)' : 'No exams taken';
-            }
+            },
         ]);
 
         // Add a column to show if student has submitted exams
@@ -226,7 +225,7 @@ class UserCrudController extends CrudController
             'value' => function ($entry) {
                 $submittedExams = $entry->userExams()->whereNotNull('submitted')->count();
                 return $submittedExams > 0 ? $submittedExams . ' submitted' : 'No submitted exams';
-            }
+            },
         ]);
     }
 
@@ -239,9 +238,11 @@ class UserCrudController extends CrudController
         CRUD::enableBulkActions();
 
         // Filter students who have admission records but session_id is null
-        CRUD::setQuery(\App\Models\User::whereHas('admissions', function ($query) {
-            $query->whereNull('session');
-        }));
+        CRUD::setQuery(
+            \App\Models\User::whereHas('admissions', function ($query) {
+                $query->whereNull('session');
+            }),
+        );
 
         // Add a custom column to show admission status
         CRUD::addColumn([
@@ -251,7 +252,7 @@ class UserCrudController extends CrudController
             'value' => function ($entry) {
                 $admission = $entry->admissions()->whereNull('session')->first();
                 return $admission ? 'Pending Acceptance' : 'No Admission';
-            }
+            },
         ]);
 
         // Add admission date column
@@ -262,7 +263,7 @@ class UserCrudController extends CrudController
             'value' => function ($entry) {
                 $admission = $entry->admissions()->whereNull('session')->first();
                 return $admission ? $admission->created_at : null;
-            }
+            },
         ]);
 
         // Add course column
@@ -276,7 +277,7 @@ class UserCrudController extends CrudController
                     return $admission->course->course_name ?? 'N/A';
                 }
                 return 'N/A';
-            }
+            },
         ]);
 
         // Add email sent status
@@ -287,7 +288,7 @@ class UserCrudController extends CrudController
             'value' => function ($entry) {
                 $admission = $entry->admissions()->whereNull('session')->first();
                 return $admission && $admission->email_sent ? 'Yes' : 'No';
-            }
+            },
         ]);
 
         // Add exam score column
@@ -301,7 +302,7 @@ class UserCrudController extends CrudController
                     return $latestResult->result . '%';
                 }
                 return 'N/A';
-            }
+            },
         ]);
     }
 
@@ -324,7 +325,7 @@ class UserCrudController extends CrudController
             'value' => function ($entry) {
                 $resultsCount = $entry->examResults()->count();
                 return $resultsCount . ' result(s)';
-            }
+            },
         ]);
 
         // Add a column to show latest exam result
@@ -338,7 +339,7 @@ class UserCrudController extends CrudController
                     return $latestResult->result . '%';
                 }
                 return 'N/A';
-            }
+            },
         ]);
 
         // Add a column to show exam name
@@ -352,7 +353,7 @@ class UserCrudController extends CrudController
                     return $latestResult->exam->title ?? 'N/A';
                 }
                 return 'N/A';
-            }
+            },
         ]);
 
         // Add a column to show if student has taken multiple exams
@@ -363,7 +364,7 @@ class UserCrudController extends CrudController
             'value' => function ($entry) {
                 $examsTaken = $entry->userExams()->count();
                 return $examsTaken > 0 ? $examsTaken . ' exam(s)' : 'No exams taken';
-            }
+            },
         ]);
 
         // Add exam score column
@@ -377,8 +378,10 @@ class UserCrudController extends CrudController
                     return $latestResult->result . '%';
                 }
                 return 'N/A';
-            }
+            },
         ]);
+        // Add bulk action buttons
+        CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
 
         // Add row actions only for this view
         CRUD::addButton('line', 'view_results', 'view', 'crud::buttons.view_results');
@@ -403,7 +406,7 @@ class UserCrudController extends CrudController
             'type' => 'text',
             'value' => function ($entry) {
                 return $entry->shortlist ? 'Shortlisted' : 'Not Shortlisted';
-            }
+            },
         ]);
 
         // Add exam score column
@@ -417,7 +420,7 @@ class UserCrudController extends CrudController
                     return $latestResult->result . '%';
                 }
                 return 'N/A';
-            }
+            },
         ]);
 
         // Add admission status column
@@ -435,7 +438,7 @@ class UserCrudController extends CrudController
                     return 'Pending Acceptance';
                 }
                 return 'Not Admitted';
-            }
+            },
         ]);
 
         // Add course column
@@ -448,7 +451,7 @@ class UserCrudController extends CrudController
                     return $entry->course->course_name ?? 'N/A';
                 }
                 return 'N/A';
-            }
+            },
         ]);
 
         // Add exams taken column
@@ -459,7 +462,7 @@ class UserCrudController extends CrudController
             'value' => function ($entry) {
                 $examsTaken = $entry->userExams()->count();
                 return $examsTaken > 0 ? $examsTaken . ' exam(s)' : 'No exams taken';
-            }
+            },
         ]);
 
         // Add the shortlist actions dropdown button (top)
@@ -483,10 +486,13 @@ class UserCrudController extends CrudController
         $sessionId = $request->input('session_id');
 
         if (empty($studentIds) || !$courseId || !$sessionId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Please select students, course, and session.'
-            ], 400);
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Please select students, course, and session.',
+                ],
+                400,
+            );
         }
 
         try {
@@ -495,10 +501,7 @@ class UserCrudController extends CrudController
 
             foreach ($students as $student) {
                 // Check if student already has an admission for this course/session
-                $existingAdmission = $student->admissions()
-                    ->where('course_id', $courseId)
-                    ->where('session', $sessionId)
-                    ->first();
+                $existingAdmission = $student->admissions()->where('course_id', $courseId)->where('session', $sessionId)->first();
 
                 if (!$existingAdmission) {
                     // Create new admission
@@ -513,13 +516,16 @@ class UserCrudController extends CrudController
 
             return response()->json([
                 'success' => true,
-                'message' => "Successfully admitted {$admittedCount} student(s)."
+                'message' => "Successfully admitted {$admittedCount} student(s).",
             ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to admit students: ' . $e->getMessage()
-            ], 500);
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Failed to admit students: ' . $e->getMessage(),
+                ],
+                500,
+            );
         }
     }
 
@@ -537,10 +543,13 @@ class UserCrudController extends CrudController
             $course = Course::find($validated['course_id']);
             $session = CourseSession::find($validated['session_id'] ?? '');
             if ($session && $session->course_id != $course->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Session not valid for selected course',
-                ], 422);
+                return response()->json(
+                    [
+                        'success' => false,
+                        'message' => 'Session not valid for selected course',
+                    ],
+                    422,
+                );
             }
             $message = 'All shortlisted students admitted successfully';
             $admittedCount = 0;
@@ -556,10 +565,13 @@ class UserCrudController extends CrudController
                     'admitted_count' => $admittedCount,
                 ]);
             } catch (\Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to admit students: ' . $e->getMessage(),
-                ], 500);
+                return response()->json(
+                    [
+                        'success' => false,
+                        'message' => 'Failed to admit students: ' . $e->getMessage(),
+                    ],
+                    500,
+                );
             }
         }
 
@@ -577,10 +589,13 @@ class UserCrudController extends CrudController
         $change = ($validated['change'] ?? false) == 'true';
 
         if ($session && $session->course_id != $course->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Session not valid for selected course',
-            ], 422);
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Session not valid for selected course',
+                ],
+                422,
+            );
         }
         $message = 'Student(s) admitted successfully';
         $admittedCount = 0;
@@ -612,10 +627,13 @@ class UserCrudController extends CrudController
                 'admitted_count' => $admittedCount,
             ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to admit students: ' . $e->getMessage(),
-            ], 500);
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'Failed to admit students: ' . $e->getMessage(),
+                ],
+                500,
+            );
         }
     }
 
@@ -676,10 +694,12 @@ class UserCrudController extends CrudController
 
         \App\Models\OexResult::where('user_id', $user_id)->where('exam_id', $exam_id)->delete();
 
-        return redirect()->back()->with([
-            'flash' => 'Exam reset successfully',
-            'key' => 'success',
-        ]);
+        return redirect()
+            ->back()
+            ->with([
+                'flash' => 'Exam reset successfully',
+                'key' => 'success',
+            ]);
     }
 
     /**
