@@ -13,10 +13,15 @@ use App\Models\Centre;
 use App\Models\User;
 use App\Models\CourseSession;
 use App\Models\OexExamMaster;
+use App\Models\CourseCategory;
+use App\Models\CourseModule;
+use App\Models\StudentVerification;
 use App\Models\OexQuestionMaster;
 use App\Models\OexCategory;
+use App\Models\CourseCertification;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\DB;
+
 class WidgetHelper
 {
     /**
@@ -133,38 +138,49 @@ class WidgetHelper
 
 
 
-    public static function attendanceWidgets()
-    {
-        $topRejectedCourses = Attendance::select('course_id')
-            ->selectRaw('COUNT(*) as total_attendance')
-            ->groupBy('course_id')
-            ->orderByDesc('total_attendance')
-            ->with('course')
-            ->take(4)
-            ->get();
+public static function attendanceWidgets()
+{
+    $topCoursesToday = Attendance::whereDate('date', today())
+        ->select('course_id')
+        ->selectRaw('COUNT(*) as total_attendance')
+        ->groupBy('course_id')
+        ->orderByDesc('total_attendance')
+        ->with('course')
+        ->take(4)
+        ->get();
 
-        $widgets = [];
+    $widgets = [];
 
-        foreach ($topRejectedCourses as $rejection) {
-            $courseName = optional($rejection->course)->course_name ?? 'Unknown';
-            $total = $rejection->total_attendance;
+    foreach ($topCoursesToday as $attendance) {
+        $courseName = optional($attendance->course)->course_name ?? 'Unknown';
+        $total = $attendance->total_attendance;
 
-            $widgets[] = [
-                'type' => 'progress_white',
-                'progress' => 100,
-                'description' => $courseName,
-                'value' => number_format($total),
-                'progressClass' => 'bg-primary',
-                'hint' => 'Total Attendance for this course',
-            ];
-        }
+        $widgets[] = [
+            'type' => 'progress_white',
+            'progress' => 100,
+            'description' => $courseName,
+            'value' => number_format($total),
+            'progressClass' => 'bg-primary',
+            'hint' => 'Total Attendance for today',
+        ];
+    }
 
+    if (count($widgets)) {
         Widget::add([
             'type' => 'div',
             'class' => 'row',
             'content' => $widgets,
         ]);
+    } else {
+        Widget::add([
+            'type' => 'alert',
+            'class' => 'alert alert-warning',
+            'content' => 'No attendance recorded for today.',
+        ]);
     }
+
+}
+
 
 
 
@@ -225,7 +241,6 @@ public static function categorytatisticsWidget()
         ],
     ]);
 }
-
 
 
 
@@ -476,6 +491,131 @@ public static function courseSessionStatisticsWidget()
 
 
 
+
+
+
+
+public static function courseCategoryStatisticsWidget()
+{
+    $totalCourseCategorys = CourseCategory::count();
+    $activeCourseCategorys = CourseCategory::where('status', 1)->count();
+    $inactiveCourseCategorys = CourseCategory::where('status', 0)->count();
+    $recentCourseCategorys = CourseCategory::whereDate('created_at', '>=', now()->subDays(30))->count();
+
+    $getPercent = function ($count) use ($totalCourseCategorys) {
+        return $totalCourseCategorys > 0 ? round(($count / $totalCourseCategorys) * 100) : 0;
+    };
+
+    Widget::add([
+        'type' => 'div',
+        'class' => 'row mb-4',
+        'content' => [
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($totalCourseCategorys),
+                'description' => 'Total Course Categories',
+                'value' => number_format($totalCourseCategorys),
+                'progressClass' => 'progress-bar bg-primary',
+                // 'wrapper' => [
+                //         'style' => 'background-color:rgb(40, 127, 167);',
+                // ],
+                'hint' => 'All registered Course Categories'
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($activeCourseCategorys),
+                'description' => 'Active Course Categories',
+                'value' => number_format($activeCourseCategorys),
+                'progressClass' => 'progress-bar bg-success',
+                'hint' => 'Course Categories currently active.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($inactiveCourseCategorys),
+                'description' => 'Inactive Course Categories',
+                'value' => number_format($inactiveCourseCategorys),
+                'progressClass' => 'progress-bar bg-danger',
+                'hint' => 'Course Categories currently inactive.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($recentCourseCategorys),
+                'description' => 'New Course Categories (30 Days)',
+                'value' => number_format($recentCourseCategorys),
+                'progressClass' => 'progress-bar bg-primary',
+                'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                'hint' => 'Categories added in the last 30 days.',
+            ],
+        ],
+    ]);
+}
+
+
+
+
+
+
+
+
+
+public static function courseModuleStatisticsWidget()
+{
+    $totalCourseModules = CourseModule::count();
+    $activeCourseModules = CourseModule::where('status', 1)->count();
+    $inactiveCourseModules = CourseModule::where('status', 0)->count();
+    $recentCourseModules = CourseModule::whereDate('created_at', '>=', now()->subDays(30))->count();
+
+    $getPercent = function ($count) use ($totalCourseModules) {
+        return $totalCourseModules > 0 ? round(($count / $totalCourseModules) * 100) : 0;
+    };
+
+    Widget::add([
+        'type' => 'div',
+        'class' => 'row mb-4',
+        'content' => [
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($totalCourseModules),
+                'description' => 'Total Course Modules',
+                'value' => number_format($totalCourseModules),
+                'progressClass' => 'progress-bar bg-primary',
+                // 'wrapper' => [
+                //         'style' => 'background-color:rgb(40, 127, 167);',
+                // ],
+                'hint' => 'All registered Course Modules',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($activeCourseModules),
+                'description' => 'Active Course Modules',
+                'value' => number_format($activeCourseModules),
+                'progressClass' => 'progress-bar bg-success',
+                'hint' => 'Course Modules currently active.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($inactiveCourseModules),
+                'description' => 'Inactive Course Modules',
+                'value' => number_format($inactiveCourseModules),
+                'progressClass' => 'progress-bar bg-danger',
+                'hint' => 'Course Modules currently inactive.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($recentCourseModules),
+                'description' => 'New Course Modules (30 Days)',
+                'value' => number_format($recentCourseModules),
+                'progressClass' => 'progress-bar bg-primary',
+                'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                'hint' => 'Modules added in the last 30 days.',
+            ],
+        ],
+    ]);
+}
 
 
 
@@ -759,6 +899,131 @@ public static function programmeStatisticsWidget()
 
 
 
+
+
+
+
+
+    public static function verificationStatisticsWidget()
+    {
+        $totalStudents = StudentVerification::count();
+        $totalVerified = StudentVerification::whereNotNull('verification_date')->count();
+        $unverified = StudentVerification::whereNull('verification_date')->count();
+        $recentlyUpdated = StudentVerification::whereDate('details_updated_at', '>=', now()->subDays(30))->count();
+
+        $getPercent = function ($count) use ($totalStudents) {
+            return $totalStudents > 0 ? round(($count / $totalStudents) * 100) : 0;
+        };
+
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalStudents),
+                    'description' => 'Total Students',
+                    'value' => number_format($totalStudents),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                            'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'All Total Students',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalVerified),
+                    'description' => 'Total Verified Students',
+                    'value' => number_format($totalVerified),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'hint' => 'All Total Verified Students.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($unverified),
+                    'description' => 'Unverified Students',
+                    'value' => number_format($unverified),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Students pending verification.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($recentlyUpdated),
+                    'description' => 'Recently Updated (30 Days)',
+                    'value' => number_format($recentlyUpdated),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                            'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'Recently Updated (30 Days)',
+                ]
+            ],
+        ]);
+    }
+
+
+
+
+
+
+
+
+    public static function courseCertificationStatisticsWidget()
+{
+    $totalCourseCertifications = CourseCertification::count();
+    $activeCourseCertifications = CourseCertification::where('status', 1)->count();
+    $inactiveCourseCertifications = CourseCertification::where('status', 0)->count();
+    $recentCourseCertifications = CourseCertification::whereDate('created_at', '>=', now()->subDays(30))->count();
+
+    $getPercent = function ($count) use ($totalCourseCertifications) {
+        return $totalCourseCertifications > 0 ? round(($count / $totalCourseCertifications) * 100) : 0;
+    };
+
+    Widget::add([
+        'type' => 'div',
+        'class' => 'row mb-4',
+        'content' => [
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($totalCourseCertifications),
+                'description' => 'Total Course Certifications',
+                'value' => number_format($totalCourseCertifications),
+                'progressClass' => 'progress-bar bg-primary',
+                // 'wrapper' => [
+                //         'style' => 'background-color:rgb(40, 127, 167);',
+                // ],
+                'hint' => 'All Course Certifications',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($activeCourseCertifications),
+                'description' => 'Active Course Certifications',
+                'value' => number_format($activeCourseCertifications),
+                'progressClass' => 'progress-bar bg-success',
+                'hint' => 'Course Certifications currently active.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($inactiveCourseCertifications),
+                'description' => 'Inactive Course Certifications',
+                'value' => number_format($inactiveCourseCertifications),
+                'progressClass' => 'progress-bar bg-danger',
+                'hint' => 'Course Certifications currently inactive.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($recentCourseCertifications),
+                'description' => 'New Course Certifications (30 Days)',
+                'value' => number_format($recentCourseCertifications),
+                'progressClass' => 'progress-bar bg-primary',
+                // 'wrapper' => [
+                //         'style' => 'background-color:rgb(40, 127, 167);',
+                //     ],
+                'hint' => 'Modules added in the last 30 days.',
+            ],
+        ],
+    ]);
+}
 
 
 

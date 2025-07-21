@@ -25,7 +25,10 @@ class ProgrammeRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'name' => 'required|min:5|max:255'
+            // 'overview.what_you_will_learn' => 'sometimes|array',
+            // 'overview.what_you_will_learn.*' => 'string|max:255',
+            // 'overview.why_choose_this_course' => 'sometimes|array',
+            // 'overview.why_choose_this_course.*' => 'string|max:255',
         ];
     }
 

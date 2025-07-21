@@ -1,0 +1,96 @@
+{
+  "success": true,
+  "data": [
+      {
+      "id": 11,
+      "title": "IT Support (Networking Focus)",
+      "duration": "120 hrs",
+      "start_date": "2025-07-15",
+      "end_date": "2025-07-17",
+      "status": true,
+      "created_at": "2025-07-15T14:09:25.000000Z",
+      "updated_at": "2025-07-20T11:58:21.000000Z",
+      "course_category_id": 1,
+      "cover_image_id": null,
+      "description": "Provide technical support with a focus on networking. Assist in network device management.",
+      "sub_title": "Certified Network Support Technician (CNST)",
+      "level": "Professional",
+      "job_responsible": "Provide technical support with a focus on networking. Assist in network device management.",
+      "image": null,
+      "overview": {
+        "what_you_will_learn": [
+          "Networking Basics",
+          "Networking Devices and Initial Configuration",
+          "Network Addressing and Basic Troubleshooting",
+          "Network Support and Security"
+        ],
+        "why_choose_this_course": [
+          "Industry-recognized certification",
+          "Hands-on practical training",
+          "Expert instructor guidance",
+          "Career placement support"
+        ]
+      },
+      "prerequisites": "Basic computer literacy",
+      "course_modules_count": 4,
+      "category": {
+        "id": 1,
+        "title": "Cybersecurity",
+        "description": null,
+        "status": true,
+        "created_at": "2025-07-14T15:34:25.000000Z",
+        "updated_at": "2025-07-14T15:34:25.000000Z"
+      },
+      "course_certification": [
+        {
+          "id": 9,
+          "title": "Cisco Certified Support Technician (CCST) Networking",
+          "programme_id": 11,
+          "description": "Industry-recognized certification that validates your skills and expertise.",
+          "type": "International Certification",
+          "status": true,
+          "created_at": "2025-07-20T11:58:21.000000Z",
+          "updated_at": "2025-07-20T11:58:21.000000Z"
+        }
+      ],
+      "course_modules": [
+        {
+          "id": 50,
+          "title": "Networking Basics",
+          "programme_id": 11,
+          "description": null,
+          "status": false,
+          "created_at": "2025-07-20T11:58:21.000000Z",
+          "updated_at": "2025-07-20T11:58:21.000000Z"
+        },
+        {
+          "id": 51,
+          "title": "Networking Devices and Initial Configuration",
+          "programme_id": 11,
+          "description": null,
+          "status": false,
+          "created_at": "2025-07-20T11:58:21.000000Z",
+          "updated_at": "2025-07-20T11:58:21.000000Z"
+        },
+        {
+          "id": 52,
+          "title": "Network Addressing and Basic Troubleshooting",
+          "programme_id": 11,
+          "description": null,
+          "status": false,
+          "created_at": "2025-07-20T11:58:21.000000Z",
+          "updated_at": "2025-07-20T11:58:21.000000Z"
+        },
+        {
+          "id": 53,
+          "title": "Network Support and Security",
+          "programme_id": 11,
+          "description": null,
+          "status": false,
+          "created_at": "2025-07-20T11:58:21.000000Z",
+          "updated_at": "2025-07-20T11:58:21.000000Z"
+        }
+      ]
+    }
+  ]
+}

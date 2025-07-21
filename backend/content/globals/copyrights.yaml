@@ -1,0 +1,22 @@
+title: Copyrights
+data:
+  copyright: '© 2025 One Million Coders Ghana. All rights reserved.  🇬🇭 Proudly Ghanaian'
+  footer_links:
+    -
+      id: md59xq6d
+      name: 'Powered by GI-KACE'
+      url: 'https://gi-kace.gov.gh/'
+      type: link
+      enabled: true
+    -
+      id: md59yxzc
+      name: 'Privacy Policy'
+      url: /privacy
+      type: link
+      enabled: true
+    -
+      id: md59zf13
+      name: 'Terms of Service'
+      url: /terms
+      type: link
+      enabled: true

@@ -2,11 +2,9 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
-use Laravel\Horizon\Horizon;
 
 class AppServiceProvider extends ServiceProvider
 {

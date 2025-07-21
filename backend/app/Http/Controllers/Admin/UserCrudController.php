@@ -71,6 +71,7 @@ class UserCrudController extends CrudController
         // CRUD::setFromDb(); // set columns from db columns.
         $this->setupStudentColumns();
 
+        $this->setupStudentColumns();
         $this->courseFilter('registered_course');
         $this->addConfirmedAdmissionFilter();
         FilterHelper::addBooleanFilter('shortlist', 'Shortlist');

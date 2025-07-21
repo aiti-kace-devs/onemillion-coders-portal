@@ -6,12 +6,36 @@ tabs:
         display: Details
         fields:
           -
-            handle: name
+            handle: social_media
             field:
-              type: text
-              display: Name
-          -
-            handle: value
-            field:
-              type: text
-              display: Value
+              type: replicator
+              display: 'Social Media'
+              sets:
+                new_set_group:
+                  display: 'New Set Group'
+                  sets:
+                    media_item:
+                      display: 'Media Item'
+                      icon: user-multiple
+                      fields:
+                        -
+                          handle: name
+                          field:
+                            type: text
+                            display: Name
+                            validate:
+                              - required
+                            width: 75
+                        -
+                          handle: icon_field
+                          field:
+                            type: icon
+                            display: Icon
+                            width: 25
+                        -
+                          handle: url
+                          field:
+                            type: link
+                            display: Url
+                            validate:
+                              - required

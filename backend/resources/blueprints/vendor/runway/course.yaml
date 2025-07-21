@@ -51,6 +51,13 @@ tabs:
               display: centre_id
               width: 50
               relationship_name: centre
+          -
+            handle: media
+            field:
+              container: google_cloud
+              folder: course-images
+              type: assets
+              display: Media
   sidebar:
     display: Sidebar
     sections:

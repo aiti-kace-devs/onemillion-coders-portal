@@ -260,7 +260,8 @@ class MediaHelper
             ->label($label)
             ->type($type)
             ->value($value)
-            ->disk_options($disk_options);
+            ->disk_options($disk_options)
+            ->wrapper(['class' => 'form-group col-6']);;
 
         return $field;
     }

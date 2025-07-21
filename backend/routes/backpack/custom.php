@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Api\CentreController;
 use App\Http\Controllers\Admin\OexQuestionMasterCrudController;
+use App\Http\Controllers\Admin\StudentVerificationCrudController;
 // --------------------------
 // Custom Backpack Routes
 // --------------------------
@@ -18,7 +19,9 @@ Route::group([
     'namespace' => 'App\Http\Controllers\Admin',
 ], function () { // custom admin routes
     Route::crud('admin', 'AdminCrudController');
-    // In routes/backpack/custom.php
+    Route::get('/filemanager', function () {
+        return view('admin.filemanager.index');
+    });
     Route::get('api/centre-by-branch', [CentreController::class, 'filterByBranch']);
     Route::get('admin/exam/{exam_id}/add-question', [OexQuestionMasterCrudController::class, 'addQuestion'])
     ->name('admin.exam.add-question');
@@ -43,6 +46,7 @@ Route::group([
     Route::crud('user', 'UserCrudController');
     Route::crud('user-admission', 'UserAdmissionCrudController');
     Route::crud('user-exam', 'UserExamCrudController');
+    Route::post('/admin/student-verification/{id}/reset', [StudentVerificationCrudController::class, 'resetVerification'])->name('student-verification.reset');
 
     // Custom AJAX routes for bulk admit modal
     Route::get('course/ajax-list', 'CourseCrudController@ajaxList');
@@ -84,6 +88,8 @@ Route::group([
     Route::get('admin_view_result/{id}', 'UserCrudController@viewResult');
     // Reset Result for a student (admin panel, Backpack)
     Route::get('reset-exam/{exam_id}/student/{user_id}', 'UserCrudController@resetResult')->name('results.reset');
+    Route::crud('student-verification', 'StudentVerificationCrudController');
+    Route::crud('course-certification', 'CourseCertificationCrudController');
 }); // this should be the absolute last line of this file
 
 /**

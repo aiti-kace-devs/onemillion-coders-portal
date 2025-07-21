@@ -26,9 +26,10 @@ RUN apt-get update && apt-get install -y \
     libmemcached-dev \
     libzip-dev \
     libssl-dev \
+    default-mysql-client \
     libpq-dev zlib1g-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath \
+    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath pcntl posix \
     && printf "" | pecl install -D 'with-libmemcached-dir="/usr"' memcached \
     && docker-php-ext-enable memcached \
     && apt-get clean \
@@ -62,11 +63,11 @@ RUN chmod +x /usr/local/bin/start-nginx
 # Application setup
 WORKDIR /var/www/html
 COPY composer.json composer.lock ./
-# COPY composerauth.json ./auth.json
+COPY composerauth.json ./auth.json
 
 # Install dependencies and optimize
-ENV CACHE_STORE=memcached
-ENV SESSION_DRIVER=memcached
+# ENV CACHE_STORE=memcached
+# ENV SESSION_DRIVER=memcached
 
 # Run composer install. This layer will only be rebuilt if composer.json/lock changes.
 # Add --no-scripts if you don't need composer scripts to run here (e.g., Laravel's post-install-cmd)
@@ -76,7 +77,7 @@ RUN composer install --no-dev --optimize-autoloader --no-scripts \
 COPY . .
 
 RUN chown -R www-data:www-data /var/www/html \
-    && mkdir -p  bootstrap/cache storage/framework/sessions storage/app/public/basset storage/logs \
+    && mkdir -p  bootstrap/cache storage/framework/sessions storage/app/public/basset storage/logs storage/statamic storage/statamic/stache-locks \
     && mkdir -p  bootstrap/cache storage/framework/views \
     && mkdir -p  bootstrap/cache storage/framework/cache \
     && chmod -R 775 storage bootstrap/cache
