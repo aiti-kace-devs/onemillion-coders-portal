@@ -44,16 +44,12 @@
     });
 
     // Handle submit
-    $('#modal-submit').on('click', function(e) {
+    $('#modal-submit').off('click').on('click', function(e) {
         e.preventDefault();
         let message = $('#sms_message').val();
         let template = $('#sms_template').val();
-        // Collect selected student IDs
-        let ids = (typeof crud !== 'undefined' && crud.checkedItems && crud.checkedItems.length > 0)
-            ? crud.checkedItems
-            : (typeof manuallySelectedIds !== 'undefined' && manuallySelectedIds.length > 0)
-                ? manuallySelectedIds
-                : (typeof allFilteredIds !== 'undefined' ? allFilteredIds : []);
+        let ids = getCheckedStudentIds();
+        let applyToAll = ids.length === 0;
 
         // Validation
         if ((!message && !template)) {
@@ -68,7 +64,7 @@
             }
             return;
         }
-        if (!ids || ids.length === 0) {
+        if (!applyToAll && ids.length === 0) {
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     icon: 'warning',
@@ -81,15 +77,26 @@
             return;
         }
 
+        let data = {
+            _token: '{{ csrf_token() }}',
+            message: message,
+            template: template
+        };
+
+        if (applyToAll) {
+            data.select_all_in_query = 1;
+            let customView = getCustomViewFromUrl() || getCustomViewFromPath();
+            if (customView) {
+                data.custom_view = customView;
+            }
+        } else {
+            data.student_ids = ids;
+        }
+
         $.ajax({
             url: '{{ route('bulk-sms.send') }}',
             method: 'POST',
-            data: {
-                student_ids: ids,
-                message: message,
-                template: template,
-                _token: '{{ csrf_token() }}'
-            },
+            data: data,
             success: function(resp) {
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({

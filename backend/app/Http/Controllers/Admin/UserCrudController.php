@@ -19,6 +19,7 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use Illuminate\Support\Facades\View;
 use App\Http\Requests\AdmitShortlistedStudentsRequest;
+use App\Http\Controllers\Traits\GetsFilteredQuery;
 
 /**
  * Class UserCrudController
@@ -32,6 +33,7 @@ class UserCrudController extends CrudController
     use ShortlistRowActionsTrait;
     use \App\SearchableCRUD;
     use UserFieldHelpers;
+    use GetsFilteredQuery;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -702,6 +704,18 @@ class UserCrudController extends CrudController
     {
         $count = User::where('shortlist', 1)->count();
         return response()->json(['count' => $count]);
+    }
+
+    public function getFilteredCount(Request $request)
+    {
+        $customView = $request->input('custom_view');
+        if ($customView === 'setupStudentsWithExamResultsView' || $customView === 'students-with-exam-results') {
+            $query = User::whereHas('examResults');
+        } else {
+            $query = User::query();
+        }
+        $count = $query->count();
+        return response()->json(['count' => $count, 'custom_view' => $customView]);
     }
 
     public function admitStudent(Request $request)

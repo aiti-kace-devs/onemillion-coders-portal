@@ -51,7 +51,7 @@
                 }
             });
 
-            function getSelectedStudentIds() {
+            function getCheckedStudentIds() {
                 // Use Backpack's internal checkedItems tracking
                 if (typeof crud !== 'undefined' && crud.checkedItems && crud.checkedItems.length > 0) {
                     return crud.checkedItems;
@@ -80,31 +80,53 @@
             }
 
             // Bulk Email
+            $('#bulkEmailBtn').on('click', function(e) {
+                e.preventDefault();
+                $('#bulkEmailModal').appendTo('body').modal('show');
+            });
             $('#bulkEmailForm').on('submit', function(e) {
                 e.preventDefault();
-                let ids = getSelectedStudentIds();
+                let ids = getCheckedStudentIds();
                 let data = $(this).serializeArray();
-                if (!selectAllAcrossPages && ids.length === 0) {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'No students selected',
-                            text: 'Select students first!'
-                        });
-                    } else {
-                        alert('Select students first!');
-                    }
-                    return;
+                let applyToAll = ids.length === 0;
+                let customView = getCustomViewFromUrl() || getCustomViewFromPath();
+
+                if (customView) {
+                    data.push({
+                        name: 'custom_view',
+                        value: customView
+                    });
                 }
-                if (!selectAllAcrossPages) {
+
+                if (!selectAllAcrossPages && applyToAll) {
+                    data.push({
+                        name: 'select_all_in_query',
+                        value: 1 // send integer 1
+                    });
+                } else if (!selectAllAcrossPages) {
                     ids.forEach(function(id) {
                         data.push({
                             name: 'student_ids[]',
                             value: id
                         });
                     });
+                } else {
+                    addSelectAllFlag(data);
                 }
-                addSelectAllFlag(data);
+
+                if (!selectAllAcrossPages && !applyToAll && ids.length === 0) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'No students selected',
+                            text: 'Select students first or filter to a view with students!'
+                        });
+                    } else {
+                        alert('Select students first or filter to a view with students!');
+                    }
+                    return;
+                }
+
                 $.ajax({
                     url: "{{ route('bulk-email.send') }}",
                     method: 'POST',
@@ -131,8 +153,8 @@
                         if (typeof Swal !== 'undefined') {
                             Swal.fire({
                                 icon: 'error',
-                                title: 'Error',
-                                text: errorMsg
+                                title: xhr.responseJSON?.message ? 'Error' : 'No students selected',
+                                text: xhr.responseJSON?.message ? errorMsg : 'Select students first!'
                             });
                         }
                         if (typeof toastr !== 'undefined') {
@@ -177,14 +199,19 @@
                     }
                 });
 
-                $(document).on('click', '#modal-submit', function() {
+                $(document).off('click', '#modal-submit').on('click', '#modal-submit', function() {
                     const message = messageBox.val();
                     const template = templateSelect.val();
+                    const ids = getCheckedStudentIds();
+                    const applyToAll = ids.length === 0;
+
                     const modalActionEvent = new CustomEvent('modalAction', {
                         detail: {
                             message,
                             template,
                             modalId: 'bulkSMSModal',
+                            ids: ids,
+                            applyToAll: applyToAll
                         },
                         bubbles: true,
                         cancelable: true,
@@ -192,31 +219,45 @@
                     document.getElementById('bulkSMSModal').dispatchEvent(modalActionEvent);
                 });
 
-                modal.on('modalAction', function(event) {
+                modal.off('modalAction').on('modalAction', function(event) {
                     const {
                         message,
-                        subject,
-                        template
+                        template,
+                        ids,
+                        applyToAll
                     } = event.detail;
                     if ((!message && !template)) {
                         toastr.error('You need a message/template and a subject');
                         return;
                     }
-                    var selectedIds = manuallySelectedIds.length > 0 ? manuallySelectedIds : allFilteredIds;
-                    // if (!selectedIds || selectedIds.length === 0) {
-                    //     toastr.warning('No students selected or no students match your filters');
-                    //     return;
-                    // }
+
+                    let data = {
+                        _token: '{{ csrf_token() }}',
+                        message: message,
+                    };
+
+                    let customView = getCustomViewFromUrl() || getCustomViewFromPath();
+
+                    if (customView) {
+                        data.custom_view = customView;
+                    }
+
+                    if (applyToAll) {
+                        data.select_all_in_query = 1;
+                    } else if (ids.length > 0) {
+                        data.student_ids = ids;
+                    } else {
+                        toastr.warning('No students selected or no students match your filters');
+                        return;
+                    }
+
                     $.ajax({
                         url: "{{ route('bulk-sms.send') }}",
                         type: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
                         },
-                        data: {
-                            student_ids: selectedIds,
-                            message,
-                        },
+                        data: data,
                         success: function(response) {
                             toastr.success(response.message ||
                                 'SMS transfer initiated successfully!');
@@ -240,10 +281,20 @@
                 $('#bulkSMSModal').appendTo('body').modal('show');
             });
             // Bulk Shortlist
+            function getCustomViewFromUrl() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('custom_view');
+            }
+            function getCustomViewFromPath() {
+                var match = window.location.pathname.match(/view\/([^/?]+)/);
+                return match ? match[1] : null;
+            }
             $('#bulkShortlistBtn').on('click', function(e) {
                 e.preventDefault();
-                let ids = getSelectedStudentIds();
-                if (!selectAllAcrossPages && ids.length === 0) {
+                let ids = getCheckedStudentIds();
+                let applyToAll = ids.length === 0;
+
+                if (!selectAllAcrossPages && !applyToAll && ids.length === 0) {
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             icon: 'error',
@@ -258,43 +309,60 @@
                     }
                     return;
                 }
-                if (typeof Swal !== 'undefined') {
+                if (applyToAll || selectAllAcrossPages) {
+                    // Fetch the count first
+                    let customView = getCustomViewFromUrl() || getCustomViewFromPath();
+                    $.ajax({
+                        url: "{{ route('user.filtered-count') }}",
+                        method: 'GET',
+                        data: { custom_view: customView },
+                        success: function(response) {
+                            Swal.fire({
+                                title: 'Shortlist Students?',
+                                text: `You are about to shortlist ${response.count} students. This might take a while. Continue?`,
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonText: 'Yes, shortlist them',
+                                cancelButtonText: 'Cancel'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    // Send boolean true for select_all_in_query
+                                    performShortlist(ids, true);
+                                }
+                            });
+                        }
+                    });
+                } else {
                     Swal.fire({
                         title: 'Shortlist Students?',
-                        text: selectAllAcrossPages ?
-                            `You are about to shortlist ALL students in the filtered query. Continue?` :
-                            `You are about to shortlist ${ids.length} students. Continue?`,
+                        text: `You are about to shortlist ${ids.length} students. Continue?`,
                         icon: 'question',
                         showCancelButton: true,
                         confirmButtonText: 'Yes, shortlist them',
                         cancelButtonText: 'Cancel'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            performShortlist(ids);
+                            performShortlist(ids, false);
                         }
                     });
-                } else if (typeof toastr !== 'undefined') {
-                    toastr.error(selectAllAcrossPages ?
-                        `You are about to shortlist ALL students in the filtered query. Continue?` :
-                        `You are about to shortlist ${ids.length} students. Continue?`);
                 }
             });
 
-            function performShortlist(ids) {
+            function performShortlist(ids, applyToAll = false) {
                 let data = {
                     _token: '{{ csrf_token() }}'
                 };
-                if (!selectAllAcrossPages) {
-                    data = {
-                        _token: '{{ csrf_token() }}'
-                    };
-                    ids.forEach(function(id) {
-                        if (!data['student_ids[]']) data['student_ids[]'] = [];
-                        data['student_ids[]'].push(id);
-                    });
-                } else {
+                if (applyToAll) {
+                    data.select_all_in_query = 1;
+                } else if (ids.length > 0) {
+                    data.student_ids = ids;
+                } else if (selectAllAcrossPages) {
                     data.select_all = true;
+                } else {
+                    // This should not be reached due to the check in the click handler
+                    return;
                 }
+
                 $.ajax({
                     url: "{{ route('bulk-students.shortlist') }}",
                     method: 'POST',

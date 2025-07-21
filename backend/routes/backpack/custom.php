@@ -60,6 +60,7 @@ Route::group([
 
     // AJAX endpoint to get count of all shortlisted students
     Route::post('user/shortlisted-count', 'UserCrudController@shortlistedCount')->name('user.shortlisted-count');
+    Route::get('user/filtered-count', 'UserCrudController@getFilteredCount')->name('user.filtered-count');
 
     // Custom routes for AttendanceCrudController non-CRUD methods
     Route::get('attendance/qr-scanner', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupScanQrCodePage'])->name('attendance.qr-scanner');

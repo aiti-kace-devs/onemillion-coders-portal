@@ -13,6 +13,8 @@ use App\Jobs\SendBulkSMSJob;
 
 trait BulkStudentActionsTrait
 {
+    use GetsFilteredQuery;
+
     public function fetchSmsTemplate()
     {
         // Fetch the templates
@@ -25,21 +27,21 @@ trait BulkStudentActionsTrait
     {
         $validated = $request->validated();
 
-        // if no list_name or students_id
-        if (empty($validated['list']) && empty($validated['student_ids'])) {
-            return redirect()
-                ->back()
-                ->with([
-                    'flash' => 'No students/ list selected.',
-                    'key' => 'error',
-                ]);
+        if ($request->has('select_all_in_query')) {
+            $query = $this->getFilteredQuery($request);
+            $validated['student_ids'] = $query->pluck('id')->toArray();
+        }
+
+        if (empty($validated['student_ids'])) {
+            return response()->json([
+                'message' => 'No students selected.',
+            ], 422);
         }
 
         SendBulkEmailJob::dispatch($validated);
 
         return response()->json([
-            'flash' => 'Email sending initiated successfully!',
-            'key' => 'success',
+            'message' => 'Email sending initiated successfully!',
         ]);
     }
 
@@ -47,25 +49,48 @@ trait BulkStudentActionsTrait
     {
         $validated = $request->validated();
 
-        if (empty($validated['list']) && empty($validated['student_ids'])) {
-            return redirect()
-                ->back()
-                ->with([
-                    'flash' => 'No students/ list selected.',
-                    'key' => 'error',
-                ]);
+        if ($request->has('select_all_in_query')) {
+            $query = $this->getFilteredQuery($request);
+            $validated['student_ids'] = $query->pluck('id')->toArray();
+        }
+
+        if (empty($validated['student_ids'])) {
+            return response()->json([
+                'message' => 'No students selected.',
+            ], 422);
         }
 
         SendBulkSMSJob::dispatch($validated);
 
         return response()->json([
-            'flash' => 'SMS sending initiated successfully!',
-            'key' => 'success',
+            'message' => 'SMS sending initiated successfully!',
         ]);
     }
 
     public function saveShortlistedStudents(SaveShortlistedStudentsRequest $request)
     {
+        if ($request->has('select_all_in_query')) {
+            $query = $this->getFilteredQuery();
+            $usersToUpdate = $query->where(function ($query) {
+                $query->whereNull('shortlist')->orWhere('shortlist', '!=', 1);
+            })->get();
+
+            if ($usersToUpdate->isEmpty()) {
+                return response()->json(
+                    [
+                        'message' => 'No users found to update or all are already shortlisted.',
+                    ],
+                    404,
+                );
+            }
+
+            $updatedCount = User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
+
+            return response()->json([
+                'message' => "$updatedCount user(s) successfully shortlisted.",
+            ]);
+        }
+
         $validated = $request->validated();
         if (empty($validated['emails']) && empty($validated['student_ids']) && empty($validated['phone_numbers'])) {
             return response()->json(
@@ -103,6 +128,10 @@ trait BulkStudentActionsTrait
 
     public function admitStudent(Request $request)
     {
+        if ($request->has('select_all_in_query')) {
+            $query = $this->getFilteredQuery();
+            $request->merge(['user_ids' => $query->pluck('userId')->toArray()]);
+        }
         $validated = $request->validate([
             'course_id' => 'required|nullable|exists:courses,id',
             'session_id' => 'sometimes|nullable|exists:course_sessions,id',

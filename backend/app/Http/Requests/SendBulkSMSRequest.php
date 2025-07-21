@@ -25,9 +25,10 @@ class SendBulkSMSRequest extends FormRequest
     {
         return [
             'message' => 'required|string',
-            'student_ids' => 'sometimes|nullable|array',
+            'student_ids' => 'required_without:select_all_in_query|nullable|array',
             'student_ids.*' => 'exists:users,id',
-            'list' => 'required_if:student_ids,null|nullable|string',
+            'select_all_in_query' => 'sometimes|boolean',
+            'custom_view' => 'sometimes|string',
         ];
     }
 

@@ -40,6 +40,12 @@
     @basset('js')
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
+            function getCheckedStudentIds() {
+                if (manuallySelectedIds.length > 0) {
+                    return manuallySelectedIds;
+                }
+                return [];
+            }
             // --- BEGIN: Bulk Shortlist Actions JS ---
             $(document).on('click', '.admit-btn', function() {
                 const user_id = $(this).data('id');
@@ -209,10 +215,10 @@
             });
 
             $('#admit-selected').click(function() {
-                var selectedIds = (typeof crud !== 'undefined' && crud.checkedItems && crud.checkedItems.length > 0) ?
-                    crud.checkedItems :
-                    (manuallySelectedIds.length > 0 ? manuallySelectedIds : allFilteredIds);
-                if (!selectedIds || selectedIds.length === 0) {
+                var selectedIds = getCheckedStudentIds();
+                var applyToAll = selectedIds.length === 0;
+
+                if (!applyToAll && selectedIds.length === 0) {
                     toastr.warning('No students selected or no students match your filters');
                     return;
                 }
@@ -224,7 +230,8 @@
 
                 Swal.fire({
                     title: 'Admit Students?',
-                    text: `You are about to admit ${selectedIds.length} students. Continue?`,
+                    text: applyToAll ? `You are about to admit all students in this view. This might take a while. Continue?` :
+                        `You are about to admit ${selectedIds.length} students. Continue?`,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonText: 'Yes, admit them',
@@ -234,18 +241,40 @@
                     customClass: {
                         denyButton: 'btn btn-primary',
                         confirmButton: 'btn btn-success'
+                    },
+                    onBeforeOpen: () => {
+                        if (applyToAll) {
+                            const textElement = Swal.getHtmlContainer();
+                            if (textElement) {
+                                $.ajax({
+                                    url: "{{ route('user.filtered-count') }}",
+                                    method: 'GET',
+                                    data: crud.last_list_url.split('?')[1] || '',
+                                    success: function(response) {
+                                        textElement.textContent =
+                                            `You are about to admit ${response.count} students in the filtered query. This might take a while. Continue?`;
+                                    }
+                                });
+                            }
+                        }
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
+                        let data = {
+                            _token: '{{ csrf_token() }}'
+                        };
+                        if (applyToAll) {
+                            data.select_all_in_query = true;
+                        } else {
+                            data.user_ids = selectedIds;
+                        }
                         $.ajax({
                             url: "{{ route('user.admit-student') }}",
                             type: 'POST',
                             headers: {
                                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                             },
-                            data: {
-                                user_ids: selectedIds
-                            },
+                            data: data,
                             success: function(response) {
                                 toastr.success(response.message ||
                                     'Students admitted successfully!');
@@ -268,18 +297,29 @@
                             const arrayInputName = 'user_ids';
                             $(`input[name="${arrayInputName}[]"]`).remove();
 
-                            // Create multiple hidden input elements, one for each value in the array
-                            selectedIds.forEach(function(id) {
-                                if (id)
-                                    $('<input>')
+                            if (applyToAll) {
+                                $('<input>')
                                     .attr('type', 'hidden')
-                                    .attr('name', arrayInputName +
-                                        '[]') // Append '[]' to the name
-                                    .attr('value', id)
+                                    .attr('name', 'select_all_in_query')
+                                    .attr('value', 'true')
                                     .appendTo(
                                         'form[name="admit_form"]'
-                                    ); // Append to the form
-                            });
+                                    );
+                            } else {
+                                // Create multiple hidden input elements, one for each value in the array
+                                selectedIds.forEach(function(id) {
+                                    if (id)
+                                        $('<input>')
+                                        .attr('type', 'hidden')
+                                        .attr('name', arrayInputName +
+                                            '[]') // Append '[]' to the name
+                                        .attr('value', id)
+                                        .appendTo(
+                                            'form[name="admit_form"]'
+                                        ); // Append to the form
+                                });
+                            }
+
 
                             $('[name="admit_form"]').submit();
                         });
@@ -322,21 +362,29 @@
             // Bulk Email modal logic
             $('#bulkEmailForm').on('submit', function(e) {
                 e.preventDefault();
-                let ids = getSelectedStudentIds();
-                let data = $(this).serializeArray();
-                if (!selectAllAcrossPages && ids.length === 0) {
+                let ids = getCheckedStudentIds();
+                let applyToAll = ids.length === 0;
+
+                if (!applyToAll && ids.length === 0) {
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             icon: 'error',
                             title: 'No students selected',
-                            text: 'Select students first!'
+                            text: 'Select students first or filter to a view with students!'
                         });
                     } else {
-                        alert('Select students first!');
+                        alert('Select students first or filter to a view with students!');
                     }
                     return;
                 }
-                if (!selectAllAcrossPages) {
+
+                let data = $(this).serializeArray();
+                if (applyToAll) {
+                    data.push({
+                        name: 'select_all_in_query',
+                        value: true
+                    });
+                } else {
                     ids.forEach(function(id) {
                         data.push({
                             name: 'student_ids[]',
@@ -344,7 +392,7 @@
                         });
                     });
                 }
-                addSelectAllFlag(data);
+
                 $.ajax({
                     url: "{{ route('bulk-email.send') }}",
                     method: 'POST',
@@ -418,14 +466,18 @@
                     }
                 });
 
-                $(document).on('click', '#modal-submit', function() {
+                $(document).off('click', '#modal-submit').on('click', '#modal-submit', function() {
                     const message = messageBox.val();
                     const template = templateSelect.val();
+                    const ids = getCheckedStudentIds();
+                    const applyToAll = ids.length === 0;
                     const modalActionEvent = new CustomEvent('modalAction', {
                         detail: {
                             message,
                             template,
                             modalId: 'bulkSMSModal',
+                            ids: ids,
+                            applyToAll: applyToAll
                         },
                         bubbles: true,
                         cancelable: true,
@@ -433,31 +485,36 @@
                     document.getElementById('bulkSMSModal').dispatchEvent(modalActionEvent);
                 });
 
-                modal.on('modalAction', function(event) {
+                modal.off('modalAction').on('modalAction', function(event) {
                     const {
                         message,
-                        subject,
-                        template
+                        template,
+                        ids,
+                        applyToAll
                     } = event.detail;
                     if ((!message && !template)) {
                         toastr.error('You need a message/template and a subject');
                         return;
                     }
-                    var selectedIds = manuallySelectedIds.length > 0 ? manuallySelectedIds : allFilteredIds;
-                    // if (!selectedIds || selectedIds.length === 0) {
-                    //     toastr.warning('No students selected or no students match your filters');
-                    //     return;
-                    // }
+                    let data = {
+                        message: message
+                    };
+                    if (applyToAll) {
+                        data.select_all_in_query = true;
+                    } else if (ids.length > 0) {
+                        data.student_ids = ids;
+                    } else {
+                        toastr.warning('No students selected or no students match your filters');
+                        return;
+                    }
+
                     $.ajax({
                         url: "{{ route('bulk-sms.send') }}",
                         type: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
                         },
-                        data: {
-                            student_ids: selectedIds,
-                            message,
-                        },
+                        data: data,
                         success: function(response) {
                             toastr.success(response.message ||
                                 'SMS transfer initiated successfully!');
@@ -475,7 +532,7 @@
             $(document).on('click', '.delete-admission-btn', function(e) {
                 e.preventDefault();
                 const userId = $(this).data('user-id');
-                const deleteUrl = "/admin/user/delete-admission/" + userId;
+                const deleteUrl = "{{ route('user.delete-admission', ['user_id' => 'USER_ID_PLACEHOLDER']) }}".replace('USER_ID_PLACEHOLDER', userId);
                 Swal.fire({
                     title: 'Are you sure?',
                     text: "Are you sure you want to remove this student from the shortlist and delete their admission?",

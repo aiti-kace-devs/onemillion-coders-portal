@@ -27,9 +27,10 @@ class SendBulkEmailRequest extends FormRequest
             'subject' => 'required',
             'message' => 'sometimes',
             'template' => 'required_if:message,null',
-            'student_ids' => 'required_if:list,null|nullable|array',
+            'student_ids' => 'required_without:select_all_in_query|nullable|array',
             'student_ids.*' => 'exists:users,id',
-            'list' => 'required_if:student_ids,null|nullable|string',
+            'select_all_in_query' => 'sometimes|boolean',
+            'custom_view' => 'sometimes|string',
         ];
     }
 

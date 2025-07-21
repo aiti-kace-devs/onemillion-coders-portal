@@ -63,52 +63,60 @@
                 // }
             });
 
-            // Handle submit
-            $('#bulk-email-modal-submit').on('click', function(e) {
-                e.preventDefault();
-                let subject = $('#email_subject').val();
-                let template = $('#email_template').val();
-                let message = window.bulkEmailEditor ? window.bulkEmailEditor.getData() : $('#email_message')
-                    .val();
+            function getCheckedStudentIds() {
+                if (typeof crud !== 'undefined' && crud.checkedItems && crud.checkedItems.length > 0) {
+                    return crud.checkedItems;
+                }
+                return [];
+            }
 
-                // Use SweetAlert2 for validation feedback
-                if (!subject || (!message && !template)) {
+            $('#bulkEmailForm').off('submit').on('submit', function(e) {
+                e.preventDefault();
+                let ids = getCheckedStudentIds();
+                let data = $(this).serializeArray();
+                let applyToAll = ids.length === 0;
+
+                if (!applyToAll && ids.length === 0) {
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
-                            icon: 'warning',
-                            title: 'Missing Information',
-                            text: 'You need a message/template and a subject',
+                            icon: 'error',
+                            title: 'No students selected',
+                            text: 'Select students first or filter to a view with students!'
                         });
                     } else {
-                        alert('You need a message/template and a subject');
+                        alert('Select students first or filter to a view with students!');
                     }
                     return;
                 }
 
-                // Find the form and submit via AJAX (or trigger the Backpack handler)
-                let ids = typeof crud !== 'undefined' && crud.checkedItems ? crud.checkedItems : [];
-                if (ids.length === 0) {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'No students selected',
-                            text: 'Select students first!',
+                let customView = getCustomViewFromUrl() || getCustomViewFromPath();
+                if (customView) {
+                    data.push({
+                        name: 'custom_view',
+                        value: customView
+                    });
+                }
+
+                if (applyToAll) {
+                    data.push({
+                        name: 'select_all_in_query',
+                        value: 1
+                    });
+                } else {
+                    ids.forEach(function(id) {
+                        data.push({
+                            name: 'student_ids[]',
+                            value: id
                         });
-                    } else {
-                        alert('Select students first!');
-                    }
-                    return;
+                    });
                 }
 
                 $.ajax({
                     url: "{{ route('bulk-email.send') }}",
                     method: 'POST',
-                    data: {
-                        student_ids: ids,
-                        subject: subject,
-                        message: message,
-                        template: template,
-                        _token: '{{ csrf_token() }}'
+                    data: data,
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
                     success: function(resp) {
                         if (typeof Swal !== 'undefined') {
@@ -116,23 +124,25 @@
                                 icon: 'success',
                                 title: 'Success',
                                 text: resp.message || 'Emails sent successfully!'
-                            });
-                        } else {
-                            alert(resp.message || 'Emails sent successfully!');
+                            }).then(() => window.location.reload());
                         }
-                        var modal = bootstrap.Modal.getInstance(document.getElementById(
-                            'bulkEmailModal'));
+                        if (typeof toastr !== 'undefined') {
+                            toastr.success(resp.message || 'Emails sent successfully!');
+                        }
+                        var modal = bootstrap.Modal.getInstance(document.getElementById('bulkEmailModal'));
                         if (modal) modal.hide();
                     },
                     error: function(xhr) {
+                        let errorMsg = xhr.responseJSON?.message || 'Failed to send emails.';
                         if (typeof Swal !== 'undefined') {
                             Swal.fire({
                                 icon: 'error',
-                                title: 'Error',
-                                text: xhr.responseJSON?.message || 'Failed to send emails.'
+                                title: xhr.responseJSON?.message ? 'Error' : 'No students selected',
+                                text: xhr.responseJSON?.message ? errorMsg : 'Select students first!'
                             });
-                        } else {
-                            alert(xhr.responseJSON?.message || 'Failed to send emails.');
+                        }
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error(errorMsg);
                         }
                     }
                 });
