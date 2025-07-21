@@ -718,9 +718,19 @@ class UserCrudController extends CrudController
         return $this->admitStudent($request);
     }
 
-    public function deleteAdmission($user_id, Request $request)
+    public function deleteAdmission($user_id)
     {
-        return $this->deleteAdmission($user_id, $request);
+        try {
+            $user = User::findOrFail($user_id);
+            $user->admissions()->delete();
+            $user->shortlist = false;
+            $user->save();
+
+            return response()->json(['message' => 'Admission deleted successfully.']);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting admission:', ['user_id' => $user_id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to delete admission.'], 500);
+        }
     }
 
     // Remove the proxy methods for AJAX endpoints, as the trait methods are used directly.

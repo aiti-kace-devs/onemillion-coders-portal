@@ -289,6 +289,28 @@
                 });
             });
 
+            $(document).on('click', '.change-admission-btn', function(e) {
+                e.preventDefault();
+                const userId = $(this).data('user-id');
+                if (!userId) {
+                    toastr.error('User ID not found.');
+                    return;
+                }
+
+                openAdmitModal('', null, null, function() {
+                    const arrayInputName = 'user_ids';
+                    $(`input[name="${arrayInputName}[]"]`).remove();
+
+                    $('<input>')
+                        .attr('type', 'hidden')
+                        .attr('name', arrayInputName + '[]')
+                        .attr('value', userId)
+                        .appendTo('form[name="admit_form"]');
+
+                    $('form[name="admit_form"]').submit();
+                });
+            });
+
             $('#admitModal #course_id').on('change', function() {
                 var courseId = $(this).val();
                 $('#admitModal #session_id option').each(function() {
@@ -452,7 +474,7 @@
             // Delete admission logic
             $(document).on('click', '.delete-admission-btn', function(e) {
                 e.preventDefault();
-                const userId = $(this).data('userid');
+                const userId = $(this).data('user-id');
                 const deleteUrl = "/admin/user/delete-admission/" + userId;
                 Swal.fire({
                     title: 'Are you sure?',
