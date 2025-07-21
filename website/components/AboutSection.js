@@ -1,137 +1,205 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Button from "./Button";
 import { FiArrowRight } from "react-icons/fi";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { GhanaGradientBackground } from "@/components/GhanaGradients";
 
-const AboutSection = () => {
+const AboutSection = ({ data }) => {
   const router = useRouter();
+  const prefersReducedMotion = useReducedMotion();
+
+  // Use only API data
+  const sectionData = data?.section_items?.[0];
+  const [imageSrc, setImageSrc] = useState(sectionData?.media?.url);
 
   const handleLearnMore = () => {
-    router.push("/about");
+    if (sectionData?.slider_button_link) {
+      if (sectionData.slider_button_link.startsWith("http")) {
+        window.open(sectionData.slider_button_link, "_blank");
+      } else {
+        router.push(sectionData.slider_button_link);
+      }
+    }
   };
 
+  const handleImageError = () => {
+    // No fallback image
+    setImageSrc(null);
+  };
+
+  // Optimized animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: prefersReducedMotion ? 0 : 0.15,
+        duration: prefersReducedMotion ? 0.3 : 0.8,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: {
+      opacity: 0,
+      y: prefersReducedMotion ? 0 : 20,
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: prefersReducedMotion ? 0.3 : 0.6,
+        ease: [0.25, 0.1, 0.25, 1],
+      },
+    },
+  };
+
+  // Don't render if no API data
+  if (!sectionData) {
+    return null;
+  }
+
   return (
-    <section className="section-spacing bg-gradient-to-br from-gray-50 to-white relative overflow-hidden">
-      {/* Ghana Flag Pattern Background */}
-`      {/* <div className="absolute inset-0 opacity-3">
-        <GhanaGradientBackground size="xs" position="top-left" opacity="20" />
-        <div className="absolute bottom-20 right-20 w-48 h-48 rounded-full bg-gradient-to-tl from-green-600 via-yellow-400 to-red-600 blur-3xl"></div>
-      </div>` */}
-      
-      {/* Ghana Flag Ribbon */}
-      {/* <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-600 via-yellow-400 to-green-600 opacity-20"></div> */}
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Left Content */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 relative z-10">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center"
+        >
+          {/* Mobile-first: Image first on mobile, content second */}
           <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
-            viewport={{ once: true }}
-            className="space-y-8"
+            variants={itemVariants}
+            className="order-1 lg:order-2 relative"
           >
-            {/* Section Header */}
-            <div className="space-y-4">
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
+            {/* Enhanced image container with Ghana theming */}
+            <div className="relative group max-w-md mx-auto lg:max-w-none">
+              {/* Ghana flag inspired border - subtle glow effect */}
+              <div
+                className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-red-600/20 via-yellow-400/20 to-green-600/20 
+                             opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"
+              ></div>
+
+              {/* Main image container with responsive aspect ratios */}
+              <div
+                className="relative aspect-[3/4] sm:aspect-[4/5] lg:aspect-[4/6] xl:aspect-[3/4] 
+                             rounded-2xl sm:rounded-3xl overflow-hidden 
+                             shadow-lg group-hover:shadow-2xl transition-shadow duration-500
+                             ring-1 ring-black/5 group-hover:ring-yellow-400/20"
+              >
+                {/* Background for loading state */}
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200"></div>
+
+                {imageSrc && (
+                  <Image
+                    src={imageSrc}
+                    alt="H.E. John Dramani Mahama - President of the Republic of Ghana"
+                    fill
+                    className="object-cover transition-all duration-500 group-hover:scale-[1.02]"
+                    priority
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 40vw"
+                    onError={handleImageError}
+                  />
+                )}
+
+                {/* Subtle overlay for better text contrast if needed */}
+                <div
+                  className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent 
+                               group-hover:from-black/10 transition-colors duration-500"
+                ></div>
+              </div>
+
+              {/* Ghana star decoration - enhanced and responsive */}
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                whileInView={{ scale: 1, rotate: 0 }}
+                transition={{
+                  duration: prefersReducedMotion ? 0.3 : 0.8,
+                  delay: prefersReducedMotion ? 0 : 0.5,
+                  type: "spring",
+                  stiffness: 200,
+                }}
                 viewport={{ once: true }}
-                className="heading-lg text-gray-900 content-spacing"
+                className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 w-10 h-10 sm:w-12 sm:h-12 z-10 
+                          group-hover:scale-110 transition-transform duration-300"
               >
-                The One Million Coders Vision
-              </motion.h2>
+                <div
+                  className="w-full h-full bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full 
+                               flex items-center justify-center shadow-lg ring-2 ring-white"
+                >
+                  <svg
+                    className="w-5 h-5 sm:w-6 sm:h-6 text-black"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                </div>
+              </motion.div>
             </div>
-
-            {/* Content */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              viewport={{ once: true }}
-              className="space-y-6"
-            >
-              <p className="text-lead text-gray-700 element-spacing">
-                One Million Coders is transforming Ghana&apos;s digital future by empowering a new generation of tech innovators and leaders. Under the visionary leadership of H.E. John Dramani Mahama, this initiative aims to equip one million Ghanaians with cutting-edge digital skills.
-              </p>
-              
-              <p className="text-lead text-gray-700 element-spacing">
-                By joining One Million Coders, you gain access to world-class training programmes, mentorship from industry experts, and a vibrant community of ambitious innovators ready to drive Ghana&apos;s technological advancement and economic growth.
-              </p>
-              
-              <p className="text-lead text-gray-900 font-medium">
-                Join us today to be part of Ghana&apos;s digital revolution and help build a prosperous, tech-enabled future for our nation.
-              </p>
-            </motion.div>
-
-            {/* CTA Button */}
-            <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.9 }}
-              whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              viewport={{ once: true }}
-            >
-              <Button
-                onClick={handleLearnMore}
-                icon={FiArrowRight}
-                variant="success"
-                size="large"
-                iconPosition="right"
-                className="font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
-              >
-                Learn More About Our Vision
-              </Button>
-            </motion.div>
           </motion.div>
 
-          {/* Right Image */}
+          {/* Content - Enhanced mobile typography and spacing */}
           <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
-            viewport={{ once: true }}
-            className="relative"
+            variants={itemVariants}
+            className="order-2 lg:order-1 space-y-6 sm:space-y-8 text-center lg:text-left"
           >
-            {/* Ghana Star Decoration */}
-            <div className="absolute -top-4 -right-4 w-12 h-12 z-10">
-              <div className="w-full h-full bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">
-                <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              </div>
-            </div>
-            
-            {/* Ghana Flag Corner Accent */}
-            {/* <div className="absolute top-4 left-4 w-16 h-12 z-10 rounded-lg overflow-hidden shadow-md">
-              <div className="w-full h-1/3 bg-red-600"></div>
-              <div className="w-full h-1/3 bg-yellow-400 flex items-center justify-center">
-                <svg className="w-3 h-3 text-black" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              </div>
-              <div className="w-full h-1/3 bg-green-600"></div>
-            </div> */}
+            {/* Section Header - Enhanced mobile typography */}
+            <motion.div
+              variants={itemVariants}
+              className="space-y-3 sm:space-y-4"
+            >
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 leading-tight">
+                {sectionData.title}
+              </h2>
+            </motion.div>
 
-            {/* Main Image */}
-            <div className="aspect-[4/6] relative">
-              <Image
-                src="/images/jdm-1.png"
-                alt="H.E. John Dramani Mahama - President of the Republic of Ghana"
-                fill
-                className="object-cover rounded-2xl"
-                priority
-              />
-            </div>
+            {/* Content - Improved mobile readability */}
+            {sectionData.slider_description && (
+              <motion.div
+                variants={itemVariants}
+                className="space-y-4 sm:space-y-6"
+              >
+                <div
+                  className="text-base sm:text-lg lg:text-xl text-gray-700 leading-relaxed 
+                           prose prose-lg max-w-none prose-p:mb-4 sm:prose-p:mb-6
+                           prose-headings:text-gray-900 prose-headings:font-semibold
+                           prose-strong:text-yellow-700 prose-a:text-green-600 prose-a:no-underline hover:prose-a:underline"
+                  dangerouslySetInnerHTML={{
+                    __html: sectionData.slider_description,
+                  }}
+                />
+              </motion.div>
+            )}
+
+            {/* CTA Button - Enhanced mobile positioning */}
+            {sectionData.slider_button_text && (
+              <motion.div variants={itemVariants} className="pt-2 sm:pt-4">
+                <Button
+                  onClick={handleLearnMore}
+                  icon={FiArrowRight}
+                  variant="success"
+                  size="large"
+                  iconPosition="right"
+                  className="w-full sm:w-auto font-semibold shadow-lg hover:shadow-xl 
+                           transform hover:-translate-y-0.5 transition-all duration-200
+                           text-sm sm:text-base px-6 sm:px-8 py-3 sm:py-4"
+                >
+                  {sectionData.slider_button_text}
+                </Button>
+              </motion.div>
+            )}
           </motion.div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
 };
 
-export default AboutSection; 
+export default AboutSection;

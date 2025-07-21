@@ -18,6 +18,7 @@ class CourseCategory extends Model
     protected $fillable = [
         'title',
         'description',
+        'icon',
         'status'
     ];
 

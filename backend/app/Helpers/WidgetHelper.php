@@ -18,6 +18,7 @@ use App\Models\CourseModule;
 use App\Models\StudentVerification;
 use App\Models\OexQuestionMaster;
 use App\Models\OexCategory;
+use App\Models\CourseCertification;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\DB;
 
@@ -960,6 +961,69 @@ public static function programmeStatisticsWidget()
         ]);
     }
 
+
+
+
+
+
+
+
+    public static function courseCertificationStatisticsWidget()
+{
+    $totalCourseCertifications = CourseCertification::count();
+    $activeCourseCertifications = CourseCertification::where('status', 1)->count();
+    $inactiveCourseCertifications = CourseCertification::where('status', 0)->count();
+    $recentCourseCertifications = CourseCertification::whereDate('created_at', '>=', now()->subDays(30))->count();
+
+    $getPercent = function ($count) use ($totalCourseCertifications) {
+        return $totalCourseCertifications > 0 ? round(($count / $totalCourseCertifications) * 100) : 0;
+    };
+
+    Widget::add([
+        'type' => 'div',
+        'class' => 'row mb-4',
+        'content' => [
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($totalCourseCertifications),
+                'description' => 'Total Course Certifications',
+                'value' => number_format($totalCourseCertifications),
+                'progressClass' => 'progress-bar bg-primary',
+                // 'wrapper' => [
+                //         'style' => 'background-color:rgb(40, 127, 167);',
+                // ],
+                'hint' => 'All Course Certifications',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($activeCourseCertifications),
+                'description' => 'Active Course Certifications',
+                'value' => number_format($activeCourseCertifications),
+                'progressClass' => 'progress-bar bg-success',
+                'hint' => 'Course Certifications currently active.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($inactiveCourseCertifications),
+                'description' => 'Inactive Course Certifications',
+                'value' => number_format($inactiveCourseCertifications),
+                'progressClass' => 'progress-bar bg-danger',
+                'hint' => 'Course Certifications currently inactive.',
+            ],
+            [
+                'type' => 'progress_white',
+                'progress' => $getPercent($recentCourseCertifications),
+                'description' => 'New Course Certifications (30 Days)',
+                'value' => number_format($recentCourseCertifications),
+                'progressClass' => 'progress-bar bg-primary',
+                // 'wrapper' => [
+                //         'style' => 'background-color:rgb(40, 127, 167);',
+                //     ],
+                'hint' => 'Modules added in the last 30 days.',
+            ],
+        ],
+    ]);
+}
 
 
 

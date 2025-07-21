@@ -190,7 +190,8 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex items-center space-x-4">
               <p className="text-gray-400 text-sm">
-                © 2024 One Million Coders Ghana. All rights reserved.
+                © {new Date().getFullYear()} One Million Coders Ghana. All
+                rights reserved.
               </p>
               <div className="hidden md:flex items-center space-x-2 text-sm text-gray-500">
                 <span>🇬🇭</span>
@@ -233,7 +234,7 @@ const Footer = () => {
       </div>
 
       {/* Ghana Flag Bottom Border */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-600 via-yellow-400 to-red-600"></div>
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 via-yellow-400 to-green-600"></div>
     </footer>
   );
 };

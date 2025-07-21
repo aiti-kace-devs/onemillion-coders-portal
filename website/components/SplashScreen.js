@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import { FiX } from "react-icons/fi";
 import { GhanaGradientText } from "@/components/GhanaGradients";
@@ -9,15 +9,41 @@ import { GhanaGradientText } from "@/components/GhanaGradients";
 const SplashScreen = ({ onDismiss }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [imageSrc, setImageSrc] = useState("/images/jdm-1.jpg");
+  const prefersReducedMotion = useReducedMotion();
+  const animationFrameRef = useRef();
+  const startTimeRef = useRef();
 
   const DISPLAY_DURATION = 6000; // 6 seconds
+
+  const handleImageError = () => {
+    setImageSrc("/images/jdm-1-old.png");
+  };
 
   const handleDismiss = useCallback(() => {
     setIsVisible(false);
     setTimeout(() => {
       onDismiss();
-    }, 600); // Wait for exit animation to complete
-  }, [onDismiss]);
+    }, prefersReducedMotion ? 150 : 400); // Faster for reduced motion users
+  }, [onDismiss, prefersReducedMotion]);
+
+  // Optimized progress animation using requestAnimationFrame
+  const updateProgress = useCallback((timestamp) => {
+    if (!startTimeRef.current) {
+      startTimeRef.current = timestamp;
+    }
+
+    const elapsed = timestamp - startTimeRef.current;
+    const newProgress = Math.min((elapsed / DISPLAY_DURATION) * 100, 100);
+    
+    setProgress(newProgress);
+
+    if (newProgress < 100) {
+      animationFrameRef.current = requestAnimationFrame(updateProgress);
+    } else {
+      handleDismiss();
+    }
+  }, [handleDismiss]);
 
   useEffect(() => {
     // Check if user has opted out of seeing the splash screen
@@ -28,28 +54,21 @@ const SplashScreen = ({ onDismiss }) => {
       return;
     }
 
-    // Progress bar animation
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          handleDismiss();
-          return 100;
-        }
-        return prev + (100 / (DISPLAY_DURATION / 100));
-      });
-    }, 100);
+    // Start optimized progress animation
+    animationFrameRef.current = requestAnimationFrame(updateProgress);
 
-    // Auto-dismiss after duration
+    // Fallback auto-dismiss timer
     const dismissTimer = setTimeout(() => {
       handleDismiss();
-    }, DISPLAY_DURATION);
+    }, DISPLAY_DURATION + 100);
 
     return () => {
-      clearInterval(progressInterval);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
       clearTimeout(dismissTimer);
     };
-  }, [onDismiss, handleDismiss]);
+  }, [onDismiss, handleDismiss, updateProgress]);
 
   const handleDontShowAgain = (checked) => {
     if (checked) {
@@ -60,70 +79,121 @@ const SplashScreen = ({ onDismiss }) => {
   };
 
   const handleSkip = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
     handleDismiss();
+  };
+
+  // Optimized animation variants
+  const containerVariants = {
+    initial: { 
+      opacity: 0,
+      scale: prefersReducedMotion ? 1 : 0.98
+    },
+    animate: { 
+      opacity: 1,
+      scale: 1,
+      transition: { 
+        duration: prefersReducedMotion ? 0.2 : 0.3,
+        ease: "easeOut"
+      }
+    },
+    exit: {
+      opacity: 0,
+      scale: prefersReducedMotion ? 1 : 0.96,
+      transition: { 
+        duration: prefersReducedMotion ? 0.15 : 0.4,
+        ease: "easeInOut"
+      }
+    }
+  };
+
+  const contentVariants = {
+    initial: { 
+      opacity: 0, 
+      y: prefersReducedMotion ? 0 : 15
+    },
+    animate: {
+      opacity: 1,
+      y: 0,
+      transition: { 
+        duration: prefersReducedMotion ? 0.2 : 0.5,
+        ease: "easeOut"
+      }
+    }
   };
 
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ 
-            opacity: 0,
-            scale: 0.95,
-            filter: "blur(10px)",
-            transition: { duration: 0.4, ease: "easeInOut" }
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="fixed inset-0 z-[9999] bg-white will-change-transform"
+          style={{ 
+            backfaceVisibility: 'hidden',
+            perspective: '1000px'
           }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="fixed inset-0 z-[9999] bg-white"
         >
-          {/* Progress Bar */}
+          {/* Optimized Progress Bar */}
           <div className="absolute top-0 left-0 right-0 h-2 bg-gray-200 z-20">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.1, ease: "linear" }}
-              className="h-full bg-gradient-to-r from-red-600 via-yellow-400 to-green-600 shadow-lg"
+            <div
+              className="h-full bg-gradient-to-r from-red-600 via-yellow-400 to-green-600 will-change-transform"
+              style={{
+                width: `${progress}%`,
+                transform: 'translate3d(0, 0, 0)', // GPU acceleration
+                transition: prefersReducedMotion ? 'none' : 'width 0.1s linear'
+              }}
             />
           </div>
 
           {/* Skip Button */}
           <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            whileHover={prefersReducedMotion ? {} : { scale: 1.05 }}
+            whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
             onClick={handleSkip}
-            className="absolute top-4 right-4 z-30 p-3 hover:bg-gray-100 rounded-full transition-colors duration-200"
+            className="absolute top-4 right-4 z-30 p-3 hover:bg-gray-100 rounded-full transition-colors duration-200 will-change-transform"
+            style={{ transform: 'translate3d(0, 0, 0)' }}
           >
             <FiX className="w-5 h-5 text-gray-600" />
           </motion.button>
 
-          {/* Main Content */}
-          <div className="flex flex-col items-center justify-center h-full px-6 text-center">
+          {/* Main Content Container */}
+          <div className="flex flex-col items-center justify-center h-full px-6 text-center will-change-transform">
             {/* President Image */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-              className="relative mb-8"
+              variants={contentVariants}
+              initial="initial"
+              animate="animate"
+              transition={{ delay: prefersReducedMotion ? 0 : 0.1 }}
+              className="relative mb-8 will-change-transform"
+              style={{ transform: 'translate3d(0, 0, 0)' }}
             >
-              <div className="aspect-[4/6] relative w-48 h-60 sm:w-56 sm:h-72 md:w-64 md:h-80">
+              <div className="aspect-[4/6] relative w-48 h-60 sm:w-56 sm:h-72 md:w-64 md:h-80 bg-gray-100 rounded-2xl overflow-hidden">
                 <Image
-                  src="/images/jdm-1.png"
+                  src={imageSrc}
                   alt="H.E. John Dramani Mahama"
                   fill
-                  className="object-fill"
+                  className="object-cover"
                   priority
+                  sizes="(max-width: 768px) 192px, (max-width: 1024px) 224px, 256px"
+                  onError={handleImageError}
+                  style={{ transform: 'translate3d(0, 0, 0)' }}
                 />
               </div>
             </motion.div>
 
             {/* Content */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
-              className="max-w-md space-y-4"
+              variants={contentVariants}
+              initial="initial"
+              animate="animate"
+              transition={{ delay: prefersReducedMotion ? 0 : 0.2 }}
+              className="max-w-md space-y-4 will-change-transform"
+              style={{ transform: 'translate3d(0, 0, 0)' }}
             >
               {/* Title */}
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 leading-tight">
@@ -147,10 +217,12 @@ const SplashScreen = ({ onDismiss }) => {
 
           {/* Don't Show Again Toggle */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
-            className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30"
+            variants={contentVariants}
+            initial="initial"
+            animate="animate"
+            transition={{ delay: prefersReducedMotion ? 0 : 0.3 }}
+            className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30 will-change-transform"
+            style={{ transform: 'translate3d(-50%, 0, 0)' }}
           >
             <label className="flex items-center space-x-2 cursor-pointer bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-md hover:shadow-lg transition-all duration-200 hover:bg-white/90">
               <input

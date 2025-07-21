@@ -127,22 +127,28 @@ class ProgrammeCrudController extends CrudController
 
     protected function handleCourseModules($programme, $modules = [])
     {
+        $modules = is_array($modules) ? $modules : [];
+
         CourseModule::where('programme_id', $programme->id)->delete();
+
         foreach ($modules as $module) {
             if (!empty($module['title'])) {
                 CourseModule::create([
                     'programme_id' => $programme->id,
                     'title' => $module['title'],
                     'description' => $module['description'] ?? null,
-                    'status' => isset($module['status']) ? $module['status'] : true,
+                    'status' => $module['status'] ?? true,
                 ]);
             }
         }
     }
 
 
+
     protected function handleCourseCertification($programme, $certificates = [])
     {
+        $certificates = is_array($certificates) ? $certificates : [];
+
         CourseCertification::where('programme_id', $programme->id)->delete();
         foreach ($certificates as $certificate) {
             if (!empty($certificate['title'])) {

@@ -10,6 +10,7 @@ import { FiArrowRight, FiMenu, FiX, FiChevronDown } from "react-icons/fi";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
+import { getCategoriesData } from "../services";
 
 export default function Header() {
   const router = useRouter();
@@ -17,9 +18,24 @@ export default function Header() {
   const [isProgramsMenuOpen, setIsProgramsMenuOpen] = useState(false);
   const [isPathwayMenuOpen, setIsPathwayMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
 
   const programsRef = useRef(null);
   const pathwayRef = useRef(null);
+
+  // Fetch categories for the programs menu
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categoriesData = await getCategoriesData();
+        setCategories(categoriesData || []);
+      } catch (error) {
+        console.error("Failed to fetch categories for header:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleProgramsClick = (e) => {
     e.preventDefault();
@@ -73,7 +89,7 @@ export default function Header() {
   return (
     <header className="bg-white sticky top-0 z-50 relative">
       {/* Ghana Flag Ribbon at Top */}
-      <GhanaGradientBar height="3px" position="top" zIndex={10} />
+      <GhanaGradientBar height="4px" position="top" zIndex={50} />
 
       {/* Subtle Ghana Star Pattern */}
       {/* <div className="absolute inset-0 opacity-2">
@@ -125,7 +141,7 @@ export default function Header() {
                   isActiveLink("/programmes") ? "active" : ""
                 }`}
               >
-                <span>Programmes</span>
+                <span>Courses </span>
                 <FiChevronDown
                   className={`w-3 h-3 transition-transform duration-200 ${
                     isProgramsMenuOpen ? "rotate-180" : ""
@@ -135,9 +151,10 @@ export default function Header() {
               <ProgramsMenu
                 isOpen={isProgramsMenuOpen}
                 onClose={closeProgramsMenu}
+                categories={categories}
               />
             </div>
-            <div ref={pathwayRef} className="relative">
+            {/* <div ref={pathwayRef} className="relative">
               <button
                 onClick={handlePathwayClick}
                 className={`nav-pill flex items-center space-x-1 ${
@@ -155,20 +172,40 @@ export default function Header() {
                 isOpen={isPathwayMenuOpen}
                 onClose={closePathwayMenu}
               />
-            </div>
+            </div> */}
+            <Link
+              href="/pathway"
+              className={`nav-pill ${
+                isActiveLink("/pathway") ? "active" : ""
+              }`}
+            >
+              Pathway
+            </Link>
             <Link
               href="/community"
               className={`nav-pill ${
                 isActiveLink("/community") ? "active" : ""
               }`}
             >
-              Community
+              Testimonials
             </Link>
             <Link
               href="/about"
               className={`nav-pill ${isActiveLink("/about") ? "active" : ""}`}
             >
               About
+            </Link>
+            <Link
+              href="/faqs"
+              className={`nav-pill ${isActiveLink("/faqs") ? "active" : ""}`}
+            >
+              FAQs
+            </Link>
+            <Link
+              href="/gallery"
+              className={`nav-pill ${isActiveLink("/gallery") ? "active" : ""}`}
+            >
+              Gallery
             </Link>
           </nav>
 
@@ -177,7 +214,7 @@ export default function Header() {
             {/* CTA Button - Hidden on small mobile, visible sm+ */}
             <div className="hidden sm:block">
               <Button
-                onClick={() => router.push("https://onemillioncoders.gov.gh/")}
+                onClick={() => router.push("https://onemillioncoders.gov.gh/forms/register")}
                 icon={FiArrowRight}
                 variant="primary"
                 size="medium"
@@ -282,14 +319,35 @@ export default function Header() {
                 >
                   About
                 </Link>
+                <Link
+                  href="/faqs"
+                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
+                    isActiveLink("/faqs")
+                      ? "text-yellow-600 bg-yellow-50 font-semibold"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  FAQs
+                </Link>
+                <Link
+                  href="/gallery"
+                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
+                    isActiveLink("/gallery")
+                      ? "text-yellow-600 bg-yellow-50 font-semibold"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Gallery
+                </Link>
 
                 {/* Mobile CTA Button */}
                 <div className="pt-4 border-t border-gray-100 mt-4">
                   <Button
-                    onClick={() => {
-                      console.log("Join Portal clicked!");
-                      setIsMobileMenuOpen(false);
-                    }}
+                    onClick={() =>
+                      router.push("https://onemillioncoders.gov.gh/forms/register")
+                    }
                     icon={FiArrowRight}
                     variant="primary"
                     size="large"

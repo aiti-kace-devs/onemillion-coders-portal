@@ -68,14 +68,22 @@ class CourseCategoryCrudController extends CrudController
             'name' => 'title',
             'label' => 'Title',
             'type'      => 'text',
-            'wrapper' => ['class' => 'form-group col-6'],
+            'wrapper' => ['class' => 'form-group col-5'],
+        ]);
+
+
+        CRUD::addField([
+            'name' => 'icon',
+            'label' => 'Icon',
+            'type'      => 'icon_picker',
+            'wrapper' => ['class' => 'form-group col-2'],
         ]);
 
         CRUD::addField([
             'name' => 'description',
-            'label' => 'description',
+            'label' => 'Description',
             'type'      => 'text',
-            'wrapper' => ['class' => 'form-group col-6'],
+            'wrapper' => ['class' => 'form-group col-5'],
         ]);
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');

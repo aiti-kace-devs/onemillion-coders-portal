@@ -8,23 +8,42 @@ use App\Models\CourseCategory;
 use App\Models\Branch;
 use App\Models\UserAdmission;
 use App\Models\Course;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class CourseProgrammeController extends Controller
 {
 
 
 
-    public function index()
+
+    public function index(Request $request)
     {
-        $programmes = Programme::with(['category', 'courseCertification', 'courseModules'])
-            ->withCount('courseModules')
-            ->get();
+        $query = Programme::with(['category', 'courseCertification', 'courseModules'])
+            ->withCount('courseModules');
+
+        if ($request->has('filter')) {
+            $filter = $request->filter;
+            $today = Carbon::today();
+
+            if ($filter === 'running') {
+                $query->where('start_date', '<=', $today)
+                    ->where('end_date', '>=', $today);
+            }
+
+            if ($filter === 'coming_soon') {
+                $query->where('start_date', '>', $today);
+            }
+        }
+
+        $programmes = $query->get();
 
         return response()->json([
             'success' => true,
             'data' => $programmes
         ]);
     }
+
 
 
 
