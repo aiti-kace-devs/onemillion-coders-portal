@@ -33,7 +33,8 @@ class Programme extends Model
         'overview' => 'array'
     ];
 
-    public function centre(){
+    public function centre()
+    {
         return $this->belongsToMany(Centre::class, 'courses');
     }
 
@@ -48,7 +49,8 @@ class Programme extends Model
         return $this->hasMany(CourseCertification::class, 'programme_id');
     }
 
-    public function category(){
+    public function category()
+    {
 
         return $this->belongsTo(CourseCategory::class, 'course_category_id');
     }
@@ -58,27 +60,29 @@ class Programme extends Model
         return $this->belongsTo(Media::class, 'cover_image_id');
     }
 
+    public function tags()
+    {
+        return $this->belongsToMany(CourseMatchOption::class, 'programme_course_match_options');
+    }
+
 
     protected static function booted()
     {
         static::saving(function ($programme) {
             $overview = request('overview', []);
-            
-            $whatYouWillLearn = is_array($overview['what_you_will_learn'] ?? null) 
+
+            $whatYouWillLearn = is_array($overview['what_you_will_learn'] ?? null)
                 ? array_filter($overview['what_you_will_learn'])
                 : [];
-            
+
             $whyChoose = is_array($overview['why_choose_this_course'] ?? null)
                 ? array_filter($overview['why_choose_this_course'])
                 : [];
-            
+
             $programme->overview = [
                 'what_you_will_learn' => $whatYouWillLearn,
                 'why_choose_this_course' => $whyChoose
             ];
         });
     }
-
-
-
 }

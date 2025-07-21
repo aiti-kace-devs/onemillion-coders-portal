@@ -66,3 +66,5 @@
 
 
 <x-backpack::menu-item title="Course certifications" icon="la la-question" :link="backpack_url('course-certification')" />
+<x-backpack::menu-item title="Course matches" icon="la la-question" :link="backpack_url('course-match')" />
+<x-backpack::menu-item title="Course match options" icon="la la-question" :link="backpack_url('course-match-option')" />
