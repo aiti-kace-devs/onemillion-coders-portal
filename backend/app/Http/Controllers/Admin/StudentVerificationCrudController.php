@@ -82,6 +82,7 @@ class StudentVerificationCrudController extends CrudController
         ]);
 
         CRUD::addButton('line', 'verification_status', 'view', 'crud::buttons.verification_status');
+        $this->addStudentBatchFilter('admission', 'Student Batch');
         $this->courseFilter('registered_course');
         FilterHelper::addNullableColumnFilter('verification_status', 'verification_date', 'Verified');
         $admins = Admin::whereIn('id', function ($query) {
