@@ -1,36 +1,38 @@
 tabs:
-  main:
-    display: Main
+  new_tab:
+    display: 'New Tab'
     sections:
       -
+        display: Details
         fields:
           -
-            handle: contact_us
+            handle: social_media
             field:
               type: replicator
-              display: 'Contact Us'
+              display: 'Social Media'
               sets:
                 new_set_group:
                   display: 'New Set Group'
                   sets:
-                    contact:
-                      display: Contact
+                    media_item:
+                      display: 'Media Item'
+                      icon: user-multiple
                       fields:
                         -
                           handle: name
                           field:
                             type: text
                             display: Name
-                            width: 50
                             validate:
                               - required
+                            width: 33
                         -
-                          handle: value
+                          handle: url
                           field:
-                            type: text
-                            display: Value
-                            width: 50
+                            type: link
+                            display: Url
                             validate:
                               - required
+                            width: 66
                         -
                           import: icons
