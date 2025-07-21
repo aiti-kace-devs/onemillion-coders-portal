@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Traits;
 
+use App\Http\Requests\SaveShortlistedStudentsRequest;
+use App\Http\Requests\SendBulkEmailRequest;
+use App\Http\Requests\SendBulkSMSRequest;
 use App\Models\SmsTemplate;
 use Illuminate\Http\Request;
 use App\Models\User;
@@ -18,22 +21,9 @@ trait BulkStudentActionsTrait
         return response()->json($templates);
     }
 
-    public function sendBulkEmail(Request $request)
+    public function sendBulkEmail(SendBulkEmailRequest $request)
     {
-        $validated = $request->validate(
-            [
-                'subject' => 'required',
-                'message' => 'sometimes',
-                'template' => 'required_if:message,null',
-                'student_ids' => 'required_if:list,null|nullable|array',
-                'student_ids.*' => 'exists:users,id',
-                'list' => 'required_if:student_ids,null|nullable|string',
-            ],
-            [],
-            [
-                'student_ids.*' => 'student',
-            ],
-        );
+        $validated = $request->validated();
 
         // if no list_name or students_id
         if (empty($validated['list']) && empty($validated['student_ids'])) {
@@ -53,20 +43,9 @@ trait BulkStudentActionsTrait
         ]);
     }
 
-    public function sendBulkSMS(Request $request)
+    public function sendBulkSMS(SendBulkSMSRequest $request)
     {
-        $validated = $request->validate(
-            [
-                'message' => 'required|string',
-                'student_ids' => 'sometimes|nullable|array',
-                'student_ids.*' => 'exists:users,id',
-                'list' => 'required_if:student_ids,null|nullable|string',
-            ],
-            [],
-            [
-                'student_ids.*' => 'student',
-            ],
-        );
+        $validated = $request->validated();
 
         if (empty($validated['list']) && empty($validated['student_ids'])) {
             return redirect()
@@ -85,24 +64,10 @@ trait BulkStudentActionsTrait
         ]);
     }
 
-    public function saveShortlistedStudents(Request $request)
+    public function saveShortlistedStudents(SaveShortlistedStudentsRequest $request)
     {
-        $request->validate(
-            [
-                'emails' => 'sometimes|array',
-                'emails.*' => 'email',
-                'student_ids' => 'sometimes|array',
-                'student_ids.*' => 'numeric',
-                'phone_numbers' => 'sometimes|array',
-                // 'phone_numbers.*' => 'phone'
-            ],
-            [],
-            [
-                'emails.*' => 'email address',
-                'student_ids.*' => 'student',
-            ],
-        );
-        if (empty($request->input('emails')) && empty($request->input('student_ids')) && empty($request->input('phone_numbers'))) {
+        $validated = $request->validated();
+        if (empty($validated['emails']) && empty($validated['student_ids']) && empty($validated['phone_numbers'])) {
             return response()->json(
                 [
                     'message' => 'Email(s), Student ID(s), or PhoneNumber(s) are required.',
@@ -111,8 +76,8 @@ trait BulkStudentActionsTrait
             );
         }
 
-        $data = $request->input('emails') ?? ($request->input('student_ids') ?? $request->input('phone_numbers'));
-        $columnName = $request->has('emails') ? 'email' : ($request->has('phone_numbers') ? 'mobile_no' : 'id');
+        $data = $validated['emails'] ?? ($validated['student_ids'] ?? $validated['phone_numbers']);
+        $columnName = isset($validated['emails']) ? 'email' : (isset($validated['phone_numbers']) ? 'mobile_no' : 'id');
 
         $usersToUpdate = User::whereIn($columnName, (array) $data)
             ->where(function ($query) {

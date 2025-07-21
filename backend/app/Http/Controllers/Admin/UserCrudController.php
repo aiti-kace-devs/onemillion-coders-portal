@@ -18,6 +18,8 @@ use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use Illuminate\Support\Facades\View;
+use App\Http\Requests\AdmitShortlistedStudentsRequest;
+
 /**
  * Class UserCrudController
  * @package App\Http\Controllers\Admin
@@ -534,14 +536,12 @@ class UserCrudController extends CrudController
     /**
      * Admit shortlisted students (bulk or single) via AJAX for Backpack Shortlist Actions.
      */
-    public function admitShortlistedStudents(Request $request)
+    public function admitShortlistedStudents(AdmitShortlistedStudentsRequest $request)
     {
+        $validated = $request->validated();
+
         // If admit_all is set, admit all shortlisted students
         if ($request->input('admit_all')) {
-            $validated = $request->validate([
-                'course_id' => 'required|nullable|exists:courses,id',
-                'session_id' => 'sometimes|nullable|exists:course_sessions,id',
-            ]);
             $course = Course::find($validated['course_id']);
             $session = CourseSession::find($validated['session_id'] ?? '');
             if ($session && $session->course_id != $course->id) {
@@ -576,15 +576,6 @@ class UserCrudController extends CrudController
                 );
             }
         }
-
-        $validated = $request->validate([
-            'course_id' => 'required|nullable|exists:courses,id',
-            'session_id' => 'sometimes|nullable|exists:course_sessions,id',
-            'user_id' => 'sometimes|nullable|required_if:user_ids,null|exists:users,userId',
-            'change' => 'sometimes',
-            'user_ids' => 'sometimes|nullable|required_if:user_id,null|array',
-            'user_ids.*' => 'exists:users,userId',
-        ]);
 
         $course = Course::find($validated['course_id']);
         $session = CourseSession::find($validated['session_id'] ?? '');
