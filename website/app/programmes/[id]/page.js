@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -14,40 +14,58 @@ import {
   FiTarget,
   FiGlobe,
   FiPlay,
-  FiStar
+  FiStar,
+  FiLoader
 } from 'react-icons/fi';
-import { courses } from '../../../data/courses';
+import { getProgrammeData } from '../../../services/pages';
 import Button from '../../../components/Button';
+import ProgrammeDetailsSkeleton from '@/components/ProgrammeDetailsSkeleton';
 
 export default function CourseDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
-  
-  // Find the course by ID
-  const courseId = parseInt(params.id);
-  const course = courses.courses
-    .flatMap(category => category.jobs.map(job => ({ ...job, category: category.category })))
-    .find(job => job.no === courseId);
+  const [programme, setProgramme] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Available courses list
-  const availableCourses = [
-    'Cybersecurity Officer',
-    'IT Support (Networking Focus)',
-    'Data Analyst (Microsoft Option)',
-    'Data Protection Expert',
-    'Data Protection Manager',
-    'Data Protection Professional',
-    'Data Protection Officer'
-  ];
+  // Fetch programme data from API
+  useEffect(() => {
+    const fetchProgrammeData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getProgrammeData(params.id);
+        setProgramme(data);
+      } catch (err) {
+        console.error('Error fetching programme:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const isAvailable = course ? availableCourses.includes(course.job_title) : false;
+    if (params.id) {
+      fetchProgrammeData();
+    }
+  }, [params.id]);
 
-  if (!course) {
+  const isAvailable = programme ? programme.status : false;
+
+  // Loading state
+  if (loading) {
+    return <ProgrammeDetailsSkeleton />;
+  }
+
+  // Error state
+  if (error || !programme) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Course Not Found</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            {error ? 'Error Loading Programme' : 'Programme Not Found'}
+          </h1>
+          {error && <p className="text-red-600 mb-4">{error}</p>}
           <Button onClick={() => router.push('/programmes')} icon={FiArrowLeft}>
             Back to Programmes
           </Button>
@@ -56,10 +74,11 @@ export default function CourseDetailsPage() {
     );
   }
 
-  const getCategoryColor = (category) => {
+  const getCategoryColor = (categoryTitle) => {
     const colors = {
       'Cybersecurity': 'from-red-400 to-rose-500',
       'DATA Protection': 'from-blue-500 to-blue-600',
+      'Data Protection': 'from-blue-500 to-blue-600', // Alternative naming
       'Artificial Intelligence Training': 'from-purple-500 to-purple-600',
       'Mobile Application Development': 'from-green-500 to-green-600',
       'Systems Administration': 'from-orange-500 to-orange-600',
@@ -67,7 +86,7 @@ export default function CourseDetailsPage() {
       'BPO Training': 'from-pink-500 to-pink-600',
       'Other Special Training Programs': 'from-gray-500 to-gray-600'
     };
-    return colors[category] || 'from-gray-500 to-gray-600';
+    return colors[categoryTitle] || 'from-gray-500 to-gray-600';
   };
 
   const tabs = [
@@ -80,7 +99,7 @@ export default function CourseDetailsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className={`relative py-20 bg-gradient-to-br ${getCategoryColor(course.category)} overflow-hidden`}>
+      <section className={`relative py-20 bg-gradient-to-br ${getCategoryColor(programme.category?.title)} overflow-hidden`}>
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{
@@ -109,7 +128,7 @@ export default function CourseDetailsPage() {
           </motion.div>
 
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Course Info */}
+            {/* Programme Info */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -119,7 +138,7 @@ export default function CourseDetailsPage() {
               {/* Availability Badge */}
               <div className="flex items-center space-x-3 mb-6">
                 <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
-                  {course.category}
+                  {programme.category?.title}
                 </span>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                   isAvailable 
@@ -131,40 +150,40 @@ export default function CourseDetailsPage() {
               </div>
 
               <h1 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-                {course.job_title}
+                {programme.title}
               </h1>
 
-              {course.training_program && (
+              {programme.sub_title && (
                 <p className="text-xl text-white/90 mb-6 font-medium">
-                  {course.training_program}
+                  {programme.sub_title}
                 </p>
               )}
 
               <p className="text-lg text-white/80 mb-8 leading-relaxed">
-                {course.job_responsibilities}
+                {programme.job_responsible || programme.description || 'Professional training program designed to advance your career.'}
               </p>
 
               {/* Quick Stats */}
               <div className="grid grid-cols-2 gap-6 mb-8">
-                {course.training_duration && (
+                {programme.duration && (
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
                       <FiClock className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="font-semibold">{course.training_duration}</div>
+                      <div className="font-semibold">{programme.duration}</div>
                       <div className="text-white/70 text-sm">Duration</div>
                     </div>
                   </div>
                 )}
 
-                {course.training_modules && (
+                {programme.course_modules_count > 0 && (
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
                       <FiBookOpen className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="font-semibold">{course.training_modules.length} Modules</div>
+                      <div className="font-semibold">{programme.course_modules_count} Modules</div>
                       <div className="text-white/70 text-sm">Curriculum</div>
                     </div>
                   </div>
@@ -180,13 +199,12 @@ export default function CourseDetailsPage() {
                   disabled={!isAvailable}
                   className="!bg-white !text-gray-900 hover:!bg-gray-100"
                 >
-                  {/* {isAvailable ? 'Enroll Now' : 'Notify When Available'} */}
                   {isAvailable ? 'Register' : 'Notify When Available'}
                 </Button>
               </div>
             </motion.div>
 
-            {/* Course Image */}
+            {/* Programme Image */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -195,8 +213,8 @@ export default function CourseDetailsPage() {
             >
               <div className="relative h-96 lg:h-[500px] rounded-2xl overflow-hidden shadow-2xl">
                 <Image
-                  src={course.image || '/images/hero/Certified-Data-Protection-Manager.jpg'}
-                  alt={course.job_title}
+                  src={programme.image || '/images/hero/Certified-Data-Protection-Manager.jpg'}
+                  alt={programme.title}
                   fill
                   className="object-cover"
                 />
@@ -215,25 +233,44 @@ export default function CourseDetailsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mb-12"
+            className="mb-8 md:mb-12"
           >
-            <div className="border-b border-gray-200">
-              <nav className="flex space-x-8">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
-                      activeTab === tab.id
-                        ? 'border-yellow-400 text-yellow-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <tab.icon className="w-4 h-4" />
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
+            <div className="border-b border-gray-200 overflow-hidden">
+              {/* Mobile: Horizontal scroll, Desktop: Flex */}
+              <nav className="flex md:justify-start overflow-x-auto scrollbar-hide -mb-px">
+                <div className="flex space-x-1 md:space-x-8 px-4 md:px-0 min-w-max md:min-w-0">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center space-x-1.5 md:space-x-2 py-3 md:py-4 px-3 md:px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 whitespace-nowrap ${
+                        activeTab === tab.id
+                          ? 'border-yellow-400 text-yellow-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <tab.icon className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+                      <span className="hidden sm:inline md:inline">{tab.label}</span>
+                      {/* Mobile: Show abbreviated labels */}
+                      <span className="sm:hidden md:hidden">
+                        {tab.label.split(' ')[0]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </nav>
+            </div>
+            
+            {/* Mobile: Show current tab name */}
+            <div className="block md:hidden mt-4 px-4">
+              <div className="flex items-center space-x-2 text-sm font-medium text-gray-900">
+                {tabs.find(tab => tab.id === activeTab)?.icon && (
+                  React.createElement(tabs.find(tab => tab.id === activeTab).icon, {
+                    className: "w-4 h-4 text-yellow-600"
+                  })
+                )}
+                <span>{tabs.find(tab => tab.id === activeTab)?.label}</span>
+              </div>
             </div>
           </motion.div>
 
@@ -245,63 +282,80 @@ export default function CourseDetailsPage() {
             transition={{ duration: 0.4 }}
           >
             {activeTab === 'overview' && (
-              <div className="grid lg:grid-cols-3 gap-12">
+              <div className="grid lg:grid-cols-3 gap-6 lg:gap-12 px-4 md:px-0">
                 <div className="lg:col-span-2">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-6">Course Overview</h2>
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Programme Overview</h2>
                   <div className="prose prose-lg max-w-none">
-                    <p className="text-gray-600 leading-relaxed mb-6">
-                      {course.job_responsibilities}
+                    <p className="text-gray-600 leading-relaxed mb-4 md:mb-6 text-sm md:text-base">
+                      {programme.job_responsible || programme.description || 'Professional training program designed to advance your career and provide industry-relevant skills.'}
                     </p>
                     
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">What You&apos;ll Learn</h3>
+                    <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4">What You&apos;ll Learn</h3>
                     <ul className="space-y-3">
-                      {course.training_modules && course.training_modules.slice(0, 4).map((module, index) => (
-                        <li key={index} className="flex items-start space-x-3">
-                          <FiCheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span className="text-gray-700">{module}</span>
-                        </li>
-                      ))}
+                      {programme.overview?.what_you_will_learn && programme.overview.what_you_will_learn.length > 0 ? (
+                        programme.overview.what_you_will_learn.map((item, index) => (
+                          <li key={index} className="flex items-start space-x-3">
+                            <FiCheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-gray-700">{item}</span>
+                          </li>
+                        ))
+                      ) : (
+                        programme.course_modules?.slice(0, 4).map((module, index) => (
+                          <li key={index} className="flex items-start space-x-3">
+                            <FiCheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-gray-700">{module.title}</span>
+                          </li>
+                        ))
+                      )}
                     </ul>
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Course Details</h3>
-                    <div className="space-y-4">
-                      {course.training_duration && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Duration</span>
-                          <span className="font-semibold text-gray-900">{course.training_duration}</span>
+                <div className="space-y-4 md:space-y-6 lg:mt-0">
+                  <div className="bg-white rounded-2xl p-4 md:p-6 shadow-lg border border-gray-200">
+                    <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Programme Details</h3>
+                    <div className="space-y-3 md:space-y-4">
+                      {programme.duration && (
+                        <div className="flex justify-between items-start">
+                          <span className="text-gray-600 text-sm md:text-base">Duration</span>
+                          <span className="font-semibold text-gray-900 text-sm md:text-base text-right">{programme.duration}</span>
                         </div>
                       )}
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Modules</span>
-                        <span className="font-semibold text-gray-900">
-                          {course.training_modules ? course.training_modules.length : 0}
+                      <div className="flex justify-between items-start">
+                        <span className="text-gray-600 text-sm md:text-base">Modules</span>
+                        <span className="font-semibold text-gray-900 text-sm md:text-base text-right">
+                          {programme.course_modules_count || 0}
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Category</span>
-                        <span className="font-semibold text-gray-900">{course.category}</span>
+                      <div className="flex justify-between items-start">
+                        <span className="text-gray-600 text-sm md:text-base">Category</span>
+                        <span className="font-semibold text-gray-900 text-xs md:text-sm text-right max-w-[60%]">{programme.category?.title}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Level</span>
-                        <span className="font-semibold text-gray-900">Professional</span>
+                      <div className="flex justify-between items-start">
+                        <span className="text-gray-600 text-sm md:text-base">Level</span>
+                        <span className="font-semibold text-gray-900 text-sm md:text-base text-right">{programme.level || 'Professional'}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-6 border border-yellow-200">
-                    <div className="flex items-center space-x-2 mb-3">
-                      <FiStar className="w-5 h-5 text-yellow-600" />
-                      <h3 className="text-lg font-semibold text-gray-900">Why Choose This Course?</h3>
+                  <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-4 md:p-6 border border-yellow-200">
+                    <div className="flex items-center space-x-2 mb-2 md:mb-3">
+                      <FiStar className="w-4 h-4 md:w-5 md:h-5 text-yellow-600 flex-shrink-0" />
+                      <h3 className="text-base md:text-lg font-semibold text-gray-900">Why Choose This Programme?</h3>
                     </div>
-                    <ul className="space-y-2 text-sm text-gray-700">
-                      <li>• Industry-recognized certification</li>
-                      <li>• Hands-on practical training</li>
-                      <li>• Expert instructor guidance</li>
-                      <li>• Career placement support</li>
+                    <ul className="space-y-2 text-xs md:text-sm text-gray-700 leading-relaxed">
+                      {programme.overview?.why_choose_this_course && programme.overview.why_choose_this_course.length > 0 ? (
+                        programme.overview.why_choose_this_course.map((reason, index) => (
+                          <li key={index}>• {reason}</li>
+                        ))
+                      ) : (
+                        <>
+                          <li>• Industry-recognized certification</li>
+                          <li>• Hands-on practical training</li>
+                          <li>• Expert instructor guidance</li>
+                          <li>• Career placement support</li>
+                        </>
+                      )}
                     </ul>
                   </div>
                 </div>
@@ -309,24 +363,27 @@ export default function CourseDetailsPage() {
             )}
 
             {activeTab === 'curriculum' && (
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Course Curriculum</h2>
-                {course.training_modules && course.training_modules.length > 0 ? (
-                  <div className="space-y-4">
-                    {course.training_modules.map((module, index) => (
+              <div className="px-4 md:px-0">
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Programme Curriculum</h2>
+                {programme.course_modules && programme.course_modules.length > 0 ? (
+                  <div className="space-y-3 md:space-y-4">
+                    {programme.course_modules.map((module, index) => (
                       <motion.div
-                        key={index}
+                        key={module.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, delay: index * 0.1 }}
-                        className="bg-white rounded-xl p-6 shadow-md border border-gray-200 hover:shadow-lg transition-shadow duration-300"
+                        className="bg-white rounded-xl p-4 md:p-6 shadow-md border border-gray-200 hover:shadow-lg transition-shadow duration-300"
                       >
-                        <div className="flex items-center space-x-4">
-                          <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center text-white font-bold">
+                        <div className="flex items-center space-x-3 md:space-x-4">
+                          <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center text-white font-bold text-sm md:text-base flex-shrink-0">
                             {index + 1}
                           </div>
-                          <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900">{module}</h3>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-base md:text-lg font-semibold text-gray-900">{module.title}</h3>
+                            {module.description && (
+                              <p className="text-gray-600 mt-2 text-sm md:text-base">{module.description}</p>
+                            )}
                           </div>
                         </div>
                       </motion.div>
@@ -342,29 +399,29 @@ export default function CourseDetailsPage() {
             )}
 
             {activeTab === 'certifications' && (
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Certifications</h2>
-                {course.available_international_certifications && course.available_international_certifications.length > 0 ? (
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {course.available_international_certifications.map((cert, index) => (
+              <div className="px-4 md:px-0">
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Certifications</h2>
+                {programme.course_certification && programme.course_certification.length > 0 ? (
+                  <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+                    {programme.course_certification.map((cert, index) => (
                       <motion.div
-                        key={index}
+                        key={cert.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, delay: index * 0.1 }}
-                        className="bg-white rounded-xl p-6 shadow-md border border-gray-200"
+                        className="bg-white rounded-xl p-4 md:p-6 shadow-md border border-gray-200"
                       >
-                        <div className="flex items-center space-x-4 mb-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                            <FiAward className="w-6 h-6 text-white" />
+                        <div className="flex items-center space-x-3 md:space-x-4 mb-3 md:mb-4">
+                          <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <FiAward className="w-5 h-5 md:w-6 md:h-6 text-white" />
                           </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">{cert}</h3>
-                            <p className="text-sm text-gray-600">International Certification</p>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-base md:text-lg font-semibold text-gray-900">{cert.title}</h3>
+                            <p className="text-xs md:text-sm text-gray-600 truncate">{cert.type || 'International Certification'}</p>
                           </div>
                         </div>
-                        <p className="text-gray-700 text-sm">
-                          Industry-recognized certification that validates your skills and expertise.
+                        <p className="text-gray-700 text-xs md:text-sm leading-relaxed">
+                          {cert.description || 'Industry-recognized certification that validates your skills and expertise.'}
                         </p>
                       </motion.div>
                     ))}
@@ -379,18 +436,27 @@ export default function CourseDetailsPage() {
             )}
 
             {activeTab === 'prerequisites' && (
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Prerequisites</h2>
-                <div className="bg-white rounded-xl p-8 shadow-md border border-gray-200">
-                  <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <FiCheckCircle className="w-6 h-6 text-white" />
+              <div className="px-4 md:px-0">
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Prerequisites</h2>
+                <div className="bg-white rounded-xl p-4 md:p-8 shadow-md border border-gray-200">
+                  <div className="flex items-start space-x-3 md:space-x-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <FiCheckCircle className="w-5 h-5 md:w-6 md:h-6 text-white" />
                     </div>
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-4">Entry Requirements</h3>
-                      <p className="text-gray-700 leading-relaxed">
-                        {course.training_prerequisite || 'No specific prerequisites required. This course is designed for beginners and professionals looking to advance their skills.'}
-                      </p>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4">Entry Requirements</h3>
+                      <div className="text-gray-700 leading-relaxed text-sm md:text-base">
+                        {programme.prerequisites ? (
+                          <p>
+                            {programme.prerequisites
+                              .replace(/<[^>]*>/g, '') // Strip HTML tags
+                              .replace(/\s+/g, ' ') // Normalize whitespace
+                              .trim() || 'No specific prerequisites required. This programme is designed for beginners and professionals looking to advance their skills.'}
+                          </p>
+                        ) : (
+                          <p>No specific prerequisites required. This programme is designed for beginners and professionals looking to advance their skills.</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

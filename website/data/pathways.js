@@ -1,7 +1,7 @@
 export const pathways = {
   "for-government-workers": {
     id: "for-government-workers",
-    title: "For Government Workers",
+    title: "For Full-time Workers ",
     subtitle: "Digital transformation pathways for public sector professionals",
     description:
       "Enhance your public service career with digital skills that drive government modernization and citizen service excellence.",
@@ -12,7 +12,7 @@ export const pathways = {
 
     overview: {
       challenge:
-        "Government workers need to adapt to digital transformation while maintaining essential public services. The challenge is finding time for training while balancing work responsibilities.",
+        "Full-time Workers  need to adapt to digital transformation while maintaining essential public services. The challenge is finding time for training while balancing work responsibilities.",
       solution:
         "Our flexible, government-focused training programs are designed around public sector schedules and priorities, with evening and weekend options.",
       benefits: [
@@ -54,7 +54,7 @@ export const pathways = {
         modules: [
           "Capstone Project in Your Department",
           "Change Management in Government",
-          "Training Fellow Government Workers",
+          "Training Fellow Full-time Workers",
           "Certification Preparation",
         ],
       },
@@ -62,7 +62,7 @@ export const pathways = {
 
     support: {
       mentorship: "Paired with senior government IT professionals",
-      community: "Government Workers Tech Community",
+      community: "Full-time Workers Tech Community",
       resources: [
         "Government-specific case studies",
         "Policy templates and frameworks",
