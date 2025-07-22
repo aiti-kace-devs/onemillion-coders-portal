@@ -62,8 +62,9 @@ class Programme extends Model
 
     public function tags()
     {
-        return $this->belongsToMany(CourseMatchOption::class, 'programme_course_match_options');
+        return $this->belongsToMany(CourseMatchOption::class, 'programme_course_match_options', 'programme_id', 'course_match_option_id');
     }
+
 
 
     protected static function booted()
