@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
 |
 */
 Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
+Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
