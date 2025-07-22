@@ -22,4 +22,9 @@ class CourseMatch extends Model
     ];
     use CrudTrait;
     //
+
+    public function courseMatchOptions()
+    {
+        return $this->hasMany(CourseMatchOption::class, 'course_match_id');
+    }
 }
