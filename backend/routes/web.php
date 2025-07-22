@@ -66,8 +66,7 @@ Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
 Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
 Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
 
-Route::get('/api/programmes/{programme}/regions', [CourseProgrammeController::class, 'regions']);
-Route::get('/api/programmes/{programme}/regions/{branch}/centres', [CourseProgrammeController::class, 'centresInRegion']);
+Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
 
 Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
 Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);

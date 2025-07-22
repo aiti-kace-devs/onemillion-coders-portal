@@ -145,43 +145,36 @@ class CourseProgrammeController extends Controller
 
 
 
-        /**
-     * Get regions (branches) a programme is available in
-     */
-    public function regions(Programme $programme)
+    public function programmeLocations(Programme $programme)
     {
-        $branchIds = $programme->centre()
-            ->with('branch')
-            ->get()
-            ->pluck('branch.id')
-            ->unique()
-            ->values();
+        $centres = $programme->centre()->with('branch')->get();
 
-        $branches = Branch::whereIn('id', $branchIds)->get();
+        $groupedByBranch = $centres->groupBy('branch.id');
+
+        $regions = $groupedByBranch->map(function ($centres, $branchId) {
+            $branch = $centres->first()->branch;
+
+            $cleanCentres = $centres->map(function ($centre) {
+                unset($centre->branch);
+                return $centre;
+            })->values();
+
+            return [
+                'id' => $branch->id,
+                'title' => $branch->title,
+                'status' => $branch->status,
+                'created_at' => $branch->created_at,
+                'updated_at' => $branch->updated_at,
+                'centres' => $cleanCentres,
+            ];
+        })->values();
 
         return response()->json([
             'programme' => $programme->title,
-            'regions' => $branches
+            'regions' => $regions,
         ]);
     }
 
 
-
-
-        /**
-     * Get centres in a specific region (branch) that offer the programme
-     */
-    public function centresInRegion(Programme $programme, Branch $branch)
-    {
-        $centres = $programme->centre()
-            ->where('branch_id', $branch->id)
-            ->get();
-
-        return response()->json([
-            'programme' => $programme->title,
-            'region' => $branch->title,
-            'centres' => $centres
-        ]);
-    }
 
 }
