@@ -67,6 +67,8 @@ class CourseMatchAPIController extends Controller
 
         return response()->json([
             'success' => true,
+            'ttile' => 'Your Course Matches',
+            'description' => 'Based on your preferences, here are the courses that align best with your goals',
             'matches' => $result,
         ]);
     }
@@ -79,35 +81,36 @@ class CourseMatchAPIController extends Controller
             'option_ids' => 'required|array',
             'option_ids.*' => 'integer|exists:course_match_options,id',
         ]);
-
+    
         $optionIds = $data['option_ids'];
         $totalOptions = count($optionIds);
-
+    
         // Get Programmes with ONLY needed columns + tags relationship
         $programmes = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'prerequisites')
             ->with('tags')
             ->get();
-
+    
         // Score each programme by matching option IDs
         $scored = $programmes->map(function ($programme) use ($optionIds, $totalOptions) {
             $programmeOptionIds = $programme->tags->pluck('id')->toArray();
             $matches = count(array_intersect($optionIds, $programmeOptionIds));
             $percentage = $totalOptions > 0 ? round(($matches / $totalOptions) * 100) : 0;
-
+    
             $programme->match_percentage = $percentage;
             $programme->match_count = $matches;
             return $programme;
         });
-
+    
         // Filter and sort top 5 matches
         $top = $scored->filter(fn($p) => $p->match_count > 0)
-                    ->sortByDesc('match_percentage')
-                    ->take(5)
-                    ->values();
-
-        // Format response with only required fields
-        $result = $top->map(function ($programme) {
+                      ->sortByDesc('match_percentage')
+                      ->take(5)
+                      ->values();
+    
+        // Format response with ranking number
+        $result = $top->map(function ($programme, $index) {
             return [
+                'rank' => '#' . ($index + 1),
                 'id' => $programme->id,
                 'title' => $programme->title,
                 'sub_title' => $programme->sub_title,
@@ -118,12 +121,15 @@ class CourseMatchAPIController extends Controller
                 'match_percentage' => $programme->match_percentage,
             ];
         });
-
+    
         return response()->json([
             'success' => true,
+            'title' => 'Your Course Matches',
+            'description' => 'Based on your preferences, here are the courses that align best with your goals',
             'matches' => $result,
         ]);
     }
+    
 
 
 
