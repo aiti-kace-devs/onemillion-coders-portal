@@ -117,6 +117,7 @@ class CourseMatchAPIController extends Controller
                 'duration' => $programme->duration,
                 'level' => $programme->level,
                 'job_responsible' => $programme->job_responsible,
+                'image' => $programme->image,
                 'prerequisites' => $programme->prerequisites,
                 'match_percentage' => $programme->match_percentage . '% Match',
             ];
