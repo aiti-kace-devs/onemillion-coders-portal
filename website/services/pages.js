@@ -130,3 +130,21 @@ export const getPageData = async (slug) => {
     throw error;
   }
 };
+
+/**
+ * Submit course match answers and get recommendations
+ * @param {Object} answers - Course match answers
+ * @returns {Promise<Array>} - Recommended courses
+ */
+export const getCourseRecommendations = async (answers) => {
+  try {
+    const response = await apiRequest("/course-match", {
+      method: 'POST',
+      data: answers
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error getting course recommendations:", error);
+    throw error;
+  }
+};
