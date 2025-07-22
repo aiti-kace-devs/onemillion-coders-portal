@@ -31,7 +31,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page']);
 // });
 
-// Route::post('/addStudent', [FormResponseController::class, 'store']);
+Route::post('/addStudent', [FormResponseController::class, 'store']);
 
 /*
 |--------------------------------------------------------------------------
