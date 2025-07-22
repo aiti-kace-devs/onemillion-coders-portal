@@ -19,6 +19,7 @@ class Course extends Model
         'programme_id',
         'course_name',
         'location',
+        // 'batch_id', 
         'duration',
         'start_date',
         'end_date',
@@ -37,6 +38,11 @@ class Course extends Model
     public function programme()
     {
         return $this->belongsTo(Programme::class);
+    }
+
+    public function batch()
+    {
+        return $this->belongsTo(Batch::class);
     }
 
     public function assignedAdmins()

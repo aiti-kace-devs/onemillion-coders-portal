@@ -1,14 +1,8 @@
 "use client";
-
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  FiUsers,
-  FiTrendingUp,
-  FiAward,
-  FiBriefcase,
-} from "react-icons/fi";
+import { FiUsers, FiTrendingUp, FiAward, FiBriefcase } from "react-icons/fi";
 import Button from "../../components/Button";
 import { GhanaGradientBar } from "@/components/GhanaGradients";
 import { useMemo } from "react";
@@ -22,28 +16,28 @@ export default function AboutClient({ data }) {
     }
 
     // Extract sections
-    const heroSection = data.sections.find(s => s.name === "Hero");
+    const heroSection = data.sections.find((s) => s.name === "Hero");
     const hero = heroSection?.section_items?.[0] || null;
 
-    const metricsSection = data.sections.find(s => s.name === "Metrics");
+    const metricsSection = data.sections.find((s) => s.name === "Metrics");
     const metrics = metricsSection?.section_items?.[0] || null;
 
-    const missionSection = data.sections.find(s => s.name === "Mission");
+    const missionSection = data.sections.find((s) => s.name === "Mission");
     const mission = missionSection?.section_items?.[0] || null;
 
-    return { 
-      heroData: hero, 
+    return {
+      heroData: hero,
       metricsData: metrics,
-      missionData: mission
+      missionData: mission,
     };
   }, [data]);
 
   // Process metrics with icons
   const stats = useMemo(() => {
     if (!metricsData?.metrics) return [];
-    
+
     const iconMap = [FiUsers, FiBriefcase, FiTrendingUp, FiAward];
-    
+
     return metricsData.metrics.map((metric, index) => ({
       icon: iconMap[index % iconMap.length],
       value: metric.number,
@@ -57,7 +51,9 @@ export default function AboutClient({ data }) {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-medium text-gray-900 mb-4">About</h1>
-          <p className="text-gray-500">No about data available at the moment.</p>
+          <p className="text-gray-500">
+            No about data available at the moment.
+          </p>
         </div>
       </div>
     );
@@ -102,28 +98,33 @@ export default function AboutClient({ data }) {
               </h1>
 
               {heroData.about_description && (
-                <div 
+                <div
                   className="text-xl text-gray-600 mb-8 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: heroData.about_description }}
+                  dangerouslySetInnerHTML={{
+                    __html: heroData.about_description,
+                  }}
                 />
               )}
 
               <div className="flex flex-col sm:flex-row gap-4">
                 {heroData.first_button_text && (
                   <Link href={heroData.first_button_link}>
-                    <Button size="large" style={{ backgroundColor: heroData.first_button_colour }}>
+                    <Button
+                      size="large"
+                      style={{ backgroundColor: heroData.first_button_colour }}
+                    >
                       {heroData.first_button_text}
                     </Button>
                   </Link>
                 )}
                 {heroData.second_button_text && (
                   <Link href={heroData.second_button_link}>
-                    <Button 
-                      size="large" 
+                    <Button
+                      size="large"
                       variant="outline"
-                      style={{ 
+                      style={{
                         borderColor: heroData.second_button_colour,
-                        color: heroData.second_button_colour 
+                        color: heroData.second_button_colour,
                       }}
                     >
                       {heroData.second_button_text}
@@ -141,7 +142,11 @@ export default function AboutClient({ data }) {
             >
               <div className="relative rounded-2xl overflow-hidden shadow-2xl">
                 <Image
-                  src={heroData.about_details_media ? `${process.env.NEXT_PUBLIC_IMAGE_BASE_URL}/${heroData.about_details_media}` : "/images/about/1million1-1.jpg"}
+                  src={
+                    heroData.about_details_media
+                      ? `${process.env.NEXT_PUBLIC_IMAGE_BASE_URL}/${heroData.about_details_media}`
+                      : "/images/about/1million1-1.jpg"
+                  }
                   alt="One Million Coders Training"
                   width={600}
                   height={400}
@@ -186,9 +191,11 @@ export default function AboutClient({ data }) {
                 {metricsData?.text_data_name || "Impact Across Ghana"}
               </h2>
               {metricsData?.text_data_description && (
-                <div 
+                <div
                   className="text-gray-500 max-w-2xl mx-auto"
-                  dangerouslySetInnerHTML={{ __html: metricsData.text_data_description }}
+                  dangerouslySetInnerHTML={{
+                    __html: metricsData.text_data_description,
+                  }}
                 />
               )}
             </motion.div>
@@ -233,9 +240,11 @@ export default function AboutClient({ data }) {
                 <h2 className="text-3xl font-light text-gray-900 mb-6">
                   {missionData.title}
                 </h2>
-                <div 
+                <div
                   className="text-gray-600 leading-relaxed whitespace-pre-line"
-                  dangerouslySetInnerHTML={{ __html: missionData.content?.replace(/\n/g, '<br/>') }}
+                  dangerouslySetInnerHTML={{
+                    __html: missionData.content?.replace(/\n/g, "<br/>"),
+                  }}
                 />
               </motion.div>
 
@@ -293,7 +302,7 @@ export default function AboutClient({ data }) {
 
       {/* Ghana Flag Ribbon Bottom */}
       <GhanaGradientBar height="1px" absolute={false} />
-      <TechGhanaSection/>
+      <TechGhanaSection />
     </div>
   );
-} 
+}

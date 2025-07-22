@@ -10,9 +10,13 @@ use App\Models\Programme;
 use App\Models\Branch;
 use App\Models\CourseCategory;
 use App\Models\Course;
+use App\Models\CourseMatch;
+
 use App\Models\UserAdmission;
 use App\Helpers\MediaHelper;
 use App\Http\Controllers\Traits\OverviewFieldTrait;
+use App\Models\CourseMatchOption;
+
 trait ProgrammeFieldHelpers
 {
 
@@ -22,21 +26,21 @@ trait ProgrammeFieldHelpers
 
 
     public static function addOngoingCoursesFilter(string $label): void
-{
-    CRUD::filter('ongoing')
-        ->type('simple')
-        ->label($label)
-        ->whenActive(function () {
-            CRUD::addClause('whereDate', 'start_date', '<=', now()->toDateString());
-            CRUD::addClause('whereDate', 'end_date', '>=', now()->toDateString());
-        });
-}
+    {
+        CRUD::filter('ongoing')
+            ->type('simple')
+            ->label($label)
+            ->whenActive(function () {
+                CRUD::addClause('whereDate', 'start_date', '<=', now()->toDateString());
+                CRUD::addClause('whereDate', 'end_date', '>=', now()->toDateString());
+            });
+    }
 
 
 
 
     protected function setupCreateFields()
-{
+    {
 
         $programme = $this->crud->getCurrentEntry() ?? null;
         $courseModules = [];
@@ -220,7 +224,7 @@ trait ProgrammeFieldHelpers
                     'wrapper' => ['class' => 'form-group col-6'],
                     'hint' => 'eg. Industry-recognized certification that validates your skills and expertise.'
                 ],
-   
+
             ],
             'new_item_label' => 'Add Course Certificate',
             'init_rows' => 0,
@@ -230,14 +234,35 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'prerequisites',
             'label' => 'Entry Requirements',
-            'type'      => 'tinymce',
+            'type'      => 'textarea',
             // 'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. 1. Minimum of a Masters degree in law, IT, data management, cybersecurity, business administration, or related fields.'
         ]);
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
 
         $this->addOverviewField();
+
+        // get the number of course matches
+        $courseMatches = CourseMatch::all();
+        $tagFieldNames = [];
+        foreach ($courseMatches as $courseMatch) {
+            $name = 'course_match_' . $courseMatch->id;
+            $tagFieldNames[] = $name;
+            CRUD::addField([
+                'name' => $name,
+                'label' => $courseMatch->question,
+                'type'      => 'select2_multiple',
+                'entity' => 'tags',
+                'attribute' => 'answer',
+                'model' => CourseMatchOption::class,
+                'allows_null' => true,
+                'options' => function ($query) use ($courseMatch) {
+                    return $query->where('course_match_id', $courseMatch->id)->get();
+                },
+                // 'wrapper' => ['class' => 'form-group col-6'],
+            ]);
+        }
 
 
         $this->addFieldsToTab('Info', true, ['title', 'sub_title', 'image', 'start_date', 'end_date', 'duration', 'course_category_id', 'status', 'level', 'job_responsible']);
@@ -245,8 +270,8 @@ trait ProgrammeFieldHelpers
         $this->addFieldsToTab('Certification', true, ['course_certification']);
         $this->addFieldsToTab('Prerequisites', true, ['prerequisites']);
         $this->addFieldsToTab('Overview', true, ['overview']);
-
-}
+        $this->addFieldsToTab('Tags', true, $tagFieldNames);
+    }
 
 
 
@@ -254,56 +279,53 @@ trait ProgrammeFieldHelpers
 
     protected function setupShowCommonFields()
     {
-            CRUD::addColumn([
-                'name' => 'title',
-                'type' => 'textarea',
-                'escaped' => false,
-            ]);
-            CRUD::addColumn([
-                'name' => 'sub_title',
-                'type' => 'textarea',
-                'escaped' => false,
-            ]);
-            CRUD::addColumn([
-                'name' => 'description',
-                'type' => 'textarea',
-                'escaped' => false,
-            ]);
-            // FilterHelper::addBooleanFilter('status', 'Status');
-            // FilterHelper::addGenericRelationshipColumn('category', 'Course Category', 'course-category', 'title');
-            // CRUD::addColumn('created_on');
-            // CRUD::addColumn('updated_on');
-            // CRUD::addColumn('duration');
-            // CRUD::addColumn('start_date');
-            // CRUD::addColumn('end_date');
-            // CRUD::addColumn([
-            //     'name' => 'overview',
-            //     'type' => 'tinymce',
-            //     'escaped' => false,
-            // ]);
-            
+        CRUD::addColumn([
+            'name' => 'title',
+            'type' => 'textarea',
+            'escaped' => false,
+        ]);
+        CRUD::addColumn([
+            'name' => 'sub_title',
+            'type' => 'textarea',
+            'escaped' => false,
+        ]);
+        CRUD::addColumn([
+            'name' => 'description',
+            'type' => 'textarea',
+            'escaped' => false,
+        ]);
+        // FilterHelper::addBooleanFilter('status', 'Status');
+        // FilterHelper::addGenericRelationshipColumn('category', 'Course Category', 'course-category', 'title');
+        // CRUD::addColumn('created_on');
+        // CRUD::addColumn('updated_on');
+        // CRUD::addColumn('duration');
+        // CRUD::addColumn('start_date');
+        // CRUD::addColumn('end_date');
+        // CRUD::addColumn([
+        //     'name' => 'overview',
+        //     'type' => 'tinymce',
+        //     'escaped' => false,
+        // ]);
 
-            $this->addFieldsToTab('General', false, [
-                'title',
-                'sub_title',
-                'description',
-                // 'status',
-                // 'course_category_id',
-                // 'created_on',
-                // 'updated_on',
-            ]);
 
-            // $this->addFieldsToTab('Duration', false, [
-            //     'duration',
-            //     'start_date',
-            //     'end_date'
-            // ]);
+        $this->addFieldsToTab('General', false, [
+            'title',
+            'sub_title',
+            'description',
+            // 'status',
+            // 'course_category_id',
+            // 'created_on',
+            // 'updated_on',
+        ]);
 
-            // $this->addFieldsToTab('Overview', false, ['overview']);
+        // $this->addFieldsToTab('Duration', false, [
+        //     'duration',
+        //     'start_date',
+        //     'end_date'
+        // ]);
+
+        // $this->addFieldsToTab('Overview', false, ['overview']);
 
 
     }
-
-
-
 }

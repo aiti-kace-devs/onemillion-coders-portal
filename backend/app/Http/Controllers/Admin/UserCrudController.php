@@ -62,9 +62,23 @@ class UserCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        // CRUD::setFromDb(); // set columns from db columns.
+        $this->crud->setModel(User::class);
+        $this->crud->setRoute(config('backpack.base.route_prefix') . '/user');
+        $this->crud->setEntityNameStrings('user', 'users');
 
-        $this->setupStudentColumns();
+        $this->crud->query->select(['id','name', 'gender', 'age', 'email', 'mobile_no', 'ghcard']);
+
+        $this->crud->addColumn(['name' => 'name', 'type' => 'text', 'label' => 'Full Name']);
+        $this->crud->addColumn(['name' => 'email', 'type' => 'text', 'label' => 'Email']);
+        $this->crud->addColumn(['name' => 'gender', 'type' => 'text', 'label' => 'Gender']);
+        $this->crud->addColumn(['name' => 'age', 'type' => 'text', 'label' => 'Age']);
+        $this->crud->addColumn(['name' => 'mobile_no', 'type' => 'text', 'label' => 'Mobile No']);
+        // $this->crud->addColumn(['name' => 'ghcard', 'type' => 'text', 'label' => 'Ghana Card Number']);
+        $this->addConfirmedAdmissionColumn();
+        FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
+        
+        // $this->setupStudentColumns();
+        $this->addStudentBatchFilter('admission', 'Student Batch');
         $this->courseFilter('registered_course');
         $this->addConfirmedAdmissionFilter();
         FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
@@ -75,6 +89,7 @@ class UserCrudController extends CrudController
         // Disable responsive table
         // CRUD::disableResponsiveTable();
 
+        
         // Enable bulk operations
         CRUD::enableBulkActions();
 
@@ -92,8 +107,13 @@ class UserCrudController extends CrudController
 
         // Add bulk action buttons
         CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
+        CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'end');
     }
 
+        protected function setupShowOperation()
+    {
+        $this->setupShowStudentColumns();
+    }
     /**
      * Define what happens when the Create operation is loaded.
      *
@@ -121,6 +141,36 @@ class UserCrudController extends CrudController
     {
         $this->setupCreateOperation();
     }
+
+
+    public function assignBatch(Request $request)
+    {
+        $request->validate([
+            'student_ids' => 'required|array',
+            'batch_id' => 'required|integer|exists:admission_batches,id',
+        ]);
+
+        $updated = 0;
+        $studentIds = $request->student_ids;
+
+        $userIds = User::whereIn('id', $studentIds)->pluck('userId')->toArray();
+
+        foreach (array_chunk($userIds, 100) as $chunk) {
+            $affected = UserAdmission::whereIn('user_id', $chunk)
+                ->update(['batch_id' => $request->batch_id]);
+            $updated += $affected;
+        }
+
+        if ($updated === 0) {
+            return response()->json(['message' => 'No admissions updated.'], 400);
+        }
+
+        return response()->json(['message' => 'Batch assignment successful']);
+    }
+    
+
+
+
 
     /**
      * Custom view for students with admission
