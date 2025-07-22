@@ -56,7 +56,7 @@ use Illuminate\Support\Str;
 // //     ->name('dynamic-course');
 
 // // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
-// // Route::post('form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
+Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
 // routes/web.php
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
