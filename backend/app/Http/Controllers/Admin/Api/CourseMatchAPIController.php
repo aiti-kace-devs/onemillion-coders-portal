@@ -74,4 +74,15 @@ class CourseMatchAPIController extends Controller
 
 
 
+
+    public function allProgrammesWithCourseMatch()
+    {
+        $programmes = Programme::with(['tags.courseMatch'])->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $programmes
+        ]);
+    }
+
 }
