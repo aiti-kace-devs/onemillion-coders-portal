@@ -86,7 +86,7 @@ class CourseMatchAPIController extends Controller
         $totalOptions = count($optionIds);
     
         // Get Programmes with ONLY needed columns + tags relationship
-        $programmes = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'prerequisites')
+        $programmes = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'image', 'prerequisites')
             ->with('tags')
             ->get();
     
