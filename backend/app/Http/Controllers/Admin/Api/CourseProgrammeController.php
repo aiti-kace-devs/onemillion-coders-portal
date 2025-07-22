@@ -145,4 +145,43 @@ class CourseProgrammeController extends Controller
 
 
 
+        /**
+     * Get regions (branches) a programme is available in
+     */
+    public function regions(Programme $programme)
+    {
+        $branchIds = $programme->centre()
+            ->with('branch')
+            ->get()
+            ->pluck('branch.id')
+            ->unique()
+            ->values();
+
+        $branches = Branch::whereIn('id', $branchIds)->get();
+
+        return response()->json([
+            'programme' => $programme->title,
+            'regions' => $branches
+        ]);
+    }
+
+
+
+
+        /**
+     * Get centres in a specific region (branch) that offer the programme
+     */
+    public function centresInRegion(Programme $programme, Branch $branch)
+    {
+        $centres = $programme->centre()
+            ->where('branch_id', $branch->id)
+            ->get();
+
+        return response()->json([
+            'programme' => $programme->title,
+            'region' => $branch->title,
+            'centres' => $centres
+        ]);
+    }
+
 }

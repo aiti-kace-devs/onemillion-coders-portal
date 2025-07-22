@@ -19,7 +19,6 @@ class Course extends Model
         'programme_id',
         'course_name',
         'location',
-        // 'batch_id', 
         'duration',
         'start_date',
         'end_date',
