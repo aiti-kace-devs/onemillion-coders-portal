@@ -6,7 +6,7 @@
     <textarea {{ $attributes->merge(['class' => 'form-control']) }} id="template_editor" cols="30" rows="10">{{ $slot }}</textarea>
 </div>
 
-@basset('js')
+@bassetBlock('custom/js/wysiwg')
 <script>
     var simplemde = new SimpleMDE({
         element: $("#template_editor")[0],
@@ -188,4 +188,4 @@
         cm.replaceSelection(output);
     }
 </script>
-@endbasset
+@endbassetBlock

@@ -1,8 +1,8 @@
 <!-- jQuery (must be loaded before Toastr and custom scripts) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+{{-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> --}}
 <!-- Toastr CSS and JS -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+
 <div class="dropdown d-inline-block">
     <button class="btn btn-primary dropdown-toggle" type="button" id="shortlistActionsDropdown" data-bs-toggle="dropdown"
         aria-expanded="false">
@@ -31,24 +31,27 @@
         </li>
     </ul>
 </div>
+
 @include('vendor.backpack.crud.modals.bulk_email', ['mailable' => $mailable])
 @include('vendor.backpack.crud.modals.bulk_sms')
 @include('vendor.backpack.crud.modals.choose_shortlist')
 @include('vendor.backpack.crud.modals.admit')
 
+
+
+
 @push('after_scripts')
-    @basset('js')
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    @basset('https://cdn.jsdelivr.net/npm/sweetalert2@11.22.2/dist/sweetalert2.all.min.js')
+    @bassetBlock('custom/js/bulk_shortlist_action.js')
         <script>
             function getCheckedStudentIds() {
-                if (manuallySelectedIds.length > 0) {
-                    return manuallySelectedIds;
+                if (typeof crud !== 'undefined' && crud.checkedItems && crud.checkedItems.length > 0) {
+                    return crud.checkedItems;
                 }
-                return [];
             }
             // --- BEGIN: Bulk Shortlist Actions JS ---
             $(document).on('click', '.admit-btn', function() {
-                const user_id = $(this).data('id');
+                const user_id = $(this).data('userId');
                 const course_id = $(this).data('course_id');
                 const session_id = $(this).data('session_id');
 
@@ -97,22 +100,7 @@
                 }
             };
 
-            $(document).on('click', '.admit-btn', function() {
-                console.log('Admit button clicked');
 
-                var userId = $(this).data('userId');
-                var course_id = $(this).data('course_id') || null;
-                var session_id = $(this).data('session_id') || null;
-                if (!userId) {
-                    console.error('No user ID found for admit button');
-                    return;
-                }
-                if (typeof window.openAdmitModal === 'function') {
-                    window.openAdmitModal(userId, course_id, session_id);
-                } else {
-                    console.error('openAdmitModal is not defined');
-                }
-            });
 
             $('#chooseShortlistBtn').on('click', function(e) {
                 e.preventDefault();
@@ -215,8 +203,8 @@
             });
 
             $('#admit-selected').click(function() {
-                var selectedIds = getCheckedStudentIds();
-                var applyToAll = selectedIds.length === 0;
+                var selectedIds = getCheckedStudentIds() ?? [];
+                var applyToAll = selectedIds.length === 0 ;
 
                 if (!applyToAll && selectedIds.length === 0) {
                     toastr.warning('No students selected or no students match your filters');
@@ -230,7 +218,7 @@
 
                 Swal.fire({
                     title: 'Admit Students?',
-                    text: applyToAll ? `You are about to admit all students in this view. This might take a while. Continue?` :
+                    text: applyToAll ? `You are about to admit many students. Continue?` :
                         `You are about to admit ${selectedIds.length} students. Continue?`,
                     icon: 'question',
                     showCancelButton: true,
@@ -242,9 +230,11 @@
                         denyButton: 'btn btn-primary',
                         confirmButton: 'btn btn-success'
                     },
-                    onBeforeOpen: () => {
+                    willOpen: () => {
                         if (applyToAll) {
                             const textElement = Swal.getHtmlContainer();
+                            console.log(crud);
+
                             if (textElement) {
                                 $.ajax({
                                     url: "{{ route('user.filtered-count') }}",
@@ -532,7 +522,8 @@
             $(document).on('click', '.delete-admission-btn', function(e) {
                 e.preventDefault();
                 const userId = $(this).data('user-id');
-                const deleteUrl = "{{ route('user.delete-admission', ['user_id' => 'USER_ID_PLACEHOLDER']) }}".replace('USER_ID_PLACEHOLDER', userId);
+                const deleteUrl = "{{ route('user.delete-admission', ['user_id' => 'USER_ID_PLACEHOLDER']) }}".replace(
+                    'USER_ID_PLACEHOLDER', userId);
                 Swal.fire({
                     title: 'Are you sure?',
                     text: "Are you sure you want to remove this student from the shortlist and delete their admission?",
@@ -567,5 +558,12 @@
             });
             // --- END: Bulk Shortlist Actions JS ---
         </script>
-    @endbasset
+    @endBassetBlock
+
+    @basset('https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js')
+@endpush
+
+@push('after_styles')
+    @basset('https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css')
+    @basset('https://cdn.jsdelivr.net/npm/sweetalert2@11.22.2/dist/sweetalert2.min.css')
 @endpush

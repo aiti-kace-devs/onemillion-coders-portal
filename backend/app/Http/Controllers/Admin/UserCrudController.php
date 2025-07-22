@@ -28,7 +28,9 @@ use App\Http\Controllers\Traits\GetsFilteredQuery;
  */
 class UserCrudController extends CrudController
 {
-    use BulkStudentActionsTrait;
+    use BulkStudentActionsTrait {
+        admitStudent as traitAdmitStudent;
+    }
     use ShortlistActionsTrait;
     use ShortlistRowActionsTrait;
     use \App\SearchableCRUD;
@@ -54,6 +56,8 @@ class UserCrudController extends CrudController
 
         // CRUD::denyAccess('create');
         // CRUD::denyAccess('update');
+        $this->setupFilter();
+
         $this->crud->operation('list', function () {
             WidgetHelper::userStatisticsWidget();
         });
@@ -70,18 +74,12 @@ class UserCrudController extends CrudController
         View::share('mailable', \App\Helpers\MailerHelper::getMailableClasses());
         // CRUD::setFromDb(); // set columns from db columns.
         $this->setupStudentColumns();
+        CRUD::disablePersistentTable();
 
-        $this->setupStudentColumns();
-        $this->courseFilter('registered_course');
-        $this->addConfirmedAdmissionFilter();
-        FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
-        FilterHelper::addAgeRangeFilter();
-        FilterHelper::addGenderFilter();
-        $this->addAdmissionLocationFilter();
-        $this->addAdmittedAtFilter();
+        // $this->setupStudentColumns();
         // Disable responsive table
         // CRUD::disableResponsiveTable();
-
+        // $this->setupFilter();
         // Enable bulk operations
         CRUD::enableBulkActions();
 
@@ -94,7 +92,7 @@ class UserCrudController extends CrudController
             'setupStudentsWithoutExamResultsView' => 'Students without Exam Results',
             'setupStudentsYetToAcceptAdmissionView' => 'Students Yet to Accept Admission',
             'setupStudentsWithExamResultsView' => 'Students with Exam Results',
-            'setupShortlistedStudentsView' => 'Shortlisted Students',
+            'setupShortlistedStudentsView' => 'Shortlisted Students'
         ]);
     }
 
@@ -126,20 +124,32 @@ class UserCrudController extends CrudController
         $this->setupCreateOperation();
     }
 
+    public function setupFilter()
+    {
+        $this->courseFilter('registered_course');
+        $this->addConfirmedAdmissionFilter();
+        FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
+        FilterHelper::addAgeRangeFilter();
+        FilterHelper::addGenderFilter();
+        $this->addAdmissionLocationFilter();
+        $this->addAdmittedAtFilter();
+    }
     /**
      * Custom view for students with admission
      */
     public function setupStudentsWithAdmissionView()
     {
+        CRUD::disableResponsiveTable();
         // Enable bulk operations for this view
         CRUD::enableBulkActions();
-
-        // Filter students who have admission records with session
         CRUD::setQuery(
             \App\Models\User::whereHas('admissions', function ($query) {
                 $query->whereNotNull('session');
             }),
         );
+        CRUD::enableFilters();
+        // $this->setupFilter();
+
 
         // Add a custom column to show admission status
         CRUD::addColumn([
@@ -199,6 +209,7 @@ class UserCrudController extends CrudController
     {
         // Enable bulk operations for this view
         CRUD::enableBulkActions();
+        // $this->setupFilter();
 
         // Filter students who don't have exam results
         CRUD::setQuery(\App\Models\User::whereDoesntHave('examResults'));
@@ -243,6 +254,7 @@ class UserCrudController extends CrudController
     {
         // Enable bulk operations for this view
         CRUD::enableBulkActions();
+        // $this->setupFilter();
 
         // Filter students who have admission records but session_id is null
         CRUD::setQuery(
@@ -320,6 +332,7 @@ class UserCrudController extends CrudController
     {
         // Enable bulk operations for this view
         CRUD::enableBulkActions();
+        // $this->setupFilter();
 
         // Filter students who have exam results
         CRUD::setQuery(\App\Models\User::whereHas('examResults'));
@@ -402,6 +415,7 @@ class UserCrudController extends CrudController
     {
         // Enable bulk operations for this view
         CRUD::enableBulkActions();
+        // $this->setupFilter();
 
         // Filter students who are shortlisted (shortlist = 1)
         CRUD::setQuery(\App\Models\User::where('shortlist', 1));
@@ -485,55 +499,9 @@ class UserCrudController extends CrudController
     /**
      * Handle bulk admit operation via AJAX
      */
-    public function bulkAdmit()
+    public function bulkAdmit(Request $request)
     {
-        $request = request();
-        $studentIds = $request->input('student_ids', []);
-        $courseId = $request->input('course_id');
-        $sessionId = $request->input('session_id');
-
-        if (empty($studentIds) || !$courseId || !$sessionId) {
-            return response()->json(
-                [
-                    'success' => false,
-                    'message' => 'Please select students, course, and session.',
-                ],
-                400,
-            );
-        }
-
-        try {
-            $students = \App\Models\User::whereIn('id', $studentIds)->get();
-            $admittedCount = 0;
-
-            foreach ($students as $student) {
-                // Check if student already has an admission for this course/session
-                $existingAdmission = $student->admissions()->where('course_id', $courseId)->where('session', $sessionId)->first();
-
-                if (!$existingAdmission) {
-                    // Create new admission
-                    $student->admissions()->create([
-                        'course_id' => $courseId,
-                        'session' => $sessionId,
-                        'confirmed' => now(),
-                    ]);
-                    $admittedCount++;
-                }
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => "Successfully admitted {$admittedCount} student(s).",
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(
-                [
-                    'success' => false,
-                    'message' => 'Failed to admit students: ' . $e->getMessage(),
-                ],
-                500,
-            );
-        }
+        $this->traitAdmitStudent($request);
     }
 
     /**
@@ -717,11 +685,6 @@ class UserCrudController extends CrudController
         }
         $count = $query->count();
         return response()->json(['count' => $count, 'custom_view' => $customView]);
-    }
-
-    public function admitStudent(Request $request)
-    {
-        return $this->admitStudent($request);
     }
 
     public function deleteAdmission($user_id)

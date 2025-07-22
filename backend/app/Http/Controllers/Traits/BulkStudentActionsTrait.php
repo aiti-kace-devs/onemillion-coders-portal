@@ -133,7 +133,7 @@ trait BulkStudentActionsTrait
             $request->merge(['user_ids' => $query->pluck('userId')->toArray()]);
         }
         $validated = $request->validate([
-            'course_id' => 'required|nullable|exists:courses,id',
+            'course_id' => 'sometimes|nullable|exists:courses,id',
             'session_id' => 'sometimes|nullable|exists:course_sessions,id',
             'user_id' => 'sometimes|nullable|required_if:user_ids,null|exists:users,userId',
             'change' => 'sometimes',

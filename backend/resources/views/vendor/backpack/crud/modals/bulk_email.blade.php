@@ -37,7 +37,7 @@
 </div>
 
 @push('after_scripts')
-    @basset('js')
+    @bassetBlock('custom/js/bulk-email')
     <script>
         (function() {
             // Initialize WYSIWYG editor if not already initialized
@@ -149,5 +149,5 @@
             });
         })();
     </script>
-    @endbasset
+    @endBassetBlock
 @endpush

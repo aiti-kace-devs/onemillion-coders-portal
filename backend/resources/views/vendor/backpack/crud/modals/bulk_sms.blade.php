@@ -29,7 +29,7 @@
 </div>
 
 @push('after_scripts')
-@basset('js')
+@bassetBlock('custom/js/bulk-sms.js')
 <script>
 (function() {
     // Handle template selection (if you want to auto-fill message based on template, add AJAX here)
@@ -125,5 +125,5 @@
     });
 })();
 </script>
-@endbasset
+@endBassetBlock
 @endpush

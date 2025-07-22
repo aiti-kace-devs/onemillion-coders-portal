@@ -77,7 +77,7 @@ Route::group([
     // Shortlist Actions (Bulk/Group)
     Route::get('user/choose-shortlist-modal', 'UserCrudController@showChooseShortlistModal')->name('user.choose-shortlist-modal');
     Route::post('user/admit-shortlisted', 'UserCrudController@admitShortlistedStudents')->name('user.admit-shortlisted');
-    Route::post('user/admit-student', 'UserCrudController@admitStudent')->name('user.admit-student');
+    Route::post('user/admit-student', 'UserCrudController@bulkAdmit')->name('user.admit-student');
 
     // Shortlist Row Actions (Per Student)
     Route::post('user/{user}/change-admission', 'UserCrudController@changeAdmission')->name('user.change-admission');
