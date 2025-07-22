@@ -21,20 +21,16 @@ tabs:
                           field:
                             type: text
                             display: Name
-                            width: 33
+                            width: 50
                             validate:
                               - required
-                        -
-                          handle: icon_field
-                          field:
-                            type: icon
-                            display: Icon
-                            width: 25
                         -
                           handle: value
                           field:
                             type: text
                             display: Value
-                            width: 33
+                            width: 50
                             validate:
                               - required
+                        -
+                          import: icons

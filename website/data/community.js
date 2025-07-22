@@ -5,28 +5,28 @@ const communityData = {
       name: "Akosua Mensah",
       image: "/images/hero/Certified-Data-Protection-Officer.jpg",
       course: "Certified Data Protection Officer",
-      story: "Before joining One Million Coders, I was working as a secretary with no clear career path. The CDPO program opened my eyes to the world of data privacy and compliance. Today, I'm leading data protection initiatives at one of Ghana's largest telecommunications companies."
+      story: "Before joining One Million Coders, I was working as a secretary with no clear career path. The CDPO programmme opened my eyes to the world of data privacy and compliance. Today, I'm leading data protection initiatives at one of Ghana's largest telecommunications companies."
     },
     {
       id: 2,
       name: "Kwame Asante",
       image: "/images/hero/1million4.jpg",
       course: "Cybersecurity Professional",
-      story: "I was a taxi driver for 8 years before discovering One Million Coders. The cybersecurity program was challenging, but the instructors were incredibly supportive. Now I protect one of Ghana's major banks from cyber threats."
+      story: "I was a taxi driver for 8 years before discovering One Million Coders. The cybersecurity programmme was challenging, but the instructors were incredibly supportive. Now I protect one of Ghana's major banks from cyber threats."
     },
     {
       id: 3,
       name: "Fatima Abdul-Rahman",
       image: "/images/hero/Certified-Data-Protection-Manager.jpg",
       course: "Data Analyst Associate",
-      story: "As a recent university graduate with no job prospects, I felt lost. The Data Analyst program not only taught me technical skills but also how to think analytically about business problems. I landed my dream job within 3 months of completing the program."
+      story: "As a recent university graduate with no job prospects, I felt lost. The Data Analyst programmme not only taught me technical skills but also how to think analytically about business problems. I landed my dream job within 3 months of completing the programme."
     },
     {
       id: 4,
       name: "Emmanuel Boateng",
       image: "/images/hero/Certified-Data-Protection-Officer.jpg",
       course: "IT Support (Networking Focus)",
-      story: "Working in the oil and gas industry required me to understand complex network systems. This program gave me the foundation I needed to excel in my role and advance my career."
+      story: "Working in the oil and gas industry required me to understand complex network systems. This programmme gave me the foundation I needed to excel in my role and advance my career."
     },
     {
       id: 5,

@@ -1,65 +1,176 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { FiClock, FiUsers, FiArrowRight } from 'react-icons/fi';
-import { courses } from '../data/courses';
-import Button from './Button';
-import { GhanaGradientBar } from '@/components/GhanaGradients';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { motion, useReducedMotion } from "framer-motion";
+import { getProgrammesData } from "../services";
+import { GhanaGradientBar } from "@/components/GhanaGradients";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { FiArrowRight } from "react-icons/fi";
+import Button from "./Button";
+import ProgrammeCard from "./ProgrammeCard";
+import CoursesSkeleton from "./CoursesSkeleton";
 
-const CoursesSection = () => {
-  const [selectedCategory, setSelectedCategory] = useState('All');
+const CoursesSection = ({ categories: apiCategories = [] }) => {
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [isMobile, setIsMobile] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [programmes, setProgrammes] = useState([]);
+  const categoryScrollRef = useRef(null);
+  const prefersReducedMotion = useReducedMotion();
   const router = useRouter();
-  // Define the specific courses to display
-  const featuredCoursePrograms = [
-    'Certified Data Protection Practitioner – CDPP',
-    'Certified Data Protection Officer – CDPO',
-    'Certified Data Protection Expert – CDPE',
-    'Certified Data Protection Supervisor – CDPS',
-    'Data Analyst Associate',
-    'Certified Cybersecurity Professional'
-  ];
 
-  // Find courses that match the featured programs
-  const featuredCourses = [];
-  courses.courses.forEach(category => {
-    category.jobs.forEach(job => {
-      if (featuredCoursePrograms.includes(job.training_program) && job.image) {
-        featuredCourses.push({
-          id: job.no,
-          title: job.training_program,
-          description: job.job_responsibilities,
-          duration: job.training_duration,
-          trainees: job.no_of_people_to_train,
-          image: job.image,
-          category: category.category,
-          prerequisites: job.training_prerequisite,
-          certifications: job.available_international_certifications
-        });
+  // Fetch programmes data
+  const fetchProgrammes = async (categoryId = null) => {
+    try {
+      let url = "/programmes";
+      if (categoryId) {
+        url = `/programmes/category/${categoryId}`;
       }
-    });
-  });
 
-  // Get unique categories for tags
-  const categories = ['All', ...new Set(featuredCourses.map(course => course.category))];
+      const data = await getProgrammesData(url);
+      
+      // Ensure data is an array
+      const dataArray = Array.isArray(data) ? data : (data?.programmes || data?.data || []);
 
-  // Filter courses based on selected category
-  const filteredCourses = selectedCategory === 'All' 
-    ? featuredCourses 
-    : featuredCourses.filter(course => course.category === selectedCategory);
+      
+      // More lenient filtering for active programmes
+      const activeProgrammes = dataArray.filter(programme => {
+        // Check for truthy status values (true, "true", 1, "1", "active", etc.)
+        // If status field doesn't exist, include the programme by default
+        return programme.status === undefined || 
+               (programme.status && programme.status !== false && programme.status !== "false" && programme.status !== 0);
+      });
+      
+      setProgrammes(activeProgrammes);
+      return activeProgrammes;
+    } catch (error) {
+      console.error("Error in fetchProgrammes:", error);
+      setProgrammes([]);
+      throw error; // Re-throw so handleCategoryClick can catch it
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    const initialFetch = async () => {
+      try {
+        await fetchProgrammes();
+      } catch (error) {
+        console.error("Error in initial fetch:", error);
+        setProgrammes([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    initialFetch();
+  }, []);
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Get categories from API
+  const categories =
+    apiCategories.length > 0
+      ? [
+          "All",
+          ...apiCategories.filter((cat) => cat.status).map((cat) => cat.title),
+        ]
+      : ["All"];
+
+  // No need to filter locally since we're getting filtered data from API
+  const filteredProgrammes = programmes;
+
+  // Handle category selection and refetch data
+  const handleCategoryClick = async (category) => {
+    setSelectedCategory(category);
+    setIsLoading(true);
+    
+    try {
+      if (category === "All") {
+        const data = await fetchProgrammes();
+      } else {
+        const categoryId = apiCategories.find(
+          (cat) => cat.title === category
+        )?.id;
+        if (categoryId) {
+          const data = await fetchProgrammes(categoryId);
+        } else {
+          setProgrammes([]); // Clear programmes if no category ID found
+        }
+      }
+    } catch (error) {
+      console.error("Error handling category click:", error);
+      setProgrammes([]); // Clear programmes on error
+    } finally {
+      console.log("Setting loading to false");
+      setIsLoading(false);
+    }
+  };
 
   // Category color mapping
   const categoryColors = {
-    'Cybersecurity': 'bg-red-100 text-red-800 border-red-200',
-    'DATA Protection': 'bg-blue-100 text-blue-800 border-blue-200',
-    'Artificial Intelligence Training': 'bg-purple-100 text-purple-800 border-purple-200',
-    'Mobile Application Development': 'bg-green-100 text-green-800 border-green-200',
-    'Systems Administration': 'bg-orange-100 text-orange-800 border-orange-200',
-    'Web Application Programming': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    'BPO Training': 'bg-pink-100 text-pink-800 border-pink-200',
-    'Other Special Training Programs': 'bg-gray-100 text-gray-800 border-gray-200'
+    Cybersecurity: "bg-red-100 text-red-800 border-red-200",
+    "DATA Protection": "bg-blue-100 text-blue-800 border-blue-200",
+    "Artificial Intelligence Training":
+      "bg-purple-100 text-purple-800 border-purple-200",
+    "Mobile Application Development":
+      "bg-green-100 text-green-800 border-green-200",
+    "Systems Administration": "bg-orange-100 text-orange-800 border-orange-200",
+    "Web Application Programming":
+      "bg-indigo-100 text-indigo-800 border-indigo-200",
+    "BPO Training": "bg-pink-100 text-pink-800 border-pink-200",
+    "Other Special Training Programs":
+      "bg-gray-100 text-gray-800 border-gray-200",
+  };
+
+  // Enhanced animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: prefersReducedMotion ? 0 : 0.08,
+        duration: prefersReducedMotion ? 0.3 : 0.6,
+      },
+    },
+  };
+
+  const cardVariants = {
+    hidden: {
+      opacity: 0,
+      y: prefersReducedMotion ? 0 : 30,
+      scale: prefersReducedMotion ? 1 : 0.95,
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        duration: prefersReducedMotion ? 0.3 : 0.6,
+        ease: [0.25, 0.1, 0.25, 1],
+      },
+    },
+  };
+
+  const categoryVariants = {
+    hidden: { opacity: 0, x: prefersReducedMotion ? 0 : 20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        duration: prefersReducedMotion ? 0.2 : 0.4,
+        ease: [0.25, 0.1, 0.25, 1],
+      },
+    },
   };
 
   return (
@@ -69,152 +180,173 @@ const CoursesSection = () => {
         <div className="absolute inset-0 opacity-8">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gray-400/10 rounded-full blur-3xl"></div>
-          
+
           {/* Ghana Map Dot Pattern */}
           <div className="absolute top-20 right-20 w-64 h-64 opacity-20">
-            <div className="w-full h-full" style={{
-              background: `radial-gradient(circle, #10b981 1px, transparent 1px)`,
-              backgroundSize: '12px 12px'
-            }}></div>
+            <div
+              className="w-full h-full"
+              style={{
+                background: `radial-gradient(circle, #10b981 1px, transparent 1px)`,
+                backgroundSize: "12px 12px",
+              }}
+            ></div>
           </div>
-          
+
           {/* Ghana Flag Ribbon */}
           <GhanaGradientBar height="1px" position="bottom-full" opacity="30" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           {/* Section Header */}
-          <div className="mb-16">
-            <motion.h2 
-              initial={{ opacity: 0, y: 15 }}
+          <div className="mb-12 sm:mb-16">
+            <motion.h2
+              initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 15 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="heading-lg text-gray-900 content-spacing"
+              transition={{ duration: prefersReducedMotion ? 0.3 : 0.4 }}
+              viewport={{ once: true }}
+              className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6"
             >
-              Professional Courses
+              Courses
             </motion.h2>
-            <motion.p 
-              initial={{ opacity: 0, y: 15 }}
+            <motion.p
+              initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 15 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.05 }}
-              className="text-lead text-gray-600 max-w-4xl content-spacing"
+              transition={{
+                duration: prefersReducedMotion ? 0.3 : 0.4,
+                delay: prefersReducedMotion ? 0 : 0.05,
+              }}
+              viewport={{ once: true }}
+              className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-4xl mb-8 sm:mb-12 leading-relaxed"
             >
-              Advance your career with our comprehensive professional courses designed for industry leaders. 
-              Gain specialized expertise and earn globally recognized certifications.
+              Advance your career with our comprehensive courses designed for
+              industry leaders. Gain specialized expertise and earn globally
+              recognized certifications.
             </motion.p>
 
-            {/* Category Tags */}
-            <motion.div 
-              initial={{ opacity: 0, y: 15 }}
+            {/* Enhanced Category Filter with Horizontal Scroll */}
+            <motion.div
+              initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 15 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-              className="flex flex-wrap gap-4 mb-12"
+              transition={{
+                duration: prefersReducedMotion ? 0.3 : 0.4,
+                delay: prefersReducedMotion ? 0 : 0.1,
+              }}
+              viewport={{ once: true }}
+              className="relative"
             >
-              {categories.map((category, index) => (
-                <motion.button
-                  key={category}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.2, delay: 0.02 * index }}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-6 py-3 rounded-full text-sm font-semibold border hover:scale-[1.02] transition-all duration-150 cursor-pointer ${
-                    selectedCategory === category
-                      ? 'bg-yellow-500 text-gray-900 border-yellow-500'
-                      : category === 'All'
-                      ? 'bg-gray-200 text-gray-800 border-gray-300 hover:bg-gray-300'
-                      : categoryColors[category] || 'bg-gray-100 text-gray-800 border-gray-200'
-                  }`}
-                >
-                  {category}
-                </motion.button>
-              ))}
+              {/* Scroll container with hidden scrollbars */}
+              <div
+                ref={categoryScrollRef}
+                className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 mb-8 sm:mb-12 scrollbar-hide scroll-smooth"
+                style={{
+                  scrollSnapType: "x mandatory",
+                  WebkitOverflowScrolling: "touch",
+                }}
+              >
+                {categories.map((category, index) => (
+                  <motion.button
+                    key={category}
+                    variants={categoryVariants}
+                    initial="hidden"
+                    whileInView="visible"
+                    transition={{
+                      delay: prefersReducedMotion ? 0 : index * 0.03,
+                    }}
+                    viewport={{ once: true }}
+                    onClick={() => handleCategoryClick(category)}
+                    whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                    whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
+                    className={`flex-shrink-0 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm font-semibold border transition-all duration-200 cursor-pointer scroll-snap-align-start touch-manipulation min-w-fit whitespace-nowrap ${
+                      selectedCategory === category
+                        ? "bg-yellow-500 text-gray-900 border-yellow-500 shadow-md"
+                        : category === "All"
+                        ? "bg-gray-200 text-gray-800 border-gray-300 hover:bg-gray-300 hover:shadow-sm"
+                        : `${
+                            categoryColors[category] ||
+                            "bg-gray-100 text-gray-800 border-gray-200"
+                          } hover:shadow-sm`
+                    }`}
+                  >
+                    {category}
+                  </motion.button>
+                ))}
+              </div>
+
+              {/* Fade gradients for scroll indication */}
+              <div className="absolute top-0 left-0 w-8 h-full bg-gradient-to-r from-gray-100 to-transparent pointer-events-none md:hidden"></div>
+              <div className="absolute top-0 right-0 w-8 h-full bg-gradient-to-l from-gray-100 to-transparent pointer-events-none md:hidden"></div>
             </motion.div>
           </div>
 
-          {/* Courses Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredCourses.map((course, index) => (
-              <motion.div
-                key={course.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-                className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-200"
-              >
-                {/* Course Image */}
-                <div className="relative h-56 overflow-hidden">
-                  <Image
-                    src={course.image}
-                    alt={course.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
-                  <div className="absolute top-6 left-6">
-                    <span className="px-4 py-2 rounded-full text-xs font-bold bg-yellow-500 text-gray-900 shadow-lg">
-                      {course.category}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-6 left-6 right-6">
-                    <div className="flex items-center space-x-4 text-white text-sm">
-                      <div className="flex items-center space-x-2">
-                        <FiClock className="w-4 h-4" />
-                        <span className="font-medium">{course.duration}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <FiUsers className="w-4 h-4" />
-                        <span className="font-medium">
-                          {(() => {
-                            if (typeof course.trainees === 'string') {
-                              const cleanValue = course.trainees.replace('=', '');
-                              if (cleanValue.includes('*')) {
-                                const [num1, num2] = cleanValue.split('*').map(n => parseInt(n.trim()));
-                                return ((num1 || 0) * (num2 || 0)).toLocaleString();
-                              } else {
-                                return (parseInt(cleanValue) || 0).toLocaleString();
-                              }
-                            } else {
-                              return (course.trainees || 0).toLocaleString();
-                            }
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Course Content */}
-                <div className="p-8">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4 line-clamp-2 group-hover:text-yellow-600 transition-colors duration-150">
-                    {course.title}
-                  </h3>
-                  
-                  <p className="text-gray-600 text-sm mb-6 line-clamp-3 leading-relaxed">
-                    {course.description}
-                  </p>
-
-                  {/* CTA Button */}
-                  <Button
-                    variant="primary"
-                    size="small"
-                    icon={FiArrowRight}
-                    iconPosition="right"
-                    className="w-full justify-center"
-                    onClick={() => router.push(`/programmes/${course.id}`)}
+          {/* Enhanced Courses Grid with Fixed Animations */}
+          <motion.div
+            key={`grid-${selectedCategory}-${programmes.length}`}
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
+          >
+            {isLoading
+              ? // Skeleton loading state
+                [...Array(6)].map((_, index) => (
+                  <motion.div
+                    key={`skeleton-${index}`}
+                    variants={cardVariants}
+                    className="opacity-100" // Ensure skeleton is always visible
                   >
-                    Learn More
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                    <CoursesSkeleton />
+                  </motion.div>
+                ))
+              : filteredProgrammes.length > 0 ? (
+                filteredProgrammes.map((programme, index) => (
+                  <motion.div
+                    key={`${programme.id}-${selectedCategory}-${index}`}
+                    variants={cardVariants}
+                    whileHover={
+                      prefersReducedMotion
+                        ? {}
+                        : {
+                            y: -8,
+                            transition: {
+                              duration: 0.2,
+                              ease: [0.25, 0.1, 0.25, 1],
+                            },
+                          }
+                    }
+                    className="opacity-100" // Ensure card is always visible
+                  >
+                    <ProgrammeCard programme={programme} />
+                  </motion.div>
+                ))
+              ) : (
+                // No programmes found message
+                <motion.div
+                  key="no-programmes"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="col-span-full text-center py-12"
+                >
+                  <div className="text-gray-500 text-lg">
+                    No programmes found for &ldquo;{selectedCategory}&rdquo;
+                  </div>
+                  <p className="text-gray-400 mt-2">
+                    Try selecting a different category or check back later.
+                  </p>
+                </motion.div>
+              )}
+          </motion.div>
 
           {/* View All Courses CTA */}
-          <div className="text-center mt-16">
+          <div className="text-center mt-12 sm:mt-16">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
+              transition={{
+                duration: prefersReducedMotion ? 0.3 : 0.6,
+                delay: prefersReducedMotion ? 0 : 0.3,
+              }}
+              viewport={{ once: true }}
             >
               <Button
                 variant="outline"
@@ -222,15 +354,27 @@ const CoursesSection = () => {
                 icon={FiArrowRight}
                 iconPosition="right"
                 onClick={() => router.push("/programmes")}
+                className="shadow-md hover:shadow-lg transition-all duration-200"
               >
-                Explore Our Full Range of Programmes
+                Browse Programmes
               </Button>
             </motion.div>
           </div>
         </div>
       </div>
+
+      {/* Custom CSS for hiding scrollbars */}
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </section>
   );
 };
 
-export default CoursesSection; 
+export default CoursesSection;

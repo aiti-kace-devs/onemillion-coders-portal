@@ -13,16 +13,17 @@ import {
   FiGrid,
   FiArrowRight,
 } from "react-icons/fi";
-import { courses } from "../data/courses";
+
 import { useRouter } from "next/navigation";
 
-const ProgramsMenu = ({ isOpen, onClose }) => {
+const ProgramsMenu = ({ isOpen, onClose, categories = [] }) => {
   const router = useRouter();
 
   // Map category names to icons
   const iconMap = {
     Cybersecurity: FiShield,
     "DATA Protection": FiDatabase,
+    "Data Protection": FiDatabase,
     "Artificial Intelligence Training": FiCpu,
     "Mobile Application Development": FiSmartphone,
     "Systems Administration": FiServer,
@@ -31,12 +32,16 @@ const ProgramsMenu = ({ isOpen, onClose }) => {
     "Other Special Training Programs": FiGrid,
   };
 
-  // Get categories from courses data
-  const programs = courses.courses.map((category, index) => ({
-    id: index + 1,
-    title: category.category,
-    icon: iconMap[category.category] || FiCode,
-  }));
+  // Use API categories only - no fallback data
+  const programs = categories.length > 0 
+    ? categories
+        .filter(cat => cat.status) // Only active categories
+        .map((category) => ({
+          id: category.id,
+          title: category.title,
+          icon: iconMap[category.title] || FiCode,
+        }))
+    : []; // No programs to show if API categories are not available
 
   return (
     <AnimatePresence>
@@ -58,33 +63,40 @@ const ProgramsMenu = ({ isOpen, onClose }) => {
 
             {/* Programs Grid */}
             <div className="grid grid-cols-2 gap-4">
-              {programs.map((program) => {
-                const IconComponent = program.icon;
-                return (
-                  <div
-                    key={program.id}
-                    onClick={() => {
-                      router.push(`/programmes?category=${encodeURIComponent(program.title)}`);
-                      onClose();
-                    }}
-                    className="group p-4 rounded-lg hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors">
-                        <IconComponent className="w-5 h-5 text-gray-600" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-[13px] text-gray-900">
-                            {program.title}
-                          </h4>
-                          <FiArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+              {programs.length > 0 ? (
+                programs.map((program) => {
+                  const IconComponent = program.icon;
+                  return (
+                    <div
+                      key={program.id}
+                      onClick={() => {
+                        router.push(`/programmes?category=${encodeURIComponent(program.title)}`);
+                        onClose();
+                      }}
+                      className="group p-4 rounded-lg hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors">
+                          <IconComponent className="w-5 h-5 text-gray-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-[13px] text-gray-900">
+                              {program.title}
+                            </h4>
+                            <FiArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <div className="col-span-2 text-center py-8 text-gray-500">
+                  <FiGrid className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                  <p className="text-sm">No programs available</p>
+                </div>
+              )}
             </div>
 
             {/* Footer */}

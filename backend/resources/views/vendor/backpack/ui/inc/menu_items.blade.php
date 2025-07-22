@@ -28,6 +28,8 @@
     <x-backpack::menu-dropdown-item title="Course Categories" icon="la la-layer-group" :link="backpack_url('course-category')" />
     <x-backpack::menu-dropdown-item title="Course Modules" icon="la la-puzzle-piece" :link="backpack_url('course-module')" />
     <x-backpack::menu-dropdown-item title="Course Certifications" icon="la la-question" :link="backpack_url('course-certification')" />
+    <x-backpack::menu-dropdown-item title="Course Matches" icon="la la-question" :link="backpack_url('course-match')" />
+    <x-backpack::menu-dropdown-item title="Course Match options" icon="la la-question" :link="backpack_url('course-match-option')" />
 </x-backpack::menu-dropdown>
 
 <x-backpack::menu-item title="View Attendances" icon="la la-calendar-check" :link="backpack_url('attendance')" />
@@ -71,3 +73,4 @@
     <x-backpack::menu-dropdown-item title="Roles" icon="la la-user-tag" :link="backpack_url('role')" />
     <x-backpack::menu-dropdown-item title="Permissions" icon="la la-key" :link="backpack_url('permission')" />
 </x-backpack::menu-dropdown> -->
+

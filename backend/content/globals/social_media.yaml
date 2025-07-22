@@ -2,26 +2,30 @@ title: 'Social Media'
 data:
   social_media:
     -
-      id: md57o43b
+      id: mdd9626s
       name: Facebook
-      url: 'https://www.facebook.com/'
+      url: 'https://facebook.com/'
+      icon: facebook
       type: media_item
       enabled: true
     -
-      id: md57pgml
+      id: mdd96uwh
       name: X(twitter)
-      url: 'https://x.com/home'
+      url: 'https://x.com/'
+      icon: twitter
       type: media_item
       enabled: true
     -
-      id: md57q9i4
+      id: mdd97zbu
       name: LinkedIn
       url: 'https://linkedin.com/'
+      icon: linkedin
       type: media_item
       enabled: true
     -
-      id: md57qvmv
+      id: mdd98mky
       name: Instagram
       url: 'https://instagram.com/'
+      icon: instagram
       type: media_item
       enabled: true

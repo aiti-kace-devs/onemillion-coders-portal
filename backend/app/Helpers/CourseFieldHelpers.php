@@ -11,8 +11,10 @@ use App\Models\Branch;
 use App\Models\Batch;
 use App\Models\Course;
 use App\Models\UserAdmission;
+use App\Models\CourseMatch;
 trait CourseFieldHelpers
 {
+    
 
     use FormHelper;
     use GeneralFieldsAndColumns;
@@ -222,6 +224,69 @@ CRUD::addField([
 
 
 }
+
+
+
+
+
+
+    protected function courseMatchOptionsFields()
+    {
+
+        CRUD::addField([
+            'name' => 'answer',
+            'label' => 'Answer',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-5'],
+        ]);
+
+        CRUD::field([
+            'name'  => 'value',
+            'target'  => 'answer',
+            'label' => "Option Tag",
+            'type'  => 'slug',
+            'locale' => 'pt',
+            'separator' => '',
+            'trim' => true,
+            'lower' => true,
+            'strict' => true,
+            'remove' => '/[*+~.()!:@]/g',
+            'wrapper' => ['class' => 'form-group col-5'],
+        ])->attributes(['readonly' => 'readonly']);
+
+
+        CRUD::addField([
+            'name'    => 'icon',
+            'type'    => 'icon_picker',
+            'label'   => 'Icon',
+            'iconset' => 'fontawesome',
+            'wrapper' => ['class' => 'form-group col-2'],
+        ]);
+
+        CRUD::addField([
+            'name' => 'course_match_id',
+            'label' => 'Course Match',
+            'type' => 'select2',
+            'entity' => 'courseMatch',
+            'attribute' => 'question',
+            'model' => CourseMatch::class,
+            'allows_null' => false,
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+
+        CRUD::addField([
+                'name' => 'description',
+                'label' => 'Description',
+                'type'      => 'textarea',
+                'wrapper' => ['class' => 'form-group col-6'],
+            ]);
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+
+
+    }
+
 
 
 
@@ -449,6 +514,108 @@ CRUD::addField([
             'escaped' => false,
         ]);
     }
+
+
+
+
+
+    protected function courseMatchFields()
+    {
+
+        CRUD::addField([
+            'name' => 'tag',
+            'label' => 'Tag',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+        CRUD::addField([
+            'name' => 'question',
+            'label' => 'Question',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+
+        CRUD::addField([
+            'name' => 'description',
+            'label' => 'Description',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-7'],
+        ]);
+
+
+        // CRUD::addField([
+        //     'name'    => 'icon',
+        //     'type'    => 'icon_picker',
+        //     'label'   => 'Icon',
+        //     'iconset' => 'fontawesome',
+        //     'wrapper' => ['class' => 'form-group col-2'],
+        // ]);
+
+
+        CRUD::addField([
+            'name' => 'order',
+            'label' => 'Order',
+            'type'      => 'number',
+            'wrapper' => ['class' => 'form-group col-5'],
+        ]);
+
+        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
+
+        CRUD::addField([
+            'name' => 'course_match_options',
+            'label' => 'Options',
+            'type' => 'repeatable',
+            'new_item_label' => 'Add Option',
+            'fields' => [
+                [
+                    'name' => 'id',
+                    'type' => 'hidden',
+                ],
+                [
+                    'name' => 'answer',
+                    'label' => 'Answer',
+                    'type' => 'text',
+                    'wrapper' => ['class' => 'form-group col-5'],
+                ],
+                [
+                    'name' => 'value',
+                    'label' => "Option Tag",
+                    'type' => 'text',
+                    'wrapper' => ['class' => 'form-group col-5'],
+                ],
+                [
+                    'name' => 'icon',
+                    'label' => 'Icon',
+                    'type' => 'icon_picker',
+                    'iconset' => 'fontawesome',
+                    'wrapper' => ['class' => 'form-group col-2'],
+                ],
+                [
+                    'name' => 'description',
+                    'label' => 'Description',
+                    'type' => 'textarea',
+                ],
+                [
+                    'name' => 'status',
+                    'type' => 'boolean',
+                    'label' => 'Active?',
+                    'default' => true,
+                    'wrapper' => ['class' => 'form-group col-6'],
+                ],
+            ],
+            'init_rows' => 1,
+            'min_rows' => 1,
+        ]);
+
+
+        $this->addFieldsToTab('Question', true, ['tag', 'question', 'description', 'order', 'status']);
+        $this->addFieldsToTab('Options', true, ['course_match_options']);
+
+
+    }
+
 
 
 

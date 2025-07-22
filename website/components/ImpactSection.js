@@ -14,55 +14,29 @@ import { useState, useEffect } from "react";
 import Button from "./Button";
 import { GhanaGradientBar } from "@/components/GhanaGradients";
 
-const ImpactSection = () => {
+const ImpactSection = ({ data }) => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
-  const testimonials = [
-    {
-      id: 1,
-      quote:
-        "The comprehensive data protection training provided essential skills for navigating complex privacy regulations. The program structure and industry relevance made it highly valuable for career advancement.",
-      name: "Program Graduate",
-      title: "Data Protection Specialist",
-      company: "Financial Services Sector",
-    },
-    {
-      id: 2,
-      quote:
-        "The cybersecurity curriculum covered practical, real-world scenarios that directly applied to workplace challenges. The certification process was thorough and industry-recognized.",
-      name: "Program Graduate",
-      title: "Cybersecurity Professional",
-      company: "Technology Sector",
-    },
-    {
-      id: 3,
-      quote:
-        "The data analytics program provided modern tools and methodologies essential for today's data-driven economy. The hands-on approach accelerated skill development significantly.",
-      name: "Program Graduate",
-      title: "Data Analytics Specialist",
-      company: "Development Sector",
-    },
-  ];
+  // Get API data
+  const textDataBlock = data?.section_items?.find(item => item.blueprint === 'textdatablock');
+  const successStories = data?.section_items?.find(item => item.blueprint === 'success_stories');
 
-  const stats = [
-    {
-      number: "306 K",
-      label: "GRADUATES",
-    },
-    {
-      number: "138,693",
-      label: "YOUTH IN WORK",
-    },
-    {
-      number: "21,726",
-      label: "YOUTH STARTING VENTURES",
-    },
-    {
-      number: "70,553",
-      label: "YOUTH IN JOBS CREATED THROUGH ENTREPRENEURSHIP",
-    },
-  ];
+  // Use only API testimonials
+  const testimonials = successStories?.stories?.map((story, index) => ({
+    id: index + 1,
+    quote: story.message?.replace(/"/g, '') || "",
+    name: story.graduate_name,
+    title: story.program_completed,
+    company: story.sector,
+  })) || [];
+
+  // Use only API stats
+  const stats = textDataBlock?.metrics?.map(metric => ({
+    number: metric.number,
+    label: metric.description?.toUpperCase() || "",
+    icon: FiUsers, // Default icon
+  })) || [];
 
   const nextTestimonial = () => {
     setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
@@ -78,25 +52,40 @@ const ImpactSection = () => {
 
   // Auto-play functionality
   useEffect(() => {
-    if (!isAutoPlaying) return;
+    let interval;
+    if (isAutoPlaying && testimonials.length > 0) {
+      interval = setInterval(() => {
+        setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
+      }, 3000); // Change every 3 seconds
+    }
 
-    const interval = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
-    }, 3000); // Change every 3 seconds
-
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
   }, [isAutoPlaying, testimonials.length]);
 
   // Resume auto-play after user stops interacting
   useEffect(() => {
+    let timeout;
     if (!isAutoPlaying) {
-      const timeout = setTimeout(() => {
+      timeout = setTimeout(() => {
         setIsAutoPlaying(true);
       }, 10000); // Resume after 10 seconds of no interaction
-
-      return () => clearTimeout(timeout);
     }
+
+    return () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    };
   }, [isAutoPlaying]);
+
+  // Don't render if no API data
+  if (!textDataBlock && !successStories) {
+    return null;
+  }
 
   // Animation variants for testimonial transitions
   const testimonialVariants = {
@@ -178,16 +167,18 @@ const ImpactSection = () => {
             className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 text-gray-900 text-sm font-semibold rounded-full mb-6"
           >
             <FiTrendingUp size={16} />
-            TRANSFORMING AFRICA&apos;S FUTURE
+            {textDataBlock?.text_data_caption}
           </motion.div>
+          {textDataBlock?.text_data_name && (
           <h2 className="heading-lg text-white content-spacing max-w-4xl mx-auto">
-            Empowering Dreams, Building Futures
+              {textDataBlock.text_data_name}
           </h2>
+          )}
+          {textDataBlock?.text_data_description && (
           <p className="text-lead text-gray-400 max-w-3xl mx-auto">
-            One Million Coders is Ghana&apos;s premier tech education
-            initiative, empowering young Africans with cutting-edge skills in
-            cybersecurity, data protection, and emerging technologies.
+              <span dangerouslySetInnerHTML={{ __html: textDataBlock.text_data_description }} />
           </p>
+          )}
         </motion.div>
 
         {/* Statistics Grid */}
@@ -399,7 +390,7 @@ const ImpactSection = () => {
                 size="large"
                 icon={FiArrowRight}
                 iconPosition="right"
-                onClick={() => console.log('View success stories')}
+                onClick={() => ('View success stories')}
                 className="shadow-xl hover:shadow-2xl hover:shadow-yellow-500/20"
               >
                 View All Success Stories

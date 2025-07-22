@@ -8,6 +8,7 @@ use Statamic\Facades\Entry;
 use Statamic\Facades\Collection;
 use Statamic\Facades\Asset;
 use Statamic\Facades\Term;
+use Statamic\Facades\GlobalSet;
 
 class StatamicEntryApiController extends Controller
 {
@@ -148,7 +149,16 @@ class StatamicEntryApiController extends Controller
             $data = array_intersect_key($data, array_flip($fieldsArr));
         }
 
-        return response()->json(['data' => $data]);
+        //footer
+        $footer = [
+            'contact_us' => GlobalSet::findByHandle('contact')->in('default')->toAugmentedArray(),
+            'quick_links' => GlobalSet::findByHandle('quick_links')->in('default')->toAugmentedArray(),
+            'copyrights' => GlobalSet::findByHandle('copyrights')->in('default')->toAugmentedArray(),
+            'collaborators' => GlobalSet::findByHandle('collaborators')->in('default')->toAugmentedArray(),
+            'social_media' => GlobalSet::findByHandle('social_media')->in('default')->toAugmentedArray(),
+        ];
+
+        return response()->json(['data' => $data,'footer' => $footer]);
     }
 
     /**

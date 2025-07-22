@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -14,10 +15,17 @@ import {
   FiClock,
   FiTarget
 } from 'react-icons/fi';
-import { pathways } from '../../data/pathways';
+// Remove static import
+// import { pathways } from '../../data/pathways';
 import Button from '../../components/Button';
+import { getPageData } from '../../services/api';
+import { PathwaysPageSkeleton } from '../../components/PathwaysSkeleton';
 
 export default function PathwaysPage() {
+  const [pageData, setPageData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   // Icon mapping
   const iconMap = {
     FiUsers,
@@ -25,8 +33,50 @@ export default function PathwaysPage() {
     FiBookOpen,
     FiHeart,
     FiPlay,
-    FiTrendingUp
+    FiTrendingUp,
+    users: FiUsers,
+    Images: FiBookOpen
   };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const data = await getPageData('pathway');
+        setPageData(data);
+      } catch (err) {
+        console.error('Error fetching pathway data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return <PathwaysPageSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error loading pathways: {error}</p>
+          <Button onClick={() => window.location.reload()} variant="primary">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Extract hero and pathways sections
+  const heroSection = pageData?.sections?.find(section => section.name === 'Hero');
+  const pathwaysSection = pageData?.sections?.find(section => section.name === 'Pathways');
+  const heroData = heroSection?.section_items?.[0];
+  const pathwaysData = pathwaysSection?.section_items || [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -40,28 +90,23 @@ export default function PathwaysPage() {
             className="text-center"
           >
             <h1 className="text-4xl lg:text-6xl font-bold mb-6">
-              Find Your <span className="text-yellow-400">Pathway</span>
+              {heroData?.name} <span className="text-yellow-400">Pathway</span>
             </h1>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
-              Every journey is unique. Discover the learning path designed specifically for your background, 
-              goals, and circumstances in the One Million Coders program.
+              {heroData?.description}
             </p>
             
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-yellow-400">6</div>
-                <div className="text-gray-300">Specialized Pathways</div>
+            {heroData?.metrics && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+                {heroData.metrics.map((metric, index) => (
+                  <div key={metric.id || index} className="text-center">
+                    <div className="text-3xl font-bold text-yellow-400">{metric.number}</div>
+                    <div className="text-gray-300">{metric.description}</div>
+                  </div>
+                ))}
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-yellow-400">500K+</div>
-                <div className="text-gray-300">Success Stories</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-yellow-400">100%</div>
-                <div className="text-gray-300">Personalized Support</div>
-              </div>
-            </div>
+            )}
           </motion.div>
         </div>
       </section>
@@ -69,23 +114,10 @@ export default function PathwaysPage() {
       {/* Pathways Grid */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              Choose Your Journey
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Each pathway is carefully designed with specific challenges, learning approaches, 
-              and support systems tailored to your unique situation.
-            </p>
-          </motion.div>
+
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {Object.values(pathways).map((pathway, index) => {
+            {pathwaysData.map((pathway, index) => {
               const IconComponent = iconMap[pathway.icon];
               
               return (
@@ -98,23 +130,27 @@ export default function PathwaysPage() {
                 >
                   {/* Pathway Image */}
                   <div className="relative h-48 overflow-hidden">
-                    <Image
-                      src={pathway.heroImage}
-                      alt={pathway.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                    {pathway.hero_image && (
+                      <Image
+                        src={`${process.env.NEXT_PUBLIC_IMAGE_BASE_URL}/${pathway.hero_image}`}
+                        alt={pathway.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                     
-                    {/* Icon */}
-                    <div className="absolute top-6 left-6">
-                      <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                        <IconComponent className="w-6 h-6 text-white" />
-                      </div>
-                    </div>
+                                          {/* Icon */}
+                      {IconComponent && (
+                        <div className="absolute top-6 left-6">
+                          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                            <IconComponent className="w-6 h-6 text-white" />
+                          </div>
+                        </div>
+                      )}
 
                     {/* Duration & Focus */}
-                    <div className="absolute bottom-6 left-6 right-6">
+                    {/* <div className="absolute bottom-6 left-6 right-6">
                       <div className="flex items-center justify-between text-white text-sm">
                         <div className="flex items-center space-x-2">
                           <FiClock className="w-4 h-4" />
@@ -125,12 +161,13 @@ export default function PathwaysPage() {
                           <span className="font-medium">{pathway.focus}</span>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
 
                   {/* Content */}
                   <div className="p-8">
-                    <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-yellow-600 transition-colors duration-200">
+                    {/* <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-yellow-600 transition-colors duration-200"> */}
+                    <h3 className="text-xl font-bold text-gray-900 mb-3 ">
                       {pathway.title}
                     </h3>
                     
@@ -143,20 +180,22 @@ export default function PathwaysPage() {
                     </p>
 
                     {/* Benefits Preview */}
-                    <div className="mb-6">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Key Benefits:</h4>
-                      <ul className="space-y-1">
-                        {pathway.overview.benefits.slice(0, 3).map((benefit, idx) => (
-                          <li key={idx} className="text-xs text-gray-600 flex items-start">
-                            <span className="w-1 h-1 bg-yellow-500 rounded-full mt-2 mr-2 flex-shrink-0"></span>
-                            {benefit}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    {pathway.overview?.benefits && (
+                      <div className="mb-6">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">Key Benefits:</h4>
+                        <ul className="space-y-1">
+                          {pathway.overview.benefits.slice(0, 2).map((benefit, idx) => (
+                            <li key={idx} className="text-xs text-gray-600 flex items-start">
+                              <span className="w-1 h-1 bg-yellow-500 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                              {benefit}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
                     {/* CTA */}
-                    <Link href={`/pathway/${pathway.id}`}>
+                    <Link href={`/pathway/${pathway.slug}`}>
                       <Button
                         variant="primary"
                         size="small"
@@ -205,7 +244,6 @@ export default function PathwaysPage() {
                 size="large"
                 className="!border-gray-900 !text-gray-900 hover:!bg-gray-900 hover:!text-white"
               >
-                {/* Enroll Now */}
                 Register
               </Button>
             </div>

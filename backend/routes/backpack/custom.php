@@ -89,7 +89,9 @@ Route::group([
     Route::get('reset-exam/{exam_id}/student/{user_id}', 'UserCrudController@resetResult')->name('results.reset');
     Route::crud('student-verification', 'StudentVerificationCrudController');
     Route::crud('course-certification', 'CourseCertificationCrudController');
-    Route::crud('batch', 'BatchCrudController');
+    Route::crud('course-match', 'CourseMatchCrudController');
+    Route::crud('course-match-option', 'CourseMatchOptionCrudController');
+    // Route::crud('media', 'MediaCrudController');
 }); // this should be the absolute last line of this file
 
 /**
