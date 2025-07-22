@@ -234,7 +234,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'prerequisites',
             'label' => 'Entry Requirements',
-            'type'      => 'tinymce',
+            'type'      => 'textarea',
             // 'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. 1. Minimum of a Masters degree in law, IT, data management, cybersecurity, business administration, or related fields.'
         ]);

@@ -89,7 +89,7 @@ Route::group([
     Route::crud('course-certification', 'CourseCertificationCrudController');
     Route::crud('course-match', 'CourseMatchCrudController');
     Route::crud('course-match-option', 'CourseMatchOptionCrudController');
-    Route::crud('media', 'MediaCrudController');
+    // Route::crud('media', 'MediaCrudController');
 }); // this should be the absolute last line of this file
 
 /**

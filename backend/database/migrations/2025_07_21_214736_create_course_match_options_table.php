@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('course_match_options', function (Blueprint $table) {
             $table->id();
+            $table->string('value')->nullable();
             $table->string('answer');
             $table->string('description')->nullable();
             $table->string('icon')->nullable();

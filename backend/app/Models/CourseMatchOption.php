@@ -13,6 +13,7 @@ class CourseMatchOption extends Model
         'course_match_id',
         'answer',
         'description',
+        'value',
         'icon',
         'status'
     ];
