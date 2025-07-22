@@ -35,7 +35,7 @@ class BatchCrudController extends CrudController
         CRUD::setEntityNameStrings('admission batch', 'admission batches');
 
         $this->crud->operation('list', function () {
-            WidgetHelper::courseSessionStatisticsWidget();
+            WidgetHelper::admissionBatchStatisticsWidget();
         });
     }
 

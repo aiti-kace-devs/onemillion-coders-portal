@@ -19,6 +19,7 @@ use App\Models\StudentVerification;
 use App\Models\OexQuestionMaster;
 use App\Models\OexCategory;
 use App\Models\CourseCertification;
+use App\Models\Batch;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\DB;
 use App\Models\CourseMatch;
@@ -905,6 +906,7 @@ public static function programmeStatisticsWidget()
 
 
 
+
     public static function verificationStatisticsWidget()
     {
         $totalStudents = StudentVerification::count();
@@ -1025,6 +1027,70 @@ public static function programmeStatisticsWidget()
         ],
     ]);
 }
+
+
+
+
+
+
+
+    public static function admissionBatchStatisticsWidget()
+    {
+        $totalBatchs = Batch::count();
+        $activeBatchs = Batch::where('status', 1)->count();
+        $inactiveBatchs = Batch::where('status', 0)->count();
+        $recentBatchs = Batch::whereDate('created_at', '>=', now()->subDays(30))->count();
+
+        $getPercent = function ($count) use ($totalBatchs) {
+            return $totalBatchs > 0 ? round(($count / $totalBatchs) * 100) : 0;
+        };
+
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalBatchs),
+                    'description' => 'Total Admission Batches',
+                    'value' => number_format($totalBatchs),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                            'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'All Admission Batches',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeBatchs),
+                    'description' => 'Active Admission Batches',
+                    'value' => number_format($activeBatchs),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Admission Batches currently active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveBatchs),
+                    'description' => 'Inactive Admission Batches',
+                    'value' => number_format($inactiveBatchs),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Admission Batches currently inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($recentBatchs),
+                    'description' => 'New Admission Batches (30 Days)',
+                    'value' => number_format($recentBatchs),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                            'style' => 'background-color:rgb(40, 127, 167);',
+                        ],
+                    'hint' => 'Batches added in the last 30 days.',
+                ],
+            ],
+        ]);
+    }
+
 
 
 
