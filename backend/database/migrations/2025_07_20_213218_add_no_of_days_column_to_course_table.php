@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('course_categories', function (Blueprint $table) {
-            $table->text('icon')->nullable()->after('description');
-        });
+        // Schema::table('course_categories', function (Blueprint $table) {
+        //     $table->text('icon')->nullable()->after('description');
+        // });
 
-        Schema::table('courses', function (Blueprint $table) {
-            $table->text('no_of_days')->nullable()->after('duration');
-        });
+        // Schema::table('courses', function (Blueprint $table) {
+        //     $table->text('no_of_days')->nullable()->after('duration');
+        // });
     }
 
     /**
@@ -25,16 +25,16 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('course_categories', function (Blueprint $table) {
-            $table->dropColumn([
-                'icon'
-            ]);
-        });
+        // Schema::table('course_categories', function (Blueprint $table) {
+        //     $table->dropColumn([
+        //         'icon'
+        //     ]);
+        // });
 
-        Schema::table('courses', function (Blueprint $table) {
-            $table->dropColumn([
-                'no_of_days'
-            ]);
-        });
+        // Schema::table('courses', function (Blueprint $table) {
+        //     $table->dropColumn([
+        //         'no_of_days'
+        //     ]);
+        // });
     }
 };

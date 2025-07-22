@@ -8,6 +8,7 @@ use App\Helpers\GeneralFieldsAndColumns;
 use App\Models\Centre;
 use App\Models\Programme;
 use App\Models\Branch;
+use App\Models\Batch;
 use App\Models\Course;
 use App\Models\UserAdmission;
 use App\Models\CourseMatch;
@@ -82,6 +83,19 @@ CRUD::addField([
     'model' => Centre::class,
     'value' => $this->crud->getCurrentEntry()?->centre_id ?? null,
 ]);
+
+
+
+// CRUD::addField([
+//     'name' => 'batch_id',
+//     'label' => 'Select Batch',
+//     'type' => 'select2',
+//     'entity' => 'batch',
+//     'attribute' => 'title',
+//     'model' => Batch::class,
+//     'allows_null' => false,
+//     'wrapper' => ['class' => 'form-group col-6'],
+// ]);
 
 
 
@@ -327,6 +341,63 @@ CRUD::addField([
     }
 
 
+
+
+    public static function addBatchFilter(string $columnName, string $label = 'Batch Filter'): void
+    {
+        $BatchsArray = Batch::orderBy('title')->pluck('title', 'id')->toArray();
+        FilterHelper::addSelectFilter(
+                columnName: $columnName,
+                label: $label,
+                options: $BatchsArray,
+                callback: function ($value) use ($columnName) {
+                    CRUD::addClause('where', $columnName, $value);
+                }
+            );
+    }
+
+
+
+    public static function addStudentBatchFilter(string $relationPath = 'admission', string $label = 'Batch')
+    {
+        $batches = Batch::orderBy('title')->pluck('title', 'id')->toArray();
+        
+        FilterHelper::addSelectFilter(
+            columnName: 'batch_filter',
+            label: $label,
+            options: $batches,
+            type: 'select2',
+            callback: function ($batchId) use ($relationPath) {
+                static::addBatchWhereClause($batchId, $relationPath);
+            },
+        );
+    }
+
+    protected static function addBatchWhereClause($batchId, $relationPath)
+    {
+        CRUD::addClause('whereHas', $relationPath, function($query) use ($batchId) {
+            $query->where('batch_id', $batchId);
+        });
+    }
+
+    // public static function addStudentBatchFilter(string $label = 'Batch Filter'): void
+    // {
+    //     $batches = Batch::orderBy('title')->pluck('title', 'id')->toArray();
+
+    //     FilterHelper::addSelectFilter(
+    //         columnName: 'batch_id',
+    //         label: 'Batch Filter',
+    //         options: $batches,
+    //         type: 'select2',
+    //         callback: function ($batchId) {
+    //             CRUD::addClause('whereHas', 'course', function ($query) use ($batchId) {
+    //                 $query->where('batch_id', $batchId);
+    //             });
+    //         },
+    //     );
+    // }
+
+
     public static function addConfirmedAdmissionFilter(string $label = 'Admission Status')
     {
         CRUD::addFilter([
@@ -443,6 +514,108 @@ CRUD::addField([
             'escaped' => false,
         ]);
     }
+
+
+
+
+
+    protected function courseMatchFields()
+    {
+
+        CRUD::addField([
+            'name' => 'tag',
+            'label' => 'Tag',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+        CRUD::addField([
+            'name' => 'question',
+            'label' => 'Question',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+
+        CRUD::addField([
+            'name' => 'description',
+            'label' => 'Description',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-7'],
+        ]);
+
+
+        // CRUD::addField([
+        //     'name'    => 'icon',
+        //     'type'    => 'icon_picker',
+        //     'label'   => 'Icon',
+        //     'iconset' => 'fontawesome',
+        //     'wrapper' => ['class' => 'form-group col-2'],
+        // ]);
+
+
+        CRUD::addField([
+            'name' => 'order',
+            'label' => 'Order',
+            'type'      => 'number',
+            'wrapper' => ['class' => 'form-group col-5'],
+        ]);
+
+        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
+
+        CRUD::addField([
+            'name' => 'course_match_options',
+            'label' => 'Options',
+            'type' => 'repeatable',
+            'new_item_label' => 'Add Option',
+            'fields' => [
+                [
+                    'name' => 'id',
+                    'type' => 'hidden',
+                ],
+                [
+                    'name' => 'answer',
+                    'label' => 'Answer',
+                    'type' => 'text',
+                    'wrapper' => ['class' => 'form-group col-5'],
+                ],
+                [
+                    'name' => 'value',
+                    'label' => "Option Tag",
+                    'type' => 'text',
+                    'wrapper' => ['class' => 'form-group col-5'],
+                ],
+                [
+                    'name' => 'icon',
+                    'label' => 'Icon',
+                    'type' => 'icon_picker',
+                    'iconset' => 'fontawesome',
+                    'wrapper' => ['class' => 'form-group col-2'],
+                ],
+                [
+                    'name' => 'description',
+                    'label' => 'Description',
+                    'type' => 'textarea',
+                ],
+                [
+                    'name' => 'status',
+                    'type' => 'boolean',
+                    'label' => 'Active?',
+                    'default' => true,
+                    'wrapper' => ['class' => 'form-group col-6'],
+                ],
+            ],
+            'init_rows' => 1,
+            'min_rows' => 1,
+        ]);
+
+
+        $this->addFieldsToTab('Question', true, ['tag', 'question', 'description', 'order', 'status']);
+        $this->addFieldsToTab('Options', true, ['course_match_options']);
+
+
+    }
+
 
 
 

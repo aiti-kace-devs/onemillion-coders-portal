@@ -16,12 +16,16 @@ class CourseMatch extends Model
         'description',
         'icon',
         'tag',
-        'order',
+        'description',
         'status',
        
     ];
     use CrudTrait;
     //
+
+    protected $casts = [
+        'course_match_options' => 'array',
+    ];
 
     public function courseMatchOptions()
     {

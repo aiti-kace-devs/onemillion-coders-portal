@@ -6,6 +6,8 @@ use App\Http\Requests\CourseMatchOptionRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\CourseFieldHelpers;
+use App\Helpers\WidgetHelper;
+use App\Helpers\FilterHelper;
 /**
  * Class CourseMatchOptionCrudController
  * @package App\Http\Controllers\Admin
@@ -30,6 +32,10 @@ class CourseMatchOptionCrudController extends CrudController
         CRUD::setModel(\App\Models\CourseMatchOption::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-match-option');
         CRUD::setEntityNameStrings('course match option', 'course match options');
+
+        $this->crud->operation('list', function () {
+            WidgetHelper::CourseMatchOptionStatisticsWidget();
+        });
     }
 
     /**
@@ -40,12 +46,13 @@ class CourseMatchOptionCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
-
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+        CRUD::column('value');
+        CRUD::column('answer');
+        CRUD::column('description');
+        FilterHelper::addGenericRelationshipColumn('courseMatch', 'Course Match', 'courseMatch', 'question');
+        FilterHelper::addBooleanColumn('status', 'status');
+        FilterHelper::addBooleanFilter('status', 'Status');
+        FilterHelper::addDateRangeFilter('created_at', 'Created Date');
     }
 
     /**

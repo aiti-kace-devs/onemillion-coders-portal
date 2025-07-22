@@ -116,6 +116,7 @@ class CourseMatchAPIController extends Controller
                 'sub_title' => $programme->sub_title,
                 'duration' => $programme->duration,
                 'level' => $programme->level,
+                'image' => $programme->image,
                 'job_responsible' => $programme->job_responsible,
                 'image' => $programme->image,
                 'prerequisites' => $programme->prerequisites,

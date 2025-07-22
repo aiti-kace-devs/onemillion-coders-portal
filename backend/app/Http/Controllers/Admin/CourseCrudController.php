@@ -50,11 +50,13 @@ class CourseCrudController extends CrudController
     protected function setupListOperation()
     {
         CRUD::column('course_name')->type('textarea');
+        // CRUD::column('batch_id')->label('Batch')->linkTo('batch.show');
         CRUD::column('duration');
-        CRUD::column('no_of_days');
+        // CRUD::column('no_of_days');
         CRUD::column('centre_id')->label('Centre')->linkTo('centre.show');
         FilterHelper::addBooleanColumn('status', 'status');
         // CRUD::column('programme_id')->label('Programme')->linkTo('programme.show');
+        // $this->addBatchFilter('batch_id');
         $this->courseFilter('id');
         FilterHelper::addDateRangeFilter('start_date', 'Start Date');
         $this->addOngoingCoursesFilter('Ongoing Courses');
@@ -70,6 +72,7 @@ class CourseCrudController extends CrudController
     {
         CRUD::column('course_name')->type('textarea');
         CRUD::column('duration');
+        // CRUD::column('batch_id')->label('Batch')->linkTo('batch.show');
         CRUD::column('no_of_days');
         CRUD::column('start_date');
         CRUD::column('end_date');

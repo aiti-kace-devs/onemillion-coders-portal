@@ -21,7 +21,8 @@ use App\Models\OexCategory;
 use App\Models\CourseCertification;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\DB;
-
+use App\Models\CourseMatch;
+use App\Models\CourseMatchOption;
 class WidgetHelper
 {
     /**
@@ -1024,6 +1025,134 @@ public static function programmeStatisticsWidget()
         ],
     ]);
 }
+
+
+
+
+
+    public static function CourseMatchOptionStatisticsWidget()
+    {
+        $totalCourseMatchOptions = CourseMatchOption::count();
+        $activeCourseMatchOptions = CourseMatchOption::where('status', 1)->count();
+        $inactiveCourseMatchOptions = CourseMatchOption::where('status', 0)->count();
+        $recentCourseMatchOptions = CourseMatchOption::whereDate('created_at', '>=', now()->subDays(30))->count();
+
+        $getPercent = function ($count) use ($totalCourseMatchOptions) {
+            return $totalCourseMatchOptions > 0 ? round(($count / $totalCourseMatchOptions) * 100) : 0;
+        };
+
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalCourseMatchOptions),
+                    'description' => 'Total Course Matches',
+                    'value' => number_format($totalCourseMatchOptions),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                            'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'All Course Matches',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeCourseMatchOptions),
+                    'description' => 'Active Course Matches',
+                    'value' => number_format($activeCourseMatchOptions),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Course Matches currently active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveCourseMatchOptions),
+                    'description' => 'Inactive Course Matches',
+                    'value' => number_format($inactiveCourseMatchOptions),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Course Matches currently inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($recentCourseMatchOptions),
+                    'description' => 'New Course Matches (30 Days)',
+                    'value' => number_format($recentCourseMatchOptions),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                            'style' => 'background-color:rgb(40, 127, 167);',
+                        ],
+                    'hint' => 'Matches added in the last 30 days.',
+                ],
+            ],
+        ]);
+    }
+
+
+
+
+    public static function courseMatchStatisticsWidget()
+    {
+        $totalCourseMatches = CourseMatch::count();
+        $activeCourseMatches = CourseMatch::where('status', 1)->count();
+        $inactiveCourseMatches = CourseMatch::where('status', 0)->count();
+        $recentCourseMatches = CourseMatch::whereDate('created_at', '>=', now()->subDays(30))->count();
+
+        $getPercent = function ($count) use ($totalCourseMatches) {
+            return $totalCourseMatches > 0 ? round(($count / $totalCourseMatches) * 100) : 0;
+        };
+
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalCourseMatches),
+                    'description' => 'Total Course Match Options',
+                    'value' => number_format($totalCourseMatches),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                            'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'All Course Match Options',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeCourseMatches),
+                    'description' => 'Active Course Match Options',
+                    'value' => number_format($activeCourseMatches),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Course Match Options currently active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveCourseMatches),
+                    'description' => 'Inactive Course Matches',
+                    'value' => number_format($inactiveCourseMatches),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Course Match Options currently inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($recentCourseMatches),
+                    'description' => 'New Course Match Options (30 Days)',
+                    'value' => number_format($recentCourseMatches),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                            'style' => 'background-color:rgb(40, 127, 167);',
+                        ],
+                    'hint' => 'Options added in the last 30 days.',
+                ],
+            ],
+        ]);
+    }
+
+
+
+
+
+
+
 
 
 
