@@ -7,6 +7,7 @@ use App\Models\Programme;
 use App\Models\CourseCategory;
 use App\Models\Branch;
 use App\Models\UserAdmission;
+use App\Models\Centre;
 use App\Models\Course;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -174,6 +175,23 @@ class CourseProgrammeController extends Controller
             'regions' => $regions,
         ]);
     }
+
+
+
+
+    public function programmesByCentre(Centre $centre)
+    {
+        $programmes = Programme::whereHas('centre', function ($query) use ($centre) {
+            $query->where('centres.id', $centre->id);
+        })->with(['category', 'coverImage'])->get();
+
+        return response()->json([
+            'centre' => $centre->title,
+            'programmes' => $programmes,
+        ]);
+    }
+
+
 
 
 
