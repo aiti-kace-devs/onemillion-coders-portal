@@ -20,6 +20,7 @@ import {
 import { getProgrammeData } from '../../../services/pages';
 import Button from '../../../components/Button';
 import ProgrammeDetailsSkeleton from '@/components/ProgrammeDetailsSkeleton';
+import RegistrationDialog from '@/components/RegistrationDialog';
 
 export default function CourseDetailsPage() {
   const params = useParams();
@@ -28,6 +29,7 @@ export default function CourseDetailsPage() {
   const [programme, setProgramme] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showRegistrationDialog, setShowRegistrationDialog] = useState(false);
 
   // Fetch programme data from API
   useEffect(() => {
@@ -193,13 +195,13 @@ export default function CourseDetailsPage() {
               {/* CTA Button */}
               <div className="flex">
                 <Button
-                  onClick={() => isAvailable && window.open('https://onemillioncoders.gov.gh/available-courses', '_blank')}
+                  onClick={() => isAvailable && setShowRegistrationDialog(true)}
                   variant="primary"
                   icon={FiPlay}
                   disabled={!isAvailable}
                   className="!bg-white !text-gray-900 hover:!bg-gray-100"
                 >
-                  {isAvailable ? 'Register' : 'Notify When Available'}
+                  {isAvailable ? 'Register Now' : 'Notify When Available'}
                 </Button>
               </div>
             </motion.div>
@@ -465,6 +467,13 @@ export default function CourseDetailsPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Registration Dialog */}
+      <RegistrationDialog
+        isOpen={showRegistrationDialog}
+        onClose={() => setShowRegistrationDialog(false)}
+        programme={programme}
+      />
     </div>
   );
 } 

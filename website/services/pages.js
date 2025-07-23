@@ -148,3 +148,50 @@ export const getCourseRecommendations = async (answers) => {
     throw error;
   }
 };
+
+/**
+ * Fetch programme locations (regions and centres)
+ * @param {string|number} programmeId - Programme ID
+ * @returns {Promise<Object>} - Programme locations data
+ */
+export const getProgrammeLocations = async (programmeId) => {
+  try {
+    const response = await apiRequest(`/programmes/${programmeId}/locations`);
+    return response;
+  } catch (error) {
+    console.error(`Error fetching programme locations for ID ${programmeId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch registration form schema
+ * @returns {Promise<Object>} - Form schema data
+ */
+export const getRegistrationForm = async () => {
+  try {
+    const response = await apiRequest("/form");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching registration form:", error);
+    throw error;
+  }
+};
+
+/**
+ * Submit registration form
+ * @param {Object} formData - Registration form data
+ * @returns {Promise<Object>} - Submission response
+ */
+export const submitRegistration = async (formData) => {
+  try {
+    const response = await apiRequest("/register", {
+      method: 'POST',
+      data: formData
+    });
+    return response;
+  } catch (error) {
+    console.error("Error submitting registration:", error);
+    throw error;
+  }
+};
