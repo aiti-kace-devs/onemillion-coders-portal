@@ -72,7 +72,7 @@ Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCateg
 Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
 Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
 Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
-Route::get('/api//branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
+Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
 
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
