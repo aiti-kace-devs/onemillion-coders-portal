@@ -194,5 +194,15 @@ class CourseProgrammeController extends Controller
 
 
 
+        public function centresByBranch(Branch $branch)
+        {
+            $centres = $branch->centre()->get();
+
+            return response()->json([
+                'region' => $branch->title,
+                'centres' => $centres,
+            ]);
+        }
+
 
 }
