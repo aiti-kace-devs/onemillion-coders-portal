@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin\Api;
 
 use App\Events\FormSubmittedEvent;
 use App\Models\Form;
@@ -13,8 +13,9 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
+use App\Http\Controllers\Controller;
 
-class FormResponseController extends Controller
+class CreateStudentAPIController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -85,19 +86,8 @@ class FormResponseController extends Controller
      */
     public function store(Request $request)
     {
-        // \Log::info('STORE: Start', $request->all());
-
-        $uuid = '6c004031-4efb-4b51-890f-0c3788defedf';
-        $form = Form::where('uuid',$uuid)->first();
-        // \Log::info('STORE: Form fetched', ['form' => $form]);
-        // dd($form);
-        if (!$form) {
-            \Log::error('STORE: Form not found for UUID', ['uuid' => $uuid]);
-            abort(404, 'Form not found');
-        }
+        $form = Form::where('uuid', $request->form_uuid)->firstOrFail();
         $schema = $form->schema;
-        // dd($schema);
-        // \Log::info('STORE: Schema loaded', ['schema' => $schema]);
 
         // $validationRules = $form->getValidationRules();
         $validationRules = [
@@ -120,7 +110,7 @@ class FormResponseController extends Controller
                 }
             }
         }
-        
+
         foreach ($schema as $field) {
             $fieldKey = $field['type'] == 'select_course' ? 'response_data.course_id' : "response_data.{$field['field_name']}";
 
@@ -150,14 +140,14 @@ class FormResponseController extends Controller
                         $exists = User::where($dbColumn, $valueToCheck)->exists();
             
                         if ($exists) {
-                            throw \Illuminate\Validation\ValidationException::withMessages([
+                            return redirect()->back()->withInput()->withErrors([
                                 $fieldKey => ["{$fieldTitle} has already been taken."]
                             ]);
                         }
                     }
                 }
             }
-            
+
             switch ($field['type']) {
                 case 'text':
                 case 'textarea':
@@ -216,14 +206,12 @@ class FormResponseController extends Controller
                     $rules[] = 'nullable';
                     break;
             }
-            Log::info('below switch');
+
             $validationRules[$fieldKey] = implode('|', $rules);
             $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|' . $field['rules'] ?? '' : '';
             $validationRules[$fieldKey] =  $validationRules[$fieldKey] . $additionRules;
-            Log::info('end of switch statement');
         }
 
-        \Log::info('Get validationRules', ['validationRules' => $validationRules]);
         // dd($validationRules, $attributes);
         $validated = $request->validate($validationRules, $customMessages, $attributes);
 
@@ -251,8 +239,8 @@ class FormResponseController extends Controller
 
         $form->responses()->save($response);
 
-        Log::info($validated['response_data']);
-        Log::info($fieldName);
+        // Log::info($validated['response_data']);
+        // Log::info($fieldName);
 
         FormSubmittedEvent::dispatch($validated['response_data'], $response->id, $fieldName);
 
@@ -385,7 +373,7 @@ class FormResponseController extends Controller
 
             $validationRules[$fieldKey] = implode('|', $rules);
         }
-        // dd($validationRules);
+        dd($validationRules);
         $validated = $request->validate($validationRules, $customMessages);
 
         // Handle file uploads

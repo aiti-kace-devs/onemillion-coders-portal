@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   FiArrowRight,
   FiArrowLeft,
@@ -304,10 +305,12 @@ export default function CourseMatchPage() {
                       <div className="lg:w-80 h-64 lg:h-80 flex-shrink-0 relative overflow-hidden">
                         {course.image ? (
                           <>
-                            <img
+                            <Image
                               src={course.image}
                               alt={course.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-700"
+                              sizes="(max-width: 1024px) 100vw, 320px"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                           </>
@@ -354,7 +357,7 @@ export default function CourseMatchPage() {
                           {/* What you'll learn preview */}
                           {course.overview?.what_you_will_learn && (
                             <div className="mb-8">
-                              <h4 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">What you'll learn</h4>
+                                                             <h4 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">What you&apos;ll learn</h4>
                               <div className="grid sm:grid-cols-2 gap-3">
                                 {course.overview.what_you_will_learn.slice(0, 4).map((item, idx) => (
                                   <div key={idx} className="flex items-start gap-3">
@@ -416,7 +419,7 @@ export default function CourseMatchPage() {
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-3">No perfect matches found</h3>
                     <p className="text-gray-600 mb-8 leading-relaxed">
-                      We couldn't find courses that perfectly match your criteria. Try adjusting your preferences or retake the quiz to explore more options.
+                      We couldn&apos;t find courses that perfectly match your criteria. Try adjusting your preferences or retake the quiz to explore more options.
                     </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                       <Button onClick={resetQuiz} variant="primary">

@@ -34,3 +34,18 @@ export default function ClientWrapper({ children }) {
     </>
   );
 }
+
+
+
+const data = {
+  "form_uuid": "6c004031-4efb-4b51-890f-0c3788defedf",
+  "response_data": {
+      "name": "John Doe",
+      "email": "john@doe.com",
+      "age": "20–24",
+      "highest-level-of-education": "Degree",
+      "phone": "+233542323133",
+      "gender": "Male",
+      "course_id": "27"
+  }
+}

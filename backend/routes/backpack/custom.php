@@ -34,6 +34,7 @@ Route::group([
     Route::crud('branch', 'BranchCrudController');
     Route::crud('centre', 'CentreCrudController');
     Route::crud('course', 'CourseCrudController');
+    Route::crud('batch', 'BatchCrudController');
     Route::crud('course-session', 'CourseSessionCrudController');
     Route::crud('email-template', 'EmailTemplateCrudController');
     Route::crud('form', 'FormCrudController');

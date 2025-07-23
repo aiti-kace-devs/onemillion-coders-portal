@@ -17,6 +17,7 @@ use App\Http\Controllers\CentreController;
 use App\Http\Controllers\Admin\Api\FormPreviewController;
 use App\Http\Controllers\Admin\Api\CourseProgrammeController;
 use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
+use App\Http\Controllers\Admin\Api\RegistrationFormAPIController;
 use App\Http\Controllers\ClassScheduleController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\FormController;
@@ -55,14 +56,18 @@ use Illuminate\Support\Str;
 // //     ->name('dynamic-course');
 
 // // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
-// // Route::post('form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
+// Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
 // routes/web.php
+Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
 // Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
 Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
 Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
 Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
 Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
+
+Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
+
 Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
 Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
 Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);

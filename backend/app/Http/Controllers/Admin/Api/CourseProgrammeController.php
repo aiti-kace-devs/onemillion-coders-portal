@@ -145,4 +145,36 @@ class CourseProgrammeController extends Controller
 
 
 
+    public function programmeLocations(Programme $programme)
+    {
+        $centres = $programme->centre()->with('branch')->get();
+
+        $groupedByBranch = $centres->groupBy('branch.id');
+
+        $regions = $groupedByBranch->map(function ($centres, $branchId) {
+            $branch = $centres->first()->branch;
+
+            $cleanCentres = $centres->map(function ($centre) {
+                unset($centre->branch);
+                return $centre;
+            })->values();
+
+            return [
+                'id' => $branch->id,
+                'title' => $branch->title,
+                'status' => $branch->status,
+                'created_at' => $branch->created_at,
+                'updated_at' => $branch->updated_at,
+                'centres' => $cleanCentres,
+            ];
+        })->values();
+
+        return response()->json([
+            'programme' => $programme->title,
+            'regions' => $regions,
+        ]);
+    }
+
+
+
 }
