@@ -214,7 +214,7 @@ export default function Header() {
             {/* CTA Button - Hidden on small mobile, visible sm+ */}
             <div className="hidden sm:block">
               <Button
-                onClick={() => router.push("https://onemillioncoders.gov.gh/forms/register")}
+                onClick={() => router.push("/register")}
                 icon={FiArrowRight}
                 variant="primary"
                 size="medium"
@@ -346,7 +346,7 @@ export default function Header() {
                 <div className="pt-4 border-t border-gray-100 mt-4">
                   <Button
                     onClick={() =>
-                      router.push("https://onemillioncoders.gov.gh/forms/register")
+                      router.push("/register")
                     }
                     icon={FiArrowRight}
                     variant="primary"
