@@ -14,7 +14,7 @@ use App\Helpers\CourseFieldHelpers;
  * @package App\Http\Controllers\Admin
  * @property-read \Backpack\CRUD\app\Library\CrudPanel\CrudPanel $crud
  */
-class BatchCrudController extends CrudController
+class p extends CrudController
 {
     use CourseFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
@@ -25,7 +25,7 @@ class BatchCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -41,7 +41,7 @@ class BatchCrudController extends CrudController
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
@@ -69,13 +69,13 @@ class BatchCrudController extends CrudController
                 $batchId = $entry->id;
                 $admittedCount = $entry->admitted_students_count;
                 $url = url("/admin/user?batch_id={$batchId}&confirmed_admission=1");
-        
+
                 return "<a href='{$url}'>".($admittedCount ?? 0)."</a>";
 
             },
             'escaped' => false,
         ]);
-        
+
 
         // CRUD::column('total_completed_students')->label('Total Completed');
         FilterHelper::addBooleanColumn('completed', 'completed');
@@ -87,7 +87,7 @@ class BatchCrudController extends CrudController
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
@@ -101,7 +101,7 @@ class BatchCrudController extends CrudController
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. Quarter 1, Batch 1'
         ]);
-        
+
         CRUD::addField([
             'name' => 'description',
             'label' => 'Description',
@@ -119,7 +119,7 @@ class BatchCrudController extends CrudController
         //     'allows_null' => false,
         //     'wrapper' => ['class' => 'form-group col-6'],
         // ]);
-       
+
         CRUD::addField([
             'name' => 'start_date',
             'label' => 'Start Date',
@@ -145,7 +145,7 @@ class BatchCrudController extends CrudController
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */
