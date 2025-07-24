@@ -173,7 +173,9 @@ const Footer = () => {
               </li>
               <li className="flex items-center space-x-3">
                 <FiMail className="text-yellow-400 flex-shrink-0" size={16} />
-                <span className="text-gray-300 text-sm">info@moc.gov.gh</span>
+                <span className="text-gray-300 text-sm">
+                  support@onemillioncoders.gov.gh
+                </span>
               </li>
               <li className="flex items-center space-x-3">
                 <FiPhone className="text-yellow-400 flex-shrink-0" size={16} />

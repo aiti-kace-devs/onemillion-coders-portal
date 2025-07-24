@@ -25,9 +25,11 @@ import {
 import Button from "../../components/Button";
 import GhanaGradientText from "../../components/GhanaGradients/GhanaGradientText";
 
+import parsePhoneNumberFromString from "libphonenumber-js";
+
 export default function RegisterPage() {
   const router = useRouter();
-  
+
   // State management
   const [step, setStep] = useState(1); // 1: region, 2: center, 3: course, 4: form, 5: success
   const [loading, setLoading] = useState(false);
@@ -196,9 +198,13 @@ export default function RegisterPage() {
 
         // Phone validation
         if (field.type === "phonenumber" && value) {
-          const phoneRegex = /^[0-9+\-\s()]+$/;
-          if (!phoneRegex.test(value) || value.length < 10) {
-            errors[field.field_name] = "Please enter a valid phone number";
+          try {
+            const phoneNumber = parsePhoneNumberFromString(value, "GH");
+            if (!phoneNumber || !phoneNumber.isValid()) {
+              errors[field.field_name] = "Please enter a valid Ghana phone number";
+            }
+          } catch (error) {
+            errors[field.field_name] = "Please enter a valid Ghana phone number";
           }
         }
       });
@@ -300,24 +306,36 @@ export default function RegisterPage() {
           type={inputType}
           value={value}
           onChange={(e) => {
-            // Filter out any characters that aren't numbers, spaces, +, -, or parentheses
-            const filteredValue = e.target.value.replace(/[^0-9+\-\s()]/g, "");
-            handleFieldChange(field.field_name, filteredValue);
+            const inputValue = e.target.value;
+            
+            try {
+              // Parse the phone number with Ghana as default country
+              const phoneNumber = parsePhoneNumberFromString(inputValue, "GH");
+              
+              if (phoneNumber && phoneNumber.isValid()) {
+                // Store the international format in state
+                handleFieldChange(field.field_name, phoneNumber.formatInternational());
+              } else {
+                // Store the raw input if it's not yet valid (user is still typing)
+                handleFieldChange(field.field_name, inputValue);
+              }
+            } catch (error) {
+              // Store the raw input if parsing fails
+              handleFieldChange(field.field_name, inputValue);
+            }
           }}
           onKeyPress={(e) => {
-            // Prevent any key that isn't a number, space, +, -, or parentheses
+            // Allow numbers, spaces, +, -, parentheses, and control keys
             const allowedChars = /[0-9+\-\s()]/;
             if (
               !allowedChars.test(e.key) &&
-              e.key !== "Backspace" &&
-              e.key !== "Delete" &&
-              e.key !== "Tab"
+              !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)
             ) {
               e.preventDefault();
             }
           }}
           className={baseClasses}
-          placeholder={placeholder}
+          placeholder="e.g., 024 123 4567 or +233 24 123 4567"
           autoComplete="tel"
           inputMode="tel"
         />
@@ -425,8 +443,10 @@ export default function RegisterPage() {
           >
             <FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-red-700 text-sm sm:text-base font-medium">{error}</p>
-              <button 
+              <p className="text-red-700 text-sm sm:text-base font-medium">
+                {error}
+              </p>
+              <button
                 onClick={() => setError(null)}
                 className="text-red-600 text-sm underline mt-1 hover:text-red-800 transition-colors"
               >
@@ -436,7 +456,7 @@ export default function RegisterPage() {
           </motion.div>
         )}
 
-        <motion.div 
+        <motion.div
           className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -469,7 +489,9 @@ export default function RegisterPage() {
                     <FiLoader className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-yellow-600" />
                     <div className="absolute inset-0 w-10 h-10 sm:w-12 sm:h-12 border-2 border-yellow-200 rounded-full animate-pulse"></div>
                   </div>
-                  <p className="text-gray-600 mt-4 text-sm sm:text-base font-medium">Loading regions...</p>
+                  <p className="text-gray-600 mt-4 text-sm sm:text-base font-medium">
+                    Loading regions...
+                  </p>
                 </div>
               ) : allRegions && allRegions.length > 0 ? (
                 <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
@@ -501,9 +523,17 @@ export default function RegisterPage() {
                   <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <FiMapPin className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No regions available</h3>
-                  <p className="text-gray-600 mb-4">Please try again later or contact support.</p>
-                  <Button onClick={() => fetchAllRegions()} variant="outline" className="min-h-[44px]">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No regions available
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Please try again later or contact support.
+                  </p>
+                  <Button
+                    onClick={() => fetchAllRegions()}
+                    variant="outline"
+                    className="min-h-[44px]"
+                  >
                     Try Again
                   </Button>
                 </div>
@@ -538,9 +568,12 @@ export default function RegisterPage() {
                     <FiLoader className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-yellow-600" />
                     <div className="absolute inset-0 w-10 h-10 sm:w-12 sm:h-12 border-2 border-yellow-200 rounded-full animate-pulse"></div>
                   </div>
-                  <p className="text-gray-600 mt-4 text-sm sm:text-base font-medium">Loading training centers...</p>
+                  <p className="text-gray-600 mt-4 text-sm sm:text-base font-medium">
+                    Loading training centers...
+                  </p>
                 </div>
-              ) : availableCenters?.centres && availableCenters.centres.length > 0 ? (
+              ) : availableCenters?.centres &&
+                availableCenters.centres.length > 0 ? (
                 <div className="space-y-3 sm:space-y-4">
                   {availableCenters.centres.map((centre) => (
                     <motion.button
@@ -567,9 +600,17 @@ export default function RegisterPage() {
                   <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <FiMapPin className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No training centers available</h3>
-                  <p className="text-gray-600 mb-4">No training centers found in {selectedRegion.title}.</p>
-                  <Button onClick={() => setStep(1)} variant="outline" className="min-h-[44px]">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No training centers available
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    No training centers found in {selectedRegion.title}.
+                  </p>
+                  <Button
+                    onClick={() => setStep(1)}
+                    variant="outline"
+                    className="min-h-[44px]"
+                  >
                     Choose Different Region
                   </Button>
                 </div>
@@ -616,7 +657,9 @@ export default function RegisterPage() {
                     <FiLoader className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-yellow-600" />
                     <div className="absolute inset-0 w-10 h-10 sm:w-12 sm:h-12 border-2 border-yellow-200 rounded-full animate-pulse"></div>
                   </div>
-                  <p className="text-gray-600 mt-4 text-sm sm:text-base font-medium">Loading available courses...</p>
+                  <p className="text-gray-600 mt-4 text-sm sm:text-base font-medium">
+                    Loading available courses...
+                  </p>
                 </div>
               ) : availableCourses?.programmes ? (
                 <div className="space-y-4 sm:space-y-6">
@@ -676,9 +719,17 @@ export default function RegisterPage() {
                   <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <FiBookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No courses available</h3>
-                  <p className="text-gray-600 mb-4">No courses found at {selectedCentre.title}.</p>
-                  <Button onClick={() => setStep(2)} variant="outline" className="min-h-[44px]">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No courses available
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    No courses found at {selectedCentre.title}.
+                  </p>
+                  <Button
+                    onClick={() => setStep(2)}
+                    variant="outline"
+                    className="min-h-[44px]"
+                  >
                     Choose Different Center
                   </Button>
                 </div>
@@ -727,16 +778,28 @@ export default function RegisterPage() {
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                   <div className="bg-white rounded-lg p-3 border border-gray-200">
-                    <p className="text-gray-600 text-xs font-medium uppercase tracking-wide">Region</p>
-                    <p className="font-semibold text-gray-900 mt-1 truncate">{selectedRegion.title}</p>
+                    <p className="text-gray-600 text-xs font-medium uppercase tracking-wide">
+                      Region
+                    </p>
+                    <p className="font-semibold text-gray-900 mt-1 truncate">
+                      {selectedRegion.title}
+                    </p>
                   </div>
                   <div className="bg-white rounded-lg p-3 border border-gray-200">
-                    <p className="text-gray-600 text-xs font-medium uppercase tracking-wide">Training Center</p>
-                    <p className="font-semibold text-gray-900 mt-1 truncate">{selectedCentre.title}</p>
+                    <p className="text-gray-600 text-xs font-medium uppercase tracking-wide">
+                      Training Center
+                    </p>
+                    <p className="font-semibold text-gray-900 mt-1 truncate">
+                      {selectedCentre.title}
+                    </p>
                   </div>
                   <div className="bg-white rounded-lg p-3 border border-gray-200">
-                    <p className="text-gray-600 text-xs font-medium uppercase tracking-wide">Course</p>
-                    <p className="font-semibold text-gray-900 mt-1 truncate">{selectedCourse.title}</p>
+                    <p className="text-gray-600 text-xs font-medium uppercase tracking-wide">
+                      Course
+                    </p>
+                    <p className="font-semibold text-gray-900 mt-1 truncate">
+                      {selectedCourse.title}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -747,10 +810,15 @@ export default function RegisterPage() {
                     <FiLoader className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-yellow-600" />
                     <div className="absolute inset-0 w-10 h-10 sm:w-12 sm:h-12 border-2 border-yellow-200 rounded-full animate-pulse"></div>
                   </div>
-                  <p className="text-gray-600 mt-4 text-sm sm:text-base font-medium">Loading registration form...</p>
+                  <p className="text-gray-600 mt-4 text-sm sm:text-base font-medium">
+                    Loading registration form...
+                  </p>
                 </div>
               ) : formSchema ? (
-                <form className="space-y-5 sm:space-y-6" onSubmit={handleSubmit}>
+                <form
+                  className="space-y-5 sm:space-y-6"
+                  onSubmit={handleSubmit}
+                >
                   {formSchema.schema
                     .filter((field) => field.field_name !== "course") // Hide course field
                     .map((field) => (
@@ -758,12 +826,17 @@ export default function RegisterPage() {
                         <label className="block text-sm font-semibold text-gray-900">
                           {field.title}
                           {field.validators?.required && (
-                            <span className="text-red-500 ml-1" aria-label="required">*</span>
+                            <span
+                              className="text-red-500 ml-1"
+                              aria-label="required"
+                            >
+                              *
+                            </span>
                           )}
                         </label>
                         {renderFormField(field)}
                         {formErrors[field.field_name] && (
-                          <motion.p 
+                          <motion.p
                             initial={{ opacity: 0, y: -5 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="text-sm text-red-600 flex items-center"
@@ -817,7 +890,7 @@ export default function RegisterPage() {
               transition={{ duration: 0.4 }}
               className="text-center py-8 sm:py-12"
             >
-              <motion.div 
+              <motion.div
                 className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -825,7 +898,7 @@ export default function RegisterPage() {
               >
                 <FiCheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />
               </motion.div>
-              <motion.h2 
+              <motion.h2
                 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 px-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -833,7 +906,7 @@ export default function RegisterPage() {
               >
                 Registration Successful!
               </motion.h2>
-              <motion.p 
+              <motion.p
                 className="text-gray-600 mb-6 sm:mb-8 leading-relaxed max-w-2xl mx-auto text-sm sm:text-base px-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -842,14 +915,14 @@ export default function RegisterPage() {
                 {formSchema?.message_after_registration ||
                   "Thank you for registering! Further instructions will be sent to you via email/SMS."}
               </motion.p>
-              <motion.div 
+              <motion.div
                 className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 px-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
-                <Button 
-                  onClick={() => router.push("/")} 
+                <Button
+                  onClick={() => router.push("/")}
                   variant="outline"
                   className="w-full sm:w-auto min-h-[48px] px-6"
                 >
@@ -869,4 +942,4 @@ export default function RegisterPage() {
       </div>
     </div>
   );
-} 
+}
