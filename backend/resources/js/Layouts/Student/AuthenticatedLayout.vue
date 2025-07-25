@@ -19,7 +19,6 @@ const toggleSidebar = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
 
-
 // Get the current route name for active link highlighting
 const { auth, component } = usePage().props;
 
@@ -101,6 +100,14 @@ const user = auth?.user || {};
           </SidebarNavLink>
 
           <SidebarNavLink
+            :active="route().current('student.results')"
+            :href="route('student.results')"
+            :label="'Results'"
+          >
+            <span class="material-symbols-outlined">task</span>
+          </SidebarNavLink>
+
+          <SidebarNavLink
             :active="route().current('student.profile.edit')"
             :href="route('student.profile.edit')"
             :label="'Profile'"
@@ -114,6 +121,14 @@ const user = auth?.user || {};
             :label="'Session'"
           >
             <span class="material-symbols-outlined"> calendar_clock </span>
+          </SidebarNavLink>
+
+          <SidebarNavLink
+            :href="route('student.change-course')"
+            :active="route().current('student.change-course')"
+            :label="'Change Course'"
+          >
+            <span class="material-symbols-outlined"> swap_horiz </span>
           </SidebarNavLink>
 
           <SidebarNavLink
@@ -135,7 +150,7 @@ const user = auth?.user || {};
           <SidebarNavLink
             :active="route().current('student.assessment.*')"
             :href="route('student.assessment.index')"
-            :label="'Assessment'"
+            :label="'Course Assessment'"
           >
             <span class="material-symbols-outlined">rate_review</span>
           </SidebarNavLink>

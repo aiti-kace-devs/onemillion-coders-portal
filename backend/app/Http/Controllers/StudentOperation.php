@@ -62,7 +62,15 @@ class StudentOperation extends Controller
             ->get()
             ->toArray();
 
-        return Inertia::render('Student/Dashboard', compact('exams'));
+        $questionnaires = Questionnaire::where('active', true)->latest()->get();
+
+        $questionnaires = $questionnaires->map(function ($questionnaire) {
+            $questionnaire['is_submitted'] = Auth::user()->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->where('is_submitted', true)->exists();
+
+            return $questionnaire;
+        });
+
+        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires'));
 
         // $data['portal_exams'] = Oex_exam_master::select(['oex_exam_masters.*', 'oex_categories.name as cat_name'])
         //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
@@ -503,14 +511,14 @@ class StudentOperation extends Controller
     {
         $user = Auth::user();
 
-        if ($user->admission) {
-            return redirect()
-                ->back()
-                ->with([
-                    'flash' => 'Student already admitted. Unable to change course.',
-                    'key' => 'error',
-                ]);
-        }
+        // if ($user->admission) {
+        //     return redirect()
+        //         ->back()
+        //         ->with([
+        //             'flash' => 'Student already admitted. Unable to change course.',
+        //             'key' => 'error',
+        //         ]);
+        // }
 
         $currentCourseId = $user->registered_course;
 
@@ -521,6 +529,7 @@ class StudentOperation extends Controller
             $currentCourse = Course::find($currentCourseId);
         }
 
+        return Inertia::render('Student/ChangeCourse', compact('user', 'courses', 'currentCourse'));
         return view('student.change-course', compact('user', 'courses', 'currentCourse'));
     }
 
@@ -532,10 +541,11 @@ class StudentOperation extends Controller
             return redirect()
                 ->back()
                 ->with([
-                    'flash' => 'Students not allowed to change course at this time. Contact the administrators',
                     'key' => 'error',
+                    'flash' => 'Students not allowed to change course at this time. Contact the administrators.',
                 ]);
         }
+
         $user = Auth::user();
 
         if ($user->admission) {
@@ -547,9 +557,13 @@ class StudentOperation extends Controller
                 ]);
         }
 
-        $request->validate([
-            'course_id' => 'required|exists:courses,id',
-        ]);
+        $request->validate(
+            [
+                'course_id' => 'required|exists:courses,id',
+            ],
+            [],
+            ['course_id' => 'course']
+        );
 
         // Get course information
         // $course = Course::find($request->course_id);
@@ -562,7 +576,7 @@ class StudentOperation extends Controller
         $user->registered_course = $request->course_id; // Store course_id in exam field
         $user->save();
 
-        return redirect()->route('student.profile')->with('success', 'Course changed successfully.');
+        return redirect()->route('student.profile.edit');
     }
 
     // API function not used
@@ -885,7 +899,7 @@ class StudentOperation extends Controller
         }
 
         $validated = $request->validate($validationRules, $customMessages, $attributes);
-      
+
         // Load existing draft or create new one
         $draft = QuestionnaireResponse::firstOrCreate(
             [
@@ -919,6 +933,8 @@ class StudentOperation extends Controller
             return !in_array($id, $existing['completed_instructors'] ?? []);
         })->values()->all();
 
+        $hasNextInstructor = ($isInstructorQuestions || $isInstructorSelect) && !empty($yetToComplete);
+
         // remaining sections left to complete
         $remainingSections = collect($questionnaire->schema)->filter(function ($section) use ($existing) {
             return !isset($existing[$section['title']]);
@@ -926,25 +942,51 @@ class StudentOperation extends Controller
 
         $isSubmitted =  count($remainingSections) === 0 && count($yetToComplete) === 0;
 
-        // dd(count($remainingSections), count($yetToComplete));
         // Save the updated response_data
         $draft->update([
             'response_data' => $existing,
             'is_submitted' => $isSubmitted,
         ]);
 
-        if($isSubmitted){
-            return Redirect::route('student.assessment.index');
-            dd('hereSub');
-        }
-
         return response()->json([
             'status' => true,
             'progress' => [
+                'is_submitted' => $isSubmitted,
                 'next_section' => !$isSubmitted ? ($remainingSections[0] ?? null) : null,
-                'next_instructor' => $isInstructorQuestions || $isInstructorSelect ? ($yetToComplete[0] ?? false) : false,
+                'next_instructor' => $hasNextInstructor ? $yetToComplete[0] : false,
+                'instructor_section' => $hasNextInstructor ? $sectionIndex : false,
                 'instructor_button_text' => ($sectionIndex >= $totalSections - 1 && count($yetToComplete) === 1) ? 'Submit' : 'Save & Next',
             ],
+        ]);
+    }
+
+    // Student results page
+    public function results()
+    {
+        $user = Auth::user();
+        $results = \DB::table('user_exams')
+            ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
+            ->leftJoin('oex_results', function($join) {
+                $join->on('user_exams.exam_id', '=', 'oex_results.exam_id')
+                     ->on('user_exams.user_id', '=', 'oex_results.user_id');
+            })
+            ->where('user_exams.user_id', $user->id)
+            ->select([
+                'oex_exam_masters.title as exam_title',
+                'oex_exam_masters.exam_date',
+                'oex_exam_masters.exam_duration',
+                'user_exams.started',
+                'user_exams.submitted',
+                'oex_results.yes_ans',
+                'oex_results.no_ans',
+                'oex_results.result_json',
+                'oex_results.created_at as result_created',
+            ])
+            ->orderByDesc('oex_exam_masters.exam_date')
+            ->get();
+
+        return Inertia::render('Student/Results', [
+            'results' => $results,
         ]);
     }
 }

@@ -516,6 +516,12 @@ Route::prefix('student')->name('student.')->group(function () {
         // Application status route
         Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
 
+        // Results route
+        Route::get('/results', [StudentOperation::class, 'results'])->name('results');
+
+        // Change course route
+        Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course');
+        Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course');
 
         // Course assessment route
         Route::prefix('assessment')->name('assessment.')->group(function () {
@@ -559,8 +565,8 @@ Route::prefix('student')
             // Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');
             // Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
             // Route::get('/profile', [StudentOperation::class, 'profile'])->name('profile')->middleware('is_not_admitted');
-            Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course');
-            Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course')->middleware('is_not_admitted');
+            // Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course');
+            // Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course')->middleware('is_not_admitted');
 
             // Route::get('/exam', [StudentOperation::class, 'exam']);
             // Route::get('/join_exam/{id}', [StudentOperation::class, 'join_exam']);

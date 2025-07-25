@@ -5,7 +5,16 @@ import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
 
 const props = defineProps({
   questionnaires: Object,
+  flash: Object,
 });
+
+if (props.flash) {
+  if (props.flash.key === "error") {
+    toastr.error(props.flash.message);
+  } else {
+    toastr.success(props.flash.message);
+  }
+}
 
 const user = computed(() => usePage().props.auth?.user || {});
 </script>

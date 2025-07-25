@@ -23,14 +23,14 @@
     {{-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
         integrity="sha512-vKMx8UnXk60zUwyUnUPM3HbQo8QfmNx7+ltw8Pm5zLusl1XIfwcxo8DbWCqMGKaWeNxWA8yrx5v3SaVpMvR3CA=="
         crossorigin="anonymous" referrerpolicy="no-referrer" /> --}}
-    <link rel="stylesheet" href="{{ url('/assets/plugin/toastr/toastr.min.css') }}">
+    <link rel="stylesheet" href="{{ url('/assets/plugins/toastr/toastr.min.css') }}">
 
 
     <!-- Scripts -->
     {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"
         integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script> --}}
-    <script src="{{ url('/assets/plugin/jquery/jquery.min.js') }}" referrerpolicy="no-referrer"></script>
+    <script src="{{ url('/assets/plugins/jquery/jquery.min.js') }}" referrerpolicy="no-referrer"></script>
     @routes(nonce: csp_nonce())
     @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
     @inertiaHead

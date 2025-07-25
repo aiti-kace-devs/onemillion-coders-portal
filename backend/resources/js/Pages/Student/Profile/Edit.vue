@@ -80,13 +80,23 @@ const downloadQRCode = () => {
               <div class="text-sm text-gray-500">{{ user.course_name }}</div>
               <div class="text-sm text-gray-400">{{ user.selected_session }} Session</div>
             </div>
+            <div class="flex items-center gap-4">
+            <button
+              @click="showQRCodeModal"
+              type="button"
+              class="w-14 h-14 flex justify-center items-center bg-gray-100 hover:bg-gray-200 rounded-full p-2 shadow text-gray-800 focus:outline-none"
+            >
+              <span class="material-symbols-outlined"> id_card </span>
+            </button>
+            
             <button
               @click="showQRCodeModal"
               type="button"
               class="w-14 h-14 flex justify-center items-center bg-gray-100 hover:bg-gray-200 rounded-full p-2 shadow text-gray-800 focus:outline-none"
             >
               <span class="material-symbols-outlined"> qr_code </span>
-            </button>
+            </button>            
+            </div>
           </div>
         </div>
 

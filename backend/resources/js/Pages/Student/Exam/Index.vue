@@ -11,6 +11,14 @@ const props = defineProps({
   flash: Object,
 });
 
+if(props.flash){
+  if(props.flash.key === "error"){
+    toastr.error(props.flash.message);
+  } else{
+    toastr.success(props.flash.message);
+  }
+}
+
 const user = computed(() => usePage().props.auth?.user || {});
 const EXAM_DEADLINE_AFTER_REGISTRATION = 2;
 

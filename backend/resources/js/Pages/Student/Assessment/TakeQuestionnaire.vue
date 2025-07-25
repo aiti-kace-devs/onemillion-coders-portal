@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
 import { ref, reactive, computed, watch } from "vue";
-import { Head, useForm } from "@inertiajs/vue3";
+import { Head, router, useForm } from "@inertiajs/vue3";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import QuestionInput from "@/Components/QuestionInput.vue";
 import InstructorSelect from "@/Components/InstructorSelect.vue";
@@ -20,6 +20,12 @@ const loadingTab = ref(null);
 const loading = ref(false);
 const formErrors = reactive({});
 const instructorButtonText = reactive({});
+const instructorSection = ref(false);
+const activeTabClasses =
+  "text-xs inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold uppercase text-white hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150 tracking-wider disabled:cursor-not-allowed disabled:opacity-25";
+const inactiveTabClasses =
+  "inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-wider shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150";
+const highlightedSectionTab = ref(null);
 
 // Form state
 const sectionForm = reactive({
@@ -46,13 +52,16 @@ async function submitSectionForm(i, section) {
   try {
     const payload = {
       section: i,
-      response_data: section.type === 'instructors' ? sectionForm.selected_instructors : sectionForm.sections[i],
+      response_data:
+        section.type === "instructors"
+          ? sectionForm.selected_instructors
+          : sectionForm.sections[i],
     };
     const { data } = await axios.post(
       route("student.assessment.store", props.questionnaire.code),
       payload
     );
-    handleProgress(data.progress)
+    handleProgress(data.progress);
   } catch (err) {
     if (err.response && err.response.status === 422) {
       formErrors[`section-${i}`] = err.response.data.errors || {};
@@ -73,16 +82,18 @@ async function submitInstructorForm(instructorId) {
       response_data: instructorForm[instructorId],
       instructor_id: instructorId,
     };
-    
+
     const { data } = await axios.post(
       route("student.assessment.store", props.questionnaire.code),
       payload
     );
 
+    toast.success('Response saved successfully.');
     handleProgress(data.progress);
   } catch (err) {
     if (err.response && err.response.status === 422) {
       formErrors[`instructor-${instructorId}`] = err.response.data.errors || {};
+      toast.error('Something went wrong. Please try again.');
     }
   } finally {
     loading.value = false;
@@ -91,11 +102,22 @@ async function submitInstructorForm(instructorId) {
 }
 
 function handleProgress(progress) {
-  if (progress.next_instructor) {
-    instructorButtonText[progress.next_instructor] = progress.instructor_button_text;
-    setActiveTab(`instructor-${progress.next_instructor}`);
+  if (progress.is_submitted) {
+    router.visit(route("student.assessment.index"));
   } else {
-    setActiveTab(`section-${progress.next_section}`);
+    if (progress.next_instructor) {
+      instructorButtonText[progress.next_instructor] = progress.instructor_button_text;
+      instructorSection.value = progress.instructor_section;
+
+      // Highlight the section tab button for the instructor's section
+      highlightedSectionTab.value = `section-${progress.instructor_section}`;
+      // Do NOT change activeTab here
+
+      setActiveTab(`instructor-${progress.next_instructor}`);
+    } else {
+      setActiveTab(`section-${progress.next_section}`);
+      highlightedSectionTab.value = null; // Remove highlight if not needed
+    }
   }
 }
 </script>
@@ -123,28 +145,15 @@ function handleProgress(progress) {
               <button
                 v-for="(section, i) in questionnaire.schema"
                 :key="'section-' + i"
+                :id="'section-' + i"
                 :class="[
-                  activeTab === `section-${i}`
-                    ? 'text-xs inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold uppercase text-white hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150 tracking-wider disabled:cursor-not-allowed disabled:opacity-25'
-                    : 'inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-wider shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150',
+                  activeTab === `section-${i}` || highlightedSectionTab === `section-${i}`
+                    ? activeTabClasses
+                    : inactiveTabClasses,
                 ]"
                 @click="setActiveTab(`section-${i}`)"
               >
                 {{ section.title }}
-              </button>
-              <button
-                v-for="instructor in instructors"
-                :key="'instructor-' + instructor.id"
-                v-show="false"
-                :class="[
-                  activeTab === `instructor-${instructor.id}`
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-white text-gray-700',
-                  'w-full px-4 py-2 rounded text-left font-medium border hover:bg-blue-50 transition',
-                ]"
-                @click="setActiveTab(`instructor-${instructor.id}`)"
-              >
-                {{ instructor.name }}
               </button>
             </div>
           </div>
@@ -163,8 +172,9 @@ function handleProgress(progress) {
                 class="space-y-4"
               >
                 <div>
-                  <p class="block text-lg font-semibold mb-2"
-                    >Review Instructor: {{ instructor.name }}</p>
+                  <p class="block text-lg font-semibold mb-2">
+                    Review Instructor: {{ instructor.name }}
+                  </p>
                 </div>
                 <QuestionInput
                   section-title="instructors"
