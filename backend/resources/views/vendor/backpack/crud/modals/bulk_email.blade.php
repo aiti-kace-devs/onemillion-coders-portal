@@ -83,19 +83,11 @@
                             title: 'No students selected',
                             text: 'Select students first or filter to a view with students!'
                         });
-                    } else {
-                        alert('Select students first or filter to a view with students!');
                     }
                     return;
                 }
 
-                let customView = getCustomViewFromUrl() || getCustomViewFromPath();
-                if (customView) {
-                    data.push({
-                        name: 'custom_view',
-                        value: customView
-                    });
-                }
+
 
                 if (applyToAll) {
                     data.push({
@@ -137,8 +129,8 @@
                         if (typeof Swal !== 'undefined') {
                             Swal.fire({
                                 icon: 'error',
-                                title: xhr.responseJSON?.message ? 'Error' : 'No students selected',
-                                text: xhr.responseJSON?.message ? errorMsg : 'Select students first!'
+                                title: 'Error',
+                                text: xhr.responseJSON?.message || 'Failed to send emails.'
                             });
                         }
                         if (typeof toastr !== 'undefined') {

@@ -54,6 +54,22 @@
                 if (typeof crud !== 'undefined' && crud.checkedItems && crud.checkedItems.length > 0) {
                     return crud.checkedItems;
                 }
+                // Fallback: Get from checkbox data attributes
+                let checkboxes = $(".crud_bulk_checkbox:checked");
+                let selectedIds = [];
+                checkboxes.each(function() {
+                    let primaryKeyValue = $(this).data('primary-key-value');
+                    if (primaryKeyValue) {
+                        selectedIds.push(primaryKeyValue);
+                    }
+                });
+                return selectedIds;
+            }
+
+            function shouldApplyToAll() {
+                // If no checkboxes are checked, apply to all students in current view
+                let checkedIds = getCheckedStudentIds();
+                return checkedIds.length === 0;
             }
             // --- BEGIN: Bulk Shortlist Actions JS ---
             $(document).on('click', '.admit-btn', function() {
@@ -258,7 +274,7 @@
 
             $('#admit-selected').click(function() {
                 var selectedIds = getCheckedStudentIds() ?? [];
-                var applyToAll = selectedIds.length === 0;
+                var applyToAll = shouldApplyToAll();
 
                 if (!applyToAll && selectedIds.length === 0) {
                     toastr.warning('No students selected or no students match your filters');
@@ -269,10 +285,21 @@
                 btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
                 // console.log('Student IDs: ', selectedIds)
 
+                // Get the total count from the current datatable view when applying to all
+                let totalCount = 0;
+                if (applyToAll) {
+                    if (typeof crud !== 'undefined' && crud.table) {
+                        // Get the total records in the current filtered view
+                        totalCount = crud.table.page.info().recordsDisplay;
+                    } else if ($('#crudTable').length) {
+                        // Fallback to DataTable API
+                        totalCount = $('#crudTable').DataTable().page.info().recordsDisplay;
+                    }
+                }
 
                 Swal.fire({
                     title: 'Admit Students?',
-                    text: applyToAll ? `You are about to admit many students. Continue?` :
+                    text: applyToAll ? `You are about to admit ${totalCount} students from the current view. Continue?` :
                         `You are about to admit ${selectedIds.length} students. Continue?`,
                     icon: 'question',
                     showCancelButton: true,
@@ -376,174 +403,65 @@
 
 
             // Bulk Email modal logic
-            $('#bulkEmailForm').on('submit', function(e) {
-                e.preventDefault();
-                let ids = getCheckedStudentIds();
-                let applyToAll = ids.length === 0;
+            // $('#bulkEmailForm').on('submit', function(e) {
+            //     e.preventDefault();
+            //     let ids = getCheckedStudentIds();
+            //     let applyToAll = shouldApplyToAll();
 
-                if (!applyToAll && ids.length === 0) {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'No students selected',
-                            text: 'Select students first or filter to a view with students!'
-                        });
-                    } else {
-                        alert('Select students first or filter to a view with students!');
-                    }
-                    return;
-                }
+            //     let data = $(this).serializeArray();
+            //     if (applyToAll) {
+            //         data.push({
+            //             name: 'select_all_in_query',
+            //             value: true
+            //         });
+            //     } else {
+            //         ids.forEach(function(id) {
+            //             data.push({
+            //                 name: 'student_ids[]',
+            //                 value: id
+            //             });
+            //         });
+            //     }
 
-                let data = $(this).serializeArray();
-                if (applyToAll) {
-                    data.push({
-                        name: 'select_all_in_query',
-                        value: true
-                    });
-                } else {
-                    ids.forEach(function(id) {
-                        data.push({
-                            name: 'student_ids[]',
-                            value: id
-                        });
-                    });
-                }
-
-                $.ajax({
-                    url: "{{ route('bulk-email.send') }}",
-                    method: 'POST',
-                    data: data,
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    success: function(resp) {
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Success',
-                                text: resp.message || 'Emails sent successfully!'
-                            }).then(() => window.location.reload());
-                        }
-                        if (typeof toastr !== 'undefined') {
-                            toastr.success(resp.message || 'Emails sent successfully!');
-                        }
-                        var modal = bootstrap.Modal.getInstance(document.getElementById(
-                            'bulkEmailModal'));
-                        if (modal) modal.hide();
-                    },
-                    error: function(xhr) {
-                        let errorMsg = xhr.responseJSON?.message || 'Failed to send emails.';
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: errorMsg
-                            });
-                        }
-                        if (typeof toastr !== 'undefined') {
-                            toastr.error(errorMsg);
-                        }
-                    }
-                });
-            });
+            //     $.ajax({
+            //         url: "{{ route('bulk-email.send') }}",
+            //         method: 'POST',
+            //         data: data,
+            //         headers: {
+            //             'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            //         },
+            //         success: function(resp) {
+            //             if (typeof Swal !== 'undefined') {
+            //                 Swal.fire({
+            //                     icon: 'success',
+            //                     title: 'Success',
+            //                     text: resp.message || 'Emails sent successfully!'
+            //                 }).then(() => window.location.reload());
+            //             }
+            //             if (typeof toastr !== 'undefined') {
+            //                 toastr.success(resp.message || 'Emails sent successfully!');
+            //             }
+            //             var modal = bootstrap.Modal.getInstance(document.getElementById(
+            //                 'bulkEmailModal'));
+            //             if (modal) modal.hide();
+            //         },
+            //         error: function(xhr) {
+            //             let errorMsg = xhr.responseJSON?.message || 'Failed to send emails.';
+            //             if (typeof Swal !== 'undefined') {
+            //                 Swal.fire({
+            //                     icon: 'error',
+            //                     title: 'Error',
+            //                     text: errorMsg
+            //                 });
+            //             }
+            //             if (typeof toastr !== 'undefined') {
+            //                 toastr.error(errorMsg);
+            //             }
+            //         }
+            //     });
+            // });
 
             // Bulk SMS modal logic
-            $(document).ready(function() {
-                const modal = $('#bulkSMSModal');
-                const templateSelect = $('#sms_template');
-                const messageBox = $('#sms_message');
-
-                modal.on('show.bs.modal', function() {
-                    templateSelect.empty().append(
-                        '<option selected disabled>Loading templates...</option>');
-                    $.get("{{ route('sms-template.fetch') }}", function(templates) {
-                        templateSelect.empty().append(
-                            '<option value="" disabled selected>Select a template</option>'
-                        );
-                        $.each(templates, function(index, template) {
-                            const option = $('<option></option>')
-                                .val(template.id)
-                                .text(template.name)
-                                .data('content', template.content);
-                            templateSelect.append(option);
-                        });
-                    }).fail(function() {
-                        toastr.error('Failed to load SMS templates.');
-                        templateSelect.empty().append(
-                            '<option value="" disabled selected>Unable to load templates</option>'
-                        );
-                    });
-                });
-
-                templateSelect.on('change', function() {
-                    const selectedOption = $(this).find('option:selected');
-                    const content = selectedOption.data('content');
-                    if (content) {
-                        messageBox.val(content);
-                    }
-                });
-
-                $(document).off('click', '#modal-submit').on('click', '#modal-submit', function() {
-                    const message = messageBox.val();
-                    const template = templateSelect.val();
-                    const ids = getCheckedStudentIds();
-                    const applyToAll = ids.length === 0;
-                    const modalActionEvent = new CustomEvent('modalAction', {
-                        detail: {
-                            message,
-                            template,
-                            modalId: 'bulkSMSModal',
-                            ids: ids,
-                            applyToAll: applyToAll
-                        },
-                        bubbles: true,
-                        cancelable: true,
-                    });
-                    document.getElementById('bulkSMSModal').dispatchEvent(modalActionEvent);
-                });
-
-                modal.off('modalAction').on('modalAction', function(event) {
-                    const {
-                        message,
-                        template,
-                        ids,
-                        applyToAll
-                    } = event.detail;
-                    if ((!message && !template)) {
-                        toastr.error('You need a message/template and a subject');
-                        return;
-                    }
-                    let data = {
-                        message: message
-                    };
-                    if (applyToAll) {
-                        data.select_all_in_query = true;
-                    } else if (ids.length > 0) {
-                        data.student_ids = ids;
-                    } else {
-                        toastr.warning('No students selected or no students match your filters');
-                        return;
-                    }
-
-                    $.ajax({
-                        url: "{{ route('bulk-sms.send') }}",
-                        type: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
-                        },
-                        data: data,
-                        success: function(response) {
-                            toastr.success(response.message ||
-                                'SMS transfer initiated successfully!');
-                            modal.modal('hide');
-                        },
-                        error: function(xhr) {
-                            toastr.error(xhr.responseJSON?.message ||
-                                'Failed to send SMS to students.');
-                        }
-                    });
-                });
-            });
 
             // Delete admission logic
             $(document).on('click', '.delete-admission-btn', function(e) {

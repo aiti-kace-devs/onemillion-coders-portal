@@ -31,99 +31,99 @@
 @push('after_scripts')
 @bassetBlock('custom/js/bulk-sms.js')
 <script>
-(function() {
-    // Handle template selection (if you want to auto-fill message based on template, add AJAX here)
-    $('#sms_template').on('change', function() {
-        // Optionally, fetch template content via AJAX and set to textarea
-        // let template = $(this).val();
-        // if (template) {
-        //     $.get('/admin/sms-template-content?template=' + encodeURIComponent(template), function(data) {
-        //         $('#sms_message').val(data.content);
-        //     });
-        // }
-    });
+            $(document).ready(function() {
+                const modal = $('#bulkSMSModal');
+                const templateSelect = $('#sms_template');
+                const messageBox = $('#sms_message');
 
-    // Handle submit
-    $('#modal-submit').off('click').on('click', function(e) {
-        e.preventDefault();
-        let message = $('#sms_message').val();
-        let template = $('#sms_template').val();
-        let ids = getCheckedStudentIds();
-        let applyToAll = ids.length === 0;
-
-        // Validation
-        if ((!message && !template)) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Missing Information',
-                    text: 'You need a message/template',
-                });
-            } else {
-                alert('You need a message/template');
-            }
-            return;
-        }
-        if (!applyToAll && ids.length === 0) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'No students selected',
-                    text: 'Select students first!',
-                });
-            } else {
-                alert('Select students first!');
-            }
-            return;
-        }
-
-        let data = {
-            _token: '{{ csrf_token() }}',
-            message: message,
-            template: template
-        };
-
-        if (applyToAll) {
-            data.select_all_in_query = 1;
-            let customView = getCustomViewFromUrl() || getCustomViewFromPath();
-            if (customView) {
-                data.custom_view = customView;
-            }
-        } else {
-            data.student_ids = ids;
-        }
-
-        $.ajax({
-            url: '{{ route('bulk-sms.send') }}',
-            method: 'POST',
-            data: data,
-            success: function(resp) {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success',
-                        text: resp.message || 'SMS sent successfully!'
+                modal.on('show.bs.modal', function() {
+                    templateSelect.empty().append(
+                        '<option selected disabled>Loading templates...</option>');
+                    $.get("{{ route('sms-template.fetch') }}", function(templates) {
+                        templateSelect.empty().append(
+                            '<option value="" disabled selected>Select a template</option>'
+                        );
+                        $.each(templates, function(index, template) {
+                            const option = $('<option></option>')
+                                .val(template.id)
+                                .text(template.name)
+                                .data('content', template.content);
+                            templateSelect.append(option);
+                        });
+                    }).fail(function() {
+                        toastr.error('Failed to load SMS templates.');
+                        templateSelect.empty().append(
+                            '<option value="" disabled selected>Unable to load templates</option>'
+                        );
                     });
-                } else {
-                    alert(resp.message || 'SMS sent successfully!');
-                }
-                var modal = bootstrap.Modal.getInstance(document.getElementById('bulkSMSModal'));
-                if (modal) modal.hide();
-            },
-            error: function(xhr) {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: xhr.responseJSON?.message || 'Failed to send SMS.'
+                });
+
+                templateSelect.on('change', function() {
+                    const selectedOption = $(this).find('option:selected');
+                    const content = selectedOption.data('content');
+                    if (content) {
+                        messageBox.val(content);
+                    }
+                });
+
+                $(document).off('click', '#modal-submit').on('click', '#modal-submit', function() {
+                    const message = messageBox.val();
+                    const template = templateSelect.val();
+                    const ids = getCheckedStudentIds();
+                    const applyToAll = shouldApplyToAll();
+                    const modalActionEvent = new CustomEvent('modalAction', {
+                        detail: {
+                            message,
+                            template,
+                            modalId: 'bulkSMSModal',
+                            ids: ids,
+                            applyToAll: applyToAll
+                        },
+                        bubbles: true,
+                        cancelable: true,
                     });
-                } else {
-                    alert(xhr.responseJSON?.message || 'Failed to send SMS.');
-                }
-            }
-        });
-    });
-})();
+                    document.getElementById('bulkSMSModal').dispatchEvent(modalActionEvent);
+                });
+
+                modal.off('modalAction').on('modalAction', function(event) {
+                    const {
+                        message,
+                        template,
+                        ids,
+                        applyToAll
+                    } = event.detail;
+                    if ((!message && !template)) {
+                        toastr.error('You need a message/template and a subject');
+                        return;
+                    }
+                    let data = {
+                        message: message
+                    };
+                    if (applyToAll) {
+                        data.select_all_in_query = 1;
+                    } else {
+                        data.student_ids = ids;
+                    }
+
+                    $.ajax({
+                        url: "{{ route('bulk-sms.send') }}",
+                        type: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                        },
+                        data: data,
+                        success: function(response) {
+                            toastr.success(response.message ||
+                                'SMS transfer initiated successfully!');
+                            modal.modal('hide');
+                        },
+                        error: function(xhr) {
+                            toastr.error(xhr.responseJSON?.message ||
+                                'Failed to send SMS to students.');
+                        }
+                    });
+                });
+            });
 </script>
 @endBassetBlock
 @endpush
