@@ -56,7 +56,7 @@ class UserCrudController extends CrudController
 
         // CRUD::denyAccess('create');
         // CRUD::denyAccess('update');
-        $this->setupFilter();
+        // $this->setupFilter();
 
         $this->crud->operation('list', function () {
             WidgetHelper::userStatisticsWidget();
@@ -75,11 +75,17 @@ class UserCrudController extends CrudController
         // CRUD::setFromDb(); // set columns from db columns.
         $this->setupStudentColumns();
         CRUD::disablePersistentTable();
+        // Add userId column to the list view
+        CRUD::addColumn([
+            'name' => 'userId',
+            'label' => 'User ID',
+            'type' => 'text',
+        ]);
 
         // $this->setupStudentColumns();
         // Disable responsive table
         // CRUD::disableResponsiveTable();
-        // $this->setupFilter();
+        $this->setupFilter();
         // Enable bulk operations
         CRUD::enableBulkActions();
 
@@ -92,7 +98,7 @@ class UserCrudController extends CrudController
             'setupStudentsWithoutExamResultsView' => 'Students without Exam Results',
             'setupStudentsYetToAcceptAdmissionView' => 'Students Yet to Accept Admission',
             'setupStudentsWithExamResultsView' => 'Students with Exam Results',
-            'setupShortlistedStudentsView' => 'Shortlisted Students'
+            'setupShortlistedStudentsView' => 'Shortlisted Students',
         ]);
     }
 
@@ -139,7 +145,7 @@ class UserCrudController extends CrudController
      */
     public function setupStudentsWithAdmissionView()
     {
-        CRUD::disableResponsiveTable();
+        // CRUD::disableResponsiveTable();
         // Enable bulk operations for this view
         CRUD::enableBulkActions();
         CRUD::setQuery(
@@ -147,9 +153,8 @@ class UserCrudController extends CrudController
                 $query->whereNotNull('session');
             }),
         );
-        CRUD::enableFilters();
+        // CRUD::enableFilters();
         // $this->setupFilter();
-
 
         // Add a custom column to show admission status
         CRUD::addColumn([
@@ -507,99 +512,99 @@ class UserCrudController extends CrudController
     /**
      * Admit shortlisted students (bulk or single) via AJAX for Backpack Shortlist Actions.
      */
-    public function admitShortlistedStudents(AdmitShortlistedStudentsRequest $request)
-    {
-        $validated = $request->validated();
+    // public function admitShortlistedStudents(AdmitShortlistedStudentsRequest $request)
+    // {
+    //     $validated = $request->validated();
 
-        // If admit_all is set, admit all shortlisted students
-        if ($request->input('admit_all')) {
-            $course = Course::find($validated['course_id']);
-            $session = CourseSession::find($validated['session_id'] ?? '');
-            if ($session && $session->course_id != $course->id) {
-                return response()->json(
-                    [
-                        'success' => false,
-                        'message' => 'Session not valid for selected course',
-                    ],
-                    422,
-                );
-            }
-            $message = 'All shortlisted students admitted successfully';
-            $admittedCount = 0;
-            try {
-                $users = User::where('shortlist', 1)->get();
-                foreach ($users as $user) {
-                    CreateStudentAdmissionJob::dispatch($user, $course, $session);
-                    $admittedCount++;
-                }
-                return response()->json([
-                    'success' => true,
-                    'message' => $message,
-                    'admitted_count' => $admittedCount,
-                ]);
-            } catch (\Exception $e) {
-                return response()->json(
-                    [
-                        'success' => false,
-                        'message' => 'Failed to admit students: ' . $e->getMessage(),
-                    ],
-                    500,
-                );
-            }
-        }
+    //     // If admit_all is set, admit all shortlisted students
+    //     if ($request->input('admit_all')) {
+    //         $course = Course::find($validated['course_id']);
+    //         $session = CourseSession::find($validated['session_id'] ?? '');
+    //         if ($session && $session->course_id != $course->id) {
+    //             return response()->json(
+    //                 [
+    //                     'success' => false,
+    //                     'message' => 'Session not valid for selected course',
+    //                 ],
+    //                 422,
+    //             );
+    //         }
+    //         $message = 'All shortlisted students admitted successfully';
+    //         $admittedCount = 0;
+    //         try {
+    //             $users = User::where('shortlist', 1)->get();
+    //             foreach ($users as $user) {
+    //                 CreateStudentAdmissionJob::dispatch($user, $course, $session);
+    //                 $admittedCount++;
+    //             }
+    //             return response()->json([
+    //                 'success' => true,
+    //                 'message' => $message,
+    //                 'admitted_count' => $admittedCount,
+    //             ]);
+    //         } catch (\Exception $e) {
+    //             return response()->json(
+    //                 [
+    //                     'success' => false,
+    //                     'message' => 'Failed to admit students: ' . $e->getMessage(),
+    //                 ],
+    //                 500,
+    //             );
+    //         }
+    //     }
 
-        $course = Course::find($validated['course_id']);
-        $session = CourseSession::find($validated['session_id'] ?? '');
-        $change = ($validated['change'] ?? false) == 'true';
+    //     $course = Course::find($validated['course_id']);
+    //     $session = CourseSession::find($validated['session_id'] ?? '');
+    //     $change = ($validated['change'] ?? false) == 'true';
 
-        if ($session && $session->course_id != $course->id) {
-            return response()->json(
-                [
-                    'success' => false,
-                    'message' => 'Session not valid for selected course',
-                ],
-                422,
-            );
-        }
-        $message = 'Student(s) admitted successfully';
-        $admittedCount = 0;
-        try {
-            if ($validated['user_id'] ?? false) {
-                $user_id = $validated['user_id'];
-                $user = User::where('userId', $user_id)->first();
-                if ($user) {
-                    CreateStudentAdmissionJob::dispatch($user, $course, $session);
-                    $oldAdmission = UserAdmission::where('user_id', $user_id)->first();
-                    if ($oldAdmission && $change) {
-                        $message = 'Student admission changed successfully';
-                    }
-                    $admittedCount = 1;
-                }
-            } elseif (count($validated['user_ids'] ?? []) > 0) {
-                $user_ids = $validated['user_ids'];
-                foreach ($user_ids as $user_id) {
-                    $user = User::where('userId', $user_id)->first();
-                    if ($user) {
-                        CreateStudentAdmissionJob::dispatch($user, $course, $session);
-                        $admittedCount++;
-                    }
-                }
-            }
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'admitted_count' => $admittedCount,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(
-                [
-                    'success' => false,
-                    'message' => 'Failed to admit students: ' . $e->getMessage(),
-                ],
-                500,
-            );
-        }
-    }
+    //     if ($session && $session->course_id != $course->id) {
+    //         return response()->json(
+    //             [
+    //                 'success' => false,
+    //                 'message' => 'Session not valid for selected course',
+    //             ],
+    //             422,
+    //         );
+    //     }
+    //     $message = 'Student(s) admitted successfully';
+    //     $admittedCount = 0;
+    //     try {
+    //         if ($validated['user_id'] ?? false) {
+    //             $user_id = $validated['user_id'];
+    //             $user = User::where('userId', $user_id)->first();
+    //             if ($user) {
+    //                 CreateStudentAdmissionJob::dispatch($user, $course, $session);
+    //                 $oldAdmission = UserAdmission::where('user_id', $user_id)->first();
+    //                 if ($oldAdmission && $change) {
+    //                     $message = 'Student admission changed successfully';
+    //                 }
+    //                 $admittedCount = 1;
+    //             }
+    //         } elseif (count($validated['user_ids'] ?? []) > 0) {
+    //             $user_ids = $validated['user_ids'];
+    //             foreach ($user_ids as $user_id) {
+    //                 $user = User::where('userId', $user_id)->first();
+    //                 if ($user) {
+    //                     CreateStudentAdmissionJob::dispatch($user, $course, $session);
+    //                     $admittedCount++;
+    //                 }
+    //             }
+    //         }
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => $message,
+    //             'admitted_count' => $admittedCount,
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return response()->json(
+    //             [
+    //                 'success' => false,
+    //                 'message' => 'Failed to admit students: ' . $e->getMessage(),
+    //             ],
+    //             500,
+    //         );
+    //     }
+    // }
 
     /**
      * Show the exam result for a student (Backpack admin panel)

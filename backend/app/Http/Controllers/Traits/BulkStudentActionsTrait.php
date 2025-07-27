@@ -5,7 +5,11 @@ namespace App\Http\Controllers\Traits;
 use App\Http\Requests\SaveShortlistedStudentsRequest;
 use App\Http\Requests\SendBulkEmailRequest;
 use App\Http\Requests\SendBulkSMSRequest;
+use App\Jobs\CreateStudentAdmissionJob;
+use App\Models\Course;
+use App\Models\CourseSession;
 use App\Models\SmsTemplate;
+use App\Models\UserAdmission;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Jobs\SendBulkEmailJob;
@@ -33,9 +37,12 @@ trait BulkStudentActionsTrait
         }
 
         if (empty($validated['student_ids'])) {
-            return response()->json([
-                'message' => 'No students selected.',
-            ], 422);
+            return response()->json(
+                [
+                    'message' => 'No students selected.',
+                ],
+                422,
+            );
         }
 
         SendBulkEmailJob::dispatch($validated);
@@ -55,9 +62,12 @@ trait BulkStudentActionsTrait
         }
 
         if (empty($validated['student_ids'])) {
-            return response()->json([
-                'message' => 'No students selected.',
-            ], 422);
+            return response()->json(
+                [
+                    'message' => 'No students selected.',
+                ],
+                422,
+            );
         }
 
         SendBulkSMSJob::dispatch($validated);
@@ -71,9 +81,11 @@ trait BulkStudentActionsTrait
     {
         if ($request->has('select_all_in_query')) {
             $query = $this->getFilteredQuery();
-            $usersToUpdate = $query->where(function ($query) {
-                $query->whereNull('shortlist')->orWhere('shortlist', '!=', 1);
-            })->get();
+            $usersToUpdate = $query
+                ->where(function ($query) {
+                    $query->whereNull('shortlist')->orWhere('shortlist', '!=', 1);
+                })
+                ->get();
 
             if ($usersToUpdate->isEmpty()) {
                 return response()->json(
@@ -133,61 +145,86 @@ trait BulkStudentActionsTrait
             $request->merge(['user_ids' => $query->pluck('userId')->toArray()]);
         }
         $validated = $request->validate([
-            'course_id' => 'sometimes|nullable|exists:courses,id',
+            'course_id' => 'required|exists:courses,id',
             'session_id' => 'sometimes|nullable|exists:course_sessions,id',
-            'user_id' => 'sometimes|nullable|required_if:user_ids,null|exists:users,userId',
+            'user_id' => 'sometimes|nullable|required_if:user_ids,null|exists:users,id',
             'change' => 'sometimes',
             'user_ids' => 'sometimes|nullable|required_if:user_id,null|array',
-            'user_ids.*' => 'exists:users,userId',
+            'user_ids.*' => 'exists:users,id',
         ]);
-
-        $course = !empty($validated['course_id']) ? \App\Models\Course::find($validated['course_id']) : null;
-        $session = !empty($validated['session_id']) ? \App\Models\CourseSession::find($validated['session_id']) : null;
-        $change = ($validated['change'] ?? false) == 'true';
-
-        if ($session && isset($session->course_id) && $course && isset($course->id) && $session->course_id != $course->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Session not valid for selected course',
-            ], 422);
-        }
-        $message = 'Student(s) admitted successfully';
         $admittedCount = 0;
+        $course = Course::find($validated['course_id']);
+        $session = CourseSession::find($validated['session_id'] ?? '');
+        $change = $validated['change'] == 'true';
 
-        if ($validated['user_id'] ?? false) {
-            $user_id = $validated['user_id'];
-            $user = User::where('userId', $user_id)->first();
-            if (!$user) {
+        if ($session && $session->course_id != $course->id) {
+            if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Student with ID $user_id not found."
-                ], 404);
+                    'message' => 'Session not valid for selected course',
+                ], 422);
             }
-            \App\Jobs\CreateStudentAdmissionJob::dispatch($user, $course, $session);
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'Session not valid for selected course',
+                    'key' => 'error',
+                ]);
+        }
+        $message = 'Student(s) admitted successfully';
+
+        if ($validated['user_id'] ?? false) {
+            $user = User::find($validated['user_id']);
+
+            if (!$user) {
+                return response()->json(
+                    [
+                        'success' => false,
+                        'message' => 'Student not found.',
+                    ],
+                    404,
+                );
+            }
+
+            // Now use the userId field for operations
+            $user_id = $user->userId;
+            CreateStudentAdmissionJob::dispatch($user, $course, $session);
             $admittedCount = 1;
-            $oldAdmission = \App\Models\UserAdmission::where('user_id', $user_id)->first();
+            $oldAdmission = UserAdmission::where('user_id', $user_id)->first();
             if ($oldAdmission && $change) {
                 $message = 'Student admission changed successfully';
             }
         } elseif (count($validated['user_ids'] ?? []) > 0) {
-            $user_ids = $validated['user_ids'];
-            foreach ($user_ids as $user_id) {
-                $user = \App\Models\User::where('userId', $user_id)->first();
-                if ($user) {
-                    \App\Jobs\CreateStudentAdmissionJob::dispatch($user, $course, $session);
-                    $admittedCount++;
-                }
+            $users = User::whereIn('id', $validated['user_ids'])->get();
+            foreach ($users as $user) {
+                $user_id = $user->userId;
+                CreateStudentAdmissionJob::dispatch($user, $course, $session);
+                $admittedCount++;
             }
         } else {
-            return response()->json([
-                'success' => false,
-                'message' => 'No user(s) provided.'
-            ], 400);
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'No user(s) provided.',
+                ],
+                400,
+            );
         }
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'admitted_count' => $admittedCount,
-        ]);
+
+        // Return JSON for AJAX requests, redirect for regular requests
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'admitted_count' => $admittedCount,
+            ]);
+        }
+
+        return redirect()
+            ->back()
+            ->with([
+                'flash' => $message,
+                'key' => 'success',
+            ]);
     }
 }

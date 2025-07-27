@@ -267,7 +267,7 @@ public static function addBooleanFilter(string $columnName, ?string $permissionN
 
     public static function addIsActiveFilter(): void
     {
-        
+
         CRUD::filter('is_active')
             ->type('simple')
             ->whenActive(function () {
@@ -283,8 +283,8 @@ public static function addBooleanFilter(string $columnName, ?string $permissionN
             'name'  => 'expires_soon',
             'type'  => 'simple',
             'label' => 'Expiring Soon (7 days)',
-        ], 
-        false, 
+        ],
+        false,
         function () {
             $from = \Carbon\Carbon::now();
             $to = \Carbon\Carbon::now()->addDays(7);
