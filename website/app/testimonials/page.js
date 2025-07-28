@@ -1,6 +1,8 @@
 import { getTestimonialsData } from "../../services";
 import TestimonialsClient from "./TestimonialsClient";
 
+export const dynamic = 'force-dynamic';
+
 export default async function TestimonialsPage() {
   let testimonialsData = null;
   
