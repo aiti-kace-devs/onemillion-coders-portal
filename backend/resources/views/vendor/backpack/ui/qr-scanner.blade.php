@@ -1,35 +1,37 @@
 @extends(backpack_view('blank'))
 @push('after_styles')
-    <style>
-        canvas {
-            height: 400px;
-            width: 400px;
-            margin: 0 auto 0 auto;
-        }
-
-        #qrcode {
-            height: 85vh
-        }
-
-        #qr-overlay canvas {
-            border: 2px solid white;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
-        }
-
-        #qr-overlay {
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
+    @bassetBlock('custom/css/qr_scanner.css')
+        <style>
+            canvas {
+                height: 400px;
+                width: 400px;
+                margin: 0 auto 0 auto;
             }
 
-            to {
-                opacity: 1;
+            #qrcode {
+                height: 85vh
             }
-        }
-    </style>
+
+            #qr-overlay canvas {
+                border: 2px solid white;
+                box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            }
+
+            #qr-overlay {
+                animation: fadeIn 0.3s ease-out;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                }
+
+                to {
+                    opacity: 1;
+                }
+            }
+        </style>
+    @endbassetBlock
 @endpush
 @section('title', 'Scan QR Code')
 @section('content')
@@ -117,6 +119,12 @@
             const qrcodeElem = $('#qrcode');
             const scannerElem = $('#scanner');
             $(function() {
+                // Preload logo for faster QR generation
+                const logoUrl = "{{ asset('assets/images/logo-bt.png') }}";
+                const logoImg = new Image();
+                logoImg.crossOrigin = "anonymous";
+                logoImg.src = logoUrl;
+
                 // Multiselect init
                 if (typeof $.fn.multiselect === 'function') {
                     $('#session_id').multiselect();
@@ -290,18 +298,40 @@
                 const data = await getQRCodeData(values);
 
                 if (data && data['url']) {
-                    new QRCode(document.getElementById("qrcode"), {
-                        text: data['url'],
-                        width: 400,
-                        height: 400,
-                        colorDark: "#000000",
-                        colorLight: "#ffffff",
-                        correctLevel: QRCode.CorrectLevel.H,
-                        quietZone: 20,
-                        logo: "{{ asset('assets/images/logo-bt.png') }}",
-                        logoWidth: 170,
-                        logoHeight: 80,
-                    });
+                    // Preload the logo image
+                    const logoUrl = "{{ asset('assets/images/logo-bt.png') }}";
+                    const logoImg = new Image();
+                    logoImg.crossOrigin = "anonymous";
+
+                    logoImg.onload = function() {
+                        new QRCode(document.getElementById("qrcode"), {
+                            text: data['url'],
+                            width: 400,
+                            height: 400,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H,
+                            quietZone: 20,
+                            logo: logoUrl,
+                            logoWidth: 170,
+                            logoHeight: 80,
+                        });
+                    };
+
+                    logoImg.onerror = function() {
+                        // If logo fails to load, generate QR without logo
+                        new QRCode(document.getElementById("qrcode"), {
+                            text: data['url'],
+                            width: 400,
+                            height: 400,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H,
+                            quietZone: 20,
+                        });
+                    };
+
+                    logoImg.src = logoUrl;
                 } else {
                     Swal.fire({
                         text: 'Failed to generate QR code.',

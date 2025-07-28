@@ -1,4 +1,3 @@
-
 <div class="dropdown d-inline-block">
     <button class="btn btn-primary dropdown-toggle" type="button" id="bulkActionsDropdown" data-bs-toggle="dropdown"
         aria-expanded="false">
@@ -25,14 +24,10 @@
 @include('vendor.backpack.crud.modals.bulk_email')
 @include('vendor.backpack.crud.modals.bulk_sms')
 
-@push('after_styles')
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-@endpush
-
 @push('after_scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script>
+    @basset('https://cdn.jsdelivr.net/npm/sweetalert2@11.22.2/dist/sweetalert2.all.min.js')
+    @bassetBlock('custom/js/bulk_shortlist_action.js')
+        <script>
             let selectAllAcrossPages = false;
 
             // Listen for select all checkbox in table header
@@ -342,4 +337,11 @@
                 });
             }
         </script>
+    @endBassetBlock
+    @basset('https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js')
+@endpush
+
+@push('after_styles')
+    @basset('https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css')
+    @basset('https://cdn.jsdelivr.net/npm/sweetalert2@11.22.2/dist/sweetalert2.min.css')
 @endpush
