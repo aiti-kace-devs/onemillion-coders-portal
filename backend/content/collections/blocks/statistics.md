@@ -9,27 +9,21 @@ metrics:
   -
     id: mcxje41r
     number: 306K
-    description: Graduates
+    description: 'Number registered'
     type: metric
     enabled: true
   -
     id: mcxjrllw
     number: '138,693'
-    description: 'Youth In Work'
+    description: 'Number of students trained'
     type: metric
     enabled: true
   -
     id: mcxjrqrf
-    number: '21,726'
-    description: 'Youth Starting Ventures'
-    type: metric
-    enabled: true
-  -
-    id: md4g35m4
-    number: '70,553'
-    description: 'Youth In Jobs created Through Entrepreneurship'
+    number: '26'
+    description: 'Number of districts'
     type: metric
     enabled: true
 updated_by: 11
-updated_at: 1753043483
+updated_at: 1753715085
 ---
