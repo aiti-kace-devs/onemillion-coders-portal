@@ -74,6 +74,7 @@ class UserCrudController extends CrudController
         $this->crud->setModel(User::class);
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/user');
         $this->crud->setEntityNameStrings('user', 'users');
+        $this->setupFilter();
 
         $this->crud->query->select(['id','name', 'gender', 'age', 'email', 'mobile_no', 'ghcard']);
 
@@ -84,21 +85,21 @@ class UserCrudController extends CrudController
         $this->crud->addColumn(['name' => 'mobile_no', 'type' => 'text', 'label' => 'Mobile No']);
         // $this->crud->addColumn(['name' => 'ghcard', 'type' => 'text', 'label' => 'Ghana Card Number']);
         $this->addConfirmedAdmissionColumn();
-        FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
-
         // $this->setupStudentColumns();
-        $this->addStudentBatchFilter('admission', 'Student Batch');
-        $this->courseFilter('registered_course');
-        $this->addConfirmedAdmissionFilter();
-        FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
-        FilterHelper::addAgeRangeFilter();
-        FilterHelper::addGenderFilter();
-        $this->addAdmissionLocationFilter();
-        $this->addAdmittedAtFilter();
+        // FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
+        // $this->addStudentBatchFilter('admission', 'Student Batch');
+        // $this->courseFilter('registered_course');
+        // $this->addConfirmedAdmissionFilter();
+        // FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
+        // FilterHelper::addAgeRangeFilter();
+        // FilterHelper::addGenderFilter();
+        // $this->addAdmissionLocationFilter();
+        // $this->addAdmittedAtFilter();
         View::share('mailable', \App\Helpers\MailerHelper::getMailableClasses());
         // CRUD::setFromDb(); // set columns from db columns.
         $this->setupStudentColumns();
-        CRUD::disablePersistentTable();
+        // CRUD::disablePersistentTable();
+        CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
         // Add userId column to the list view
         CRUD::addColumn([
             'name' => 'userId',
@@ -109,7 +110,7 @@ class UserCrudController extends CrudController
         // $this->setupStudentColumns();
         // Disable responsive table
         // CRUD::disableResponsiveTable();
-        $this->setupFilter();
+        // $this->setupFilter();
         // Enable bulk operations
         CRUD::enableBulkActions();
 
@@ -189,13 +190,15 @@ class UserCrudController extends CrudController
 
     public function setupFilter()
     {
+        $this->addStudentBatchFilter('admission', 'Student Batch');
         $this->courseFilter('registered_course');
         $this->addConfirmedAdmissionFilter();
+        $this->addAdmissionLocationFilter();
+        $this->addAdmittedAtFilter();
         FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
         FilterHelper::addAgeRangeFilter();
         FilterHelper::addGenderFilter();
-        $this->addAdmissionLocationFilter();
-        $this->addAdmittedAtFilter();
+        FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
     }
     /**
      * Custom view for students with admission
@@ -463,7 +466,7 @@ class UserCrudController extends CrudController
             },
         ]);
         // Add bulk action buttons
-        CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
+        // CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
 
         // Add row actions only for this view
         CRUD::addButton('line', 'view_results', 'view', 'crud::buttons.view_results');
@@ -475,6 +478,7 @@ class UserCrudController extends CrudController
      */
     public function setupShortlistedStudentsView()
     {
+        CRUD::removeButtonFromStack('bulk_actions_dropdown', 'top');
         // Enable bulk operations for this view
         CRUD::enableBulkActions();
         // $this->setupFilter();

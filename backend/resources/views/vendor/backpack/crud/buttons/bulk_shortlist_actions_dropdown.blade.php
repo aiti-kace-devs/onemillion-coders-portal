@@ -299,7 +299,7 @@
 
                 Swal.fire({
                     title: 'Admit Students?',
-                    text: applyToAll ? `You are about to admit ${totalCount} students from the current view. Continue?` :
+                    text: applyToAll ? `You are about to admit ${totalCount} students. Continue?` :
                         `You are about to admit ${selectedIds.length} students. Continue?`,
                     icon: 'question',
                     showCancelButton: true,

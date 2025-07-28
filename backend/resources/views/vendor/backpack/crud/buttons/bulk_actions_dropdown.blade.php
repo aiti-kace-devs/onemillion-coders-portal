@@ -274,7 +274,7 @@
 
                     Swal.fire({
                         title: 'Shortlist Students?',
-                        text: `You are about to shortlist ${totalCount} students from the current view. This might take a while. Continue?`,
+                        text: `You are about to shortlist ${totalCount} students. This might take a while. Continue?`,
                         icon: 'question',
                         showCancelButton: true,
                         confirmButtonText: 'Yes, shortlist them',
