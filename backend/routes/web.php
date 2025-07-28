@@ -67,11 +67,13 @@ Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
 Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
 
 Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
-
+Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
 Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
 Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
 Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
 Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
+Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
+
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
 

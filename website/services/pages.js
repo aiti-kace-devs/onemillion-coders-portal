@@ -150,6 +150,35 @@ export const getCourseRecommendations = async (answers) => {
 };
 
 /**
+ * Fetch all regions/branches
+ * @returns {Promise<Object>} - Regions data
+ */
+export const getAllRegions = async () => {
+  try {
+    const response = await apiRequest("/branches");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching regions:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch centers in a specific region
+ * @param {string|number} regionId - Region ID
+ * @returns {Promise<Object>} - Centers data
+ */
+export const getRegionCenters = async (regionId) => {
+  try {
+    const response = await apiRequest(`/branch/${regionId}/centres`);
+    return response;
+  } catch (error) {
+    console.error(`Error fetching centers for region ${regionId}:`, error);
+    throw error;
+  }
+};
+
+/**
  * Fetch programme locations (regions and centres)
  * @param {string|number} programmeId - Programme ID
  * @returns {Promise<Object>} - Programme locations data
@@ -192,6 +221,21 @@ export const submitRegistration = async (formData) => {
     return response;
   } catch (error) {
     console.error("Error submitting registration:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch programmes available at a specific center
+ * @param {string|number} centreId - Centre ID
+ * @returns {Promise<Object>} - Centre programmes data
+ */
+export const getCentreProgrammes = async (centreId) => {
+  try {
+    const response = await apiRequest(`/centre/${centreId}/programmes`);
+    return response;
+  } catch (error) {
+    console.error(`Error fetching programmes for centre ${centreId}:`, error);
     throw error;
   }
 };

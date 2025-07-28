@@ -173,7 +173,9 @@ const Footer = () => {
               </li>
               <li className="flex items-center space-x-3">
                 <FiMail className="text-yellow-400 flex-shrink-0" size={16} />
-                <span className="text-gray-300 text-sm">info@moc.gov.gh</span>
+                <span className="text-gray-300 text-sm">
+                  support@onemillioncoders.gov.gh
+                </span>
               </li>
               <li className="flex items-center space-x-3">
                 <FiPhone className="text-yellow-400 flex-shrink-0" size={16} />
@@ -189,7 +191,7 @@ const Footer = () => {
         <div className="border-t border-gray-700 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex items-center space-x-4">
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 text-sm text-center">
                 © {new Date().getFullYear()} One Million Coders Ghana. All
                 rights reserved.
               </p>

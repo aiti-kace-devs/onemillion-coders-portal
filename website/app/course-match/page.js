@@ -20,7 +20,10 @@ import {
   FiAlertCircle,
 } from "react-icons/fi";
 import Button from "../../components/Button";
-import { getCourseMatchQuestions, getCourseRecommendations } from "../../services/api";
+import {
+  getCourseMatchQuestions,
+  getCourseRecommendations,
+} from "../../services/api";
 
 export default function CourseMatchPage() {
   const router = useRouter();
@@ -53,8 +56,8 @@ export default function CourseMatchPage() {
         const questionsData = await getCourseMatchQuestions();
         setQuestions(questionsData || []);
       } catch (err) {
-        console.error('Error fetching questions:', err);
-        setError('Failed to load questions. Please try again later.');
+        console.error("Error fetching questions:", err);
+        setError("Failed to load questions. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -85,17 +88,17 @@ export default function CourseMatchPage() {
     try {
       setSubmitting(true);
       setError(null);
-      
+
       // Get all selected option IDs
       const optionIds = Object.values(answers);
-      
+
       // Call the recommendation API
       const recommendationsData = await getCourseRecommendations(optionIds);
       setRecommendations(recommendationsData || []);
       setCurrentStep(questions.length + 1); // Results step
     } catch (err) {
-      console.error('Error getting recommendations:', err);
-      setError('Failed to get recommendations. Please try again.');
+      console.error("Error getting recommendations:", err);
+      setError("Failed to get recommendations. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -128,11 +131,11 @@ export default function CourseMatchPage() {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center max-w-md">
           <FiAlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-medium text-gray-900 mb-2">Something went wrong</h2>
+          <h2 className="text-xl font-medium text-gray-900 mb-2">
+            Something went wrong
+          </h2>
           <p className="text-gray-500 mb-6">{error}</p>
-          <Button onClick={() => window.location.reload()}>
-            Try Again
-          </Button>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
         </div>
       </div>
     );
@@ -177,7 +180,7 @@ export default function CourseMatchPage() {
               <div className="text-center mb-16">
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-8">
                   {React.createElement(getQuestionIcon(currentQuestion.tag), {
-                    className: "w-7 h-7 text-gray-700"
+                    className: "w-7 h-7 text-gray-700",
                   })}
                 </div>
                 <h2 className="text-3xl font-light text-gray-900 mb-4 leading-tight">
@@ -208,9 +211,7 @@ export default function CourseMatchPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1, duration: 0.3 }}
-                    onClick={() =>
-                      handleAnswer(currentQuestion.id, option.id)
-                    }
+                    onClick={() => handleAnswer(currentQuestion.id, option.id)}
                     className={`group relative p-8 rounded-2xl text-left transition-all duration-300 ${
                       answers[currentQuestion.id] === option.id
                         ? "bg-gray-900 text-white shadow-lg"
@@ -280,14 +281,20 @@ export default function CourseMatchPage() {
                     {/* Match Badge */}
                     <div className="absolute top-6 right-6 z-10">
                       <div className="bg-white/95 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-green-100">
-                          <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${
-                            course.match_percentage >= 90 ? 'bg-green-500' :
-                            course.match_percentage >= 70 ? 'bg-yellow-500' :
-                            course.match_percentage >= 50 ? 'bg-orange-500' : 'bg-red-500'
-                          }`}></div>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {course.match_percentage}% Match
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-3 h-3 rounded-full ${
+                              course.match_percentage >= 90
+                                ? "bg-green-500"
+                                : course.match_percentage >= 70
+                                ? "bg-yellow-500"
+                                : course.match_percentage >= 50
+                                ? "bg-orange-500"
+                                : "bg-red-500"
+                            }`}
+                          ></div>
+                          <span className="text-xs font-semibold text-gray-900">
+                            {course.match_percentage}
                           </span>
                         </div>
                       </div>
@@ -327,10 +334,10 @@ export default function CourseMatchPage() {
                           {/* Header */}
                           <div className="mb-6">
                             <div className="flex flex-wrap items-center gap-3 mb-4">
-                              <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
+                              <h3 className="text-xl lg:text-3xl font-bold text-gray-900 leading-tight">
                                 {course.title}
                               </h3>
-                              <span
+                              {/* <span
                                 className={`px-4 py-1.5 text-xs font-semibold rounded-full ${
                                   course.level === "Beginner"
                                     ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
@@ -342,13 +349,13 @@ export default function CourseMatchPage() {
                                 }`}
                               >
                                 {course.level}
-                              </span>
+                              </span> */}
                             </div>
-                            
+
                             <p className="text-lg font-medium text-gray-700 mb-3">
                               {course.sub_title}
                             </p>
-                            
+
                             <p className="text-gray-600 leading-relaxed text-base">
                               {course.job_responsible}
                             </p>
@@ -357,23 +364,36 @@ export default function CourseMatchPage() {
                           {/* What you'll learn preview */}
                           {course.overview?.what_you_will_learn && (
                             <div className="mb-8">
-                                                             <h4 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">What you&apos;ll learn</h4>
+                              <h4 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
+                                What you&apos;ll learn
+                              </h4>
                               <div className="grid sm:grid-cols-2 gap-3">
-                                {course.overview.what_you_will_learn.slice(0, 4).map((item, idx) => (
-                                  <div key={idx} className="flex items-start gap-3">
-                                    <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-                                    <span className="text-sm text-gray-600 leading-relaxed">{item}</span>
-                                  </div>
-                                ))}
+                                {course.overview.what_you_will_learn
+                                  .slice(0, 4)
+                                  .map((item, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="flex items-start gap-3"
+                                    >
+                                      <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+                                      <span className="text-sm text-gray-600 leading-relaxed">
+                                        {item}
+                                      </span>
+                                    </div>
+                                  ))}
                               </div>
-                              {course.overview.what_you_will_learn.length > 4 && (
+                              {course.overview.what_you_will_learn.length >
+                                4 && (
                                 <p className="text-sm text-gray-400 mt-3">
-                                  +{course.overview.what_you_will_learn.length - 4} more learning objectives
+                                  +
+                                  {course.overview.what_you_will_learn.length -
+                                    4}{" "}
+                                  more learning objectives
                                 </p>
                               )}
                             </div>
                           )}
-                          
+
                           {/* Footer Info */}
                           <div className="mt-auto">
                             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -391,9 +411,11 @@ export default function CourseMatchPage() {
                                   </span>
                                 </div>
                               </div>
-                              
+
                               <div className="flex items-center gap-3 text-gray-500 group-hover:text-gray-700 transition-colors">
-                                <span className="text-sm font-medium">Explore Course</span>
+                                <span className="text-sm font-medium">
+                                  Explore Course
+                                </span>
                                 <div className="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-gray-900 flex items-center justify-center transition-all duration-300">
                                   <FiArrowRight className="w-5 h-5 group-hover:text-white group-hover:translate-x-0.5 transition-all duration-300" />
                                 </div>
@@ -417,19 +439,21 @@ export default function CourseMatchPage() {
                     <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                       <FiTarget className="w-10 h-10 text-gray-400" />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">No perfect matches found</h3>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                      No perfect matches found
+                    </h3>
                     <p className="text-gray-600 mb-8 leading-relaxed">
-                      We couldn&apos;t find courses that perfectly match your criteria. Try adjusting your preferences or retake the quiz to explore more options.
+                      We couldn&apos;t find courses that perfectly match your
+                      criteria. Try adjusting your preferences or retake the
+                      quiz to explore more options.
                     </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
                       <Button onClick={resetQuiz} variant="primary">
-                    Retake Quiz
-                  </Button>
-                  <Link href="/programmes">
-                        <Button variant="ghost">
-                          Browse All Courses
-                    </Button>
-                  </Link>
+                        Retake Quiz
+                      </Button>
+                      <Link href="/programmes">
+                        <Button variant="ghost">Browse All Courses</Button>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -443,18 +467,19 @@ export default function CourseMatchPage() {
                       Ready to start your journey?
                     </h3>
                     <p className="text-gray-600">
-                      Found your perfect match? Register now or explore more options to find the right fit for your goals.
+                      Found your perfect match? Register now or explore more
+                      options to find the right fit for your goals.
                     </p>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-                  <Button
-                    onClick={() =>
-                      window.open(
-                        "https://onemillioncoders.gov.gh/available-courses",
-                        "_blank"
-                      )
-                    }
-                    size="large"
+                    <Button
+                      onClick={() =>
+                        window.open(
+                          "https://onemillioncoders.gov.gh/available-courses",
+                          "_blank"
+                        )
+                      }
+                      size="large"
                       className="flex-1 sm:flex-none"
                     >
                       Register Now
@@ -466,7 +491,7 @@ export default function CourseMatchPage() {
                       <Link href="/programmes">
                         <Button variant="ghost" size="large">
                           Browse All
-                  </Button>
+                        </Button>
                       </Link>
                     </div>
                   </div>
@@ -492,10 +517,20 @@ export default function CourseMatchPage() {
             <Button
               onClick={nextStep}
               disabled={!isAnswered || submitting}
-              icon={submitting ? FiLoader : (currentStep === totalQuestions ? FiCheckCircle : FiArrowRight)}
+              icon={
+                submitting
+                  ? FiLoader
+                  : currentStep === totalQuestions
+                  ? FiCheckCircle
+                  : FiArrowRight
+              }
               size="large"
             >
-              {submitting ? "Getting Results..." : (currentStep === totalQuestions ? "Get Results" : "Next")}
+              {submitting
+                ? "Getting Results..."
+                : currentStep === totalQuestions
+                ? "Get Results"
+                : "Next"}
             </Button>
           </div>
         )}
