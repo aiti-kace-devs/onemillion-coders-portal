@@ -12,7 +12,7 @@ metrics:
     enabled: true
   -
     id: md4lhqip
-    number: 500K+
+    number: 50K+
     description: 'Success Stories'
     type: metric
     enabled: true
@@ -23,6 +23,6 @@ metrics:
     type: metric
     enabled: true
 updated_by: 11
-updated_at: 1752587901
+updated_at: 1753190711
 name: 'Find Your Pathway'
 ---

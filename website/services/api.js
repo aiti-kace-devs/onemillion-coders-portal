@@ -85,4 +85,38 @@ export const fetchBranchesSummary = async () => {
     console.error('Failed to fetch branches summary:', error);
     throw error;
   }
+};
+
+/**
+ * Fetch course match questions and options
+ * @returns {Promise<Object>} - Course match questions data
+ */
+export const getCourseMatchQuestions = async () => {
+  try {
+    const response = await apiRequest('course-match');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch course match questions:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get course recommendations based on selected options
+ * @param {number[]} optionIds - Array of selected option IDs
+ * @returns {Promise<Object>} - Course recommendations data
+ */
+export const getCourseRecommendations = async (optionIds) => {
+  try {
+    const response = await apiRequest('course-match/recommend', {
+      method: 'POST',
+      data: {
+        option_ids: optionIds
+      }
+    });
+    return response.matches || [];
+  } catch (error) {
+    console.error('Failed to get course recommendations:', error);
+    throw error;
+  }
 }; 

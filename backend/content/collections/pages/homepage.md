@@ -7,9 +7,9 @@ sections:
     id: mcxfwkq1
     name: Hero
     section_items:
+      - 02a908ba-c974-4c04-838c-bc057bec8acd
       - 9ccb6840-dc09-4498-b50b-7960d0a64f98
       - 57302f01-8048-43ae-a7ce-21729d1f71b1
-      - 02a908ba-c974-4c04-838c-bc057bec8acd
     type: section
     enabled: true
   -
@@ -40,5 +40,5 @@ sections:
     enabled: true
     caption: 'Trusted Partnerships'
 updated_by: 11
-updated_at: 1752584760
+updated_at: 1753192879
 ---

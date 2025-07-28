@@ -76,6 +76,7 @@ trait UserFieldHelpers
         $this->addGenderColumn();
         $this->addPhoneColumn();
         $this->addAgeColumn();
+        CRUD::column('ghcard')->label('Ghana Card Number');
         $this->addCourseField();
         $this->addConfirmedAdmissionColumn();
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');

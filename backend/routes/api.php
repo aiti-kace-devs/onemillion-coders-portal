@@ -6,7 +6,8 @@ use App\Http\Controllers\FormResponseController;
 use App\Http\Controllers\StatamicEntryApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
+use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\Route;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
+Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -29,7 +32,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page']);
 // });
 
-// Route::post('/addStudent', [FormResponseController::class, 'store']);
+Route::post('/add-student', [FormResponseController::class, 'store']);
+// Route::post('/add-student', [CreateStudentAPIController::class, 'store'])->middleware('api'); // This applies the api middleware group
+
+
 
 /*
 |--------------------------------------------------------------------------

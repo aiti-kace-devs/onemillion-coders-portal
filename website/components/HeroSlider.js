@@ -12,12 +12,14 @@ import {
   FiChevronLeft,
   FiChevronRight,
 } from "react-icons/fi";
+import { useRouter } from "next/navigation";
 
 const HeroSlider = ({ data }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+  const router = useRouter();
 
   // Detect mobile device
   useEffect(() => {
@@ -241,7 +243,7 @@ const HeroSlider = ({ data }) => {
                   className="pt-4 sm:pt-6"
                 >
                   <Button
-                    onClick={() => window.open(current.to, "_blank")}
+                    onClick={() => router.push(current.to)}
                     icon={FiArrowRight}
                     variant="primary"
                     size={isMobile ? "medium" : "large"}

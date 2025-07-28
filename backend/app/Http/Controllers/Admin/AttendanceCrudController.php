@@ -67,6 +67,7 @@ class AttendanceCrudController extends CrudController
         ]);
 
         CRUD::column('date');
+        $this->addStudentBatchFilter('userAdmission', 'Student Batch');
         $this->courseFilter('course_id');
         $sessions = \App\Models\CourseSession::select('session')
             ->distinct()

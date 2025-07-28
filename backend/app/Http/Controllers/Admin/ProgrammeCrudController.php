@@ -33,7 +33,7 @@ class ProgrammeCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -49,7 +49,7 @@ class ProgrammeCrudController extends CrudController
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
@@ -77,7 +77,7 @@ class ProgrammeCrudController extends CrudController
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
@@ -86,12 +86,11 @@ class ProgrammeCrudController extends CrudController
         CRUD::setValidation(ProgrammeRequest::class);
 
         $this->setupCreateFields();
-
     }
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */
@@ -117,6 +116,13 @@ class ProgrammeCrudController extends CrudController
     public function update()
     {
         $this->crud->setRequest($this->handleOverviewData());
+        // Combine all course_match_* values into one array called tags
+        $tags = [];
+        $keysToRemove = [];
+        $data = request()->all();
+       
+        $programme = $this->crud->getCurrentEntry();
+        $this->handleProgrammeTags($programme, $data['tags']);
         $response = $this->traitUpdate();
         $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
         $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
@@ -163,22 +169,43 @@ class ProgrammeCrudController extends CrudController
         }
     }
 
+     protected function handleProgrammeTags($programme, $tags = [])
+    {
+        $programme->tags()->sync($tags);
+    }
+
 
 
     protected function handleOverviewData()
     {
         $request = $this->crud->getRequest();
-        
+
         $overview = $request->input('overview', []);
-        
+
         $processedOverview = [
             'what_you_will_learn' => array_values(array_filter($overview['what_you_will_learn'] ?? [])),
             'why_choose_this_course' => array_values(array_filter($overview['why_choose_this_course'] ?? []))
         ];
-        
+
         $request->merge(['overview' => $processedOverview]);
-        
+
+        // Combine all course_match_* values into one array called tags
+        $tags = [];
+        $keysToRemove = [];
+
+        foreach (request()->all() as $key => $value) {
+            if (strpos($key, 'course_match_') === 0 && is_array($value)) {
+                $tags = array_merge($tags, $value);
+                $keysToRemove[] = $key;
+            }
+        }
+        $request->merge(['tags' => $tags]);
+
+        // Remove the course_match_* keys from the request
+        foreach ($keysToRemove as $key) {
+            $request->request->remove($key);
+        }
+
         return $request;
     }
-
 }

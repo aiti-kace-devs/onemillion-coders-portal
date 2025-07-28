@@ -7,6 +7,7 @@ use App\Models\Programme;
 use App\Models\CourseCategory;
 use App\Models\Branch;
 use App\Models\UserAdmission;
+use App\Models\Centre;
 use App\Models\Course;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -143,6 +144,65 @@ class CourseProgrammeController extends Controller
 
 
 
+
+
+    public function programmeLocations(Programme $programme)
+    {
+        $centres = $programme->centre()->with('branch')->get();
+
+        $groupedByBranch = $centres->groupBy('branch.id');
+
+        $regions = $groupedByBranch->map(function ($centres, $branchId) {
+            $branch = $centres->first()->branch;
+
+            $cleanCentres = $centres->map(function ($centre) {
+                unset($centre->branch);
+                return $centre;
+            })->values();
+
+            return [
+                'id' => $branch->id,
+                'title' => $branch->title,
+                'status' => $branch->status,
+                'created_at' => $branch->created_at,
+                'updated_at' => $branch->updated_at,
+                'centres' => $cleanCentres,
+            ];
+        })->values();
+
+        return response()->json([
+            'programme' => $programme->title,
+            'regions' => $regions,
+        ]);
+    }
+
+
+
+
+    public function programmesByCentre(Centre $centre)
+    {
+        $programmes = Programme::whereHas('centre', function ($query) use ($centre) {
+            $query->where('centres.id', $centre->id);
+        })->with(['category', 'coverImage'])->get();
+
+        return response()->json([
+            'centre' => $centre->title,
+            'programmes' => $programmes,
+        ]);
+    }
+
+
+
+
+        public function centresByBranch(Branch $branch)
+        {
+            $centres = $branch->centre()->get();
+
+            return response()->json([
+                'region' => $branch->title,
+                'centres' => $centres,
+            ]);
+        }
 
 
 }
