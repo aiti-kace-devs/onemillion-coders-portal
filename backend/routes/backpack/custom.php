@@ -70,12 +70,12 @@ Route::group([
     Route::get('user/filtered-count', 'UserCrudController@getFilteredCount')->name('user.filtered-count');
 
     // Custom routes for AttendanceCrudController non-CRUD methods
-    Route::get('attendance/qr-scanner', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupScanQrCodePage'])->name('attendance.qr-scanner');
-    Route::post('attendance/generate_qrcode', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupGenerateQrCodeData'])->name('attendance.generate_qrcode');
-    Route::post('attendance/confirm_attendance', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupConfirmAttendance'])->name('attendance.confirm_attendance');
-    Route::post('attendance/record_attendance', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupRecordAttendance'])->name('attendance.record_attendance');
-    Route::get('attendance/view_attendance', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupViewAttendance'])->name('attendance.view_attendance');
-    Route::delete('attendance/remove_attendance/{id}', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupRemoveAttendance'])->name('attendance.remove_attendance');
+    Route::get('attendance/qr-scanner','AttendanceCrudController@setupScanQrCodePage')->name('attendance.qr-scanner');
+    Route::post('attendance/generate_qrcode','AttendanceCrudController@setupGenerateQrCodeData')->name('attendance.generate_qrcode');
+    Route::post('attendance/confirm_attendance','AttendanceCrudController@setupConfirmAttendance')->name('attendance.confirm_attendance');
+    Route::post('attendance/record_attendance','AttendanceCrudController@setupRecordAttendance')->name('attendance.record_attendance');
+    Route::get('attendance/view_attendance','AttendanceCrudController@setupViewAttendance')->name('attendance.view_attendance');
+    Route::delete('attendance/remove_attendance/{id}','AttendanceCrudController@setupRemoveAttendance')->name('attendance.remove_attendance');
 
     // Shortlist Actions (Bulk/Group)
     Route::get('user/choose-shortlist-modal', 'UserCrudController@showChooseShortlistModal')->name('user.choose-shortlist-modal');

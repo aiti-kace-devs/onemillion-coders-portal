@@ -9,16 +9,12 @@ use App\Http\Controllers\Traits\BulkStudentActionsTrait;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\ShortlistActionsTrait;
 use App\Http\Controllers\Traits\ShortlistRowActionsTrait;
-use App\Jobs\CreateStudentAdmissionJob;
-use App\Models\CourseSession;
 use App\Models\UserAdmission;
-use App\Models\Course;
 use App\Models\User;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use Illuminate\Support\Facades\View;
-use App\Http\Requests\AdmitShortlistedStudentsRequest;
 use App\Http\Controllers\Traits\GetsFilteredQuery;
 
 /**
