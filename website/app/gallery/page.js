@@ -1,6 +1,8 @@
 import { getGalleryData } from "../../services";
 import GalleryClient from "./GalleryClient";
 
+export const dynamic = 'force-dynamic';
+
 export default async function GalleryPage() {
   let galleryData = null;
   

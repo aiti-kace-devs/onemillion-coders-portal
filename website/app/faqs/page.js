@@ -1,6 +1,9 @@
 import { getFaqsData } from "../../services";
 import FaqsClient from "./FaqsClient";
 
+
+export const dynamic = 'force-dynamic';
+
 export default async function FAQPage() {
   let faqsData = null;
   

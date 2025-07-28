@@ -21,6 +21,8 @@ import Button from '../../components/Button';
 import { getPageData } from '../../services/api';
 import { PathwaysPageSkeleton } from '../../components/PathwaysSkeleton';
 
+export const dynamic = 'force-dynamic';
+
 export default function PathwaysPage() {
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
