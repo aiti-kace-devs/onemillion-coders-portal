@@ -15,6 +15,8 @@ import Button from "./Button";
 import { GhanaGradientBar } from "@/components/GhanaGradients";
 
 const ImpactSection = ({ data }) => {
+
+  console.log('data', data)
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
@@ -188,7 +190,7 @@ const ImpactSection = ({ data }) => {
           transition={{ duration: 0.3, delay: 0.1 }}
           className="mb-20"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {stats.map((stat, index) => {
               const icons = [FiUsers, FiBriefcase, FiTrendingUp, FiAward];
               const IconComponent = icons[index];
