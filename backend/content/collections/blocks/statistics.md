@@ -8,13 +8,13 @@ text_data_description: "One Million Coders is Ghana's premier tech education ini
 metrics:
   -
     id: mcxje41r
-    number: 306K
+    number: 155K
     description: 'Number registered'
     type: metric
     enabled: true
   -
     id: mcxjrllw
-    number: '138,693'
+    number: '1269'
     description: 'Number of students trained'
     type: metric
     enabled: true
@@ -25,5 +25,5 @@ metrics:
     type: metric
     enabled: true
 updated_by: 11
-updated_at: 1753715085
+updated_at: 1753717649
 ---
