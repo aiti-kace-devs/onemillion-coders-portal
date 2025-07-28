@@ -1,7 +1,7 @@
 ---
 id: 4c61d8e2-d758-4687-88bf-1fdaf1808822
 blueprint: pathway
-title: 'Students & Recent Graduates'
+title: Youth
 subtitle: 'Launch your tech career straight from university'
 description: 'Bridge the gap between academic learning and industry requirements with practical skills and job-ready training.'
 icon: BookOpen
@@ -78,5 +78,5 @@ sections:
     type: section
     enabled: true
 updated_by: 6
-updated_at: 1753708661
+updated_at: 1753710984
 ---

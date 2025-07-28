@@ -15,14 +15,14 @@ metrics:
     number: 50K+
     description: 'Success Stories'
     type: metric
-    enabled: true
+    enabled: false
   -
     id: md4li6gb
     number: 100%
     description: 'Personalized Support'
     type: metric
     enabled: true
-updated_by: 11
-updated_at: 1753190711
+updated_by: 6
+updated_at: 1753711355
 name: 'Find Your Pathway'
 ---
