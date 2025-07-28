@@ -6,6 +6,8 @@ import Link from 'next/link';
 import Button from '../../components/Button';
 import { communityData } from '../../data/community';
 
+export const dynamic = 'force-dynamic';
+
 export default function CommunityPage() {
   return (
     <div className="min-h-screen bg-white">
