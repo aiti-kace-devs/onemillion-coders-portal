@@ -23,15 +23,14 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libpng-dev \
     libwebp-dev \
-    libjpeg-dev \
+    libjpeg62-turbo-dev \
     libfreetype6-dev \
-    libmemcached-dev \
     libzip-dev \
     libssl-dev \
     default-mysql-client \
     libpq-dev zlib1g-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath pcntl posix exif \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp --with-png \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
