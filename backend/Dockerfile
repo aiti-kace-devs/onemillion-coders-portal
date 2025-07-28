@@ -6,9 +6,10 @@ ENV PHP_PM_MAX_CHILDREN=12 \
     PHP_MIN_SPARE_SERVERS=2 \
     PHP_MAX_SPARE_SERVERS=4 \
     PHP_DATE_TIMEZONE=UTC \
-    PHP_MEMORY_LIMIT=512M \
+    PHP_MEMORY_LIMIT=1G \
     NGINX_VERSION=1.25.3 \
     PHP_VERSION=8.3 \
+    PHP_OPEN_BASEDIR=/var/www/html:/dev/stdout:/tmp:/var/www:/var/www/.config/gcloud \
     COMPOSER_ALLOW_SUPERUSER=1
 
 # COPY docker/php/ondrej_ubuntu_php.gpg /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg
@@ -21,6 +22,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     unzip \
     libpng-dev \
+    libwebp-dev \
     libjpeg-dev \
     libfreetype6-dev \
     libmemcached-dev \
@@ -28,10 +30,8 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     default-mysql-client \
     libpq-dev zlib1g-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath pcntl posix exif \
-    && printf "" | pecl install -D 'with-libmemcached-dir="/usr"' memcached \
-    && docker-php-ext-enable memcached \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp --with-png \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
