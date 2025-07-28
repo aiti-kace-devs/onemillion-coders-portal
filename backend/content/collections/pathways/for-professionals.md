@@ -1,7 +1,7 @@
 ---
 id: 76d4adf7-cf9c-47b6-a9c9-f9985e3390d2
 blueprint: pathway
-title: 'For Professionals Seeking to Upskill'
+title: 'Professionals Seeking to Upskill'
 subtitle: 'Advance your current career with new tech skills'
 description: 'Enhance your existing career with complementary tech skills that make you more valuable and open new opportunities.'
 icon: TrendingUp
@@ -88,6 +88,6 @@ sections:
       - b98b3673-b001-4f44-9a6d-3d9e5abfec46
     type: section
     enabled: true
-updated_by: 11
-updated_at: 1753189854
+updated_by: 6
+updated_at: 1753708675
 ---

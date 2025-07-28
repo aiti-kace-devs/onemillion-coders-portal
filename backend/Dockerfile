@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y \
     default-mysql-client \
     libpq-dev zlib1g-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath pcntl posix \
+    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath pcntl posix exif \
     && printf "" | pecl install -D 'with-libmemcached-dir="/usr"' memcached \
     && docker-php-ext-enable memcached \
     && apt-get clean \
