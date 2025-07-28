@@ -159,7 +159,6 @@ const overallProgress = computed(() =>
                       <h3 class="text-lg font-bold text-gray-800">Change Course</h3>
                     </div>
                   </div>
-pro
                   <!-- Exam Details -->
                   <div class="mt-2 space-y-1 text-left">
                     <p class="text-sm">Change your course to a different one.</p>
