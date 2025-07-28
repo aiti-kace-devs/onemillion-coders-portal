@@ -134,6 +134,12 @@ export default function Header() {
             >
               Home
             </Link>
+            <Link
+              href="/about"
+              className={`nav-pill ${isActiveLink("/about") ? "active" : ""}`}
+            >
+              About
+            </Link>
             <div ref={programsRef} className="relative">
               <button
                 onClick={handleProgramsClick}
@@ -175,11 +181,15 @@ export default function Header() {
             </div> */}
             <Link
               href="/pathway"
-              className={`nav-pill ${
-                isActiveLink("/pathway") ? "active" : ""
-              }`}
+              className={`nav-pill ${isActiveLink("/pathway") ? "active" : ""}`}
             >
-              Pathway
+              Pathways
+            </Link>
+            <Link
+              href="/gallery"
+              className={`nav-pill ${isActiveLink("/gallery") ? "active" : ""}`}
+            >
+              Gallery
             </Link>
             <Link
               href="/community"
@@ -190,22 +200,10 @@ export default function Header() {
               Testimonials
             </Link>
             <Link
-              href="/about"
-              className={`nav-pill ${isActiveLink("/about") ? "active" : ""}`}
-            >
-              About
-            </Link>
-            <Link
               href="/faqs"
               className={`nav-pill ${isActiveLink("/faqs") ? "active" : ""}`}
             >
               FAQs
-            </Link>
-            <Link
-              href="/gallery"
-              className={`nav-pill ${isActiveLink("/gallery") ? "active" : ""}`}
-            >
-              Gallery
             </Link>
           </nav>
 
@@ -295,7 +293,7 @@ export default function Header() {
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Pathway
+                  Pathways
                 </Link>
                 <Link
                   href="/community"
@@ -345,9 +343,7 @@ export default function Header() {
                 {/* Mobile CTA Button */}
                 <div className="pt-4 border-t border-gray-100 mt-4">
                   <Button
-                    onClick={() =>
-                      router.push("/register")
-                    }
+                    onClick={() => router.push("/register")}
                     icon={FiArrowRight}
                     variant="primary"
                     size="large"
