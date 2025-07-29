@@ -12,7 +12,9 @@ class VerifyCsrfToken extends Middleware
      * @var array
      */
     protected $except = [
-        '/handle-task',
+        'admin/handle-task',
         'api/addStudent',
+        '*/handle-task',
+        'handle-task'
     ];
 }
