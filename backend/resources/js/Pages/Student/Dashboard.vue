@@ -76,18 +76,21 @@ const overallProgress = computed(() =>
         </div>
 
         <div class="mt-6 space-y-10">
-        <div>
-          <p class="mb-2 text-sm font-medium text-gray-800 leading-tight">Quick Access</p>
+          <div>
+            <p class="mb-2 text-sm font-medium text-gray-800 leading-tight">
+              Quick Access
+            </p>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <Link :href="route('student.application-status')">
                 <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
-                  
                   <!-- Icon and Title -->
                   <div class="flex items-center gap-3 mb-2">
                     <span
                       class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100"
                     >
-                      <span class="material-symbols-outlined text-gray-600">contract</span>
+                      <span class="material-symbols-outlined text-gray-600"
+                        >contract</span
+                      >
                     </span>
                     <div class="flex-1 text-left">
                       <h3 class="text-lg font-bold text-gray-800">Application Status</h3>
@@ -96,14 +99,15 @@ const overallProgress = computed(() =>
 
                   <!-- Exam Details -->
                   <div class="mt-2 space-y-1 text-left">
-                    <p class="text-sm">Discover your standing for the current application.</p>
+                    <p class="text-sm">
+                      Discover your standing for the current application.
+                    </p>
                   </div>
                 </div>
               </Link>
 
-              <Link :href="route('student.results')">
+              <Link v-if="user.isAdmitted" :href="route('student.results')">
                 <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
-                  
                   <!-- Icon and Title -->
                   <div class="flex items-center gap-3 mb-2">
                     <span
@@ -123,15 +127,16 @@ const overallProgress = computed(() =>
                 </div>
               </Link>
 
-              <Link :href="route('student.assessment.index')">
+              <Link :href="route('student.assessment.index')" v-if="user.isAdmitted">
                 <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
-                  
                   <!-- Icon and Title -->
                   <div class="flex items-center gap-3 mb-2">
                     <span
                       class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100"
                     >
-                      <span class="material-symbols-outlined text-gray-600">rate_review</span>
+                      <span class="material-symbols-outlined text-gray-600"
+                        >rate_review</span
+                      >
                     </span>
                     <div class="flex-1 text-left">
                       <h3 class="text-lg font-bold text-gray-800">Course Assessment</h3>
@@ -140,20 +145,43 @@ const overallProgress = computed(() =>
 
                   <!-- Exam Details -->
                   <div class="mt-2 space-y-1 text-left">
-                    <p class="text-sm">Provide feedback and rating on course to improve course delivery.</p>
+                    <p class="text-sm">
+                      Provide feedback and rating on course to improve course delivery.
+                    </p>
                   </div>
                 </div>
               </Link>
 
-              <Link :href="route('student.change-course')">
+              <Link v-if="user.isAdmitted" :href="route('student.attendance.show')">
                 <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
-                  
                   <!-- Icon and Title -->
                   <div class="flex items-center gap-3 mb-2">
                     <span
                       class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100"
                     >
-                      <span class="material-symbols-outlined text-gray-600">swap_horiz</span>
+                      <span class="material-symbols-outlined text-gray-600">rule</span>
+                    </span>
+                    <div class="flex-1 text-left">
+                      <h3 class="text-lg font-bold text-gray-800">Attendance</h3>
+                    </div>
+                  </div>
+                  <!-- Exam Details -->
+                  <div class="mt-2 space-y-1 text-left">
+                    <p class="text-sm">This module displays your attendance record.</p>
+                  </div>
+                </div>
+              </Link>
+
+              <Link v-if="!user.isAdmitted" :href="route('student.change-course')">
+                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
+                  <!-- Icon and Title -->
+                  <div class="flex items-center gap-3 mb-2">
+                    <span
+                      class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100"
+                    >
+                      <span class="material-symbols-outlined text-gray-600"
+                        >swap_horiz</span
+                      >
                     </span>
                     <div class="flex-1 text-left">
                       <h3 class="text-lg font-bold text-gray-800">Change Course</h3>
@@ -166,7 +194,7 @@ const overallProgress = computed(() =>
                 </div>
               </Link>
             </div>
-        </div>
+          </div>
           <div>
             <p class="mb-2 text-sm font-medium text-gray-800 leading-tight">Test</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -261,7 +289,7 @@ const overallProgress = computed(() =>
             </div>
           </div>
 
-          <div>
+          <div v-if="user.isAdmitted">
             <p class="mb-2 text-sm font-medium text-gray-800 leading-tight">
               Course Assessment
             </p>
@@ -317,5 +345,3 @@ const overallProgress = computed(() =>
     </div>
   </AuthenticatedLayout>
 </template>
-
-<style scoped></style>

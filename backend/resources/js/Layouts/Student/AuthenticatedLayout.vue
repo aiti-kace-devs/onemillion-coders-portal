@@ -100,6 +100,7 @@ const user = auth?.user || {};
           </SidebarNavLink>
 
           <SidebarNavLink
+            v-if="user.isAdmitted"
             :active="route().current('student.results')"
             :href="route('student.results')"
             :label="'Results'"
@@ -116,6 +117,7 @@ const user = auth?.user || {};
           </SidebarNavLink>
 
           <SidebarNavLink
+            v-if="user.hasAdmission"
             :href="route('student.session.index')"
             :active="route().current('student.session.*')"
             :label="'Session'"
@@ -124,6 +126,7 @@ const user = auth?.user || {};
           </SidebarNavLink>
 
           <SidebarNavLink
+            v-if="!user.isAdmitted"
             :href="route('student.change-course')"
             :active="route().current('student.change-course')"
             :label="'Change Course'"
@@ -139,21 +142,23 @@ const user = auth?.user || {};
             <span class="material-symbols-outlined"> contract </span>
           </SidebarNavLink>
 
-          <SidebarNavLink
-            :active="route().current('student.attendance.show')"
-            :href="route('student.attendance.show')"
-            :label="'Attendance'"
-          >
-            <span class="material-symbols-outlined">rule</span>
-          </SidebarNavLink>
+          <template v-if="user.isAdmitted">
+            <SidebarNavLink
+              :active="route().current('student.attendance.show')"
+              :href="route('student.attendance.show')"
+              :label="'Attendance'"
+            >
+              <span class="material-symbols-outlined">rule</span>
+            </SidebarNavLink>
 
-          <SidebarNavLink
-            :active="route().current('student.assessment.*')"
-            :href="route('student.assessment.index')"
-            :label="'Course Assessment'"
-          >
-            <span class="material-symbols-outlined">rate_review</span>
-          </SidebarNavLink>
+            <SidebarNavLink
+              :active="route().current('student.assessment.*')"
+              :href="route('student.assessment.index')"
+              :label="'Course Assessment'"
+            >
+              <span class="material-symbols-outlined">rate_review</span>
+            </SidebarNavLink>
+          </template>
 
           <SidebarNavLink
             :href="route('logout')"

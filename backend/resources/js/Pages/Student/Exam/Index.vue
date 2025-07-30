@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { Head, usePage, Link } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
 
@@ -8,16 +8,25 @@ const props = defineProps({
     type: Object,
     required: true,
   },
-  flash: Object,
 });
 
-if(props.flash){
-  if(props.flash.key === "error"){
-    toastr.error(props.flash.message);
-  } else{
-    toastr.success(props.flash.message);
+const page = usePage();
+onMounted(() => {
+  const flash = page.props.flash;
+  if (flash) {
+    if (flash.key === "success") {
+      toastr.success(flash.message);
+    } else if (flash.key === "error") {
+      toastr.error(flash.message);
+    } else if (flash.key === "info") {
+      toastr.info(flash.message);
+    } else if (flash.key === "warning") {
+      toastr.warning(flash.message);
+    } else if (flash.key === "message") {
+      toastr.success(flash.message);
+    }
   }
-}
+});
 
 const user = computed(() => usePage().props.auth?.user || {});
 const EXAM_DEADLINE_AFTER_REGISTRATION = 2;

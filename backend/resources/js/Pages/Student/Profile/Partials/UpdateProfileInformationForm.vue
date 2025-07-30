@@ -129,8 +129,8 @@ const submit = () => {
       </div>
     </header>
 
-    <form class="mt-6 space-y-6">
-      <div>
+    <form class="grid lg:grid-cols-2 gap-6 mt-6">
+      <div class="col-span-full">
         <InputLabel
           for="name"
           value="Fullname (as appears on your Ghana Card / any National ID)"
@@ -147,7 +147,7 @@ const submit = () => {
         <InputError :message="form.errors.name" />
       </div>
 
-      <div>
+      <div class="col-span-full">
         <InputLabel for="gender" value="Gender" />
         <SelectInput
           id="gender"
@@ -164,63 +164,69 @@ const submit = () => {
         <InputError :message="form.errors.gender" />
       </div>
 
-      <div>
-        <InputLabel for="card_type" value="Card Type" />
-        <SelectInput
-          id="card_type"
-          v-model="form.card_type"
-          :disabled="detailsUpdated"
-          required
-          class="block w-full"
-          :class="{ 'border-red-600': form.errors.card_type }"
-        >
-          <option value="" disabled>-- Select Card Type --</option>
-          <option value="ghcard">Ghana Card</option>
-          <option value="voters_id">Voter's ID</option>
-          <option value="drivers_license">Driver's License</option>
-          <option value="passport">Passport</option>
-        </SelectInput>
-        <InputError :message="form.errors.card_type" />
-      </div>
+      <div class="col-span-full">
+        <div class="grid grid-cols-2 gap-6">
+          <div>
+            <InputLabel for="card_type" value="Card Type" />
+            <SelectInput
+              id="card_type"
+              v-model="form.card_type"
+              :disabled="detailsUpdated"
+              required
+              class="block w-full"
+              :class="{ 'border-red-600': form.errors.card_type }"
+            >
+              <option value="" disabled>-- Select Card Type --</option>
+              <option value="ghcard">Ghana Card</option>
+              <option value="voters_id">Voter's ID</option>
+              <option value="drivers_license">Driver's License</option>
+              <option value="passport">Passport</option>
+            </SelectInput>
+            <InputError :message="form.errors.card_type" />
+          </div>
 
-      <div>
-        <InputLabel for="ghcard" value="Card ID" />
-        <div class="flex">
-          <span
-            v-if="form.card_type === 'ghcard'"
-            class="inline-flex items-center px-3 border border-r-0 text-sm rounded-l-sm h-10"
-            id="ghcard-addon"
-            :class="{
-              'text-gray-700 border-green-600': cardVerified,
-              'border-red-600': !cardVerified,
-              'cursor-not-allowed bg-gray-200 text-gray-700': detailsUpdated,
-              'border-red-600': form.errors.ghcard,
-            }"
-            >GHA-</span
-          >
-          <TextInput
-            id="ghcard"
-            type="text"
-            class="block w-full"
-            v-model="form.ghcard"
-            required
-            :disabled="detailsUpdated"
-            :class="{
-              'border-l-0': form.card_type === 'ghcard',
-              'border-green-600': cardVerified,
-              'border-red-600': !cardVerified,
-              'rounded-none rounded-r-sm': form.card_type === 'ghcard',
-              'border-red-600': form.errors.ghcard,
-            }"
-            placeholder="123456789-1"
-            :aria-describedby="form.card_type === 'ghcard' ? 'ghcard-addon' : undefined"
-          />
+          <div>
+            <InputLabel for="ghcard" value="Card ID" />
+            <div class="flex">
+              <span
+                v-if="form.card_type === 'ghcard'"
+                class="inline-flex items-center px-3 border border-r-0 text-sm rounded-l-sm h-10"
+                id="ghcard-addon"
+                :class="{
+                  'text-gray-700 border-green-600': cardVerified,
+                  'border-red-600': !cardVerified,
+                  'cursor-not-allowed bg-gray-200 text-gray-700': detailsUpdated,
+                  'border-red-600': form.errors.ghcard,
+                }"
+                >GHA-</span
+              >
+              <TextInput
+                id="ghcard"
+                type="text"
+                class="block w-full"
+                v-model="form.ghcard"
+                required
+                :disabled="detailsUpdated"
+                :class="{
+                  'border-l-0': form.card_type === 'ghcard',
+                  'border-green-600': cardVerified,
+                  'border-red-600': !cardVerified,
+                  'rounded-none rounded-r-sm': form.card_type === 'ghcard',
+                  'border-red-600': form.errors.ghcard,
+                }"
+                placeholder="123456789-1"
+                :aria-describedby="
+                  form.card_type === 'ghcard' ? 'ghcard-addon' : undefined
+                "
+              />
+            </div>
+            <InputError :message="form.errors.ghcard" />
+          </div>
         </div>
-        <InputError :message="form.errors.ghcard" />
 
         <div
           v-if="!form.errors.ghcard"
-          class="mt-1 text-sm inline-flex items-center"
+          class="text-xs inline-flex items-center"
           :class="cardVerified ? 'text-green-600' : 'text-gray-700'"
         >
           {{
@@ -264,7 +270,7 @@ const submit = () => {
         <InputError :message="form.errors.mobile_no" />
       </div>
 
-      <div>
+      <div class="col-span-full">
         <InputLabel for="email" value="Email" />
         <TextInput
           id="email"
