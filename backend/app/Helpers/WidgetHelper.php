@@ -1037,9 +1037,11 @@ public static function programmeStatisticsWidget()
     public static function admissionBatchStatisticsWidget()
     {
         $totalBatchs = Batch::count();
-        $activeBatchs = Batch::where('status', 1)->count();
-        $inactiveBatchs = Batch::where('status', 0)->count();
-        $recentBatchs = Batch::whereDate('created_at', '>=', now()->subDays(30))->count();
+        $activeBatchs = Batch::where('completed', 1)->count();
+        $inactiveBatchs = Batch::where('completed', 0)->count();
+        $ongoingBatches = Batch::whereDate('start_date', '<=', now())
+        ->whereDate('end_date', '>=', now())
+        ->count();
 
         $getPercent = function ($count) use ($totalBatchs) {
             return $totalBatchs > 0 ? round(($count / $totalBatchs) * 100) : 0;
@@ -1063,29 +1065,29 @@ public static function programmeStatisticsWidget()
                 [
                     'type' => 'progress_white',
                     'progress' => $getPercent($activeBatchs),
-                    'description' => 'Active Admission Batches',
+                    'description' => 'Completed Admission Batches',
                     'value' => number_format($activeBatchs),
                     'progressClass' => 'progress-bar bg-success',
-                    'hint' => 'Admission Batches currently active.',
+                    'hint' => 'Batches currently completed.',
                 ],
                 [
                     'type' => 'progress_white',
                     'progress' => $getPercent($inactiveBatchs),
-                    'description' => 'Inactive Admission Batches',
+                    'description' => 'Not Completed Admission Batches',
                     'value' => number_format($inactiveBatchs),
                     'progressClass' => 'progress-bar bg-danger',
-                    'hint' => 'Admission Batches currently inactive.',
+                    'hint' => 'Batches currently not completed.',
                 ],
                 [
                     'type' => 'progress_white',
-                    'progress' => $getPercent($recentBatchs),
-                    'description' => 'New Admission Batches (30 Days)',
-                    'value' => number_format($recentBatchs),
+                    'progress' => $getPercent($ongoingBatches),
+                    'description' => 'Ongoing Admission Batches',
+                    'value' => number_format($ongoingBatches),
                     'progressClass' => 'progress-bar bg-primary',
                     'wrapper' => [
                             'style' => 'background-color:rgb(40, 127, 167);',
                         ],
-                    'hint' => 'Batches added in the last 30 days.',
+                    'hint' => 'Batches currently in session.',
                 ],
             ],
         ]);

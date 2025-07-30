@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\Api\CentreController;
 use App\Http\Controllers\Admin\OexQuestionMasterCrudController;
 use App\Http\Controllers\Admin\StudentVerificationCrudController;
 use App\Http\Controllers\Admin\UserCrudController;
+use App\Http\Controllers\Admin\DashboardController;
 // --------------------------
 // Custom Backpack Routes
 // --------------------------
@@ -23,6 +24,7 @@ Route::group([
     Route::get('/filemanager', function () {
         return view('admin.filemanager.index');
     });
+    Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('backpack.dashboard');
     Route::post('/user/assign-batch', [UserCrudController::class, 'assignBatch']);
     Route::get('api/centre-by-branch', [CentreController::class, 'filterByBranch']);
     Route::get('admin/exam/{exam_id}/add-question', [OexQuestionMasterCrudController::class, 'addQuestion'])

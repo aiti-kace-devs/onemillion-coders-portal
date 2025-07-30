@@ -80,6 +80,7 @@ class BatchCrudController extends CrudController
         // CRUD::column('total_completed_students')->label('Total Completed');
         FilterHelper::addBooleanColumn('completed', 'completed');
         // $this->courseFilter('course_id');
+        $this->addOngoingCoursesFilter('Ongoing Batches');
         FilterHelper::addBooleanFilter('completed', 'Filter By Completed');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
