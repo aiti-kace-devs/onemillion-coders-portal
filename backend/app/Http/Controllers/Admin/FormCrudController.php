@@ -23,7 +23,7 @@ class FormCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -32,21 +32,34 @@ class FormCrudController extends CrudController
         CRUD::setRoute(config('backpack.base.route_prefix') . '/form');
         CRUD::setEntityNameStrings('form', 'forms');
 
-        // CRUD::denyAccess('show');
+        $this->setSearchableColumns(['title', 'description']);
+        $this->setSearchResultAttributes(['id', 'title', 'description']);
+
+        // Add permission checks
+        $this->crud->operation(['list', 'show'], function () {
+            $this->crud->addClause('where', function ($query) {
+                if (!backpack_user()->can('form.read.all')) {
+                    // Add any specific filtering logic here if needed
+                }
+            });
+        });
     }
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
     protected function setupListOperation()
     {
-        CRUD::column('title')->type('textarea');
-        FilterHelper::addBooleanColumn('active', 'status');
-        CRUD::column('created_at');
-        // $this->crud->addButtonFromView('line', 'custom_preview', 'custom_preview', 'beginning');
+        // Check permissions
+        if (!backpack_user()->can('form.read.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        CRUD::setFromDb();
+        CRUD::enableExportButtons();
     }
 
     protected function setupShowOperation()
@@ -59,24 +72,48 @@ class FormCrudController extends CrudController
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
     protected function setupCreateOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('form.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         CRUD::setValidation(RegistrationFormRequest::class);
         $this->setupCreateRegistrationFormFields();
     }
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */
     protected function setupUpdateOperation()
     {
-        $this->setupCreateOperation();
+        // Check permissions
+        if (!backpack_user()->can('form.update.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        CRUD::setFromDb();
+    }
+
+    /**
+     * Define what happens when the Delete operation is loaded.
+     *
+     * @see https://backpackforlaravel.com/docs/crud-operation-delete
+     * @return void
+     */
+    protected function setupDeleteOperation()
+    {
+        // Check permissions
+        if (!backpack_user()->can('form.delete.all')) {
+            abort(403, 'Unauthorized action.');
+        }
     }
 }

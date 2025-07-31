@@ -36,8 +36,18 @@ class CourseCrudController extends CrudController
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course');
         CRUD::setEntityNameStrings('course', 'courses');
 
-        $this->crud->operation('list', function () {
-            WidgetHelper::courseStatisticsWidget();
+        $this->setSearchableColumns(['course_name', 'description']);
+        $this->setSearchResultAttributes(['id', 'course_name', 'description']);
+
+        // Add permission checks
+        $this->crud->operation(['list', 'show'], function () {
+            $this->crud->addClause('where', function ($query) {
+                if (!backpack_user()->can('course.read.all')) {
+                    // Add any specific filtering logic here if needed
+                    // For now, we'll use the scope from the model
+                    $query->myAssignedCourses();
+                }
+            });
         });
     }
 
@@ -49,6 +59,11 @@ class CourseCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('course.read.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         CRUD::column('course_name')->type('textarea');
         // CRUD::column('batch_id')->label('Batch')->linkTo('batch.show');
         CRUD::column('duration');
@@ -66,10 +81,13 @@ class CourseCrudController extends CrudController
         CRUD::enableExportButtons();
     }
 
-
-
     protected function setupShowOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('course.read.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         CRUD::column('course_name')->type('textarea');
         CRUD::column('duration');
         // CRUD::column('batch_id')->label('Batch')->linkTo('batch.show');
@@ -83,7 +101,6 @@ class CourseCrudController extends CrudController
         CRUD::column('created_at');
     }
 
-
     /**
      * Define what happens when the Create operation is loaded.
      *
@@ -92,6 +109,11 @@ class CourseCrudController extends CrudController
      */
     protected function setupCreateOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('course.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         CRUD::setValidation(CourseRequest::class);
         
         $this->setupCommonFields();
@@ -103,19 +125,38 @@ class CourseCrudController extends CrudController
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */
-protected function setupUpdateOperation()
-{
-    $this->setupCommonFields();
-    $entry = $this->crud->getCurrentEntry();
-    
-    CRUD::field('centre_id')
-        ->default([
-            'id' => $entry->centre_id ?? null,
-            'text' => $entry->centre->title ?? '' 
-        ]);
-    
-    CRUD::field('duration')->hint('Updating duration may affect existing schedules');
-}
+    protected function setupUpdateOperation()
+    {
+        // Check permissions
+        if (!backpack_user()->can('course.update.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $this->setupCommonFields();
+        $entry = $this->crud->getCurrentEntry();
+        
+        CRUD::field('centre_id')
+            ->default([
+                'id' => $entry->centre_id ?? null,
+                'text' => $entry->centre->title ?? '' 
+            ]);
+        
+        CRUD::field('duration')->hint('Updating duration may affect existing schedules');
+    }
+
+    /**
+     * Define what happens when the Delete operation is loaded.
+     *
+     * @see https://backpackforlaravel.com/docs/crud-operation-delete
+     * @return void
+     */
+    protected function setupDeleteOperation()
+    {
+        // Check permissions
+        if (!backpack_user()->can('course.delete.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+    }
 
     /**
      * Return courses as JSON for AJAX requests

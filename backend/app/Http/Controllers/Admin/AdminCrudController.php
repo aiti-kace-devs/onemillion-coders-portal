@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Requests\AdminRequest;
+use App\Models\Admin;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
+use Illuminate\Support\Facades\DB;
 /**
  * Class AdminCrudController
  * @package App\Http\Controllers\Admin
@@ -18,8 +20,12 @@ class AdminCrudController extends CrudController
     use \App\SearchableCRUD;
     use UserFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation {
+        store as traitStore;
+    }
+    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation {
+        update as traitUpdate;
+    }
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
@@ -40,6 +46,15 @@ class AdminCrudController extends CrudController
         $this->crud->operation('list', function () {
             WidgetHelper::adminStatisticsWidget();
         });
+
+        // Add permission checks
+        $this->crud->operation(['list', 'show'], function () {
+            $this->crud->addClause('where', function ($query) {
+                if (!backpack_user()->can('admin.read.all')) {
+                    $query->where('id', backpack_user()->id);
+                }
+            });
+        });
     }
 
     /**
@@ -50,6 +65,11 @@ class AdminCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('admin.read.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         // CRUD::setFromDb();
         $this->setupUserColumns();
         $this->setupUserFilters();
@@ -63,9 +83,12 @@ class AdminCrudController extends CrudController
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
-
     public function setupCreateOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('admin.create')) {
+            abort(403, 'Unauthorized action.');
+        }
 
         // $this->crud->removeSaveAction('save_and_back');
         // $this->crud->removeSaveAction('save_and_new');
@@ -76,16 +99,19 @@ class AdminCrudController extends CrudController
         $this->crud->setValidation(AdminRequest::class);
     }
 
-
     public function setupShowOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('admin.read.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $this->setupUserColumns();
         $entry = $this->crud->getCurrentEntry();
 
         if ($entry->userProfile) {
             $this->setupProfileColumns();
         }
-        
     }
 
     /**
@@ -96,9 +122,106 @@ class AdminCrudController extends CrudController
      */
     protected function setupUpdateOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('admin.update.self')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $this->setupUserFields(false);
     }
 
+    // Override the store method to handle course assignment
+    public function store()
+    {
+        // Check permissions
+        if (!backpack_user()->can('admin.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $response = $this->traitStore();
+        
+        // Get the created admin
+        $admin = $this->crud->entry;
+        
+        // Handle password hashing
+        if (request()->has('password') && request()->input('password')) {
+            $admin->password = request()->input('password');
+            $admin->save();
+        }
+        
+        // Sync the assigned courses
+        if (request()->has('courses')) {
+            $admin->assignedCourses()->sync(request()->input('courses'));
+        }
+        
+        return $response;
+    }
+
+    // Override the update method to handle course assignment
+    public function update()
+    {
+        // Check permissions
+        if (!backpack_user()->can('admin.update.self')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $response = $this->traitUpdate();
+        
+        // Get the updated admin
+        $admin = $this->crud->entry;
+        
+        // Handle password hashing
+        if (request()->has('password') && request()->input('password')) {
+            $admin->password = request()->input('password');
+            $admin->save();
+        }
+        
+        // Sync the assigned courses
+        if (request()->has('courses')) {
+            $admin->assignedCourses()->sync(request()->input('courses'));
+        }
+        
+        return $response;
+    }
+
+    /**
+     * Define what happens when the Delete operation is loaded.
+     *
+     * @see https://backpackforlaravel.com/docs/crud-operation-delete
+     * @return void
+     */
+    public function destroy($id)
+    {
+        // Check permissions
+        if (!backpack_user()->can('admin.delete')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $admin = Admin::findOrFail($id);
+
+            $admin->assignedCourses()->detach();
+
+            $admin->delete();
+
+            DB::commit();
+
+            \Alert::success('Admin deleted successfully.')->flash();
+
+            return redirect(backpack_url('admin/admin'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            \Log::error('Admin deletion failed: ' . $e->getMessage());
+            \Alert::error('Failed to delete admin: ' . $e->getMessage())->flash();
+
+            return redirect(backpack_url('admin/admin'));
+        }
+    }
+    
+    
     // No need for setupDeleteOperation unless you want to add custom logic before/after delete
     // Keep only custom endpoints that are not standard CRUD
     // Toggle is_super admin status

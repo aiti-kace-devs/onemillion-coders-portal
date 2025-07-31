@@ -46,13 +46,25 @@ class Admin extends Authenticatable
         'preferences' => 'json',
     ];
 
+    /**
+     * Hash the password when it's set
+     */
+    public function setPasswordAttribute($value)
+    {
+        if ($value) {
+            $this->attributes['password'] = bcrypt($value);
+        }
+    }
+
     public function isSuper()
     {
         return $this->is_super;
     }
     public function assignedCourses()
     {
-        return $this->belongsToMany(Course::class, 'admin_course', 'admin_id', 'course_id')->select('courses.*');
+        return $this->belongsToMany(Course::class, 'admin_course', 'admin_id', 'course_id')
+                    ->select(['courses.id', 'courses.course_name', 'courses.duration', 'courses.status'])
+                    ->withTimestamps();
     }
 
     public function courses()

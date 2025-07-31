@@ -31,11 +31,13 @@ class AdminRequest extends FormRequest
             $rules = [
                 'name' => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z0-9\s.,_\'"-]+$/'],
                 'email' => 'required|string|email|max:255|unique:admins,email,' . $adminId,
-                'password' => 'required|string|min:8',
             ];
+            
+            // Only require password if it's being updated
             if ($this->filled('password')) {
                 $rules['password'] = 'string|min:8';
             }
+            
             return $rules;
         }
 
