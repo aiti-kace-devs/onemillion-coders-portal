@@ -17,12 +17,12 @@ return [
     'enabled' => env('STATAMIC_GRAPHQL_ENABLED', false),
 
     'resources' => [
-        'collections' => false,
+        'collections' => true,
         'navs' => false,
         'taxonomies' => false,
-        'assets' => false,
-        'globals' => false,
-        'forms' => false,
+        'assets' => true,
+        'globals' => true,
+        'forms' => true,
         'sites' => false,
         'users' => false,
     ],

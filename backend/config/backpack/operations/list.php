@@ -30,12 +30,12 @@ return [
     // use false to never force localStorage clear. (default)
     // keep in mind: User can clear their localStorage whenever they want.
 
-    'persistentTableDuration' => false,
+    'persistentTableDuration' => 10,
 
     // How many items should be shown by default by the Datatable?
     // This value can be overwritten on a specific CRUD by calling
     // $this->crud->setDefaultPageLength(50);
-    'defaultPageLength' => 10,
+    'defaultPageLength' => 15,
 
     // A 1D array of options which will be used for both the displayed option and the value, or
     // A 2D array in which the first array is used to define the value options and the second array the displayed options
@@ -50,12 +50,12 @@ return [
     'actionsColumnPriority' => 1,
 
     // Nest action buttons within a dropdown in actions column
-    'lineButtonsAsDropdown' => false,
+    'lineButtonsAsDropdown' => true,
 
     // What is the minimum actions for the dropdown to be created
     // Example: when minimum to drop is «2»,  any row with less than «2» action buttons
     // will not create a dropdown, but will show the buttons inline
-    'lineButtonsAsDropdownMinimum' => 1,
+    'lineButtonsAsDropdownMinimum' => 3,
 
     // Force «X» actions to be shown inline before the dropdown is created
     // Example: when setting this to «2», the first «2» actions will be shown inline

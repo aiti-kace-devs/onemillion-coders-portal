@@ -1,0 +1,27 @@
+title: Button
+fields:
+  -
+    handle: button_text
+    field:
+      type: text
+      display: 'Button Text'
+  -
+    handle: button_description
+    field:
+      type: text
+      display: 'Button Description'
+  -
+    handle: button_colour
+    field:
+      type: color
+      display: 'Button Colour'
+  -
+    handle: button_link
+    field:
+      type: link
+      display: 'Button Link'
+  -
+    handle: button_url
+    field:
+      type: text
+      display: 'Button URL'

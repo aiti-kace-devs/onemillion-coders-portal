@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class SetupApplication extends Command
@@ -135,7 +136,7 @@ class SetupApplication extends Command
         if ($current[0] !== $previous[0]) {
             return [
                 ['migrate', '--force'],
-                // 'basset:fresh',
+                'basset:fresh',
                 ['db:seed', '--force'],
                 // 'optimize:clear',
                 // 'optimize',
@@ -186,6 +187,12 @@ class SetupApplication extends Command
     protected function getStoredVersion(): ?string
     {
         try {
+            // Check if the migrations table exists
+            if (!Schema::hasTable('migrations')) {
+                $this->warn('Migrations table does not exist. Running migrations...');
+                $this->call('migrate', ['--force' => true]);
+            }
+
             // Try database first
             $lastVersion = DB::table('versions')->latest('updated_at')->value('version');
 

@@ -1,0 +1,35 @@
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: copyright
+            field:
+              type: text
+              display: Copyright
+          -
+            handle: footer_links
+            field:
+              type: replicator
+              display: 'Footer Links'
+              sets:
+                new_set_group:
+                  display: 'New Set Group'
+                  sets:
+                    link:
+                      display: Link
+                      fields:
+                        -
+                          handle: name
+                          field:
+                            type: text
+                            display: Name
+                            width: 33
+                        -
+                          handle: url
+                          field:
+                            type: link
+                            display: Url
+                            width: 66

@@ -1,0 +1,17 @@
+title: Collaborators
+data:
+  name: Collaborators
+  description: "Empowering Ghana's digital future through world-class technology education and training programs."
+  collaborators:
+    -
+      id: md586461
+      name: 'One Million Coders'
+      image: uploads/images/one-mil-coders-black-text.png
+      type: collaborator
+      enabled: true
+    -
+      id: md587ede
+      name: MOCD
+      image: uploads/partners/mocd.webp
+      type: collaborator
+      enabled: true

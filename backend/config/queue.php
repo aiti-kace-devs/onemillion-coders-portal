@@ -70,9 +70,22 @@ return [
             'block_for' => null,
             'after_commit' => false,
         ],
+        'cloudtasks' => [
+            'driver' => 'cloudtasks',
+            'project' => env('CLOUD_TASKS_PROJECT', ''),
+            'location' => env('CLOUD_TASKS_LOCATION', ''),
+            'queue' => env('CLOUD_TASKS_QUEUE', 'default'),
 
+            // Required when not using AppEngine
+            'handler'               => env('CLOUD_TASKS_HANDLER', ''),
+            'service_account_email' => env('CLOUD_TASKS_SERVICE_EMAIL', ''),
+
+            'backoff' => 0,
+            'after_commit' => false,
+            // enable this if you want to set a non-default Google Cloud Tasks dispatch timeout
+            //'dispatch_deadline' => 1800, // in seconds
+        ],
     ],
-
     /*
     |--------------------------------------------------------------------------
     | Failed Queue Jobs

@@ -1,0 +1,11 @@
+title: Logos
+data:
+  logo:
+    -
+      id: mcxp0qc8
+      name: 'One Million Coders'
+      caption: 'White Background'
+      media: uploads/images/one-mil-coders-black-text.png
+      link: 'https://onemillioncoders.gov.gh'
+      type: logo
+      enabled: true

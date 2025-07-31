@@ -1,0 +1,180 @@
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: title
+            field:
+              type: text
+              required: true
+              validate:
+                - required
+          -
+            handle: subtitle
+            field:
+              type: text
+              display: Subtitle
+          -
+            handle: description
+            field:
+              type: textarea
+              display: Description
+          -
+            handle: icon
+            field:
+              options:
+                -
+                  key: home
+                  value: Home
+                -
+                  key: users
+                  value: Users
+              taggable: true
+              type: select
+              display: Icon
+              width: 50
+          -
+            handle: duration
+            field:
+              type: text
+              display: Duration
+              width: 50
+          -
+            handle: focus
+            field:
+              type: text
+              display: Focus
+          -
+            handle: hero_image
+            field:
+              max_files: 1
+              min_files: 1
+              container: google_cloud
+              folder: uploads
+              type: assets
+              display: 'Hero Image'
+          -
+            handle: overview
+            field:
+              type: group
+              display: Overview
+              fields:
+                -
+                  handle: challenge
+                  field:
+                    type: textarea
+                    display: Challenge
+                    validate:
+                      - required
+                -
+                  handle: solution
+                  field:
+                    type: textarea
+                    display: Solution
+                    validate:
+                      - required
+                -
+                  handle: benefits
+                  field:
+                    type: list
+                    display: Benefits
+                    validate:
+                      - required
+          -
+            handle: learning_path
+            field:
+              type: group
+              display: 'Learning Path'
+              fields:
+                -
+                  handle: phases
+                  field:
+                    type: replicator
+                    display: Phases
+                    sets:
+                      new_set_group:
+                        display: 'New Set Group'
+                        sets:
+                          phase_items:
+                            display: 'Phase Items'
+                            fields:
+                              -
+                                handle: title
+                                field:
+                                  type: text
+                                  display: Title
+                                  validate:
+                                    - required
+                              -
+                                handle: description
+                                field:
+                                  type: text
+                                  display: Description
+                              -
+                                handle: modules
+                                field:
+                                  type: list
+                                  display: Modules
+                                  validate:
+                                    - required
+          -
+            handle: support
+            field:
+              type: group
+              display: Support
+              fields:
+                -
+                  handle: mentorship
+                  field:
+                    type: text
+                    display: Mentorship
+                -
+                  handle: community
+                  field:
+                    type: text
+                    display: Community
+                -
+                  handle: resources
+                  field:
+                    type: list
+                    display: Resources
+          -
+            handle: sections
+            field:
+              type: replicator
+              display: Sections
+              sets:
+                new_set_group:
+                  display: 'New Set Group'
+                  sets:
+                    section:
+                      display: Section
+                      fields:
+                        -
+                          handle: title
+                          field:
+                            type: text
+                            display: Title
+                            validate:
+                              - required
+                        -
+                          handle: section_items
+                          field:
+                            type: entries
+                            display: 'Section Items'
+                            validate:
+                              - required
+  sidebar:
+    display: Sidebar
+    sections:
+      -
+        fields:
+          -
+            handle: slug
+            field:
+              type: slug
+              localizable: true
+              validate: 'max:200'
+title: Pathway

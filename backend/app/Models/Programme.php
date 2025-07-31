@@ -13,13 +13,77 @@ class Programme extends Model
 
     protected $fillable = [
         'title',
+        'sub_title',
         'duration',
         'start_date',
         'end_date',
+        'description',
+        'overview',
+        'prerequisites',
+        'image',
+        'level',
+        'job_responsible',
+        'cover_image_id',
+        'course_category_id',
         'status'
     ];
 
-    public function centre(){
+    protected $casts = [
+        'status' => 'boolean',
+        'overview' => 'array'
+    ];
+
+    public function centre()
+    {
         return $this->belongsToMany(Centre::class, 'courses');
+    }
+
+    public function courseModules()
+    {
+        return $this->hasMany(CourseModule::class, 'programme_id');
+    }
+
+
+    public function courseCertification()
+    {
+        return $this->hasMany(CourseCertification::class, 'programme_id');
+    }
+
+    public function category()
+    {
+
+        return $this->belongsTo(CourseCategory::class, 'course_category_id');
+    }
+
+    public function coverImage()
+    {
+        return $this->belongsTo(Media::class, 'cover_image_id');
+    }
+
+    public function tags()
+    {
+        return $this->belongsToMany(CourseMatchOption::class, 'programme_course_match_options', 'programme_id', 'course_match_option_id');
+    }
+
+
+
+    protected static function booted()
+    {
+        static::saving(function ($programme) {
+            $overview = request('overview', []);
+
+            $whatYouWillLearn = is_array($overview['what_you_will_learn'] ?? null)
+                ? array_filter($overview['what_you_will_learn'])
+                : [];
+
+            $whyChoose = is_array($overview['why_choose_this_course'] ?? null)
+                ? array_filter($overview['why_choose_this_course'])
+                : [];
+
+            $programme->overview = [
+                'what_you_will_learn' => $whatYouWillLearn,
+                'why_choose_this_course' => $whyChoose
+            ];
+        });
     }
 }

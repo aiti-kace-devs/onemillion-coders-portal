@@ -1,0 +1,58 @@
+title: Metrics
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: title
+            field:
+              type: text
+              required: true
+              validate:
+                - required
+          -
+            import: details
+            prefix: text_data_
+          -
+            handle: metrics
+            field:
+              type: replicator
+              display: Metrics
+              sets:
+                new_set_group:
+                  display: 'New Set Group'
+                  sets:
+                    metric:
+                      display: Metric
+                      fields:
+                        -
+                          handle: icon_field
+                          field:
+                            type: icon
+                            display: Icon
+                            width: 33
+                        -
+                          handle: number
+                          field:
+                            type: text
+                            display: Number
+                            width: 33
+                        -
+                          handle: description
+                          field:
+                            type: text
+                            display: Description
+                            width: 33
+  sidebar:
+    display: Sidebar
+    sections:
+      -
+        fields:
+          -
+            handle: slug
+            field:
+              type: slug
+              localizable: true
+              validate: 'max:200'

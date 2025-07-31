@@ -85,8 +85,19 @@ class FormResponseController extends Controller
      */
     public function store(Request $request)
     {
-        $form = Form::where('uuid', $request->form_uuid)->firstOrFail();
+        // \Log::info('STORE: Start', $request->all());
+
+        $uuid = '6c004031-4efb-4b51-890f-0c3788defedf';
+        $form = Form::where('uuid',$uuid)->first();
+        // \Log::info('STORE: Form fetched', ['form' => $form]);
+        // dd($form);
+        if (!$form) {
+            \Log::error('STORE: Form not found for UUID', ['uuid' => $uuid]);
+            abort(404, 'Form not found');
+        }
         $schema = $form->schema;
+        // dd($schema);
+        // \Log::info('STORE: Schema loaded', ['schema' => $schema]);
 
         // $validationRules = $form->getValidationRules();
         $validationRules = [
@@ -109,7 +120,7 @@ class FormResponseController extends Controller
                 }
             }
         }
-
+        
         foreach ($schema as $field) {
             $fieldKey = $field['type'] == 'select_course' ? 'response_data.course_id' : "response_data.{$field['field_name']}";
 
@@ -139,14 +150,14 @@ class FormResponseController extends Controller
                         $exists = User::where($dbColumn, $valueToCheck)->exists();
             
                         if ($exists) {
-                            return redirect()->back()->withInput()->withErrors([
+                            throw \Illuminate\Validation\ValidationException::withMessages([
                                 $fieldKey => ["{$fieldTitle} has already been taken."]
                             ]);
                         }
                     }
                 }
             }
-
+            
             switch ($field['type']) {
                 case 'text':
                 case 'textarea':
@@ -205,12 +216,14 @@ class FormResponseController extends Controller
                     $rules[] = 'nullable';
                     break;
             }
-
+            Log::info('below switch');
             $validationRules[$fieldKey] = implode('|', $rules);
             $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|' . $field['rules'] ?? '' : '';
             $validationRules[$fieldKey] =  $validationRules[$fieldKey] . $additionRules;
+            Log::info('end of switch statement');
         }
 
+        \Log::info('Get validationRules', ['validationRules' => $validationRules]);
         // dd($validationRules, $attributes);
         $validated = $request->validate($validationRules, $customMessages, $attributes);
 
@@ -238,10 +251,19 @@ class FormResponseController extends Controller
 
         $form->responses()->save($response);
 
-        // Log::info($validated['response_data']);
-        // Log::info($fieldName);
+        Log::info($validated['response_data']);
+        Log::info($fieldName);
 
         FormSubmittedEvent::dispatch($validated['response_data'], $response->id, $fieldName);
+
+
+        return response()->json([
+                'success' => true,
+                'message' => 'Student created successfully',
+                'data' => $response
+            ], 201);
+
+
     }
 
 
@@ -363,7 +385,7 @@ class FormResponseController extends Controller
 
             $validationRules[$fieldKey] = implode('|', $rules);
         }
-        dd($validationRules);
+        // dd($validationRules);
         $validated = $request->validate($validationRules, $customMessages);
 
         // Handle file uploads

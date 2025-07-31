@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Models;
+
+use Backpack\CRUD\app\Models\Traits\CrudTrait;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class CourseModule extends Model
+{
+    use CrudTrait;
+    use HasFactory;
+
+    protected $table = 'course_modules';
+    // protected $primaryKey = 'id';
+    // public $timestamps = false;
+    protected $guarded = ['id'];
+    protected $fillable = [
+        'title',
+        'programme_id',
+        'description',
+        'status'
+    ];
+
+
+    protected $casts = [
+        'status' => 'boolean',
+    ];
+
+
+    public function programme()
+    {
+        return $this->belongsTo(Programme::class);
+    }
+}

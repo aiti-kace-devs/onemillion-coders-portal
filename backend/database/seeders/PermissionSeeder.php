@@ -6,6 +6,8 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use App\Models\Admin;
+use Exception;
 
 class PermissionSeeder extends Seeder
 {
@@ -100,6 +102,14 @@ class PermissionSeeder extends Seeder
         // give permissions
         $superAdministratorPermissions = Permission::all();
         $superAdminRole->syncPermissions($superAdministratorPermissions);
+
+        // try granting super admin role to admin user from config
+        try {
+            $superAdminUser = Admin::where('email', config('app.super_admin_email'))->first();
+            $superAdminUser->syncRoles($superAdminRole);
+        } catch (Exception $e) {
+            echo $e->getMessage();
+        }
     }
 
     private function findResourcePermissions($resources, $actions)

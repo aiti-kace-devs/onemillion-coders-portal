@@ -21,7 +21,7 @@ class EmailTemplateCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -33,40 +33,42 @@ class EmailTemplateCrudController extends CrudController
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
-
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+        CRUD::column('name')->type('textarea');
+        CRUD::addColumn([
+            'name' => 'content',
+            'label' => 'Content',
+            'type' => 'text',
+            'escaped' => false,
+        ]);
+        CRUD::column('created_at');
     }
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
     protected function setupCreateOperation()
     {
         CRUD::setValidation(EmailTemplateRequest::class);
-        CRUD::setFromDb(); // set fields from db columns.
-
-        /**
-         * Fields can be defined using the fluent syntax:
-         * - CRUD::field('price')->type('number');
-         */
+        CRUD::field('name')->type('text');
+        CRUD::addField([
+            'name' => 'content',
+            'label' => 'Content',
+            'type'      => 'tinymce',
+        ]);
     }
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */

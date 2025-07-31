@@ -26,8 +26,21 @@ fields:
       type: text
       display: Value
   -
-    handle: media
+    handle: details_media
     field:
-      container: public
+      container: google_cloud
       type: assets
       display: Media
+      max_files: 1
+      folder: uploads
+  -
+    handle: button_text
+    field:
+      type: text
+      display: 'Button Text'
+  -
+    handle: description
+    field:
+      escape_markup: true
+      type: markdown
+      display: Description

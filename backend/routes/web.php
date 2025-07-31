@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CentreController;
+use App\Http\Controllers\Admin\Api\FormPreviewController;
+use App\Http\Controllers\Admin\Api\CourseProgrammeController;
+use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
+use App\Http\Controllers\Admin\Api\RegistrationFormAPIController;
 use App\Http\Controllers\ClassScheduleController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\FormController;
@@ -49,17 +53,29 @@ use Illuminate\Support\Str;
 // //     ->name('dynamic-course');
 
 // // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
-// // Route::post('form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
+// Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
+// routes/web.php
+Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
+Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
+// Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
+Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
+Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
+Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
 
-Route::prefix('questionnaire')
-    ->middleware('auth')
-    ->name('questionnaire.')
-    ->group(function () {
-        Route::get('/{code}', [QuestionnaireController::class, 'submitForm'])->name('show');
-        // Route::post('form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
-    });
+Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
+Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
+Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
+Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
+Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
+Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
+Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
 
-Route::prefix('admin')
+Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
+    ->name('logout');
+
+
+Route::prefix('admins')
     ->middleware(['auth:admin'])
     ->name('admin.')
     ->group(function () {
@@ -144,7 +160,7 @@ Route::prefix('admin')
             });
     });
 
-Route::prefix('admin')
+Route::prefix('admins')
     ->middleware('theme:dashboard')
     ->name('admin.')
     ->group(function () {
@@ -251,13 +267,20 @@ Route::prefix('admin')
             });
 
             Route::middleware('permission:attendance.read')->group(function () {
-                Route::post('/confirm_attendance', [AttendanceController::class, 'confirmAttendance'])->middleware('permission:attendance.create');
+                Route::post('/confirm_attendance', [AttendanceConfirmTrait::class, 'confirmAttendance'])->middleware('permission:attendance.create');
                 Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])->name('viewAttendanceByDate');
-                Route::get('/remove-attendance/{id}', [AttendanceController::class, 'removeAttendance'])
+                Route::get('/remove-attendance/{id}', [AttendanceViewRemoveTrait::class, 'removeAttendance'])
                     ->name('remove-attendance')
                     ->middleware('permission:attendance.delete');
                 Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page'])->middleware('permission:attendance.create');
-                Route::post('/generate_qrcode', [AttendanceController::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
+                Route::post('/generate_qrcode', [AttendanceQRCodeTrait::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
+                // Route::post('/confirm_attendance', [AttendanceController::class, 'confirmAttendance'])->middleware('permission:attendance.create');
+                Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])->name('viewAttendanceByDate');
+                // Route::get('/remove-attendance/{id}', [AttendanceController::class, 'removeAttendance'])
+                //     ->name('remove-attendance')
+                    // ->middleware('permission:attendance.delete');
+                Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page'])->middleware('permission:attendance.create');
+                // Route::post('/generate_qrcode', [AttendanceController::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
                 Route::get('/scan_qrcode', [AdminController::class, 'scan_qrcode_page'])->middleware('permission:attendance.create');
                 Route::get('/verification', [AdminController::class, 'verification_page'])->name('verification');
                 Route::get('/verify_details', [AdminController::class, 'verifyDetails'])->name('verify-details');
@@ -279,23 +302,23 @@ Route::prefix('admin')
             });
 
             Route::middleware('permission:admin.read')->group(function () {
-                Route::get('/get-admin-courses/{admin}', [RegisteredUserController::class, 'getAdminCourses'])->name('admin.get-admin-courses');
-                Route::post('/update-admin-courses', [RegisteredUserController::class, 'updateAdminCourses'])->name('admin.update-admin-courses');
-                Route::get('/manage_admins', [RegisteredUserController::class, 'index'])->name('manage_admins');
-                Route::get('/create', [RegisteredUserController::class, 'create'])
-                    ->name('admins.create')
-                    ->middleware('permission:admin.create');
-                Route::post('/add_new_admin', [RegisteredUserController::class, 'store'])->middleware('permission:admin.create');
-                Route::get('/edit_admin/{id}/edit', [RegisteredUserController::class, 'edit'])
-                    ->name('admins.edit')
-                    ->middleware('permission:admin.update');
-                Route::put('/{id}/update', [RegisteredUserController::class, 'update'])
-                    ->name('admins.update')
-                    ->middleware('permission:admin.update');
-                Route::delete('/{id}/delete', [RegisteredUserController::class, 'destroy'])
-                    ->name('admins.delete')
-                    ->middleware('permission:admin.delete');
-                Route::get('/is_super_admin_status/{id}', [RegisteredUserController::class, 'is_super_admin_status'])->middleware('permission:admin.status');
+                // Route::get('/get-admin-courses/{admin}', [RegisteredUserController::class, 'getAdminCourses'])->name('admin.get-admin-courses');
+                // Route::post('/update-admin-courses', [RegisteredUserController::class, 'updateAdminCourses'])->name('admin.update-admin-courses');
+                // Route::get('/manage_admins', [RegisteredUserController::class, 'index'])->name('manage_admins');
+                // Route::get('/create', [RegisteredUserController::class, 'create'])
+                //     ->name('admins.create')
+                //     ->middleware('permission:admin.create');
+                // Route::post('/add_new_admin', [RegisteredUserController::class, 'store'])->middleware('permission:admin.create');
+                // Route::get('/edit_admin/{id}/edit', [RegisteredUserController::class, 'edit'])
+                //     ->name('admins.edit')
+                //     ->middleware('permission:admin.update');
+                // Route::put('/{id}/update', [RegisteredUserController::class, 'update'])
+                //     ->name('admins.update')
+                //     ->middleware('permission:admin.update');
+                // Route::delete('/{id}/delete', [RegisteredUserController::class, 'destroy'])
+                //     ->name('admins.delete')
+                //     ->middleware('permission:admin.delete');
+                // Route::get('/is_super_admin_status/{id}', [RegisteredUserController::class, 'is_super_admin_status'])->middleware('permission:admin.status');
             });
 
             // manage branch routes

@@ -1,0 +1,44 @@
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: title
+            field:
+              type: text
+              required: true
+              validate:
+                - required
+          -
+            handle: image
+            field:
+              max_files: 1
+              min_files: 1
+              container: google_cloud
+              folder: uploads
+              type: assets
+              display: Image
+          -
+            handle: caption
+            field:
+              type: text
+              display: Caption
+          -
+            handle: tag
+            field:
+              type: taggable
+              display: Tag
+  sidebar:
+    display: Sidebar
+    sections:
+      -
+        fields:
+          -
+            handle: slug
+            field:
+              type: slug
+              localizable: true
+              validate: 'max:200'
+title: Gallery

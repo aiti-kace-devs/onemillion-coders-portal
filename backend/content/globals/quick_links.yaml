@@ -1,17 +1,39 @@
 title: 'Quick Links'
 data:
-  grid_field:
+  quick_links:
     -
-      id: mcl87q73
-      name: Logout
-      caption: out
-      icon: arrows-horizontal-expand
-      media:
-        - form/banner/1743377994.png
+      id: md56xje6
+      name: Home
+      link: /
+      type: quick_link
+      enabled: true
     -
-      id: mcl87o88
-      name: Login
-      caption: Login
-      icon: add-col-before
-      media:
-        - form/banner/1743960525.jpeg
+      id: md56z15z
+      name: Programmes
+      link: /programmes
+      type: quick_link
+      enabled: true
+    -
+      id: md56zjo0
+      name: Pathways
+      link: /pathway
+      type: quick_link
+      enabled: true
+    -
+      id: md56zxrk
+      name: Community
+      link: /community
+      type: quick_link
+      enabled: true
+    -
+      id: md5706se
+      name: About
+      link: /about
+      type: quick_link
+      enabled: true
+    -
+      id: md570o3l
+      name: 'Course Match'
+      link: /course-match
+      type: quick_link
+      enabled: true

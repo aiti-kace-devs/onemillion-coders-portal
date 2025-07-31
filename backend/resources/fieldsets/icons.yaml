@@ -1,0 +1,68 @@
+title: Icons
+fields:
+  - handle: icon
+    field:
+      type: select
+      display: Icon
+      options:
+        phone: Phone
+        user: User
+        email: Email
+        address-book: Address Book
+        map-marker-alt: Location
+        mobile-alt: Mobile
+        fax: Fax
+        comment-dots: Chat
+        comments: Comments
+        globe: Website
+        at: At Symbol
+        home: Home
+        star: Star
+        cog: Settings
+        heart: Heart
+        search: Search
+        calendar: Calendar
+        camera: Camera
+        facebook: Facebook
+        twitter: Twitter
+        instagram: Instagram
+        linkedin: LinkedIn
+        github: GitHub
+        youtube: YouTube
+        whatsapp: WhatsApp
+        telegram: Telegram
+        tiktok: TikTok
+        arrow-left: Arrow Left
+        arrow-right: Arrow Right
+        arrow-up: Arrow Up
+        arrow-down: Arrow Down
+        bars: Menu
+        times: Close
+        chevron-left: Chevron Left
+        chevron-right: Chevron Right
+        chevron-up: Chevron Up
+        chevron-down: Chevron Down
+        angle-left: Angle Left
+        angle-right: Angle Right
+        angle-up: Angle Up
+        angle-down: Angle Down
+        info: Info
+        warning: Warning
+        check: Success
+        error: Error
+        help: Help
+        download: Download
+        upload: Upload
+        edit: Edit
+        delete: Delete
+        add: Add
+        remove: Remove
+        attachment: Attachment
+        link: Link
+        print: Print
+        view: View
+        lock: Lock
+        unlock: Unlock
+        share: Share
+        bookmark: Bookmark
+        notification: Notification

@@ -20,6 +20,8 @@ class CategorySeeder extends Seeder
             'status' => '1'
         ];
 
-        // Oex_category::createOrFirst($category);
+        Oex_category::createOrFirst([
+            'name' => $category['name'],
+        ], $category);
     }
 }

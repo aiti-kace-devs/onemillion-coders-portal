@@ -5,7 +5,18 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\UserRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use App\Http\Controllers\Traits\BulkStudentActionsTrait;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Traits\ShortlistActionsTrait;
+use App\Http\Controllers\Traits\ShortlistRowActionsTrait;
+use App\Jobs\CreateStudentAdmissionJob;
+use App\Models\CourseSession;
+use App\Models\UserAdmission;
+use App\Models\Course;
+use App\Models\User;
+use App\Helpers\UserFieldHelpers;
+use App\Helpers\WidgetHelper;
+use App\Helpers\FilterHelper;
 /**
  * Class UserCrudController
  * @package App\Http\Controllers\Admin
@@ -13,6 +24,11 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
  */
 class UserCrudController extends CrudController
 {
+    use BulkStudentActionsTrait;
+    use ShortlistActionsTrait;
+    use ShortlistRowActionsTrait;
+    use \App\SearchableCRUD;
+    use UserFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -30,6 +46,12 @@ class UserCrudController extends CrudController
         CRUD::setModel(\App\Models\User::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/user');
         CRUD::setEntityNameStrings('student', 'students');
+
+        // CRUD::denyAccess('create');
+        // CRUD::denyAccess('update');
+        $this->crud->operation('list', function () {
+            WidgetHelper::userStatisticsWidget();
+        });
     }
 
     /**
@@ -40,15 +62,36 @@ class UserCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
+        $this->crud->setModel(User::class);
+        $this->crud->setRoute(config('backpack.base.route_prefix') . '/user');
+        $this->crud->setEntityNameStrings('user', 'users');
 
-        /**
-         * Columns can be defined using the fluent syntax:
-         * - CRUD::column('price')->type('number');
-         */
+        $this->crud->query->select(['id','name', 'gender', 'age', 'email', 'mobile_no', 'ghcard']);
 
+        $this->crud->addColumn(['name' => 'name', 'type' => 'text', 'label' => 'Full Name']);
+        $this->crud->addColumn(['name' => 'email', 'type' => 'text', 'label' => 'Email']);
+        $this->crud->addColumn(['name' => 'gender', 'type' => 'text', 'label' => 'Gender']);
+        $this->crud->addColumn(['name' => 'age', 'type' => 'text', 'label' => 'Age']);
+        $this->crud->addColumn(['name' => 'mobile_no', 'type' => 'text', 'label' => 'Mobile No']);
+        // $this->crud->addColumn(['name' => 'ghcard', 'type' => 'text', 'label' => 'Ghana Card Number']);
+        $this->addConfirmedAdmissionColumn();
+        FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
+
+        // $this->setupStudentColumns();
+        $this->addStudentBatchFilter('admission', 'Student Batch');
+        $this->courseFilter('registered_course');
+        $this->addConfirmedAdmissionFilter();
+        FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
+        FilterHelper::addAgeRangeFilter();
+        FilterHelper::addGenderFilter();
+        $this->addAdmissionLocationFilter();
+        $this->addAdmittedAtFilter();
         // Disable responsive table
         // CRUD::disableResponsiveTable();
+
+
+        // Enable bulk operations
+        CRUD::enableBulkActions();
 
         // Add export options
         CRUD::enableExportButtons();
@@ -61,8 +104,16 @@ class UserCrudController extends CrudController
             'setupStudentsWithExamResultsView' => 'Students with Exam Results',
             'setupShortlistedStudentsView' => 'Shortlisted Students',
         ]);
+
+        // Add bulk action buttons
+        CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
+        CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'end');
     }
 
+        protected function setupShowOperation()
+    {
+        $this->setupShowStudentColumns();
+    }
     /**
      * Define what happens when the Create operation is loaded.
      *
@@ -91,11 +142,44 @@ class UserCrudController extends CrudController
         $this->setupCreateOperation();
     }
 
+
+    public function assignBatch(Request $request)
+    {
+        $request->validate([
+            'student_ids' => 'required|array',
+            'batch_id' => 'required|integer|exists:admission_batches,id',
+        ]);
+
+        $updated = 0;
+        $studentIds = $request->student_ids;
+
+        $userIds = User::whereIn('id', $studentIds)->pluck('userId')->toArray();
+
+        foreach (array_chunk($userIds, 100) as $chunk) {
+            $affected = UserAdmission::whereIn('user_id', $chunk)
+                ->update(['batch_id' => $request->batch_id]);
+            $updated += $affected;
+        }
+
+        if ($updated === 0) {
+            return response()->json(['message' => 'No admissions updated.'], 400);
+        }
+
+        return response()->json(['message' => 'Batch assignment successful']);
+    }
+
+
+
+
+
     /**
      * Custom view for students with admission
      */
     public function setupStudentsWithAdmissionView()
     {
+        // Enable bulk operations for this view
+        CRUD::enableBulkActions();
+
         // Filter students who have admission records with session
         CRUD::setQuery(\App\Models\User::whereHas('admissions', function ($query) {
             $query->whereNotNull('session');
@@ -157,6 +241,9 @@ class UserCrudController extends CrudController
      */
     public function setupStudentsWithoutExamResultsView()
     {
+        // Enable bulk operations for this view
+        CRUD::enableBulkActions();
+
         // Filter students who don't have exam results
         CRUD::setQuery(\App\Models\User::whereDoesntHave('examResults'));
 
@@ -198,6 +285,9 @@ class UserCrudController extends CrudController
      */
     public function setupStudentsYetToAcceptAdmissionView()
     {
+        // Enable bulk operations for this view
+        CRUD::enableBulkActions();
+
         // Filter students who have admission records but session_id is null
         CRUD::setQuery(\App\Models\User::whereHas('admissions', function ($query) {
             $query->whereNull('session');
@@ -270,6 +360,9 @@ class UserCrudController extends CrudController
      */
     public function setupStudentsWithExamResultsView()
     {
+        // Enable bulk operations for this view
+        CRUD::enableBulkActions();
+
         // Filter students who have exam results
         CRUD::setQuery(\App\Models\User::whereHas('examResults'));
 
@@ -336,6 +429,10 @@ class UserCrudController extends CrudController
                 return 'N/A';
             }
         ]);
+
+        // Add row actions only for this view
+        CRUD::addButton('line', 'view_results', 'view', 'crud::buttons.view_results');
+        CRUD::addButton('line', 'reset_result', 'view', 'crud::buttons.reset_result');
     }
 
     /**
@@ -343,6 +440,9 @@ class UserCrudController extends CrudController
      */
     public function setupShortlistedStudentsView()
     {
+        // Enable bulk operations for this view
+        CRUD::enableBulkActions();
+
         // Filter students who are shortlisted (shortlist = 1)
         CRUD::setQuery(\App\Models\User::where('shortlist', 1));
 
@@ -412,19 +512,14 @@ class UserCrudController extends CrudController
             }
         ]);
 
-        // Add Backpack-style bulk admit operation
-        // CRUD::addBulkAction([
-        //     'label' => 'Admit',
-        //     'name' => 'admit',
-        //     'icon' => 'la la-user-check',
-        //     'callback' => function ($entries) {
-        //         // This will be handled via AJAX/modal, so leave empty
-        //     },
-        //     'visible' => true, // always show in this view
-        // ]);
+        // Add the shortlist actions dropdown button (top)
+        CRUD::addButtonFromView('top', 'bulk_shortlist_actions_dropdown', 'bulk_shortlist_actions_dropdown', 'beginning');
 
-        // Set custom view to include modal
-        // $this->crud->setListView('vendor.backpack.crud.list_with_modal');
+        // Remove default edit, preview, delete buttons and add custom row actions dropdown
+        CRUD::removeButton('line', 'update');
+        CRUD::removeButton('line', 'show');
+        CRUD::removeButton('line', 'delete');
+        CRUD::addButton('line', 'shortlist_row_actions_dropdown', 'view', 'crud::buttons.shortlist_row_actions_dropdown');
     }
 
     /**
@@ -477,4 +572,174 @@ class UserCrudController extends CrudController
             ], 500);
         }
     }
+
+    /**
+     * Admit shortlisted students (bulk or single) via AJAX for Backpack Shortlist Actions.
+     */
+    public function admitShortlistedStudents(Request $request)
+    {
+        // If admit_all is set, admit all shortlisted students
+        if ($request->input('admit_all')) {
+            $validated = $request->validate([
+                'course_id' => 'required|nullable|exists:courses,id',
+                'session_id' => 'sometimes|nullable|exists:course_sessions,id',
+            ]);
+            $course = Course::find($validated['course_id']);
+            $session = CourseSession::find($validated['session_id'] ?? '');
+            if ($session && $session->course_id != $course->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Session not valid for selected course',
+                ], 422);
+            }
+            $message = 'All shortlisted students admitted successfully';
+            $admittedCount = 0;
+            try {
+                $users = User::where('shortlist', 1)->get();
+                foreach ($users as $user) {
+                    CreateStudentAdmissionJob::dispatch($user, $course, $session);
+                    $admittedCount++;
+                }
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'admitted_count' => $admittedCount,
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to admit students: ' . $e->getMessage(),
+                ], 500);
+            }
+        }
+
+        $validated = $request->validate([
+            'course_id' => 'required|nullable|exists:courses,id',
+            'session_id' => 'sometimes|nullable|exists:course_sessions,id',
+            'user_id' => 'sometimes|nullable|required_if:user_ids,null|exists:users,userId',
+            'change' => 'sometimes',
+            'user_ids' => 'sometimes|nullable|required_if:user_id,null|array',
+            'user_ids.*' => 'exists:users,userId',
+        ]);
+
+        $course = Course::find($validated['course_id']);
+        $session = CourseSession::find($validated['session_id'] ?? '');
+        $change = ($validated['change'] ?? false) == 'true';
+
+        if ($session && $session->course_id != $course->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session not valid for selected course',
+            ], 422);
+        }
+        $message = 'Student(s) admitted successfully';
+        $admittedCount = 0;
+        try {
+            if ($validated['user_id'] ?? false) {
+                $user_id = $validated['user_id'];
+                $user = User::where('userId', $user_id)->first();
+                if ($user) {
+                    CreateStudentAdmissionJob::dispatch($user, $course, $session);
+                    $oldAdmission = UserAdmission::where('user_id', $user_id)->first();
+                    if ($oldAdmission && $change) {
+                        $message = 'Student admission changed successfully';
+                    }
+                    $admittedCount = 1;
+                }
+            } elseif (count($validated['user_ids'] ?? []) > 0) {
+                $user_ids = $validated['user_ids'];
+                foreach ($user_ids as $user_id) {
+                    $user = User::where('userId', $user_id)->first();
+                    if ($user) {
+                        CreateStudentAdmissionJob::dispatch($user, $course, $session);
+                        $admittedCount++;
+                    }
+                }
+            }
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'admitted_count' => $admittedCount,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to admit students: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Show the exam result for a student (Backpack admin panel)
+     */
+    public function viewResult($id)
+    {
+        $student = \App\Models\User::find($id);
+        if (!$student) {
+            return back()->with(['flash' => 'Student not found.', 'key' => 'error']);
+        }
+
+        // Get the latest exam result for the student
+        $latestResult = $student->examResults()->latest()->first();
+        if (!$latestResult) {
+            return back()->with(['flash' => 'No exam results found for this student.', 'key' => 'error']);
+        }
+
+        // Get the related exam info
+        $exam = $latestResult->exam ?? null;
+        if (!$exam) {
+            return back()->with(['flash' => 'Exam information not found.', 'key' => 'error']);
+        }
+
+        $data = [
+            'result_info' => $latestResult,
+            'student_info' => $student,
+            'exam_info' => $exam,
+        ];
+        return view('vendor.backpack.crud.admin_view_result', $data);
+    }
+
+    /**
+     * Reset the exam result for a student (Backpack admin panel)
+     */
+    public function resetResult($exam_id, $user_id)
+    {
+        $user = \App\Models\User::findOrFail($user_id);
+        if (!$user) {
+            return back()->with(['flash' => 'Student not found.', 'key' => 'error']);
+        }
+        $exam = \App\Models\OexExamMaster::find($exam_id);
+        if (!$exam) {
+            return back()->with(['flash' => 'Exam not found.', 'key' => 'error']);
+        }
+
+        $user->updated_at = now();
+        $user->save();
+
+        \App\Models\UserExam::updateOrCreate(
+            [
+                'user_id' => $user_id,
+                'exam_id' => $exam_id,
+            ],
+            ['started' => null, 'submitted' => null, 'exam_joined' => 0, 'std_status' => 1],
+        );
+
+        \App\Models\OexResult::where('user_id', $user_id)->where('exam_id', $exam_id)->delete();
+
+        return redirect()->back()->with([
+            'flash' => 'Exam reset successfully',
+            'key' => 'success',
+        ]);
+    }
+
+    /**
+     * Return the count of all shortlisted students for AJAX bulk admit modal.
+     */
+    public function shortlistedCount(Request $request)
+    {
+        $count = User::where('shortlist', 1)->count();
+        return response()->json(['count' => $count]);
+    }
+
+    // Remove the proxy methods for AJAX endpoints, as the trait methods are used directly.
 }

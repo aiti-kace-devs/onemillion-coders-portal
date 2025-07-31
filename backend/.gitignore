@@ -16,4 +16,4 @@ yarn-error.log
 .history
 public/build
 storage/app/version.json
-storage/framework
+storage/app/key.json

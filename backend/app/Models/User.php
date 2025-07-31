@@ -31,6 +31,7 @@ class User extends Authenticatable
         'exam',
         'status',
         'mobile_no',
+        'age',
         'password',
         'userId',
         'card_type',
@@ -58,6 +59,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'shortlist' => 'boolean',
     ];
 
     public function isAdmitted()
@@ -123,18 +125,14 @@ class User extends Authenticatable
         return $this->belongsTo(Course::class, 'registered_course');
     }
 
-    public function questionnaire_response()
-    {
-        return $this->hasMany(QuestionnaireResponse::class);
-    }
-
-    public function hasAttendance()
-    {        
-        return Attendance::where('user_id', $this->userId)->count() > 0;
-    }
-
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new ResetPasswordNotification($token));
     }
+
+    public function getNameWithEmail()
+{
+    return $this->name . ' (' . $this->email . ')';
+}
+
 }

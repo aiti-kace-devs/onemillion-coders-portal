@@ -10,47 +10,30 @@ class OexExamMaster extends Model
 {
     use CrudTrait;
     use HasFactory;
+    protected $table="oex_exam_masters";
 
-    /*
-    |--------------------------------------------------------------------------
-    | GLOBAL VARIABLES
-    |--------------------------------------------------------------------------
-    */
+    protected $primaryKey="id";
 
-    protected $table = 'oex_exam_masters';
-    // protected $primaryKey = 'id';
-    // public $timestamps = false;
-    protected $guarded = ['id'];
-    // protected $fillable = [];
-    // protected $hidden = [];
+    protected $fillable=['title','category','passmark', 'exam_date','status','exam_duration'];
+    protected $casts = [
+        'status' => 'boolean',
+    ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | FUNCTIONS
-    |--------------------------------------------------------------------------
-    */
+    public function categoryRelation()
+    {
+        return $this->belongsTo(OexCategory::class, 'category', 'id');
+    }
 
-    /*
-    |--------------------------------------------------------------------------
-    | RELATIONS
-    |--------------------------------------------------------------------------
-    */
+    public function questions(){
+        return $this->hasMany(OexQuestionMaster::class, 'exam_id');
+    }
 
-    /*
-    |--------------------------------------------------------------------------
-    | SCOPES
-    |--------------------------------------------------------------------------
-    */
+    protected static function boot()
+    {
+        parent::boot();
 
-    /*
-    |--------------------------------------------------------------------------
-    | ACCESSORS
-    |--------------------------------------------------------------------------
-    */
-
-    /*
-    |--------------------------------------------------------------------------
-    | MUTATORS
-    |--------------------------------------------------------------------------
-    */
+        static::addGlobalScope('questions_count', function ($query) {
+            $query->withCount('questions');
+        });
+    }
 }

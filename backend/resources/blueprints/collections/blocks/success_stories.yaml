@@ -1,0 +1,64 @@
+title: Success-Stories
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: title
+            field:
+              type: text
+              required: true
+              validate:
+                - required
+          -
+            import: details
+          -
+            handle: stories
+            field:
+              type: replicator
+              display: Stories
+              sets:
+                new_set_group:
+                  display: 'New Set Group'
+                  sets:
+                    story:
+                      display: Story
+                      fields:
+                        -
+                          handle: graduate_name
+                          field:
+                            type: text
+                            display: 'Graduate Name'
+                            width: 33
+                            validate:
+                              - required
+                        -
+                          handle: program_completed
+                          field:
+                            type: text
+                            display: 'Program Completed'
+                            width: 33
+                        -
+                          handle: sector
+                          field:
+                            type: text
+                            display: Sector
+                            width: 33
+                        -
+                          handle: message
+                          field:
+                            type: textarea
+                            display: Message
+  sidebar:
+    display: Sidebar
+    sections:
+      -
+        fields:
+          -
+            handle: slug
+            field:
+              type: slug
+              localizable: true
+              validate: 'max:200'
