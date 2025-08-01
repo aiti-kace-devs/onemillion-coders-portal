@@ -50,9 +50,9 @@ class HandleInertiaRequests extends Middleware
                     ? array_merge(
                         $user->only('id', 'name', 'email', 'created_at'),
                         [
-                            'isAdmitted' => $user->isAdmitted(),
-                            'hasAdmission' => $user->hasAdmission(),
-                            'hasAttendance' => $user->hasAttendance(),
+                            'isAdmitted' => $user?->isAdmitted(),
+                            'hasAdmission' => $user?->hasAdmission(),
+                            // 'hasAttendance' => $user?->hasAttendance(),
                         ]
                     )
                     : null,
