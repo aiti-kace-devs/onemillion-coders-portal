@@ -15,6 +15,7 @@ use App\Helpers\StudentFormFieldHelpers;
 class FormCrudController extends CrudController
 {
     use StudentFormFieldHelpers;
+    use \App\SearchableCRUD;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -58,7 +59,9 @@ class FormCrudController extends CrudController
             abort(403, 'Unauthorized action.');
         }
 
-        CRUD::setFromDb();
+        CRUD::column('title')->type('textarea');
+        FilterHelper::addBooleanColumn('active', 'status');
+        CRUD::column('created_at');
         CRUD::enableExportButtons();
     }
 
@@ -100,7 +103,7 @@ class FormCrudController extends CrudController
             abort(403, 'Unauthorized action.');
         }
 
-        CRUD::setFromDb();
+        $this->setupCreateOperation();
     }
 
     /**

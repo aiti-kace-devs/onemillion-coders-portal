@@ -125,10 +125,10 @@ class PermissionSeeder extends Seeder
         // ATTENDANCE OFFICER ROLE
         $attendanceOfficerRole = Role::findByName('attendance-officer', 'admin');
         $attendanceOfficerPermissions = $this->findResourcePermissions(
-            ['attendance', 'student', 'qr-scanner'],
+            ['attendance', 'qr-scanner', 'student-verification'],
             ['create', 'read', 'update'],
             ['all', 'self'],
-            ['attendance' => ['present', 'absent', 'late'], 'student' => ['verify'], 'qr-scanner' => ['scan', 'generate']]
+            ['attendance' => ['present', 'absent', 'late'], 'qr-scanner' => ['scan', 'generate'], 'student-verification' => ['verify']]
         );
         $attendanceOfficerRole->syncPermissions($attendanceOfficerPermissions);
 

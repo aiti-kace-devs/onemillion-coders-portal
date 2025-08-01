@@ -28,12 +28,6 @@ class DashboardController extends AdminController
 
         DashboardWidgetHelper::dashboardStudentStatisticsWidget();
 
-        //  DashboardWidgetHelper::dashboardStudentAgeGroupStatisticsWidget();
-
-        // DashboardWidgetHelper::dashboardArticleAndCatgoryChartStatisticsWidget();
-
-        // DashboardWidgetHelper::dashboardMediaChartStatisticsWidget();
-
         return view(backpack_view('dashboard'));
     }
 

@@ -17,6 +17,7 @@ use App\Helpers\CourseFieldHelpers;
 class BatchCrudController extends CrudController
 {
     use CourseFieldHelpers;
+    use \App\SearchableCRUD;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -30,12 +31,16 @@ class BatchCrudController extends CrudController
      */
     public function setup()
     {
-        CRUD::setModel(\App\Models\AdmissionBatch::class);
+        CRUD::setModel(\App\Models\Batch::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/batch');
         CRUD::setEntityNameStrings('batch', 'batches');
 
         $this->setSearchableColumns(['name', 'description']);
         $this->setSearchResultAttributes(['id', 'name', 'description']);
+
+        $this->crud->operation('list', function () {
+            WidgetHelper::admissionBatchStatisticsWidget();
+        });
 
         // Add permission checks
         $this->crud->operation(['list', 'show'], function () {
@@ -60,7 +65,42 @@ class BatchCrudController extends CrudController
             abort(403, 'Unauthorized action.');
         }
 
-        CRUD::setFromDb();
+        $this->crud->query
+            ->select('admission_batches.*')
+            ->selectRaw('(SELECT COUNT(ua.id)
+                FROM courses c
+                LEFT JOIN user_admission ua ON ua.course_id = c.id AND ua.confirmed IS NOT NULL
+                WHERE ua.batch_id = admission_batches.id
+            ) AS admitted_students_count');
+
+        CRUD::column('title')->type('text');
+        // FilterHelper::addGenericRelationshipColumn('course', 'Course', 'course', 'course_name');
+        CRUD::column('year');
+        CRUD::column('start_date');
+        CRUD::column('end_date');
+
+        CRUD::addColumn([
+            'name' => 'admitted_students_count',
+            'label' => 'Admitted Students',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $batchId = $entry->id;
+                $admittedCount = $entry->admitted_students_count;
+                $url = url("/admin/user?batch_id={$batchId}&confirmed_admission=1");
+        
+                return "<a href='{$url}'>".($admittedCount ?? 0)."</a>";
+
+            },
+            'escaped' => false,
+        ]);
+        
+
+        // CRUD::column('total_completed_students')->label('Total Completed');
+        FilterHelper::addBooleanColumn('completed', 'completed');
+        // $this->courseFilter('course_id');
+        $this->addOngoingCoursesFilter('Ongoing Batches');
+        FilterHelper::addBooleanFilter('completed', 'Filter By Completed');
+        FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
     }
 
@@ -77,7 +117,53 @@ class BatchCrudController extends CrudController
             abort(403, 'Unauthorized action.');
         }
 
-        CRUD::setFromDb();
+        CRUD::setValidation(BatchRequest::class);
+        CRUD::addField([
+            'name' => 'title',
+            'label' => 'Title',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+            'hint' => 'eg. Quarter 1, Batch 1'
+        ]);
+        
+        CRUD::addField([
+            'name' => 'description',
+            'label' => 'Description',
+            'type'      => 'text',
+            'wrapper' => ['class' => 'form-group col-6'],
+            // 'hint' => 'eg. 8am - 1pm'
+        ]);
+        // CRUD::addField([
+        //     'name' => 'course_id',
+        //     'label' => 'Course',
+        //     'type' => 'select2',
+        //     'entity' => 'course',
+        //     'attribute' => 'course_name',
+        //     'model' => Course::class,
+        //     'allows_null' => false,
+        //     'wrapper' => ['class' => 'form-group col-6'],
+        // ]);
+       
+        CRUD::addField([
+            'name' => 'start_date',
+            'label' => 'Start Date',
+            'type'      => 'date',
+            'wrapper' => ['class' => 'form-group col-6'],
+            // 'hint' => 'eg. 8am - 1pm'
+        ]);
+
+        CRUD::addField([
+            'name' => 'end_date',
+            'label' => 'End Date',
+            'type'      => 'date',
+            'wrapper' => ['class' => 'form-group col-6'],
+            // 'hint' => 'eg. 8am - 1pm'
+        ]);
+
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Completed', 'completed');
     }
 
     /**
@@ -93,7 +179,7 @@ class BatchCrudController extends CrudController
             abort(403, 'Unauthorized action.');
         }
 
-        CRUD::setFromDb();
+        $this->setupCreateOperation();
     }
 
     /**

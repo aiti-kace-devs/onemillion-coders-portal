@@ -15,31 +15,19 @@
 </x-backpack::menu-dropdown>
 @endcan
 
-@can('batch.read.all')
-<x-backpack::menu-dropdown title="Admissions" icon="la la-user-plus">
-    @can('batch.read.self')
-    <x-backpack::menu-dropdown-item title="Admission Batches" icon="la la-question" :link="backpack_url('batch')" />
-    @endcan
-    @can('user-admission.read.self')
-    <x-backpack::menu-dropdown-item title="Student Admissions" icon="la la-user-check" :link="backpack_url('user-admission')" />
-    @endcan
-    @can('student-verification.read.self')
-    <x-backpack::menu-dropdown-item title="Student Verifications" icon="la la-check-circle" :link="backpack_url('student-verification')" />
-    @endcan
-</x-backpack::menu-dropdown>
+@can('batch.read.self')
+    <x-backpack::menu-item title="Admission Batches" icon="la la-question" :link="backpack_url('batch')" />
 @endcan
 
+
 @can('filemanager.read.all')
-@can('filemanager.read.self')
 <x-backpack::menu-item :title="trans('backpack::crud.file_manager')" icon="la la-folder-open" :link="backpack_url('filemanager')" />
-@endcan
 @endcan
 
 @can('branch.read.all')
-@can('branch.read.self')
 <x-backpack::menu-item title="Manage Branches" icon="la la-code-branch" :link="backpack_url('branch')" />
 @endcan
-@endcan
+
 
 
 @can('centre.read.self')
@@ -82,7 +70,7 @@
 @endcan
 
 @can('form.read.self')
-<x-backpack::menu-item title="Forms" icon="la la-wpforms" :link="backpack_url('form')" />
+<x-backpack::menu-item title="Registration Form" icon="la la-wpforms" :link="backpack_url('form')" />
 @endcan
 
 @can('category.read.self')
@@ -100,6 +88,12 @@
 @can('student.read.self')
 <x-backpack::menu-item title="Students" icon="la la-user-graduate" :link="backpack_url('user')" />
 @endcan
+
+
+@can('student-verification.read.self')
+    <x-backpack::menu-item title="Student Verifications" icon="la la-check-circle" :link="backpack_url('student-verification')" />
+@endcan
+
 
 @can('email-template.read.self')
 <x-backpack::menu-item title="Email templates" icon="la la-envelope-open-text" :link="backpack_url('email-template')" />

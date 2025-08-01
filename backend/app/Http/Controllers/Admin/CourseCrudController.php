@@ -18,6 +18,7 @@ use App\Models\Course;
 class CourseCrudController extends CrudController
 {
     use GeneralFieldsAndColumns;
+    use \App\SearchableCRUD;
     use CourseFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
@@ -39,6 +40,10 @@ class CourseCrudController extends CrudController
         $this->setSearchableColumns(['course_name', 'description']);
         $this->setSearchResultAttributes(['id', 'course_name', 'description']);
 
+        $this->crud->operation('list', function () {
+            WidgetHelper::courseStatisticsWidget();
+        });
+        
         // Add permission checks
         $this->crud->operation(['list', 'show'], function () {
             $this->crud->addClause('where', function ($query) {
