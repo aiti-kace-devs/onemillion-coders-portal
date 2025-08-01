@@ -29,6 +29,8 @@ class AdminRequest extends FormRequest
 
         $rules = [
             'name' => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z0-9\s.,_\'"-]+$/'],
+            'email' => 'required|string|email|max:255|unique:admins',
+            'password' => 'required|string|min:8|confirmed',
         ];
 
         if ($isUpdate && $adminId) {
