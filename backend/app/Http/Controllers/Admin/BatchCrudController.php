@@ -129,7 +129,7 @@ class BatchCrudController extends CrudController
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. Quarter 1, Batch 1'
         ]);
-        
+
         CRUD::addField([
             'name' => 'description',
             'label' => 'Description',
@@ -147,7 +147,7 @@ class BatchCrudController extends CrudController
         //     'allows_null' => false,
         //     'wrapper' => ['class' => 'form-group col-6'],
         // ]);
-       
+
         CRUD::addField([
             'name' => 'start_date',
             'label' => 'Start Date',

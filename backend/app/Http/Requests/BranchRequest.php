@@ -37,7 +37,7 @@ class BranchRequest extends FormRequest
     public function attributes()
     {
         return [
-                //
+                'title' => 'Batch title'
             ];
     }
 
@@ -49,7 +49,7 @@ class BranchRequest extends FormRequest
     public function messages()
     {
         return [
-                //
+                'title.required' => 'Bacth title is required'
             ];
     }
 }

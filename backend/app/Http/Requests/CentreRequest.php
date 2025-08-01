@@ -37,7 +37,8 @@ class CentreRequest extends FormRequest
     public function attributes()
     {
         return [
-            //
+            'branch_id' => 'Branch name',
+            'title' => 'Title',
         ];
     }
 
@@ -50,6 +51,7 @@ class CentreRequest extends FormRequest
     {
         return [
             'branch_id.required' => 'The branch field is required.',
+            'title.required' => 'The titile field is required',
         ];
     }
 }

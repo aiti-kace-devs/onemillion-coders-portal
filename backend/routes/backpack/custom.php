@@ -28,7 +28,7 @@ Route::group([
     Route::post('/user/assign-batch', [UserCrudController::class, 'assignBatch']);
     Route::get('api/centre-by-branch', [CentreController::class, 'filterByBranch']);
     Route::get('admin/exam/{exam_id}/add-question', [OexQuestionMasterCrudController::class, 'addQuestion'])
-    ->name('admin.exam.add-question');    
+    ->name('admin.exam.add-question');
     Route::crud('role', 'RoleCrudController');
     Route::crud('admission-rejection', 'AdmissionRejectionCrudController');
     Route::crud('app-config', 'AppConfigCrudController');

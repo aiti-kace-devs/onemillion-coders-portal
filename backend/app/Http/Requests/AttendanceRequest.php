@@ -63,7 +63,12 @@ class AttendanceRequest extends FormRequest
     public function attributes()
     {
         return [
-                //
+            'user_id' => 'student',
+            'course_id' => 'course',
+            'date' => 'attendance date',
+            'scanned_data' => 'scanned QR code',
+            'online' => 'online status',
+            'validity' => 'validity period',
             ];
     }
 
@@ -75,7 +80,17 @@ class AttendanceRequest extends FormRequest
     public function messages()
     {
         return [
-                //
+            'user_id.required' => 'Please select a student.',
+            'user_id.exists' => 'The selected student does not exist.',
+            'course_id.required' => 'Please select a course.',
+            'course_id.exists' => 'The selected course does not exist.',
+            'date.required' => 'Please provide an attendance date.',
+            'date.date' => 'The attendance date must be a valid date.',
+            'date.before_or_equal' => 'The attendance date cannot be in the future.',
+            'scanned_data.required' => 'Please provide the scanned QR code data.',
+            'scanned_data.string' => 'The scanned QR code data must be a valid string.',
+            'validity.integer' => 'The validity period must be a number.',
+            'validity.min' => 'The validity period must be at least 1.',
             ];
     }
 }
