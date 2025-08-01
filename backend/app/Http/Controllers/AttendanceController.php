@@ -2,5 +2,40 @@
 
 namespace App\Http\Controllers;
 
-// This controller is now deprecated. All logic has been moved to traits and used in AttendanceCrudController.
-// Optionally, you can remove this file or keep it as a thin wrapper if needed for legacy routes.
+use Illuminate\Support\Facades\Auth;
+use App\Models\Attendance;
+use App\Models\UserAdmission;
+use Carbon\Carbon;
+use Inertia\Inertia;
+
+class AttendanceController extends Controller
+{
+    public function viewAttendance()
+    {
+        $userId = Auth::user()->userId;
+        $attendances = Attendance::select('attendances.*', 'courses.created_at as course_created', 'courses.course_name')
+            ->where('user_id', $userId)
+            ->join('courses', 'courses.id', 'attendances.course_id')
+            ->orderBy('date', 'desc')
+            ->get();
+
+        // Get the user's admitted course
+        $userAdmitted = UserAdmission::where('user_id', $userId)
+            ->whereNotNull('confirmed')
+            ->with('course')
+            ->first();
+
+        $totalSessions = 0;
+        
+        if ($userAdmitted && $userAdmitted->course && $userAdmitted->course->start_date && $userAdmitted->course->end_date) {
+            $start = Carbon::parse($userAdmitted->course->start_date);
+            $end = Carbon::parse($userAdmitted->course->end_date);
+            // Count weekdays (Mon-Fri) between start and end date, inclusive
+            $totalSessions = $start->diffInWeekdays($end) + (!$start->isWeekend() ? 1 : 0);
+        }
+
+        return Inertia::render('Student/Attendance', compact('attendances', 'totalSessions'));
+
+        // return view('student.attendance', compact('attendance'));
+    }
+}

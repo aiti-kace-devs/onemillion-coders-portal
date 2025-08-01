@@ -130,9 +130,19 @@ class User extends Authenticatable
         $this->notify(new ResetPasswordNotification($token));
     }
 
-    public function getNameWithEmail()
-{
-    return $this->name . ' (' . $this->email . ')';
-}
 
+    public function questionnaire_response()
+    {
+        return $this->hasMany(QuestionnaireResponse::class);
+    }
+
+    public function hasAttendance()
+    {
+        return Attendance::where('user_id', $this->userId)->count() > 0;
+    }
+
+    public function getNameWithEmail()
+    {
+        return $this->name . ' (' . $this->email . ')';
+    }
 }
