@@ -86,13 +86,17 @@ class BatchCrudController extends CrudController
             'function' => function ($entry) {
                 $batchId = $entry->id;
                 $admittedCount = $entry->admitted_students_count;
-                $url = url("/admin/user?batch_id={$batchId}&confirmed_admission=1");
-        
-                return "<a href='{$url}'>".($admittedCount ?? 0)."</a>";
 
+                if ($admittedCount > 0) {
+                    $url = url("/admin/user?batch_id={$batchId}&confirmed_admission=1");
+                    return "<a href='{$url}'>{$admittedCount}</a>";
+                }
+
+                return ''; 
             },
             'escaped' => false,
         ]);
+
         
 
         // CRUD::column('total_completed_students')->label('Total Completed');

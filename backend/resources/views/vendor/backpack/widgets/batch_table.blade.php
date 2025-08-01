@@ -22,10 +22,13 @@
                         <td>{{ $counter++ }}</td>
                         <td>{{ $batch->title }} - {{ $batch->year }}</td>
                         <td>
-                            <a href="{{ url("/admin/user?batch_id={$batch->id}&confirmed_admission=1") }}">
-                                {{ $batch->admitted_students_count ?? 0 }}
-                            </a>
+                            @if($batch->admitted_students_count > 0)
+                                <a href="{{ url("/admin/user?batch_id={$batch->id}&confirmed_admission=1") }}">
+                                    {{ $batch->admitted_students_count }}
+                                </a>
+                            @endif
                         </td>
+
                         <td>
                             {{ $batch->completed ? 'Completed' : 'Ongoing' }}
                         </td>
