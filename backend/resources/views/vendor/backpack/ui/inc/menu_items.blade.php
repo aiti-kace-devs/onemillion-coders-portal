@@ -16,7 +16,7 @@
 @endcan
 
 @can('batch.read.all')
-    <x-backpack::menu-item title="Admission Batches" icon="la la-question" :link="backpack_url('batch')" />
+    <x-backpack::menu-item title="Admission Batches" icon="la la-users" :link="backpack_url('batch')" />
 @endcan
 
 
@@ -53,13 +53,13 @@
     <x-backpack::menu-dropdown-item title="Course Modules" icon="la la-puzzle-piece" :link="backpack_url('course-module')" />
     @endcan
     @can('course-certification.read.all')
-    <x-backpack::menu-dropdown-item title="Course Certifications" icon="la la-question" :link="backpack_url('course-certification')" />
+    <x-backpack::menu-dropdown-item title="Course Certifications" icon="la la-certificate" :link="backpack_url('course-certification')" />
     @endcan
     @can('course-match.read.all')
-    <x-backpack::menu-dropdown-item title="Course Matches" icon="la la-question" :link="backpack_url('course-match')" />
+    <x-backpack::menu-dropdown-item title="Course Matches" icon="la la-link" :link="backpack_url('course-match')" />
     @endcan
     @can('course-match-option.read.all')
-    <x-backpack::menu-dropdown-item title="Course Match options" icon="la la-question" :link="backpack_url('course-match-option')" />
+    <x-backpack::menu-dropdown-item title="Course Match options" icon="la la-list-ul" :link="backpack_url('course-match-option')" />
     @endcan
 </x-backpack::menu-dropdown>
 @endcan
