@@ -17,3 +17,4 @@ yarn-error.log
 public/build
 storage/app/version.json
 storage/app/key.json
+/storage/debugbar

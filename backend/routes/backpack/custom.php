@@ -62,29 +62,32 @@ Route::group([
     Route::get('qr-scanner', 'AttendanceCrudController@setupScanQrCodePage')->name('qr-scanner');
 
     // Bulk actions for UserCrudController
-    Route::post('user/send-bulk-email', 'UserCrudController@sendBulkEmail');
-    Route::post('user/send-bulk-sms', 'UserCrudController@sendBulkSMS');
-    Route::post('user/shortlist-students', 'UserCrudController@saveShortlistedStudents');
+    Route::get('user/fetch_sms_template', 'UserCrudController@fetchSmsTemplate')->name('sms-template.fetch');
+    Route::post('user/send-bulk-email', 'UserCrudController@sendBulkEmail')->name('bulk-email.send');
+    Route::post('user/send-bulk-sms', 'UserCrudController@sendBulkSMS')->name('bulk-sms.send');
+    Route::post('user/shortlist-students', 'UserCrudController@saveShortlistedStudents')->name('bulk-students.shortlist');
 
     // AJAX endpoint to get count of all shortlisted students
     Route::post('user/shortlisted-count', 'UserCrudController@shortlistedCount')->name('user.shortlisted-count');
+    Route::get('user/filtered-count', 'UserCrudController@getFilteredCount')->name('user.filtered-count');
 
     // Custom routes for AttendanceCrudController non-CRUD methods
-    Route::get('attendance/qr-scanner', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupScanQrCodePage'])->name('attendance.qr-scanner');
-    Route::post('attendance/generate_qrcode', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupGenerateQrCodeData'])->name('attendance.generate_qrcode');
-    Route::post('attendance/confirm_attendance', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupConfirmAttendance'])->name('attendance.confirm_attendance');
-    Route::post('attendance/record_attendance', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupRecordAttendance'])->name('attendance.record_attendance');
-    Route::get('attendance/view_attendance', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupViewAttendance'])->name('attendance.view_attendance');
-    Route::delete('attendance/remove_attendance/{id}', [\App\Http\Controllers\Admin\AttendanceCrudController::class, 'setupRemoveAttendance'])->name('attendance.remove_attendance');
+    Route::get('attendance/qr-scanner','AttendanceCrudController@setupScanQrCodePage')->name('attendance.qr-scanner');
+    Route::post('attendance/generate_qrcode','AttendanceCrudController@setupGenerateQrCodeData')->name('attendance.generate_qrcode');
+    Route::post('attendance/confirm_attendance','AttendanceCrudController@setupConfirmAttendance')->name('attendance.confirm_attendance');
+    Route::post('attendance/record_attendance','AttendanceCrudController@setupRecordAttendance')->name('attendance.record_attendance');
+    Route::get('attendance/view_attendance','AttendanceCrudController@setupViewAttendance')->name('attendance.view_attendance');
+    Route::delete('attendance/remove_attendance/{id}','AttendanceCrudController@setupRemoveAttendance')->name('attendance.remove_attendance');
 
     // Shortlist Actions (Bulk/Group)
     Route::get('user/choose-shortlist-modal', 'UserCrudController@showChooseShortlistModal')->name('user.choose-shortlist-modal');
     Route::post('user/admit-shortlisted', 'UserCrudController@admitShortlistedStudents')->name('user.admit-shortlisted');
+    Route::post('user/admit-student', 'UserCrudController@bulkAdmit')->name('user.admit-student');
 
     // Shortlist Row Actions (Per Student)
     Route::post('user/{user}/change-admission', 'UserCrudController@changeAdmission')->name('user.change-admission');
     Route::post('user/{user}/choose-session', 'UserCrudController@chooseSession')->name('user.choose-session');
-    Route::delete('user/{user}/delete-admission', 'UserCrudController@deleteAdmission')->name('user.delete-admission');
+    Route::delete('user/delete-admission/{user_id}', 'UserCrudController@deleteAdmission')->name('user.delete-admission');
 
     // View Results for a student (admin panel, Backpack)
     Route::get('admin_view_result/{id}', 'UserCrudController@viewResult');

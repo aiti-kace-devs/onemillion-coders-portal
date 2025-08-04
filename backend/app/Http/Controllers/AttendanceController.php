@@ -26,7 +26,7 @@ class AttendanceController extends Controller
             ->first();
 
         $totalSessions = 0;
-        
+
         if ($userAdmitted && $userAdmitted->course && $userAdmitted->course->start_date && $userAdmitted->course->end_date) {
             $start = Carbon::parse($userAdmitted->course->start_date);
             $end = Carbon::parse($userAdmitted->course->end_date);

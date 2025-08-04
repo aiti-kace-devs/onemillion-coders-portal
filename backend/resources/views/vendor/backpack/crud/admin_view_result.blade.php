@@ -1,20 +1,16 @@
 @extends(backpack_view('blank'))
 @section('header')
     <section class="content-header">
-        <h1>Result</h1>
-        <ol class="breadcrumb">
-            <li><a href="{{ backpack_url('dashboard') }}">Dashboard</a></li>
-            <li class="active">Exam</li>
-        </ol>
+        <h1 class="text-center">Result</h1>
     </section>
 @endsection
 
 @section('content')
-<div class="row">
-    <div class="col-md-8 col-md-offset-2">
-        <div class="card mt-4">
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card mt-4 mx-auto">
             <div class="card-body">
-                <h2>Student information</h2>
+                <h2 class="text-center">Student information</h2>
                 <table class="table">
                     <tr>
                         <td>Name : </td>

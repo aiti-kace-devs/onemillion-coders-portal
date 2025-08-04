@@ -4,12 +4,20 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\StudentOperation;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Admin\RegisteredUserController;
+use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\AppConfigController;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\Traits\AttendanceQRCodeTrait;
+use App\Http\Controllers\Traits\AttendanceConfirmTrait;
+use App\Http\Controllers\Traits\AttendanceViewRemoveTrait;
+// use App\Http\Controllers\Admin\RegisteredUserController;
+// use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CentreController;
+use App\Http\Controllers\Admin\Api\FormPreviewController;
+use App\Http\Controllers\Admin\Api\CourseProgrammeController;
+use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
+use App\Http\Controllers\Admin\Api\RegistrationFormAPIController;
 use App\Http\Controllers\Admin\Api\FormPreviewController;
 use App\Http\Controllers\Admin\Api\CourseProgrammeController;
 use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
@@ -29,6 +37,7 @@ use App\Http\Controllers\QuestionnaireController;
 use Illuminate\Support\Str;
 
 
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -41,17 +50,48 @@ use Illuminate\Support\Str;
 */
 
 // Route::redirect('/', '/admin');
+// Route::redirect('/', '/admin');
 
+// // Route::get('/', [LandingPageController::class, 'index']);
 // // Route::get('/', [LandingPageController::class, 'index']);
 
 // // Route::get('/available-courses', [LandingPageController::class, 'availableCourses'])->name('available-courses');
+// // Route::get('/available-courses', [LandingPageController::class, 'availableCourses'])->name('available-courses');
 
+// // Route::get('/application', [LandingPageController::class, 'application'])->name('application');
 // // Route::get('/application', [LandingPageController::class, 'application'])->name('application');
 
 // // Route::get('/{course}', [LandingPageController::class, 'courseView'])
 // //     ->where('course', 'cybersecurity-course|ai-course|data-protection-course|protection-expert-course|protection-sup-course|certified-dpf-course|cnst-course')
 // //     ->name('dynamic-course');
+// // Route::get('/{course}', [LandingPageController::class, 'courseView'])
+// //     ->where('course', 'cybersecurity-course|ai-course|data-protection-course|protection-expert-course|protection-sup-course|certified-dpf-course|cnst-course')
+// //     ->name('dynamic-course');
 
+// // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
+// Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
+// routes/web.php
+Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
+Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
+// Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
+Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
+Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
+Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
+
+Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
+Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
+Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
+Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
+Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
+Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
+Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
+
+Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
+    ->name('logout');
+
+
+Route::prefix('admins')
 // // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
 // Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
 // routes/web.php
@@ -166,6 +206,7 @@ Route::prefix('admins')
     ->group(function () {
         Route::middleware(['auth:admin'])->group(function () {
             // Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
+            // Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
 
             Route::middleware('permission:category.read')
                 ->name('category.')
@@ -270,9 +311,18 @@ Route::prefix('admins')
                 Route::post('/confirm_attendance', [AttendanceConfirmTrait::class, 'confirmAttendance'])->middleware('permission:attendance.create');
                 Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])->name('viewAttendanceByDate');
                 Route::get('/remove-attendance/{id}', [AttendanceViewRemoveTrait::class, 'removeAttendance'])
+                Route::get('/remove-attendance/{id}', [AttendanceViewRemoveTrait::class, 'removeAttendance'])
                     ->name('remove-attendance')
                     ->middleware('permission:attendance.delete');
                 Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page'])->middleware('permission:attendance.create');
+                Route::post('/generate_qrcode', [AttendanceQRCodeTrait::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
+                // Route::post('/confirm_attendance', [AttendanceController::class, 'confirmAttendance'])->middleware('permission:attendance.create');
+                Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])->name('viewAttendanceByDate');
+                // Route::get('/remove-attendance/{id}', [AttendanceController::class, 'removeAttendance'])
+                //     ->name('remove-attendance')
+                    // ->middleware('permission:attendance.delete');
+                Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page'])->middleware('permission:attendance.create');
+                // Route::post('/generate_qrcode', [AttendanceController::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
                 Route::post('/generate_qrcode', [AttendanceQRCodeTrait::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
                 // Route::post('/confirm_attendance', [AttendanceController::class, 'confirmAttendance'])->middleware('permission:attendance.create');
                 Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])->name('viewAttendanceByDate');
@@ -302,6 +352,23 @@ Route::prefix('admins')
             });
 
             Route::middleware('permission:admin.read')->group(function () {
+                // Route::get('/get-admin-courses/{admin}', [RegisteredUserController::class, 'getAdminCourses'])->name('admin.get-admin-courses');
+                // Route::post('/update-admin-courses', [RegisteredUserController::class, 'updateAdminCourses'])->name('admin.update-admin-courses');
+                // Route::get('/manage_admins', [RegisteredUserController::class, 'index'])->name('manage_admins');
+                // Route::get('/create', [RegisteredUserController::class, 'create'])
+                //     ->name('admins.create')
+                //     ->middleware('permission:admin.create');
+                // Route::post('/add_new_admin', [RegisteredUserController::class, 'store'])->middleware('permission:admin.create');
+                // Route::get('/edit_admin/{id}/edit', [RegisteredUserController::class, 'edit'])
+                //     ->name('admins.edit')
+                //     ->middleware('permission:admin.update');
+                // Route::put('/{id}/update', [RegisteredUserController::class, 'update'])
+                //     ->name('admins.update')
+                //     ->middleware('permission:admin.update');
+                // Route::delete('/{id}/delete', [RegisteredUserController::class, 'destroy'])
+                //     ->name('admins.delete')
+                //     ->middleware('permission:admin.delete');
+                // Route::get('/is_super_admin_status/{id}', [RegisteredUserController::class, 'is_super_admin_status'])->middleware('permission:admin.status');
                 // Route::get('/get-admin-courses/{admin}', [RegisteredUserController::class, 'getAdminCourses'])->name('admin.get-admin-courses');
                 // Route::post('/update-admin-courses', [RegisteredUserController::class, 'updateAdminCourses'])->name('admin.update-admin-courses');
                 // Route::get('/manage_admins', [RegisteredUserController::class, 'index'])->name('manage_admins');
@@ -611,21 +678,60 @@ Route::prefix('student')
             // Route::post('/questionnaire/{code}', [StudentOperation::class, 'store_questionnaire'])->name('questionnaire.store');
 
 
-            // Route::get('/ateendance', [StudentOperation::class, 'view_result']);
+//             // Route::get('/ateendance', [StudentOperation::class, 'view_result']);
 
-            // Route::get('/view_answer/{id}', [StudentOperation::class, 'view_answer']);
+//             // Route::get('/view_answer/{id}', [StudentOperation::class, 'view_answer']);
 
-            Route::post('/start-exam/{id}', [StudentOperation::class, 'start_exam']);
-            Route::get('/mark_attendance', [AttendanceController::class, 'recordAttendance'])->name('mark-attendance');
-            Route::get('/logout', [AuthenticatedSessionController::class, 'destroy']);
-        });
-    });
+//             Route::post('/start-exam/{id}', [StudentOperation::class, 'start_exam']);
+//             Route::get('/mark_attendance', [AttendanceController::class, 'recordAttendance'])->name('mark-attendance');
+//             Route::get('/logout', [AuthenticatedSessionController::class, 'destroy']);
+//         });
+//     });
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
+// Route::middleware('auth')->group(function () {
+//     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+//     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+//     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+// });
 
-require __DIR__ . '/auth.php';
+// require __DIR__ . '/auth.php';
+
+
+
+Route::get('admin/roles/permissions', function (Request $request) {
+    $roleIds = $request->input('role_ids', []);
+
+    // Ensure $roleIds is an array
+    if (!is_array($roleIds)) {
+        $roleIds = [$roleIds];
+    }
+
+    // Filter out empty values and convert to integers
+    $roleIds = array_filter(array_map('intval', $roleIds));
+
+    if (empty($roleIds)) {
+        return response()->json([]);
+    }
+
+    try {
+        // Get unique permission IDs for the selected roles
+        $permissionIds = \Spatie\Permission\Models\Permission::whereHas('roles', function ($q) use ($roleIds) {
+            $q->whereIn('roles.id', $roleIds);
+        })->pluck('id')->unique()->values()->toArray();
+
+        // Convert to integers to ensure consistency
+        $permissionIds = array_map('intval', $permissionIds);
+
+        return response()->json($permissionIds);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Failed to fetch permissions'], 500);
+    }
+})->middleware(['web', 'admin']);
+
+
+
+
+
+
+require __DIR__ . '/backpack/custom.php';
 require __DIR__ . '/admin.php';

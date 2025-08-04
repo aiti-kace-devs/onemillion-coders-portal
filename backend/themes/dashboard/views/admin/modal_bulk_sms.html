@@ -1,0 +1,13 @@
+<x-modal id="bulk-sms-modal" title="Send Bulk SMS TESTING" size="modal-lg">
+    <label for="sms_template">Select Template To Use</label>
+    <select name="sms_template" id="sms_template" class="form-control">
+        <option value="" selected disabled>Loading templates...</option>
+    </select>
+    <br>
+    <label for="sms_message">Or Write Message</label>
+    <textarea class="form-control mb-3" name="sms_message" id="sms_message" placeholder="Type your SMS message here..."></textarea>
+    <x-slot name="footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button id="modal-submit" type="button" class="btn btn-primary">Submit</button>
+    </x-slot>
+</x-modal>
