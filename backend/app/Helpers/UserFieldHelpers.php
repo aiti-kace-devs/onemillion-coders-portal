@@ -81,6 +81,7 @@ trait UserFieldHelpers
         $this->addConfirmedAdmissionColumn();
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
         CRUD::column('created_at');
+
     }
 
     public function setupProfileColumns()
