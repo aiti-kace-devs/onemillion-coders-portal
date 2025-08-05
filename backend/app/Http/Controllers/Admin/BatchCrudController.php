@@ -19,8 +19,12 @@ class BatchCrudController extends CrudController
     use CourseFieldHelpers;
     use \App\SearchableCRUD;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation {
+        store as traitStore;
+    }
+    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation {
+        update as traitUpdate;
+    }
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
@@ -67,17 +71,52 @@ class BatchCrudController extends CrudController
 
         $this->crud->query
             ->select('admission_batches.*')
-            ->selectRaw('(SELECT COUNT(ua.id)
+            ->addSelect('admission_batches.id') // explicitly qualifying id
+            ->selectRaw('(
+                SELECT COUNT(ua.id)
                 FROM courses c
                 LEFT JOIN user_admission ua ON ua.course_id = c.id AND ua.confirmed IS NOT NULL
                 WHERE ua.batch_id = admission_batches.id
-            ) AS admitted_students_count');
+            ) AS admitted_students_count')
+            ->selectRaw('(
+                SELECT COUNT(cb.course_id)
+                FROM course_batches cb
+                WHERE cb.batch_id = admission_batches.id
+            ) AS courses_count');
+
 
         CRUD::column('title')->type('text');
         // FilterHelper::addGenericRelationshipColumn('course', 'Course', 'course', 'course_name');
         CRUD::column('year');
         CRUD::column('start_date');
         CRUD::column('end_date');
+
+        CRUD::addColumn([
+            'name' => 'courses_count',
+            'label' => 'Courses',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                // Get course IDs (not batch IDs) from the relationship
+                $courseIds = $entry->assignedCourseBatches()
+                                ->with('course') // eager load course relationship if needed
+                                ->pluck('course_id') // explicitly pluck course_id
+                                ->unique() // remove duplicates if any
+                                ->values() // reset array keys
+                                ->toArray();
+
+                $courseCount = count($courseIds);
+
+                if ($courseCount > 0) {
+                    $encodedIds = urlencode(json_encode($courseIds));
+                    $url = url("/admin/course?id={$encodedIds}");
+
+                    return "<a href='{$url}'>{$courseCount}</a>";
+                }
+
+                return '';
+            },
+            'escaped' => false,
+        ]);
 
         CRUD::addColumn([
             'name' => 'admitted_students_count',
@@ -127,7 +166,8 @@ class BatchCrudController extends CrudController
             'label' => 'Title',
             'type'      => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
-            'hint' => 'eg. Quarter 1, Batch 1'
+            'hint' => 'eg. Quarter 1, Batch 1',
+            'tab' => 'General Info',
         ]);
 
         CRUD::addField([
@@ -135,24 +175,16 @@ class BatchCrudController extends CrudController
             'label' => 'Description',
             'type'      => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
+            'tab' => 'General Info',
             // 'hint' => 'eg. 8am - 1pm'
         ]);
-        // CRUD::addField([
-        //     'name' => 'course_id',
-        //     'label' => 'Course',
-        //     'type' => 'select2',
-        //     'entity' => 'course',
-        //     'attribute' => 'course_name',
-        //     'model' => Course::class,
-        //     'allows_null' => false,
-        //     'wrapper' => ['class' => 'form-group col-6'],
-        // ]);
 
         CRUD::addField([
             'name' => 'start_date',
             'label' => 'Start Date',
             'type'      => 'date',
             'wrapper' => ['class' => 'form-group col-6'],
+            'tab' => 'General Info',
             // 'hint' => 'eg. 8am - 1pm'
         ]);
 
@@ -161,13 +193,26 @@ class BatchCrudController extends CrudController
             'label' => 'End Date',
             'type'      => 'date',
             'wrapper' => ['class' => 'form-group col-6'],
+            'tab' => 'General Info',
             // 'hint' => 'eg. 8am - 1pm'
         ]);
 
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+        CRUD::addField([
+            'name' => 'batches',
+            'type' => 'select2_multiple',
+            'label' => 'Assign Course',
+            'entity' => 'assignedCourseBatches',
+            'model' => 'App\\Models\\Course',
+            'attribute' => 'course_name',
+            'pivot' => true,
+            'tab' => 'Assign Courses',
+            // 'wrapper' => ['class' => 'form-group col-6'],
+        ]);
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Completed', 'completed');
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status', 'General Info');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Completed', 'completed', 'General Info');
     }
 
     /**
@@ -198,5 +243,53 @@ class BatchCrudController extends CrudController
         if (!backpack_user()->can('batch.delete.all')) {
             abort(403, 'Unauthorized action.');
         }
+    }
+
+
+
+
+
+
+    public function store()
+    {
+        // Check permissions
+        if (!backpack_user()->can('batch.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $response = $this->traitStore();
+        
+        // Get the created batch
+        $batch = $this->crud->entry;
+        
+        // Sync the assigned batches
+        if (request()->has('batches')) {
+            $batch->assignedCourseBatches()->sync(request()->input('batches'));
+        }
+        
+        return $response;
+    }
+
+
+
+
+    public function update()
+    {
+        // Check permissions
+        if (!backpack_user()->can('batch.update.self')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $response = $this->traitUpdate();
+        
+        // Get the updated batch
+        $batch = $this->crud->entry;
+        
+        // Sync the assigned batches
+        if (request()->has('batches')) {
+            $batch->assignedCourseBatches()->sync(request()->input('batches'));
+        }
+        
+        return $response;
     }
 }
