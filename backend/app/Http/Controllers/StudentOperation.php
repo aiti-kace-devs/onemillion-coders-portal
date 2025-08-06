@@ -80,7 +80,7 @@ class StudentOperation extends Controller
     public function profile()
     {
         // Get the current authenticated user
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
 
         // Get course details if available in user's record
         $course = null;
@@ -98,7 +98,7 @@ class StudentOperation extends Controller
     // application status
     public function application_status()
     {
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
 
         $user_exam = user_exam::where('user_id', $user->id)->first();
         $user_admission = UserAdmission::where('user_id', $user->userId)->first();
@@ -110,7 +110,7 @@ class StudentOperation extends Controller
     //Exam page
     public function exam()
     {
-        if (!Auth::user()->isAdmitted()) {
+        if (!Auth::guard('web')->user()->isAdmitted()) {
             return redirect(route('student.profile.edit'));
         }
 
@@ -142,7 +142,7 @@ class StudentOperation extends Controller
     //join exam page
     public function join_exam($id)
     {
-        if (!Auth::user()->isAdmitted()) {
+        if (!Auth::guard('web')->user()->isAdmitted()) {
             return redirect(route('student.profile.edit'));
         }
 
@@ -152,7 +152,7 @@ class StudentOperation extends Controller
 
         // $question = Oex_question_master::where('exam_id', $id)->inRandomOrder()->get();
         $user_exam = user_exam::where('exam_id', $id)
-            ->where('user_id', Auth::user()->id)
+            ->where('user_id', Auth::guard('web')->user()->id)
             ->get()
             ->first();
 
@@ -174,7 +174,7 @@ class StudentOperation extends Controller
         }
 
         // 48 hours to finish exam
-        $userCreatedAt = new Carbon(Auth::user()->created_at);
+        $userCreatedAt = new Carbon(Auth::guard('web')->user()->created_at);
         $userCreatedAtPlusDeadlineDays = $userCreatedAt->addDays(config(EXAM_DEADLINE_AFTER_REGISTRATION, 2));
 
         if (!$userCreatedAtPlusDeadlineDays->isBefore($now)) {
@@ -214,7 +214,7 @@ class StudentOperation extends Controller
         $id = $request->exam_id;
 
         $user_exam = user_exam::where('exam_id', $id)
-            ->where('user_id', Auth::user()->id)
+            ->where('user_id', Auth::guard('web')->user()->id)
             ->get()
             ->first();
 
@@ -230,14 +230,14 @@ class StudentOperation extends Controller
     //On submit
     public function submit_questions(Request $request)
     {
-        $std_info = user_exam::where('user_id', Auth::user()->id)
+        $std_info = user_exam::where('user_id', Auth::guard('web')->user()->id)
             ->where('exam_id', $request->exam_id)
             ->get()
             ->first();
 
         if ($std_info && $std_info->submitted) {
             $res = Oex_result::where('exam_id', $request->exam_id)
-                ->where('user_id', Auth::user()->id)
+                ->where('user_id', Auth::guard('web')->user()->id)
                 ->get()
                 ->first();
 
@@ -283,7 +283,7 @@ class StudentOperation extends Controller
         $std_info->submitted = Carbon::now()->toDateTimeString();
         $std_info->update();
 
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
         $userId = $user->userId;
 
         $res = new Oex_result();
@@ -312,7 +312,7 @@ class StudentOperation extends Controller
     //Applying for exam
     public function apply_exam($id)
     {
-        $checkuser = user_exam::where('user_id', Auth::user()->id)
+        $checkuser = user_exam::where('user_id', Auth::guard('web')->user()->id)
             ->where('exam_id', $id)
             ->get()
             ->first();
@@ -322,7 +322,7 @@ class StudentOperation extends Controller
         } else {
             $exam_user = new user_exam();
 
-            $exam_user->user_id = Auth::user()->id;
+            $exam_user->user_id = Auth::guard('web')->user()->id;
             $exam_user->exam_id = $id;
             $exam_user->std_status = 1;
             $exam_user->exam_joined = 0;
@@ -339,11 +339,11 @@ class StudentOperation extends Controller
     public function view_result($id)
     {
         $data['result_info'] = Oex_result::where('exam_id', $id)
-            ->where('user_id', Auth::user()->id)
+            ->where('user_id', Auth::guard('web')->user()->id)
             ->get()
             ->first();
 
-        $data['student_info'] = User::where('id', Auth::user()->id)
+        $data['student_info'] = User::where('id', Auth::guard('web')->user()->id)
             ->get()
             ->first();
 
@@ -385,7 +385,7 @@ class StudentOperation extends Controller
 
     public function select_session_view(Request $request)
     {
-        $user = $request->user()->only(['id', 'name', 'userId']);
+        $user = Auth::guard('web')->user()->only(['id', 'name', 'userId']);
         $admission = UserAdmission::where('user_id', $user['userId'])->firstOrFail();
         $course = Course::find($admission->course_id);
         $sessions = CourseSession::where('course_id', $course->id)->get();
@@ -408,7 +408,7 @@ class StudentOperation extends Controller
 
     public function confirm_session(Request $request)
     {
-        $user = $request->user();
+        $user = $request->guard('web')->user();
 
         $data = $request->validate(
             [
@@ -509,7 +509,7 @@ class StudentOperation extends Controller
 
     public function change_course()
     {
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
 
         // if ($user->admission) {
         //     return redirect()
@@ -546,7 +546,7 @@ class StudentOperation extends Controller
                 ]);
         }
 
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
 
         if ($user->admission) {
             return redirect()
@@ -641,7 +641,7 @@ class StudentOperation extends Controller
     public function get_details_page()
     {
         $user = User::select('users.*', 'users.updated_at as user_updated', 'users.created_at as user_created', 'users.name as student_name', 'courses.*', 'course_sessions.session as selected_session', 'course_sessions.*', 'user_admission.*')
-            ->where('userId', Auth::user()->userId)
+            ->where('userId', Auth::guard('web')->user()->userId)
             ->join('user_admission', 'user_admission.user_id', '=', 'users.userId')
             ->join('course_sessions', 'user_admission.session', '=', 'course_sessions.id')
             ->join('courses', 'user_admission.course_id', '=', 'courses.id')
@@ -658,7 +658,7 @@ class StudentOperation extends Controller
 
     public function get_meeting_link_page()
     {
-        $session = CourseSession::find(UserAdmission::where('user_id', Auth::user()->userId)->firstOrFail()->session);
+        $session = CourseSession::find(UserAdmission::where('user_id', Auth::guard('web')->user()->userId)->firstOrFail()->session);
         return view('student.meeting-link', [
             'session' => $session,
         ]);
@@ -666,7 +666,7 @@ class StudentOperation extends Controller
 
     public function updateDetails(Request $request)
     {
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
 
         $rules = [
             'name' => 'sometimes|string|regex:/^[\pL\s\-\' ]+$/u|min:5|max:255|min:4',
@@ -737,7 +737,7 @@ class StudentOperation extends Controller
         $questionnaires = Questionnaire::where('active', true)->latest()->get();
 
         $questionnaires = $questionnaires->map(function ($questionnaire) {
-            $questionnaire['is_submitted'] = Auth::user()->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->where('is_submitted', true)->exists();
+            $questionnaire['is_submitted'] = Auth::guard('web')->user()->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->where('is_submitted', true)->exists();
 
             return $questionnaire;
         });
@@ -760,7 +760,7 @@ class StudentOperation extends Controller
             );
         }
 
-        $user = \Auth::user();
+        $user = Auth::guard('web')->user();
 
         if (!$user->isAdmitted() && !$user->hasAttendance()) {
             return redirect(route('student.assessment.index'))->with(
@@ -904,7 +904,7 @@ class StudentOperation extends Controller
         $draft = QuestionnaireResponse::firstOrCreate(
             [
                 'questionnaire_id' => $questionnaire->id,
-                'user_id' => Auth::id(),
+                'user_id' => Auth::guard('web')->user()->id,
             ],
             [
                 'response_data' => [],
@@ -963,7 +963,7 @@ class StudentOperation extends Controller
     // Student results page
     public function results()
     {
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
         $results = \DB::table('user_exams')
             ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
             ->leftJoin('oex_results', function($join) {

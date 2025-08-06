@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, usePage } from "@inertiajs/vue3";
 import { computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 
 const props = defineProps({
@@ -13,6 +13,10 @@ const props = defineProps({
     default: 0,
   },
 });
+
+const { auth } = usePage().props;
+
+const user = auth?.user || {};
 
 const attendanceCount = computed(() => props.attendances.length);
 const attendancePercent = computed(() => {
@@ -49,6 +53,7 @@ onMounted(async () => {
 
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        {{ user }}
         <!-- Progress Bar -->
         <div v-if="totalSessions != 0" class="p-6 bg-white shadow sm:rounded-lg">
           <div class="mb-2">

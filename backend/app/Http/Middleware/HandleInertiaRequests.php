@@ -52,7 +52,7 @@ class HandleInertiaRequests extends Middleware
                         [
                             'isAdmitted' => $user?->isAdmitted(),
                             'hasAdmission' => $user?->hasAdmission(),
-                            // 'hasAttendance' => $user?->hasAttendance(),
+                            'hasAttendance' => $user?->hasAttendance(),
                         ]
                     )
                     : null,

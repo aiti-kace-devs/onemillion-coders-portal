@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
-use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -63,7 +62,6 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'shortlist' => 'boolean',
-        'shortlist' => 'boolean',
     ];
 
     public function isAdmitted()
@@ -107,26 +105,6 @@ class User extends Authenticatable
     public function rejectedAdmissions()
     {
         return $this->hasMany(AdmissionRejection::class, 'user_id', 'userId');
-    }
-
-    public function admissions()
-    {
-        return $this->hasMany(UserAdmission::class, 'user_id', 'userId');
-    }
-
-    public function userExams()
-    {
-        return $this->hasMany(\App\Models\user_exam::class, 'user_id', 'id');
-    }
-
-    public function examResults()
-    {
-        return $this->hasMany(\App\Models\Oex_result::class, 'user_id', 'id');
-    }
-
-    public function course()
-    {
-        return $this->belongsTo(Course::class, 'registered_course');
     }
 
     public function admissions()

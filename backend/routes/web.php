@@ -18,15 +18,11 @@ use App\Http\Controllers\Admin\Api\FormPreviewController;
 use App\Http\Controllers\Admin\Api\CourseProgrammeController;
 use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
 use App\Http\Controllers\Admin\Api\RegistrationFormAPIController;
-use App\Http\Controllers\Admin\Api\FormPreviewController;
-use App\Http\Controllers\Admin\Api\CourseProgrammeController;
-use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
-use App\Http\Controllers\Admin\Api\RegistrationFormAPIController;
 use App\Http\Controllers\ClassScheduleController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\FormController;
 use App\Http\Controllers\FormResponseController;
-use App\Http\Controllers\LandingPageController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ListController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\ProfileController;
@@ -91,7 +87,7 @@ Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
 
 
-Route::prefix('admins')
+//Route::prefix('admins')-
 // // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
 // Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
 // routes/web.php
@@ -310,7 +306,6 @@ Route::prefix('admins')
             Route::middleware('permission:attendance.read')->group(function () {
                 Route::post('/confirm_attendance', [AttendanceConfirmTrait::class, 'confirmAttendance'])->middleware('permission:attendance.create');
                 Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])->name('viewAttendanceByDate');
-                Route::get('/remove-attendance/{id}', [AttendanceViewRemoveTrait::class, 'removeAttendance'])
                 Route::get('/remove-attendance/{id}', [AttendanceViewRemoveTrait::class, 'removeAttendance'])
                     ->name('remove-attendance')
                     ->middleware('permission:attendance.delete');
@@ -649,7 +644,7 @@ Route::prefix('student')
             ->middleware(['auth', 'is_admitted']);
         Route::delete('/delete-student-admission/{user_id}', [StudentOperation::class, 'delete_admission'])
             ->name('delete-student-admission')
-            ->middleware(['auth', 'is_admitted']);
+            ->middleware(['auth', 'is_admitted']);});
 
         Route::middleware(['auth:web'])->group(function () {
             // Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');
@@ -665,11 +660,11 @@ Route::prefix('student')
             Route::get('/apply_exam/{id}', [StudentOperation::class, 'apply_exam']);
             // Route::get('/view_result/{id}', [StudentOperation::class, 'view_result']);
             Route::post('/attendance/record', [AttendanceController::class, 'recordAttendance'])->name('attendance.record')->middleware('is_admitted:true');
-            Route::get('/attendance', [AttendanceController::class, 'viewAttendance'])->name('attendance.show')->middleware('is_admitted:true');
+            // Route::get('/attendance', [AttendanceController::class, 'viewAttendance'])->name('attendance.show')->middleware('is_admitted:true');
             Route::get('/id-qrcode', [StudentOperation::class, 'get_details_page'])->middleware('is_admitted:true');
             Route::get('/scan-qrcode', [StudentOperation::class, 'get_scanner_page']);
             Route::get('/meeting-link', [StudentOperation::class, 'get_meeting_link_page']);
-            Route::post('/update-details', [StudentOperation::class, 'updateDetails'])->name('updateDetails')->middleware('is_admitted');
+            Route::post('/update-details', [StudentOperation::class, 'updateDetails'])->name('updateDetails')->middleware('is_admitted');});
 
 
             // // questionnaire routes
@@ -694,7 +689,7 @@ Route::prefix('student')
 //     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 // });
 
-// require __DIR__ . '/auth.php';
+    require __DIR__ . '/auth.php';
 
 
 
