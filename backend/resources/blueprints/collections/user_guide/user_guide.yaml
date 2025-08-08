@@ -1,0 +1,64 @@
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: title
+            field:
+              type: text
+              required: true
+              validate:
+                - required
+          -
+            handle: description
+            field:
+              type: textarea
+              display: Description
+          -
+            handle: steps
+            field:
+              type: replicator
+              display: Steps
+              sets:
+                new_set_group:
+                  display: 'New Set Group'
+                  sets:
+                    step_details:
+                      display: 'Step Details'
+                      fields:
+                        -
+                          handle: name
+                          field:
+                            type: text
+                            display: Name
+                            validate:
+                              - required
+                        -
+                          handle: image
+                          field:
+                            min_files: 1
+                            container: google_cloud
+                            folder: uploads
+                            type: assets
+                            display: Image
+                        -
+                          handle: instruction
+                          field:
+                            type: list
+                            display: Instruction
+                            validate:
+                              - required
+  sidebar:
+    display: Sidebar
+    sections:
+      -
+        fields:
+          -
+            handle: slug
+            field:
+              type: slug
+              localizable: true
+              validate: 'max:200'
+title: 'User Guide'
