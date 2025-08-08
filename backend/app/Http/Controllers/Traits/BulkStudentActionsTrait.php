@@ -2,6 +2,14 @@
 
 namespace App\Http\Controllers\Traits;
 
+use App\Http\Requests\SaveShortlistedStudentsRequest;
+use App\Http\Requests\SendBulkEmailRequest;
+use App\Http\Requests\SendBulkSMSRequest;
+use App\Jobs\CreateStudentAdmissionJob;
+use App\Models\Course;
+use App\Models\CourseSession;
+use App\Models\SmsTemplate;
+use App\Models\UserAdmission;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Jobs\SendBulkEmailJob;
@@ -9,91 +17,94 @@ use App\Jobs\SendBulkSMSJob;
 
 trait BulkStudentActionsTrait
 {
-    public function sendBulkEmail(Request $request)
-    {
-        $validated = $request->validate(
-            [
-                'subject' => 'required',
-                'message' => 'sometimes',
-                'template' => 'required_if:message,null',
-                'student_ids' => 'required_if:list,null|nullable|array',
-                'student_ids.*' => 'exists:users,id',
-                'list' => 'required_if:student_ids,null|nullable|string',
-            ],
-            [],
-            [
-                'student_ids.*' => 'student',
-            ],
-        );
+    use GetsFilteredQuery;
 
-        // if no list_name or students_id
-        if (empty($validated['list']) && empty($validated['student_ids'])) {
-            return redirect()
-                ->back()
-                ->with([
-                    'flash' => 'No students/ list selected.',
-                    'key' => 'error',
-                ]);
+    public function fetchSmsTemplate()
+    {
+        // Fetch the templates
+        $templates = SmsTemplate::select('id', 'name', 'content')->get();
+
+        return response()->json($templates);
+    }
+
+    public function sendBulkEmail(SendBulkEmailRequest $request)
+    {
+        $validated = $request->validated();
+
+        if ($request->has('select_all_in_query')) {
+            $query = $this->getFilteredQuery($request);
+            $validated['student_ids'] = $query->pluck('id')->toArray();
+        }
+
+        if (empty($validated['student_ids'])) {
+            return response()->json(
+                [
+                    'message' => 'No students selected.',
+                ],
+                422,
+            );
         }
 
         SendBulkEmailJob::dispatch($validated);
 
         return response()->json([
-            'flash' => 'SMS sending initiated successfully!',
-            'key' => 'success',
+            'message' => 'Email sending initiated successfully!',
         ]);
     }
 
-    public function sendBulkSMS(Request $request)
+    public function sendBulkSMS(SendBulkSMSRequest $request)
     {
-        $validated = $request->validate(
-            [
-                'message' => 'required|string',
-                'student_ids' => 'sometimes|nullable|array',
-                'student_ids.*' => 'exists:users,id',
-                'list' => 'required_if:student_ids,null|nullable|string',
-            ],
-            [],
-            [
-                'student_ids.*' => 'student',
-            ],
-        );
+        $validated = $request->validated();
 
-        if (empty($validated['list']) && empty($validated['student_ids'])) {
-            return redirect()
-                ->back()
-                ->with([
-                    'flash' => 'No students/ list selected.',
-                    'key' => 'error',
-                ]);
+        if ($request->has('select_all_in_query')) {
+            $query = $this->getFilteredQuery($request);
+            $validated['student_ids'] = $query->pluck('id')->toArray();
+        }
+
+        if (empty($validated['student_ids'])) {
+            return response()->json(
+                [
+                    'message' => 'No students selected.',
+                ],
+                422,
+            );
         }
 
         SendBulkSMSJob::dispatch($validated);
 
         return response()->json([
-            'flash' => 'SMS sending initiated successfully!',
-            'key' => 'success',
+            'message' => 'SMS sending initiated successfully!',
         ]);
     }
 
-    public function saveShortlistedStudents(Request $request)
+    public function saveShortlistedStudents(SaveShortlistedStudentsRequest $request)
     {
-        $request->validate(
-            [
-                'emails' => 'sometimes|array',
-                'emails.*' => 'email',
-                'student_ids' => 'sometimes|array',
-                'student_ids.*' => 'numeric',
-                'phone_numbers' => 'sometimes|array',
-                // 'phone_numbers.*' => 'phone'
-            ],
-            [],
-            [
-                'emails.*' => 'email address',
-                'student_ids.*' => 'student',
-            ],
-        );
-        if (empty($request->input('emails')) && empty($request->input('student_ids')) && empty($request->input('phone_numbers'))) {
+        if ($request->has('select_all_in_query')) {
+            $query = $this->getFilteredQuery();
+            $usersToUpdate = $query
+                ->where(function ($query) {
+                    $query->whereNull('shortlist')->orWhere('shortlist', '!=', 1);
+                })
+                ->get();
+
+            if ($usersToUpdate->isEmpty()) {
+                return response()->json(
+                    [
+                        'message' => 'No users found to update or all are already shortlisted.',
+                    ],
+                    404,
+                );
+            }
+
+            $updatedCount = User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
+
+            return response()->json([
+                'message' => "$updatedCount user(s) successfully shortlisted.",
+            ]);
+        }
+
+        $validated = $request->validated();
+        if (empty($validated['emails']) && empty($validated['student_ids']) && empty($validated['phone_numbers'])) {
             return response()->json(
                 [
                     'message' => 'Email(s), Student ID(s), or PhoneNumber(s) are required.',
@@ -102,8 +113,8 @@ trait BulkStudentActionsTrait
             );
         }
 
-        $data = $request->input('emails') ?? ($request->input('student_ids') ?? $request->input('phone_numbers'));
-        $columnName = $request->has('emails') ? 'email' : ($request->has('phone_numbers') ? 'mobile_no' : 'id');
+        $data = $validated['emails'] ?? ($validated['student_ids'] ?? $validated['phone_numbers']);
+        $columnName = isset($validated['emails']) ? 'email' : (isset($validated['phone_numbers']) ? 'mobile_no' : 'id');
 
         $usersToUpdate = User::whereIn($columnName, (array) $data)
             ->where(function ($query) {
@@ -125,5 +136,95 @@ trait BulkStudentActionsTrait
         return response()->json([
             'message' => "$updatedCount user(s) successfully shortlisted.",
         ]);
+    }
+
+    public function admitStudent(Request $request)
+    {
+        if ($request->has('select_all_in_query')) {
+            $query = $this->getFilteredQuery();
+            $request->merge(['user_ids' => $query->pluck('userId')->toArray()]);
+        }
+        $validated = $request->validate([
+            'course_id' => 'required|exists:courses,id',
+            'session_id' => 'sometimes|nullable|exists:course_sessions,id',
+            'user_id' => 'sometimes|nullable|required_if:user_ids,null|exists:users,id',
+            'change' => 'sometimes',
+            'user_ids' => 'sometimes|nullable|required_if:user_id,null|array',
+            'user_ids.*' => 'exists:users,id',
+        ]);
+        $admittedCount = 0;
+        $course = Course::find($validated['course_id']);
+        $session = CourseSession::find($validated['session_id'] ?? '');
+        $change = $validated['change'] == 'true';
+
+        if ($session && $session->course_id != $course->id) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Session not valid for selected course',
+                ], 422);
+            }
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'Session not valid for selected course',
+                    'key' => 'error',
+                ]);
+        }
+        $message = 'Student(s) admitted successfully';
+
+        if ($validated['user_id'] ?? false) {
+            $user = User::find($validated['user_id']);
+
+            if (!$user) {
+                return response()->json(
+                    [
+                        'success' => false,
+                        'message' => 'Student not found.',
+                    ],
+                    404,
+                );
+            }
+
+            // Now use the userId field for operations
+            $user_id = $user->userId;
+            CreateStudentAdmissionJob::dispatch($user, $course, $session);
+            $admittedCount = 1;
+            $oldAdmission = UserAdmission::where('user_id', $user_id)->first();
+            if ($oldAdmission && $change) {
+                $message = 'Student admission changed successfully';
+            }
+        } elseif (count($validated['user_ids'] ?? []) > 0) {
+            $users = User::whereIn('id', $validated['user_ids'])->get();
+            foreach ($users as $user) {
+                $user_id = $user->userId;
+                CreateStudentAdmissionJob::dispatch($user, $course, $session);
+                $admittedCount++;
+            }
+        } else {
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => 'No user(s) provided.',
+                ],
+                400,
+            );
+        }
+
+        // Return JSON for AJAX requests, redirect for regular requests
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'admitted_count' => $admittedCount,
+            ]);
+        }
+
+        return redirect()
+            ->back()
+            ->with([
+                'flash' => $message,
+                'key' => 'success',
+            ]);
     }
 }

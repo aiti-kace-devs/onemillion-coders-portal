@@ -15,7 +15,7 @@ data:
       enabled: true
     -
       id: md56zjo0
-      name: Pathway
+      name: Pathways
       link: /pathway
       type: quick_link
       enabled: true

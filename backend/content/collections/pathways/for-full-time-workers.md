@@ -1,9 +1,9 @@
 ---
 id: 9a9e5c2f-7f81-4b4d-a710-aa1a10f4317d
 blueprint: pathway
-title: 'For Full-time Workers'
-subtitle: 'Digital transformation pathways for public sector professionals'
-description: 'Enhance your public service career with digital skills that drive government modernization and citizen service excellence.'
+title: 'Full-time Workers'
+subtitle: 'Digital transformation pathways for workers'
+description: 'Enhance your career with digital skills that drive government modernization and citizen service excellence.'
 icon: users
 duration: 'Flexible scheduling'
 focus: 'Public Sector Digital Transformation'
@@ -77,6 +77,6 @@ sections:
       - 04f92c89-6b7c-4b22-aa09-179ef2797343
     type: section
     enabled: true
-updated_by: 11
-updated_at: 1753042880
+updated_by: 6
+updated_at: 1753709102
 ---

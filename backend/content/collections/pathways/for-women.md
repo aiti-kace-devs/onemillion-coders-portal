@@ -1,7 +1,7 @@
 ---
 id: ce7f3842-3034-4f79-8f2e-98ce530bd044
 blueprint: pathway
-title: 'For Women in Tech'
+title: 'Women in Tech'
 subtitle: 'Supportive community and tailored learning paths for women'
 description: 'Join a supportive community of women breaking barriers in technology with programs designed to address unique challenges and opportunities.'
 icon: Heart
@@ -77,6 +77,6 @@ sections:
       - 4ca8bcfe-a3d8-4cbd-a320-8d34be396320
     type: section
     enabled: true
-updated_by: 11
-updated_at: 1753187845
+updated_by: 6
+updated_at: 1753708686
 ---

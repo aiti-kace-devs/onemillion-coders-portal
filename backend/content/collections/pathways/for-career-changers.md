@@ -1,15 +1,15 @@
 ---
 id: c790e118-9c08-4f7a-acd9-925ab32b6acf
 blueprint: pathway
-title: 'For Career-Changers'
+title: Career-Changers
 subtitle: 'Transition smoothly into tech from any background'
 description: 'Make a successful career pivot into technology with comprehensive support designed for professionals changing fields.'
 icon: Images
 duration: '6-12 months'
 focus: 'Career Transition Support'
 hero_image: uploads/pathway/career-changers.webp
-updated_by: 11
-updated_at: 1753041967
+updated_by: 6
+updated_at: 1753708612
 overview:
   challenge: 'Changing careers can be daunting, especially into tech. Concerns about starting over, age barriers, and competing with younger graduates are common.'
   solution: 'Our career-changer program provides structured transition support, leveraging your existing experience while building new tech skills.'
