@@ -14,16 +14,11 @@ const props = defineProps({
   },
 });
 
-const { auth } = usePage().props;
-
-const user = auth?.user || {};
-
 const attendanceCount = computed(() => props.attendances.length);
 const attendancePercent = computed(() => {
   if (!props.totalSessions) return 0;
   return Math.round((attendanceCount.value / props.totalSessions) * 100);
 });
-
 
 onMounted(async () => {
   await nextTick();
@@ -41,7 +36,6 @@ onMounted(async () => {
     order: [[1, "desc"]],
   });
 });
-
 </script>
 
 <template>
@@ -53,7 +47,6 @@ onMounted(async () => {
 
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-        {{ user }}
         <!-- Progress Bar -->
         <div v-if="totalSessions != 0" class="p-6 bg-white shadow sm:rounded-lg">
           <div class="mb-2">
@@ -90,10 +83,7 @@ onMounted(async () => {
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="(attend, idx) in attendances"
-                  :key="attend.id || idx"
-                >
+                <tr v-for="(attend, idx) in attendances" :key="attend.id || idx">
                   <td class="px-4 py-2">{{ attend.course_name }}</td>
                   <td class="px-4 py-2">{{ new Date(attend.date).toDateString() }}</td>
                   <td class="px-4 py-2">

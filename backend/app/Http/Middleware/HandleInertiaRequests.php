@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Middleware;
 
@@ -42,7 +43,7 @@ class HandleInertiaRequests extends Middleware
                 ];
             }
 
-        $user = $request->user();
+        $user = Auth::guard('web')->user();
         return [
             ...parent::share($request),
             'auth' => [
