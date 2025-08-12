@@ -92,12 +92,12 @@ class QuestionnaireController extends Controller
             $fileName = time() . '.' . $image->getClientOriginalExtension();
 
             // Delete old image if it exists
-            if (\Storage::disk('public')->exists($destinationPath . $fileName)) {
-                \Storage::disk('public')->delete($destinationPath . $fileName);
+            if (\Storage::exists($destinationPath . $fileName)) {
+                \Storage::delete($destinationPath . $fileName);
             }
 
             // Save new image
-            \Storage::disk('public')->putFileAs($destinationPath, $image, $fileName);
+            \Storage::putFileAs($destinationPath, $image, $fileName);
             $validated['image'] = $fileName;
         }
 
@@ -193,12 +193,12 @@ class QuestionnaireController extends Controller
             $fileName = time() . '.' . $image->getClientOriginalExtension();
 
             // Delete old image if it exists
-            if ($form->image && \Storage::disk('public')->exists($destinationPath . $form->image)) {
-                \Storage::disk('public')->delete($destinationPath . $form->image);
+            if ($form->image && \Storage::exists($destinationPath . $form->image)) {
+                \Storage::delete($destinationPath . $form->image);
             }
 
             // Save new image
-            \Storage::disk('public')->putFileAs($destinationPath, $image, $fileName);
+            \Storage::putFileAs($destinationPath, $image, $fileName);
             $validated['image'] = $fileName;
         } else {
             // Retain existing image
