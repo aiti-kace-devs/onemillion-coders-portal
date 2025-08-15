@@ -1,94 +1,170 @@
 {
   "success": true,
   "data": [
-      {
-      "id": 11,
-      "title": "IT Support (Networking Focus)",
-      "duration": "120 hrs",
-      "start_date": "2025-07-15",
-      "end_date": "2025-07-17",
-      "status": true,
-      "created_at": "2025-07-15T14:09:25.000000Z",
-      "updated_at": "2025-07-20T11:58:21.000000Z",
-      "course_category_id": 1,
-      "cover_image_id": null,
-      "description": "Provide technical support with a focus on networking. Assist in network device management.",
-      "sub_title": "Certified Network Support Technician (CNST)",
-      "level": "Professional",
-      "job_responsible": "Provide technical support with a focus on networking. Assist in network device management.",
-      "image": null,
-      "overview": {
-        "what_you_will_learn": [
-          "Networking Basics",
-          "Networking Devices and Initial Configuration",
-          "Network Addressing and Basic Troubleshooting",
-          "Network Support and Security"
-        ],
-        "why_choose_this_course": [
-          "Industry-recognized certification",
-          "Hands-on practical training",
-          "Expert instructor guidance",
-          "Career placement support"
-        ]
-      },
-      "prerequisites": "Basic computer literacy",
-      "course_modules_count": 4,
-      "category": {
-        "id": 1,
-        "title": "Cybersecurity",
-        "description": null,
-        "status": true,
-        "created_at": "2025-07-14T15:34:25.000000Z",
-        "updated_at": "2025-07-14T15:34:25.000000Z"
-      },
-      "course_certification": [
+    {
+      "id": 1,
+      "title": "Quarter 1",
+      "description": null,
+      "start_date": "2025-07-01",
+      "end_date": "2025-09-30",
+      "programmes": [
+          {
+              "id": 1,
+              "title": "Certified Data Protection Officer  (CDPO)",
+              "duration": "1 Week",
+              "start_date": "2025-04-14",
+              "end_date": "2025-04-18",
+              "status": true,
+              "created_at": "2025-03-31T12:41:20.000000Z",
+              "updated_at": "2025-04-12T19:06:16.000000Z",
+              "course_category_id": 2,
+              "cover_image_id": null,
+              "description": null,
+              "sub_title": null,
+              "level": null,
+              "job_responsible": null,
+              "image": null,
+              "overview": null,
+              "prerequisites": null,
+              "course_modules_count": 0,
+              "category": {
+                "id": 2,
+                "title": "DATA Protection",
+                "description": null,
+                "icon": null,
+                "status": false,
+                "created_at": "2025-07-14T15:36:03.000000Z",
+                "updated_at": "2025-07-14T15:36:03.000000Z"
+              },
+              "course_certification": [],
+              "course_modules": []
+        },
+
         {
-          "id": 9,
-          "title": "Cisco Certified Support Technician (CCST) Networking",
-          "programme_id": 11,
-          "description": "Industry-recognized certification that validates your skills and expertise.",
-          "type": "International Certification",
-          "status": true,
-          "created_at": "2025-07-20T11:58:21.000000Z",
-          "updated_at": "2025-07-20T11:58:21.000000Z"
+            "id": 2,
+            "title": "Certified Cybersecurity Professional",
+            "duration": "5 Weeks",
+            "start_date": "2025-04-14",
+            "end_date": "2025-05-16",
+            "status": true,
+            "created_at": "2025-03-31T12:41:28.000000Z",
+            "updated_at": "2025-04-12T19:05:12.000000Z",
+            "course_category_id": 2,
+            "cover_image_id": null,
+            "description": null,
+            "sub_title": null,
+            "level": null,
+            "job_responsible": null,
+            "image": null,
+            "overview": null,
+            "prerequisites": null,
+            "course_modules_count": 0,
+            "category": {
+              "id": 2,
+              "title": "DATA Protection",
+              "description": null,
+              "icon": null,
+              "status": false,
+              "created_at": "2025-07-14T15:36:03.000000Z",
+              "updated_at": "2025-07-14T15:36:03.000000Z"
+            },
+            "course_certification": [],
+            "course_modules": []
         }
-      ],
-      "course_modules": [
-        {
-          "id": 50,
-          "title": "Networking Basics",
-          "programme_id": 11,
-          "description": null,
-          "status": false,
-          "created_at": "2025-07-20T11:58:21.000000Z",
-          "updated_at": "2025-07-20T11:58:21.000000Z"
-        },
-        {
-          "id": 51,
-          "title": "Networking Devices and Initial Configuration",
-          "programme_id": 11,
-          "description": null,
-          "status": false,
-          "created_at": "2025-07-20T11:58:21.000000Z",
-          "updated_at": "2025-07-20T11:58:21.000000Z"
-        },
-        {
-          "id": 52,
-          "title": "Network Addressing and Basic Troubleshooting",
-          "programme_id": 11,
-          "description": null,
-          "status": false,
-          "created_at": "2025-07-20T11:58:21.000000Z",
-          "updated_at": "2025-07-20T11:58:21.000000Z"
-        },
-        {
-          "id": 53,
-          "title": "Network Support and Security",
-          "programme_id": 11,
-          "description": null,
-          "status": false,
-          "created_at": "2025-07-20T11:58:21.000000Z",
-          "updated_at": "2025-07-20T11:58:21.000000Z"
+      ]
+    },
+
+
+    {
+      "id": 2,
+      "title": "Quarter 2",
+      "description": null,
+      "start_date": "2025-07-01",
+      "end_date": "2025-09-30",
+      "programmes": [
+          {
+            "id": 3,
+            "title": "Data Analyst Associate",
+            "duration": "5 Weeks",
+            "start_date": "2025-04-14",
+            "end_date": "2025-05-16",
+            "status": true,
+            "created_at": "2025-03-31T19:33:14.000000Z",
+            "updated_at": "2025-04-12T19:03:59.000000Z",
+            "course_category_id": 3,
+            "cover_image_id": null,
+            "description": null,
+            "sub_title": null,
+            "level": null,
+            "job_responsible": null,
+            "image": null,
+            "overview": null,
+            "prerequisites": null,
+            "course_modules_count": 6,
+            "category": {
+              "id": 3,
+              "title": "Artificial Intelligence Training",
+              "description": null,
+              "icon": null,
+              "status": true,
+              "created_at": "2025-07-14T15:36:17.000000Z",
+              "updated_at": "2025-07-14T15:36:17.000000Z"
+            },
+            "course_certification": [],
+            "course_modules": [
+              {
+                "id": 5,
+                "title": "Power BI Basics - Interface, data import, simple visuals",
+                "programme_id": 3,
+                "description": null,
+                "status": true,
+                "created_at": "2025-07-15T20:24:05.000000Z",
+                "updated_at": "2025-07-15T20:24:05.000000Z"
+              },
+              {
+                "id": 6,
+                "title": "Data Cleaning (Power Query) - Transformations, merging, error handling",
+                "programme_id": 3,
+                "description": null,
+                "status": true,
+                "created_at": "2025-07-15T20:24:16.000000Z",
+                "updated_at": "2025-07-15T20:24:16.000000Z"
+              }
+            ],
+            "courses": [
+              {
+                "id": 27,
+                "course_name": "Data Analyst Associate - (Ashanti Region)",
+                "course": null,
+                "batch_id": null,
+                "location": "Ashanti Region",
+                "duration": "5 Weeks",
+                "no_of_days": null,
+                "start_date": null,
+                "end_date": null,
+                "status": true,
+                "created_at": "2025-04-09T08:28:15.000000Z",
+                "updated_at": "2025-07-21T11:23:03.000000Z",
+                "centre_id": 4,
+                "programme_id": 3
+              },
+              {
+                "id": 28,
+                "course_name": "Data Analyst Associate - (Upper East Region)",
+                "course": null,
+                "batch_id": null,
+                "location": "Upper East Region",
+                "duration": "5 Weeks",
+                "no_of_days": null,
+                "start_date": null,
+                "end_date": null,
+                "status": true,
+                "created_at": "2025-04-09T08:28:26.000000Z",
+                "updated_at": "2025-07-21T11:22:58.000000Z",
+                "centre_id": 2,
+                "programme_id": 3
+              }
+            ]
         }
       ]
     }

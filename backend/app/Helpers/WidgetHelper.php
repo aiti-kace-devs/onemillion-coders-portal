@@ -36,7 +36,8 @@ class WidgetHelper
 
     public static function adminStatisticsWidget()
     {
-        $totalUsers = Admin::whereHas('roles')->count();
+        // $totalUsers = Admin::whereHas('roles')->count();
+        $totalUsers = Admin::count();
         $totalUsersToday = Admin::whereHas('roles')->whereDate('last_login', now())->count();
 
         $verifiedUsers = Admin::whereNotNull('email_verified_at')

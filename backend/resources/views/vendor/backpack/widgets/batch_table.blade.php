@@ -1,10 +1,11 @@
 <div class="card h-100">
-    <div class="card-header">Top 5 Batches by Admission</div>
+    <div class="card-header">Admission Batche for </div>
     <div class="card-body table-responsive">
         @php
             $batches = $widget['data']['batches'] ?? [];
             $counter = 1;
             $totalAdmitted = $batches->sum('admitted_students_count');
+            $totalCourses = $batches->sum('courses_count');
         @endphp
 
         <table class="table table-bordered">
@@ -13,7 +14,7 @@
                     <th>NO</th>
                     <th>BATCH TITLE - YEAR</th>
                     <th>ADMITTED STUDENTS</th>
-                    <th>COMPLETED STATUS</th>
+                    <th>COURSES</th>
                 </tr>
             </thead>
             <tbody>
@@ -22,12 +23,21 @@
                         <td>{{ $counter++ }}</td>
                         <td>{{ $batch->title }} - {{ $batch->year }}</td>
                         <td>
-                            <a href="{{ url("/admin/user?batch_id={$batch->id}&confirmed_admission=1") }}">
-                                {{ $batch->admitted_students_count ?? 0 }}
-                            </a>
+                            @if($batch->admitted_students_count > 0)
+                                <a href="{{ url("/admin/user?batch_id={$batch->id}&confirmed_admission=1") }}">
+                                    {{ $batch->admitted_students_count }}
+                                </a>
+                            @endif
                         </td>
                         <td>
-                            {{ $batch->completed ? 'Completed' : 'Ongoing' }}
+                            @if($batch->courses_count > 0)
+                                @php
+                                    $encodedIds = urlencode(json_encode($batch->course_ids));
+                                @endphp
+                                <a href="{{ url("/admin/course?id={$encodedIds}") }}">
+                                    {{ $batch->courses_count }}
+                                </a>
+                            @endif
                         </td>
                     </tr>
                 @empty
@@ -40,7 +50,7 @@
                 <tr>
                     <th colspan="2" class="text-end text-center">Total</th>
                     <th>{{ $totalAdmitted }}</th>
-                    <th></th>
+                    <th>{{ $totalCourses }}</th>
                 </tr>
             </tfoot>
         </table>

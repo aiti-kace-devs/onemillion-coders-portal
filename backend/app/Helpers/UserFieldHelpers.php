@@ -173,14 +173,14 @@ trait UserFieldHelpers
 
 
 
-    public function setPasswordField($name = 'admin_hash'): void
+    public function setPasswordField(): void
     {
-        CRUD::field($name)
+        CRUD::field('password')
             ->type('password')
             ->label('Password')
             ->tab($this->accountInfoTab);
 
-        CRUD::field($name . '_confirmation')
+        CRUD::field('password_confirmation')
             ->type('password')
             ->label('Confirm Password')
             ->tab($this->accountInfoTab);
@@ -204,17 +204,17 @@ trait UserFieldHelpers
 
     public function assignedCourses(): void
     {
-            CRUD::addField([
+        CRUD::addField([
             'name' => 'courses',
             'type' => 'select2_multiple',
-            'label'     => 'Assign Course',
+            'label' => 'Assign Course',
             'entity' => 'assignedCourses',
             'model' => 'App\\Models\\Course',
             'attribute' => 'course_name',
             'pivot' => true,
             'tab' => 'Account Info',
             'wrapper' => ['class' => 'form-group col-6'],
-            ]);
+        ]);
     }
 
 
@@ -228,7 +228,8 @@ trait UserFieldHelpers
             ->attribute('name')
             ->model(config('permission.models.role'))
             ->pivot(true)
-            ->tab($this->rolesPermissionsTab);
+            ->tab($this->rolesPermissionsTab)
+            ->wrapper(['class' => 'form-group col-md-6']);
     }
 
     public function setPermissionsField(): void
@@ -240,7 +241,8 @@ trait UserFieldHelpers
             ->attribute('name')
             ->model(config('permission.models.permission'))
             ->pivot(true)
-            ->tab($this->rolesPermissionsTab);
+            ->tab($this->rolesPermissionsTab)
+            ->wrapper(['class' => 'form-group col-md-6']);
     }
 
     // Column Methods

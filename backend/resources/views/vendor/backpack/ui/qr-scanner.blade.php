@@ -84,7 +84,7 @@
             <div class="d-flex flex-wrap gap-2 justify-content-center mb-4">
                 <button type="button" class="btn btn-primary" id="startScanner">Start QR Code Scanner</button>
                 <button type="button" class="btn btn-danger" id="stopScanner">Stop QR Code Scanner</button>
-                @can('attendance.status')
+                @can('attendance.read.all')
                     <button type="button" class="btn btn-success" id="generateCode">Generate QR Code</button>
                     <button type="button" class="btn btn-danger" id="stopCodeGeneration">Stop QR Code Generation</button>
                 @endcan

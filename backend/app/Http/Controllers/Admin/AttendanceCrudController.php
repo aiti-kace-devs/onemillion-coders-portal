@@ -19,6 +19,7 @@ class AttendanceCrudController extends CrudController
 {
 
     use CourseFieldHelpers;
+    use \App\SearchableCRUD;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -38,14 +39,20 @@ class AttendanceCrudController extends CrudController
     {
         CRUD::setModel(\App\Models\Attendance::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/attendance');
-        CRUD::setEntityNameStrings('view attendance list', 'view attendance list');
+        CRUD::setEntityNameStrings('attendance', 'attendances');
 
-        CRUD::denyAccess('create');
-        CRUD::denyAccess('show');
-        CRUD::denyAccess('update');
+        $this->setSearchableColumns(['user_id', 'date']);
+        $this->setSearchResultAttributes(['id', 'user_id', 'date']);
 
-        $this->crud->operation('list', function () {
-            WidgetHelper::attendanceWidgets();
+        $this->crud->denyAccess('create');
+
+        // Add permission checks
+        $this->crud->operation(['list', 'show'], function () {
+            $this->crud->addClause('where', function ($query) {
+                if (!backpack_user()->can('attendance.read.all')) {
+                    // Add any specific filtering logic here if needed
+                }
+            });
         });
     }
 
@@ -57,6 +64,11 @@ class AttendanceCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('attendance.read.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         CRUD::column('user_id')->label('Student')->linkTo('user.show');
         FilterHelper::addGenericRelationshipColumn('user', 'Email', 'user', 'email');
         FilterHelper::addGenericRelationshipColumn('course', 'Course', 'course', 'course_name');
@@ -92,6 +104,11 @@ class AttendanceCrudController extends CrudController
      */
     protected function setupCreateOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('attendance.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         CRUD::setValidation(AttendanceRequest::class);
         CRUD::setFromDb(); // set fields from db columns.
 
@@ -109,7 +126,26 @@ class AttendanceCrudController extends CrudController
      */
     protected function setupUpdateOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('attendance.update.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $this->setupCreateOperation();
+    }
+
+    /**
+     * Define what happens when the Delete operation is loaded.
+     *
+     * @see https://backpackforlaravel.com/docs/crud-operation-delete
+     * @return void
+     */
+    protected function setupDeleteOperation()
+    {
+        // Check permissions
+        if (!backpack_user()->can('attendance.delete')) {
+            abort(403, 'Unauthorized action.');
+        }
     }
 
     // Example: Add endpoints or methods for trait logic

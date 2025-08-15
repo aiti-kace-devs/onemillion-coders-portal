@@ -318,13 +318,16 @@ CRUD::addField([
             columnName: $columnName,
             label: $label,
             options: $coursesArray,
-            type: 'select2',
+            type: 'select2_multiple',
             callback: function ($value) use ($columnName) {
-                CRUD::addClause('where', $columnName, $value);
+                // Convert string to array if it's not already
+                $values = is_array($value) ? $value : explode(',', $value);
+                
+                // Use whereIn for multiple values
+                CRUD::addClause('whereIn', $columnName, $values);
             },
         );
     }
-
 
     
     public static function addProgrammeFilter(string $columnName, string $label = 'Course Filter'): void

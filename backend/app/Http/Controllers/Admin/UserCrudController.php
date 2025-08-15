@@ -53,9 +53,20 @@ class UserCrudController extends CrudController
         // CRUD::denyAccess('create');
         // CRUD::denyAccess('update');
         // $this->setupFilter();
+        $this->setSearchableColumns(['name', 'email', 'mobile_no']);
+        $this->setSearchResultAttributes(['id', 'name', 'email', 'mobile_no']);
 
         $this->crud->operation('list', function () {
             WidgetHelper::userStatisticsWidget();
+        });
+
+        // Add permission checks
+        $this->crud->operation(['list', 'show'], function () {
+            $this->crud->addClause('where', function ($query) {
+                if (!backpack_user()->can('student.read.all')) {
+                    // Add any specific filtering logic here if needed
+                }
+            });
         });
     }
 
@@ -67,6 +78,11 @@ class UserCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('student.read.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $this->crud->setModel(User::class);
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/user');
         $this->crud->setEntityNameStrings('user', 'users');
@@ -135,6 +151,11 @@ class UserCrudController extends CrudController
      */
     protected function setupCreateOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('student.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         CRUD::setValidation(UserRequest::class);
         CRUD::setFromDb(); // set fields from db columns.
 
@@ -152,8 +173,28 @@ class UserCrudController extends CrudController
      */
     protected function setupUpdateOperation()
     {
+        // Check permissions
+        if (!backpack_user()->can('student.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $this->setupCreateOperation();
     }
+
+    /**
+     * Define what happens when the Delete operation is loaded.
+     *
+     * @see https://backpackforlaravel.com/docs/crud-operation-delete
+     * @return void
+     */
+    protected function setupDeleteOperation()
+    {
+        // Check permissions
+        if (!backpack_user()->can('student.delete')) {
+            abort(403, 'Unauthorized action.');
+        }
+    }
+
 
     public function assignBatch(Request $request)
     {

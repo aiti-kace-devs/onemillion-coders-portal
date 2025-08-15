@@ -128,24 +128,39 @@ class DashboardWidgetHelper
     public static function dashboardBatchStatisticsWidget()
     {
         $dashboardTableStatistics = Cache::flexible('dashboard_table_statistics', [(60 * 60), 10], function () {
-            return [
-                'topAdmissionBatch' => DB::table('admission_batches as ab')
-                    ->leftJoin('user_admission as ua', function ($join) {
-                        $join->on('ab.id', '=', 'ua.batch_id')
-                            ->whereNotNull('ua.confirmed');
-                    })
-                    ->select(
-                        'ab.id',
-                        'ab.title',
-                        'ab.year',
-                        'ab.completed',
-                        DB::raw('COUNT(ua.id) as admitted_students_count')
-                    )
-                    ->groupBy('ab.id', 'ab.title', 'ab.year', 'ab.completed')
-                    ->orderByDesc('admitted_students_count')
-                    ->limit(5)
-                    ->get(),
+            $topBatches = DB::table('admission_batches as ab')
+                ->leftJoin('user_admission as ua', function ($join) {
+                    $join->on('ab.id', '=', 'ua.batch_id')
+                        ->whereNotNull('ua.confirmed');
+                })
+                ->select(
+                    'ab.id',
+                    'ab.title',
+                    'ab.year',
+                    'ab.completed',
+                    DB::raw('COUNT(DISTINCT ua.id) as admitted_students_count')
+                )
+                ->groupBy('ab.id', 'ab.title', 'ab.year', 'ab.completed')
+                ->orderByDesc('admitted_students_count')
+                ->limit(5)
+                ->get();
 
+            $batchesWithCourses = $topBatches->map(function ($batch) {
+                $courseIds = DB::table('course_batches')
+                    ->where('batch_id', $batch->id)
+                    ->pluck('course_id')
+                    ->unique()
+                    ->values()
+                    ->toArray();
+
+                $batch->course_ids = $courseIds;
+                $batch->courses_count = count($courseIds);
+                
+                return $batch;
+            });
+
+            return [
+                'topAdmissionBatch' => $batchesWithCourses,
                 'topAdmittedRegion' => DB::table('user_admission as ua')
                     ->join('courses as c', 'ua.course_id', '=', 'c.id')
                     ->leftJoin('centres as ce', 'c.centre_id', '=', 'ce.id')
