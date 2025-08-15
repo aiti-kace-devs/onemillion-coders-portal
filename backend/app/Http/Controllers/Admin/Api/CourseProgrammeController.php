@@ -97,6 +97,93 @@ class CourseProgrammeController extends Controller
 
 
 
+    public function allBatches(Request $request)
+    {
+        $query = Batch::query();
+
+        // $query->with([
+        //     'assignedCourseBatches.programme.category',
+        //     'assignedCourseBatches.programme.courseCertification',
+        //     'assignedCourseBatches.programme.courseModules'
+        // ]);
+
+        // Optional filtering
+        if ($request->has('filter')) {
+            $filter = $request->filter;
+            $today = Carbon::today();
+
+            if ($filter === 'running') {
+                $query->where('start_date', '<=', $today)
+                    ->where('end_date', '>=', $today);
+            }
+
+            if ($filter === 'coming_soon') {
+                $query->where('start_date', '>', $today);
+            }
+
+            if ($filter === 'completed') {
+                $query->where('end_date', '<', $today);
+            }
+        }
+
+        $query->orderBy('start_date', 'asc');
+
+        $batches = $query->get();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $batches
+        ]);
+    }
+
+
+
+
+    public function programmesByBatch($batchId, Request $request)
+    {
+        $query = Batch::with([
+                'assignedCourseBatches.programme' => function ($q) {
+                    $q->with(['category', 'courseCertification', 'courseModules'])
+                    ->withCount('courseModules');
+                }
+            ])
+            ->whereHas('assignedCourseBatches.programme');
+
+        // Apply optional filters
+        if ($request->has('filter')) {
+            $filter = $request->filter;
+            $today = Carbon::today();
+
+            if ($filter === 'running') {
+                $query->where('start_date', '<=', $today)
+                    ->where('end_date', '>=', $today);
+            }
+
+            if ($filter === 'coming_soon') {
+                $query->where('start_date', '>', $today);
+            }
+        }
+
+        $batch = $query->findOrFail($batchId);
+
+        $data = [
+            'id'          => $batch->id,
+            'title'       => $batch->title,
+            'description' => $batch->description,
+            'start_date'  => $batch->start_date,
+            'end_date'    => $batch->end_date,
+            'programmes'  => $batch->assignedCourseBatches
+                                ->pluck('programme')
+                                ->unique('id')
+                                ->values(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data'    => $data
+        ]);
+    }
+
 
 
 

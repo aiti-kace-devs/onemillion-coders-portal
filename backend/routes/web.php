@@ -63,7 +63,12 @@ Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
 // Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
 Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
 Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+
+Route::get('/api/batches', [CourseProgrammeController::class, 'allBatches']);
 Route::get('/api/batch/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
+Route::get('/api/batch/programmes/{id}', [CourseProgrammeController::class, 'programmesByBatch']);
+
+
 Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
 Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
 
@@ -77,7 +82,6 @@ Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'c
 
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
-
 
 Route::prefix('admins')
     ->middleware(['auth:admin'])
