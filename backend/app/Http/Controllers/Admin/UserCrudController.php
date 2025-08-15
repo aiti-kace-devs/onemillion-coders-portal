@@ -112,6 +112,7 @@ class UserCrudController extends CrudController
         $this->setupStudentColumns();
         // CRUD::disablePersistentTable();
         CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
+        CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'end');
         // Add userId column to the list view
         CRUD::addColumn([
             'name' => 'userId',
