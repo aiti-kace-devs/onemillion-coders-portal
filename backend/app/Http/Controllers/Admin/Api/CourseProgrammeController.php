@@ -9,6 +9,7 @@ use App\Models\Branch;
 use App\Models\UserAdmission;
 use App\Models\Centre;
 use App\Models\Course;
+use App\Models\Batch;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -44,6 +45,56 @@ class CourseProgrammeController extends Controller
             'data' => $programmes
         ]);
     }
+
+
+
+
+    public function programmeWithBatch(Request $request)
+    {
+        $query = Batch::with([
+                'assignedCourseBatches.programme' => function ($q) {
+                    $q->with(['category', 'courseCertification', 'courseModules'])
+                    ->withCount('courseModules');
+                }
+            ])
+            ->whereHas('assignedCourseBatches.programme');
+
+        if ($request->has('filter')) {
+            $filter = $request->filter;
+            $today = Carbon::today();
+
+            if ($filter === 'running') {
+                $query->where('start_date', '<=', $today)
+                    ->where('end_date', '>=', $today);
+            }
+
+            if ($filter === 'coming_soon') {
+                $query->where('start_date', '>', $today);
+            }
+        }
+
+        $batches = $query->get()
+            ->map(function ($batch) {
+                return [
+                    'id'          => $batch->id,
+                    'title'       => $batch->title,
+                    'description' => $batch->description,
+                    'start_date'  => $batch->start_date,
+                    'end_date'    => $batch->end_date,
+                    'programmes'  => $batch->assignedCourseBatches
+                                        ->pluck('programme')
+                                        ->unique('id')
+                                        ->values(),
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data'    => $batches
+        ]);
+    }
+
+
 
 
 

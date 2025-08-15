@@ -44,6 +44,11 @@ class Course extends Model
         return $this->belongsTo(Batch::class);
     }
 
+    public function batches()
+    {
+        return $this->belongsToMany(Batch::class, 'course_batches', 'course_id', 'batch_id');
+    }
+
     public function assignedAdmins()
     {
         return $this->belongsToMany(Admin::class, 'admin_course', 'course_id', 'admin_id')
