@@ -120,7 +120,7 @@ class CourseCrudController extends CrudController
         }
 
         CRUD::setValidation(CourseRequest::class);
-        
+
         $this->setupCommonFields();
     }
 

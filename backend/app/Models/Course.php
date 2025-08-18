@@ -14,7 +14,7 @@ class Course extends Model
     use \StatamicRadPack\Runway\Traits\HasRunwayResource;
 
     protected $fillable = [
-        'branch_id', 
+        'branch_id',
         'centre_id',
         'programme_id',
         'course_name',

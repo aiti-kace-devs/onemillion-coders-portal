@@ -267,7 +267,6 @@ public static function addBooleanFilter(string $columnName, ?string $permissionN
 
     public static function addIsActiveFilter(): void
     {
-
         CRUD::filter('is_active')
             ->type('simple')
             ->whenActive(function () {

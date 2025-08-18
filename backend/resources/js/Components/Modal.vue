@@ -13,9 +13,17 @@ const props = defineProps({
     type: String,
     default: "2xl",
   },
+  bgColor: {
+    type: String,
+    default: "bg-white",
+  },
   closeable: {
     type: Boolean,
     default: true,
+  },
+  teleportTo: {
+    type: String,
+    default: "body",
   },
 });
 
@@ -63,10 +71,10 @@ const maxWidthClass = computed(() => {
 </script>
 
 <template>
-  <teleport to="body">
+  <teleport :to="props.teleportTo">
     <transition leave-active-class="duration-200">
       <div
-        v-show="show"
+        v-show="show" id="modale"
         class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-[10003]"
         scroll-region
       >
@@ -93,16 +101,15 @@ const maxWidthClass = computed(() => {
         >
           <div
             v-show="show"
-            class="mb-6 p-5 bg-white rounded-sm overflow-hidden shadow-sm transform transition-all sm:w-full sm:mx-auto"
-            :class="maxWidthClass"
+            class="mb-6 p-5 rounded-sm overflow-hidden shadow-sm transform transition-all sm:w-full sm:mx-auto"
+            :class="[maxWidthClass, bgColor]"
           >
             <div class="flex justify-between items-center mb-6">
               <p class="text-xl font-normal capitalize">{{ props.modalTitle }}</p>
-              <button @click="close">
+              <button @click="close" v-if="props.closeable">
                 <span class="material-symbols-outlined text-3xl"> close </span>
               </button>
             </div>
-
             <slot v-if="show" />
           </div>
         </transition>

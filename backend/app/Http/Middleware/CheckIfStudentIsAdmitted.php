@@ -17,7 +17,7 @@ class CheckIfStudentIsAdmitted
     public function handle(Request $request, Closure $next, bool $withSession = false): Response
     {
         $admin = Auth::guard('admin')->user();
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
 
         $admitted = $user->hasAdmission();
 

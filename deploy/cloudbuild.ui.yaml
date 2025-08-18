@@ -1,0 +1,47 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    dir: 'ui'
+    args: ['build', '--build-arg=ENVIRONMENT=${_BUILD_ENV}' ,'-t', 'europe-west1-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_CONTAINER}:latest', '-f','Dockerfile', '.']
+    id: 'build-ui-image'
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    dir: 'ui'
+    args: ['push', 'europe-west1-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_CONTAINER}:latest']
+    id: 'push-ui-image'
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-ui'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - 'europe-west1-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_CONTAINER}:latest'
+      - '--region'
+      - 'europe-west1'
+      - '--platform'
+      - 'managed'
+      - '--port'
+      - '8080'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    id: 'update-ui-traffic'
+    args:
+      - 'run'
+      - 'services'
+      - 'update-traffic'
+      - '${_SERVICE_NAME}'
+      - '--to-latest'
+      - '--region'
+      - 'europe-west1'     
+images:
+  - 'europe-west1-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_CONTAINER}:latest'
+substitutions:
+    _REPO_NAME: msme-repo # default value
+    _CONTAINER: ui # default value
+    _SERVICE_NAME: msme-ui # default value
+    _BUILD_ENV: prod # default value
+options:
+  logging: CLOUD_LOGGING_ONLY

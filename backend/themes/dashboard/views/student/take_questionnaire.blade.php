@@ -1,0 +1,232 @@
+@extends('layouts.student')
+@section('title', 'Questionnaire')
+@section('content')
+
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">Questionnaire</h1>
+                </div><!-- /.col -->
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="#">Home</a></li>
+                        <li class="breadcrumb-item active">Questionnaire</li>
+                    </ol>
+                </div><!-- /.col -->
+            </div><!-- /.row -->
+        </div><!-- /.container-fluid -->
+    </div>
+
+    <div class="container my-4">
+        <div class="mb-4">
+            <h3 class="h4 font-weight-bold text-capitalize">{{ $questionnaire['title'] }}</h3>
+            @if(!empty($questionnaire['description']))
+            <p class="text-muted small">{{ $questionnaire['description'] }}</p>
+            @endif
+        </div>
+
+        <div class="row">
+            <div class="col-12 col-md-3 mb-3">
+                <!-- Vertical nav tabs for mobile responsiveness -->
+                <div class="nav flex-column nav-pills" id="sectionTabs" role="tablist">
+                    @foreach ($questionnaire['schema'] as $i => $section)
+                    <a class="nav-link text-capitalize {{ $i == 0 ? 'active' : '' }}"
+                        id="tab-{{ $i }}"
+                        data-toggle="pill"
+                        href="#section-{{ $i }}"
+                        role="tab">
+                        {{ $section['title'] }}
+                    </a>
+                    @endforeach
+
+                    @foreach ($instructors as $instructor)
+                    <a class="nav-link text-capitalize d-none"
+                        id="tab-instructor-{{ $instructor['id'] }}"
+                        data-toggle="pill"
+                        href="#section-instructor-{{ $instructor['id'] }}"
+                        role="tab">
+                        {{ $instructor['name'] }}
+                    </a>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="col-12 col-md-9">
+                <div class="tab-content" id="sectionContent">
+                    @foreach ($instructors as $instructor)
+                    <div class="tab-pane fade"
+                        id="section-instructor-{{ $instructor['id'] }}"
+                        role="tabpanel">
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                @if (!empty($section['description']))
+                                <p class="text-muted small">{{ $section['description'] }}</p>
+                                @endif
+
+                                <form
+                                    method="POST"
+                                    class="questionnaireForm"
+                                    action="{{ route('student.assessment.store',  $questionnaire->code) }}"
+                                    enctype="multipart/form-data">
+                                    @csrf
+
+                                    <input type="hidden" name="section" value="instructor-{{ $instructor['id'] }}">
+                                    <label class="h5 font-weight-normal">
+                                        Review Instructor : {{ $instructor['name'] }}
+                                    </label>
+
+                                    <x-question-input
+                                        :hideLabel="true"
+                                        :sectionTitle="'instructors'"
+                                        :sectionQuestions="$instructorQuestions"
+                                        :sectionIndex="$i"
+                                        :instructors="$section['type'] === 'instructors' ? $instructors : []"
+                                        :responses="$responses['instructors'][$instructor['id']] ?? []" />
+
+                                    <input type="hidden" name="instructor_id" value="{{ $instructor['id'] }}">
+
+                                    <div class="form-group mt-4">
+                                        @php
+                                        $isLastSection = $i == count($questionnaire['schema']) - 1;
+                                        $isInstructorsSection = true;
+                                        @endphp
+
+                                        <button type="submit" id="instructor-{{ $instructor['id'] }}-btn" class="btn btn-primary">
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                    @foreach ($questionnaire['schema'] as $i => $section)
+                    <div class="tab-pane fade {{ $i == 0 ? 'show active' : '' }}"
+                        id="section-{{ $i }}"
+                        role="tabpanel">
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                @if (!empty($section['description']))
+                                <p class="text-muted small">{{ $section['description'] }}</p>
+                                @endif
+
+
+                                <form
+                                    method="POST"
+                                    class="questionnaireForm"
+                                    action="{{ route('student.assessment.store',  $questionnaire->code) }}"
+                                    enctype="multipart/form-data">
+                                    @csrf
+
+                                    <input type="hidden" name="section" value="{{ $i }}">
+
+                                    @if ($section['type'] === 'instructors')
+                                    <x-instructor-select :instructors="$instructors" :responses="$responses['selected_instructors'] ?? []" />
+                                    @else
+                                    <x-question-input
+                                        :sectionTitle="$section['title']"
+                                        :sectionQuestions="$section['questions']"
+                                        :sectionIndex="$i"
+                                        :instructors="$section['type'] === 'instructors' ? $instructors : []"
+                                        :responses="$responses ?? []" />
+
+                                    @endif
+
+                                    <div class="form-group mt-4">
+                                        @php
+                                        $isLastSection = $i == count($questionnaire['schema']) - 1;
+                                        $isInstructorsSection = $section['type'] == 'instructors';
+                                        @endphp
+
+                                        <button type="submit" class="btn btn-primary">
+                                            {{ ($isLastSection && !$isInstructorsSection) ? 'Submit' : 'Save & Next' }}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+    @endsection
+
+    @push('scripts')
+    <script>
+        document.querySelectorAll('.questionnaireForm').forEach(questionnaire => {
+            questionnaire.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const form = this;
+
+                // Disable the submit button to prevent multiple submissions
+                const submitButton = form.querySelector('button[type="submit"]');
+                const beforeSubmitButtonText = submitButton.textContent;
+
+                submitButton.disabled = true;
+                submitButton.textContent = 'Submitting...';
+
+
+                $.ajax({
+                    type: $(form).attr('method'),
+                    url: $(form).attr('action'),
+                    data: $(form).serialize(),
+                    success: function(response) {
+                        submitButton.disabled = false;
+                        submitButton.textContent = beforeSubmitButtonText;
+
+                        // Clear previous errors
+                        $(':input', form).removeClass('is-invalid');
+                        $('.invalid-feedback', form).text("");
+
+                        if (response.status) {
+                            // Handle completion
+                            if (response.progress.is_submitted) {
+                                window.location.href = response.progress.redirect_url;
+                            } else {
+                                $('.tab-pane').removeClass('show active');
+
+                                if (response.progress.next_instructor) {
+                                    const instructorId = response.progress.next_instructor;
+                                    const buttonText = response.progress.instructor_button_text;
+
+                                    $(`#instructor-${instructorId}-btn`).text(buttonText);
+                                    $(`#section-instructor-${instructorId}`).addClass('show active');
+                                    $(`a[href="#section-instructor-${instructorId}"]`).removeClass('show active');
+                                } else {
+                                    const nextSection = response.progress.next_section;
+                                    $(`#section-${nextSection}`).addClass('show active');
+                                    $(`a[href="#section-${nextSection}"]`).tab('show');
+                                }
+                            }
+                        }
+                    },
+                    error: function(xhr) {
+                        $(':input', form).removeClass('is-invalid');
+                        $('.invalid-feedback', form).text("");
+
+                        if (xhr.status === 422) {
+                            const response = xhr.responseJSON;
+
+                            if (response.error) {
+                                $.each(response.error, function(prefix, val) {
+                                    const fieldId = prefix.replace('.', '_');
+                                    $(`#${fieldId}`, form).addClass('is-invalid');
+                                    $(`.${fieldId}_error`, form).text(val[0]);
+                                });
+                            }
+                            toastr.error(response.msg || 'Validation failed');
+                        } else {
+                            toastr.error("An error occurred: " + xhr.statusText);
+                        }
+                    }
+                });
+
+            });
+        });
+    </script>
+
+    @endpush

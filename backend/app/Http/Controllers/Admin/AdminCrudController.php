@@ -112,6 +112,7 @@ class AdminCrudController extends CrudController
         if ($entry->userProfile) {
             $this->setupProfileColumns();
         }
+        
     }
 
     /**
