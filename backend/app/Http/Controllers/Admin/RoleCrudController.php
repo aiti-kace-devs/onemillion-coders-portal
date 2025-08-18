@@ -19,97 +19,91 @@ class RoleCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
 
+    /**
+     * Configure the CrudPanel object. Apply settings to all operations.
+     *
+     * @return void
+     */
     public function setup()
     {
-        $this->role_model = $role_model = config('backpack.permissionmanager.models.role');
-        $this->permission_model = $permission_model = config('backpack.permissionmanager.models.permission');
+        CRUD::setModel(\Spatie\Permission\Models\Role::class);
+        CRUD::setRoute(config('backpack.base.route_prefix') . '/role');
+        CRUD::setEntityNameStrings('role', 'roles');
 
-        $this->crud->setModel($role_model);
-        $this->crud->setEntityNameStrings(trans('backpack::permissionmanager.role'), trans('backpack::permissionmanager.roles'));
-        $this->crud->setRoute(backpack_url('role'));
+        $this->setSearchableColumns(['name', 'guard_name']);
+        $this->setSearchResultAttributes(['id', 'name', 'guard_name']);
 
-        CRUD::denyAccess('delete');
-        CRUD::denyAccess('create');
+        // Add permission checks
+        $this->crud->operation(['list', 'show'], function () {
+            $this->crud->addClause('where', function ($query) {
+                if (!backpack_user()->can('role.read.all')) {
+                    // Add any specific filtering logic here if needed
+                }
+            });
+        });
     }
 
-    public function setupListOperation()
+    /**
+     * Define what happens when the List operation is loaded.
+     *
+     * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
+     * @return void
+     */
+    protected function setupListOperation()
     {
-        /**
-         * Show a column for the name of the role.
-         */
-        $this->crud->addColumn([
-            'name'  => 'name',
-            'label' => trans('backpack::permissionmanager.name'),
-            'type'  => 'text',
-            'value' => function ($entry) {
-                return mb_strtoupper($entry->name);
-            }
-        ]);
-
-        /**
-         * Show a column with the number of users that have that particular role.
-         *
-         * Note: To account for the fact that there can be thousands or millions
-         * of users for a role, we did not use the `relationship_count` column,
-         * but instead opted to append a fake `user_count` column to
-         * the result, using Laravel's `withCount()` method.
-         * That way, no users are loaded.
-         */
-        $this->crud->query->withCount('users');
-        $this->crud->addColumn([
-            'label'     => trans('backpack::permissionmanager.users'),
-            'type'      => 'text',
-            'name'      => 'users_count',
-            'wrapper'   => [
-                'href' => function ($crud, $column, $entry, $related_key) {
-                    return backpack_url('admin?roles=[' . $entry->getKey() . ']');
-                },
-            ],
-            'suffix'    => ' ' . strtolower(trans('backpack::permissionmanager.users')),
-        ]);
-
-        /**
-         * In case multiple guards are used, show a column for the guard.
-         */
-        if (config('backpack.permissionmanager.multiple_guards')) {
-            $this->crud->addColumn([
-                'name'  => 'guard_name',
-                'label' => trans('backpack::permissionmanager.guard_type'),
-                'type'  => 'text',
-            ]);
+        // Check permissions
+        if (!backpack_user()->can('role.read.all')) {
+            abort(403, 'Unauthorized action.');
         }
 
-        /**
-         * Show the exact permissions that role has.
-         */
-        // $this->crud->addColumn([
-        //     // n-n relationship (with pivot table)
-        //     'label'     => mb_ucfirst(trans('backpack::permissionmanager.permission_plural')),
-        //     'type'      => 'select_multiple',
-        //     'name'      => 'permissions', // the method that defines the relationship in your Model
-        //     'entity'    => 'permissions', // the method that defines the relationship in your Model
-        //     'attribute' => 'name', // foreign key attribute that is shown to user
-        //     'model'     => $this->permission_model, // foreign key model
-        //     'pivot'     => true, // on create&update, do you need to add/delete pivot table entries?
-        // ]);
+        CRUD::setFromDb();
+        CRUD::enableExportButtons();
     }
 
-    public function setupCreateOperation()
+    /**
+     * Define what happens when the Create operation is loaded.
+     *
+     * @see https://backpackforlaravel.com/docs/crud-operation-create
+     * @return void
+     */
+    protected function setupCreateOperation()
     {
-        $this->addFields();
-        $this->crud->setValidation(StoreRequest::class);
+        // Check permissions
+        if (!backpack_user()->can('role.create')) {
+            abort(403, 'Unauthorized action.');
+        }
 
-        //otherwise, changes won't have effect
-        app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
+        CRUD::setFromDb();
     }
 
-    public function setupUpdateOperation()
+    /**
+     * Define what happens when the Update operation is loaded.
+     *
+     * @see https://backpackforlaravel.com/docs/crud-operation-update
+     * @return void
+     */
+    protected function setupUpdateOperation()
     {
-        $this->addFields();
-        $this->crud->setValidation(UpdateRequest::class);
+        // Check permissions
+        if (!backpack_user()->can('role.update.all')) {
+            abort(403, 'Unauthorized action.');
+        }
 
-        //otherwise, changes won't have effect
-        app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
+        CRUD::setFromDb();
+    }
+
+    /**
+     * Define what happens when the Delete operation is loaded.
+     *
+     * @see https://backpackforlaravel.com/docs/crud-operation-delete
+     * @return void
+     */
+    protected function setupDeleteOperation()
+    {
+        // Check permissions
+        if (!backpack_user()->can('role.delete.all')) {
+            abort(403, 'Unauthorized action.');
+        }
     }
 
     private function addFields()

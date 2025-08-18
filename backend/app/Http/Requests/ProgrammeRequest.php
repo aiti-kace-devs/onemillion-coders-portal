@@ -25,10 +25,20 @@ class ProgrammeRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'overview.what_you_will_learn' => 'sometimes|array',
-            // 'overview.what_you_will_learn.*' => 'string|max:255',
-            // 'overview.why_choose_this_course' => 'sometimes|array',
-            // 'overview.why_choose_this_course.*' => 'string|max:255',
+            'title' => 'required|string|max:255',
+            'sub_title' => 'sometimes|string|max:255',
+            'duration' => 'sometimes|string|max:255',
+            'start_date' => 'sometimes|date',
+            'end_date' => 'sometimes|date',
+            'description' => 'sometimes|string',
+            'overview' => 'sometimes|array',
+            'prerequisites' => 'sometimes|string',
+            'image' => 'sometimes|string',
+            'level' => 'sometimes|string',
+            'job_responsible' => 'sometimes|string',
+            'cover_image_id' => 'sometimes|string',
+            'course_category_id' => 'sometimes|string',
+            'status' => 'sometimes|boolean',
         ];
     }
 

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\StudentOperation;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -89,13 +90,18 @@ Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
 
 //Route::prefix('admins')-
 // // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
-// Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
-// routes/web.php
+Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
 // Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
 Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
 Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+
+Route::get('/api/batches', [CourseProgrammeController::class, 'allBatches']);
+Route::get('/api/batch/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
+Route::get('/api/batch/programmes/{id}', [CourseProgrammeController::class, 'programmesByBatch']);
+
+
 Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
 Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
 
@@ -110,6 +116,33 @@ Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'c
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
 
+//Route::prefix('admins')-
+// // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
+Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
+Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
+Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
+// Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
+Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
+Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+
+Route::get('/api/batches', [CourseProgrammeController::class, 'allBatches']);
+Route::get('/api/batch/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
+Route::get('/api/batch/programmes/{id}', [CourseProgrammeController::class, 'programmesByBatch']);
+
+
+Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
+Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
+
+Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
+Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
+Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
+Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
+Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
+Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
+Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
+
+Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
+    ->name('logout');
 
 Route::prefix('admins')
     ->middleware(['auth:admin'])
@@ -719,13 +752,32 @@ Route::get('admin/roles/permissions', function (Request $request) {
 
         return response()->json($permissionIds);
     } catch (\Exception $e) {
+        \Log::error('Error fetching role permissions: ' . $e->getMessage());
         return response()->json(['error' => 'Failed to fetch permissions'], 500);
     }
-})->middleware(['web', 'admin']);
+})->middleware(['web']);
 
-
-
-
+// Test route for debugging
+Route::get('admin/test-roles', function () {
+    $roles = \Spatie\Permission\Models\Role::with('permissions')->get();
+    $permissions = \Spatie\Permission\Models\Permission::all();
+    
+    return response()->json([
+        'roles' => $roles->map(function($role) {
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+                'permissions' => $role->permissions->pluck('id')->toArray()
+            ];
+        }),
+        'permissions' => $permissions->map(function($permission) {
+            return [
+                'id' => $permission->id,
+                'name' => $permission->name
+            ];
+        })
+    ]);
+})->middleware(['web']);
 
 
 require __DIR__ . '/backpack/custom.php';
