@@ -1,5 +1,5 @@
 <div class="card h-100">
-    <div class="card-header">Admission Batche for </div>
+    <div class="card-header">Admission Batches</div>
     <div class="card-body table-responsive">
         @php
             $batches = $widget['data']['batches'] ?? [];
@@ -24,7 +24,7 @@
                         <td>{{ $batch->title }} - {{ $batch->year }}</td>
                         <td>
                             @if($batch->admitted_students_count > 0)
-                                <a href="{{ url("/admin/user?batch_id={$batch->id}&confirmed_admission=1") }}">
+                                <a href="{{ url("/admin/user?batch_filter={$batch->id}") }}">
                                     {{ $batch->admitted_students_count }}
                                 </a>
                             @endif

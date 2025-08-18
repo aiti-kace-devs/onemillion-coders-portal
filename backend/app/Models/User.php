@@ -61,6 +61,14 @@ class User extends Authenticatable
         'shortlist' => 'boolean',
     ];
 
+
+
+    public function course()
+    {
+        return $this->belongsTo(Course::class, 'registered_course');
+    }
+
+
     public function isAdmitted()
     {
         return UserAdmission::where('user_id', $this->userId)
@@ -117,11 +125,6 @@ class User extends Authenticatable
     public function examResults()
     {
         return $this->hasMany(\App\Models\Oex_result::class, 'user_id', 'id');
-    }
-
-    public function course()
-    {
-        return $this->belongsTo(Course::class, 'registered_course');
     }
 
     public function sendPasswordResetNotification($token)

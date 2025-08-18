@@ -16,7 +16,7 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use Illuminate\Support\Facades\View;
 use App\Http\Controllers\Traits\GetsFilteredQuery;
-
+use Illuminate\Support\Facades\Log;
 /**
  * Class UserCrudController
  * @package App\Http\Controllers\Admin
@@ -89,13 +89,6 @@ class UserCrudController extends CrudController
         $this->setupFilter();
 
         $this->crud->query->select(['id','name', 'gender', 'age', 'email', 'mobile_no', 'ghcard']);
-
-        $this->crud->addColumn(['name' => 'name', 'type' => 'text', 'label' => 'Full Name']);
-        $this->crud->addColumn(['name' => 'email', 'type' => 'text', 'label' => 'Email']);
-        $this->crud->addColumn(['name' => 'gender', 'type' => 'text', 'label' => 'Gender']);
-        $this->crud->addColumn(['name' => 'age', 'type' => 'text', 'label' => 'Age']);
-        $this->crud->addColumn(['name' => 'mobile_no', 'type' => 'text', 'label' => 'Mobile No']);
-        // $this->crud->addColumn(['name' => 'ghcard', 'type' => 'text', 'label' => 'Ghana Card Number']);
         $this->addConfirmedAdmissionColumn();
         // $this->setupStudentColumns();
         // FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
@@ -197,6 +190,7 @@ class UserCrudController extends CrudController
     }
 
 
+
     public function assignBatch(Request $request)
     {
         $request->validate([
@@ -226,9 +220,10 @@ class UserCrudController extends CrudController
 
 
 
+
     public function setupFilter()
     {
-        $this->addStudentBatchFilter('admission', 'Student Batch');
+        $this->addStudentBatchFilter('Batch Filter');
         $this->courseFilter('registered_course');
         $this->addConfirmedAdmissionFilter();
         $this->addAdmissionLocationFilter();
@@ -237,6 +232,7 @@ class UserCrudController extends CrudController
         FilterHelper::addAgeRangeFilter();
         FilterHelper::addGenderFilter();
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
+        $this->addStudentBatchFilterFromDashboard('admission');
     }
     /**
      * Custom view for students with admission
