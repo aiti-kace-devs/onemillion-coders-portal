@@ -27,6 +27,9 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'first_name',
+        'middle_name',
+        'last_name',
         'email',
         'exam',
         'status',
@@ -148,5 +151,57 @@ class User extends Authenticatable
     public function getNameWithEmail()
     {
         return $this->name . ' (' . $this->email . ')';
+    }
+
+    /**
+     * Check if user has separate name fields populated
+     */
+    public function hasSeparateNameFields()
+    {
+        return !empty($this->first_name) || !empty($this->middle_name) || !empty($this->last_name);
+    }
+
+    /**
+     * Get full name from separate fields or fallback to name field
+     */
+    public function getFullNameAttribute()
+    {
+        if ($this->hasSeparateNameFields()) {
+            $parts = array_filter([$this->first_name, $this->middle_name, $this->last_name]);
+            return implode(' ', $parts);
+        }
+        return $this->name;
+    }
+
+    /**
+     * Set name from separate fields
+     */
+    public function setNameFromFields()
+    {
+        if ($this->hasSeparateNameFields()) {
+            $this->name = $this->getFullNameAttribute();
+        }
+    }
+
+    /**
+     * Parse existing name into separate fields (for migration)
+     */
+    public function parseNameIntoFields()
+    {
+        if (!$this->hasSeparateNameFields() && !empty($this->name)) {
+            $nameParts = explode(' ', trim($this->name));
+
+            if (count($nameParts) >= 2) {
+                $this->first_name = $nameParts[0];
+                $this->last_name = end($nameParts);
+
+                if (count($nameParts) > 2) {
+                    $this->middle_name = implode(' ', array_slice($nameParts, 1, -1));
+                }
+            } else {
+                // If only one name part, treat it as first name
+                $this->first_name = $this->name;
+            }
+        }
     }
 }

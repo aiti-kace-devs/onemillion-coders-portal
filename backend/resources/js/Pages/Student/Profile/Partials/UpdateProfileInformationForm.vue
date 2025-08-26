@@ -17,6 +17,9 @@ const props = defineProps({
 
 const form = useForm({
   name: props.user.student_name || props.user.name || "",
+  first_name: props.user.first_name || "",
+  middle_name: props.user.middle_name || "",
+  last_name: props.user.last_name || "",
   card_type: props.user.card_type || "",
   ghcard: props.user.ghcard || "",
   gender: props.user.gender || "",
@@ -43,6 +46,8 @@ const closeConfirmationModal = () => {
 
   confirmationModal.value = false;
 };
+
+// always collect first/middle/last name from inputs; no switching UI
 
 watch(
   () => form.card_type,
@@ -130,22 +135,48 @@ const submit = () => {
     </header>
 
     <form class="grid lg:grid-cols-2 gap-6 mt-6">
-      <div class="col-span-full">
-        <InputLabel
-          for="name"
-          value="Fullname (as appears on your Ghana Card / any National ID)"
-        />
-        <TextInput
-          id="name"
-          type="text"
-          class="block w-full"
-          v-model="form.name"
-          required
-          :disabled="detailsUpdated"
-          :class="{ 'border-red-600': form.errors.name }"
-        />
-        <InputError :message="form.errors.name" />
-      </div>
+      <!-- Always show separate name fields -->
+        <div class="col-span-full">
+          <InputLabel for="first_name" value="First Name" />
+          <TextInput
+            id="first_name"
+            type="text"
+            class="block w-full"
+            v-model="form.first_name"
+            required
+            :disabled="detailsUpdated"
+            :class="{ 'border-red-600': form.errors.first_name }"
+          />
+          <InputError :message="form.errors.first_name" />
+        </div>
+
+        <div class="col-span-full">
+          <InputLabel for="middle_name" value="Middle Name" />
+          <TextInput
+            id="middle_name"
+            type="text"
+            class="block w-full"
+            v-model="form.middle_name"
+            :disabled="detailsUpdated"
+            :class="{ 'border-red-600': form.errors.middle_name }"
+          />
+          <InputError :message="form.errors.middle_name" />
+        </div>
+
+        <div class="col-span-full">
+          <InputLabel for="last_name" value="Last Name" />
+          <TextInput
+            id="last_name"
+            type="text"
+            class="block w-full"
+            v-model="form.last_name"
+            required
+            :disabled="detailsUpdated"
+            :class="{ 'border-red-600': form.errors.last_name }"
+          />
+          <InputError :message="form.errors.last_name" />
+        </div>
+
 
       <div class="col-span-full">
         <InputLabel for="gender" value="Gender" />

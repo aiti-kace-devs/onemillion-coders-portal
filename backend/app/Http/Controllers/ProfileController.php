@@ -28,6 +28,7 @@ class ProfileController extends Controller
             ->first();
 
         $user['isAdmitted'] = $user?->isAdmitted();
+        $user['hasSeparateNameFields'] = $user?->hasSeparateNameFields();
 
         return Inertia::render('Student/Profile/Edit', [
             'user' => $user
@@ -43,13 +44,34 @@ class ProfileController extends Controller
 
         $validated = $request->validated();
 
-        $user->fill($validated);
+        // Handle name fields based on user's current state
+        if ($user->hasSeparateNameFields()) {
+            // User has separate name fields, update them and sync with name field
+            $user->fill($validated);
+            $user->setNameFromFields();
+        } else {
+            // User has only name field, check if they're trying to switch to separate fields
+            if (isset($validated['first_name']) && isset($validated['last_name'])) {
+                // User is switching to separate name fields
+                $user->fill($validated);
+                $user->setNameFromFields();
+            } else {
+                // User is updating the single name field
+                $user->fill($validated);
 
+                // If they have a name but no separate fields, offer to parse it
+                if (isset($validated['name']) && !empty($validated['name'])) {
+                    $user->parseNameIntoFields();
+                }
+            }
+        }
+
+        // Handle previous name tracking
         if ($user->isDirty('name') && !$user->previous_name) {
             $user->previous_name = $user->getOriginal('name');
         }
 
-        if ($validated['name'] == $user->previous_name) {
+        if (isset($validated['name']) && $validated['name'] == $user->previous_name) {
             $user->previous_name = null;
         }
 
