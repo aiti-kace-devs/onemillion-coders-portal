@@ -51,27 +51,20 @@
                                 </div>
                             </div> -->
                             <div class="col-md-9">
-                                @if($user->hasSeparateNameFields())
+                                <div class="row mb-3">
+                                    <div class="col-md-3 font-weight-bold">First Name:</div>
+                                    <div class="col-md-9">{{ $user->first_name ?: 'Not provided' }}</div>
+                                </div>
+                                @if($user->middle_name)
                                     <div class="row mb-3">
-                                        <div class="col-md-3 font-weight-bold">First Name:</div>
-                                        <div class="col-md-9">{{ $user->first_name }}</div>
-                                    </div>
-                                    @if($user->middle_name)
-                                        <div class="row mb-3">
-                                            <div class="col-md-3 font-weight-bold">Middle Name:</div>
-                                            <div class="col-md-9">{{ $user->middle_name }}</div>
-                                        </div>
-                                    @endif
-                                    <div class="row mb-3">
-                                        <div class="col-md-3 font-weight-bold">Last Name:</div>
-                                        <div class="col-md-9">{{ $user->last_name }}</div>
-                                    </div>
-                                @else
-                                    <div class="row mb-3">
-                                        <div class="col-md-3 font-weight-bold">Full Name:</div>
-                                        <div class="col-md-9">{{ $user->name }}</div>
+                                        <div class="col-md-3 font-weight-bold">Middle Name:</div>
+                                        <div class="col-md-9">{{ $user->middle_name }}</div>
                                     </div>
                                 @endif
+                                <div class="row mb-3">
+                                    <div class="col-md-3 font-weight-bold">Last Name:</div>
+                                    <div class="col-md-9">{{ $user->last_name ?: 'Not provided' }}</div>
+                                </div>
                                 <div class="row mb-3">
                                     <div class="col-md-3 font-weight-bold">Email:</div>
                                     <div class="col-md-9">{{ $user->email }}</div>

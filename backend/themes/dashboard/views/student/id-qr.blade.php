@@ -45,93 +45,36 @@
                     @csrf
                     {{-- @method('PATCH') --}}
                     <div class="row g-3 flex mb-2 align-items-center">
-                        @if($user->hasSeparateNameFields())
-                            <!-- Show separate name fields if user has them -->
-                            <div class="col-12 mb-2">
-                                <label class="form-label col-12">First Name</label>
-                                <input id="first_name" type="text" required value="{{ $user->first_name }}" name="first_name"
-                                    class="form-control col-12 @error('first_name') is-invalid @enderror"
-                                    @if (detailsUpdated($user)) disabled @endif>
-                                @error('first_name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                        <!-- Always show separate name fields -->
+                        <div class="col-12 mb-2">
+                            <label class="form-label col-12">First Name</label>
+                            <input id="first_name" type="text" required value="{{ $user->first_name }}" name="first_name"
+                                class="form-control col-12 @error('first_name') is-invalid @enderror"
+                                @if (detailsUpdated($user)) disabled @endif>
+                            @error('first_name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
 
-                            <div class="col-12 mb-2">
-                                <label class="form-label col-12">Middle Name</label>
-                                <input id="middle_name" type="text" value="{{ $user->middle_name }}" name="middle_name"
-                                    class="form-control col-12 @error('middle_name') is-invalid @enderror"
-                                    @if (detailsUpdated($user)) disabled @endif>
-                                @error('middle_name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                        <div class="col-12 mb-2">
+                            <label class="form-label col-12">Middle Name</label>
+                            <input id="middle_name" type="text" value="{{ $user->middle_name }}" name="middle_name"
+                                class="form-control col-12 @error('middle_name') is-invalid @enderror"
+                                @if (detailsUpdated($user)) disabled @endif>
+                            @error('middle_name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
 
-                            <div class="col-12 mb-2">
-                                <label class="form-label col-12">Last Name</label>
-                                <input id="last_name" type="text" required value="{{ $user->last_name }}" name="last_name"
-                                    class="form-control col-12 @error('last_name') is-invalid @enderror"
-                                    @if (detailsUpdated($user)) disabled @endif>
-                                @error('last_name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        @else
-                            <!-- Show single name field for existing users -->
-                            <div class="col-12 mb-2">
-                                <label class="form-label col-12">Fullname (as appears on your Ghana Card/ any National ID)
-                                </label>
-                                <input id="name" type="text" required value=" {{ $user->student_name }}" name="name"
-                                    class="form-control col-12  @error('name') is-invalid @enderror"
-                                    @if (detailsUpdated($user)) disabled @endif>
-                                @if ($user->previous_name)
-                                    <div class="text-primary">Previous Name: {{ $user->previous_name }}</div>
-                                @endif
-                                @error('name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                
-                                <!-- Option to switch to separate name fields -->
-                                @if (!detailsUpdated($user))
-                                    <div class="mt-2">
-                                        <button type="button" onclick="switchToSeparateFields()" 
-                                            class="btn btn-sm btn-outline-primary">
-                                            Use separate first, middle, and last name fields
-                                        </button>
-                                    </div>
-                                @endif
-                            </div>
-
-                            <!-- Hidden separate name fields for switching -->
-                            <div id="separate-name-fields" style="display: none;">
-                                <div class="col-12 mb-2">
-                                    <label class="form-label col-12">First Name</label>
-                                    <input id="first_name" type="text" name="first_name"
-                                        class="form-control col-12 @error('first_name') is-invalid @enderror">
-                                    @error('first_name')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="col-12 mb-2">
-                                    <label class="form-label col-12">Middle Name</label>
-                                    <input id="middle_name" type="text" name="middle_name"
-                                        class="form-control col-12 @error('middle_name') is-invalid @enderror">
-                                    @error('middle_name')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="col-12 mb-2">
-                                    <label class="form-label col-12">Last Name</label>
-                                    <input id="last_name" type="text" name="last_name"
-                                        class="form-control col-12 @error('last_name') is-invalid @enderror">
-                                    @error('last_name')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        @endif
+                        <div class="col-12 mb-2">
+                            <label class="form-label col-12">Last Name</label>
+                            <input id="last_name" type="text" required value="{{ $user->last_name }}" name="last_name"
+                                class="form-control col-12 @error('last_name') is-invalid @enderror"
+                                @if (detailsUpdated($user)) disabled @endif>
+                            @error('last_name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
 
                         <div class="col-12 mb-2">
                             <label class="form-label col-12">Card Type</label>
@@ -368,31 +311,6 @@
             cardTypeSelect.addEventListener("change", togglePrefix);
         });
 
-        function switchToSeparateFields() {
-            const nameInput = document.getElementById('name');
-            const separateFieldsDiv = document.getElementById('separate-name-fields');
-            const nameValue = nameInput.value.trim();
-            
-            if (nameValue) {
-                // Parse the existing name into separate fields
-                const nameParts = nameValue.split(' ');
-                
-                if (nameParts.length >= 2) {
-                    document.getElementById('first_name').value = nameParts[0];
-                    document.getElementById('last_name').value = nameParts[nameParts.length - 1];
-                    
-                    if (nameParts.length > 2) {
-                        document.getElementById('middle_name').value = nameParts.slice(1, -1).join(' ');
-                    }
-                } else {
-                    document.getElementById('first_name').value = nameValue;
-                    document.getElementById('last_name').value = '';
-                }
-            }
-            
-            // Hide the single name field and show separate fields
-            nameInput.parentElement.style.display = 'none';
-            separateFieldsDiv.style.display = 'block';
-        }
+
     </script>
 @endpush

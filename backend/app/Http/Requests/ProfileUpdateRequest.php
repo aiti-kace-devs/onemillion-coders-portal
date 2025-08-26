@@ -17,29 +17,11 @@ class ProfileUpdateRequest extends FormRequest
     {
         $user = $this->user();
 
-        // If user has separate name fields, validate them
-        if ($user->hasSeparateNameFields()) {
-            return [
-                'first_name' => ['required', 'string', 'max:255'],
-                'middle_name' => ['nullable', 'string', 'max:255'],
-                'last_name' => ['required', 'string', 'max:255'],
-                'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user->id)],
-            ];
-        }
-
-        // Check if user is trying to switch to separate name fields
-        if ($this->has('first_name') && $this->has('last_name')) {
-            return [
-                'first_name' => ['required', 'string', 'max:255'],
-                'middle_name' => ['nullable', 'string', 'max:255'],
-                'last_name' => ['required', 'string', 'max:255'],
-                'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user->id)],
-            ];
-        }
-
-        // Otherwise, validate the single name field
+        // Always validate separate name fields
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user->id)],
         ];
     }
