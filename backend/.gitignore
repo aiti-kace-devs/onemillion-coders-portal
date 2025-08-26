@@ -13,7 +13,9 @@ npm-debug.log
 yarn-error.log
 /.idea
 /.vscode
+/.vite
 .history
 public/build
 storage/app/version.json
 storage/app/key.json
+/storage/debugbar

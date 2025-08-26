@@ -2,27 +2,26 @@
 
 namespace App\Http\Controllers\Traits;
 
+use App\Http\Requests\ChangeAdmissionRequest;
+use App\Http\Requests\ChooseSessionRequest;
 use Illuminate\Http\Request;
 use App\Models\User;
 
 trait ShortlistRowActionsTrait
 {
     // Change admission for a student
-    public function changeAdmission(Request $request, $userId)
+    public function changeAdmission(ChangeAdmissionRequest $request, $userId)
     {
-        $request->validate([
-            'course_id' => 'required|exists:courses,id',
-            'session_id' => 'required|exists:course_sessions,id',
-        ]);
+        $validated = $request->validated();
         $user = User::findOrFail($userId);
-        $admission = $user->admissions()->where('course_id', $request->course_id)->first();
+        $admission = $user->admissions()->where('course_id', $validated['course_id'])->first();
         if ($admission) {
-            $admission->session = $request->session_id;
+            $admission->session = $validated['session_id'];
             $admission->save();
         } else {
             $user->admissions()->create([
-                'course_id' => $request->course_id,
-                'session' => $request->session_id,
+                'course_id' => $validated['course_id'],
+                'session' => $validated['session_id'],
                 'confirmed' => now(),
             ]);
         }
@@ -30,15 +29,13 @@ trait ShortlistRowActionsTrait
     }
 
     // Choose session for a student
-    public function chooseSession(Request $request, $userId)
+    public function chooseSession(ChooseSessionRequest $request, $userId)
     {
-        $request->validate([
-            'session_id' => 'required|exists:course_sessions,id',
-        ]);
+        $validated = $request->validated();
         $user = User::findOrFail($userId);
         $admission = $user->admissions()->first();
         if ($admission) {
-            $admission->session = $request->session_id;
+            $admission->session = $validated['session_id'];
             $admission->save();
         }
         return response()->json(['message' => 'Session chosen successfully.']);

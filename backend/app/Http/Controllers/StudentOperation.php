@@ -21,18 +21,37 @@ use App\Jobs\AdmitStudentJob;
 use App\Jobs\CreateStudentAdmissionJob;
 use App\Jobs\TestSubmittedJob;
 use App\Models\AdmissionRejection;
+use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use App\Models\Questionnaire;
+use App\Models\QuestionnaireResponse;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class StudentOperation extends Controller
 {
     //student dashboard
     public function dashboard()
     {
-        if (Auth::user()->isAdmitted()) {
-            return redirect('/student/id-qrcode');
+        if (!Auth::user()->isAdmitted()) {
+            return redirect(route('student.profile.edit'));
         }
 
-        $data['portal_exams'] = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
+        // $data['portal_exams'] = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
+        //     ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
+        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
+        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
+        //     ->orderBy('user_exams.exam_id', 'desc')
+        //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
+        //     ->where('user_exams.user_id', Auth::user()->id)
+        //     ->where('user_exams.std_status', '1')
+        //     ->get()
+        //     ->toArray();
+
+        //     return view('student.dashboard', $data);
+
+        $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
             ->join('users', 'users.id', '=', 'user_exams.user_id')
             ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
@@ -43,15 +62,25 @@ class StudentOperation extends Controller
             ->get()
             ->toArray();
 
+        $questionnaires = Questionnaire::where('active', true)->latest()->get();
+
+        $questionnaires = $questionnaires->map(function ($questionnaire) {
+            $questionnaire['is_submitted'] = Auth::user()->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->where('is_submitted', true)->exists();
+
+            return $questionnaire;
+        });
+
+        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires'));
+
         // $data['portal_exams'] = Oex_exam_master::select(['oex_exam_masters.*', 'oex_categories.name as cat_name'])
         //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
         //     ->orderBy('id', 'desc')->where('oex_exam_masters.status', '1')->get()->toArray();
-        return view('student.dashboard', $data);
+
     }
     public function profile()
     {
         // Get the current authenticated user
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
 
         // Get course details if available in user's record
         $course = null;
@@ -69,50 +98,66 @@ class StudentOperation extends Controller
     // application status
     public function application_status()
     {
-        $user_exam = user_exam::where('user_id', Auth::user()->id)->first();
-        $user_admission = UserAdmission::where('user_id', Auth::user()->userId)->first();
+        $user = Auth::guard('web')->user();
+
+        $user_exam = user_exam::where('user_id', $user->id)->first();
+        $user_admission = UserAdmission::where('user_id', $user->userId)->first();
         // dd($exam_submitted, $data);
 
-        return view('student.application-status', compact('user_exam', 'user_admission'));
+        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_exam', 'user_admission'));
     }
 
     //Exam page
     public function exam()
     {
-        if (Auth::user()->isAdmitted()) {
-            return redirect('/student/id-qrcode');
+        if (!Auth::guard('web')->user()->isAdmitted()) {
+            return redirect(route('student.profile.edit'));
         }
-        $student_info = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.title', 'oex_exam_masters.exam_date', 'users.created_at as registered'])
+
+        // $student_info = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.title', 'oex_exam_masters.exam_date', 'users.created_at as registered'])
+        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
+        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
+        //     ->orderBy('user_exams.exam_id', 'desc')
+        //     ->where('user_exams.user_id', Auth::user()->id)
+        //     ->where('user_exams.std_status', '1')
+        //     ->get()
+        //     ->toArray();
+
+        // return view('student.exam', ['student_info' => $student_info]);
+
+        $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
+            ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
             ->join('users', 'users.id', '=', 'user_exams.user_id')
             ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
             ->orderBy('user_exams.exam_id', 'desc')
+            ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
             ->where('user_exams.user_id', Auth::user()->id)
             ->where('user_exams.std_status', '1')
             ->get()
             ->toArray();
 
-        return view('student.exam', ['student_info' => $student_info]);
+        return Inertia::render('Student/Exam/Index', compact('exams'));
     }
 
     //join exam page
     public function join_exam($id)
     {
-        if (Auth::user()->isAdmitted()) {
-            return redirect('/student/id-qrcode');
+        if (!Auth::guard('web')->user()->isAdmitted()) {
+            return redirect(route('student.profile.edit'));
         }
 
         $questionSets = Oex_question_master::select('exam_set_id')->distinct()->pluck('exam_set_id');
         $randomExamId = $questionSets->random();
-        $question = Oex_question_master::where('exam_set_id', $randomExamId)->inRandomOrder()->get();
+        $questions = Oex_question_master::where('exam_set_id', $randomExamId)->inRandomOrder()->get();
 
         // $question = Oex_question_master::where('exam_id', $id)->inRandomOrder()->get();
         $user_exam = user_exam::where('exam_id', $id)
-            ->where('user_id', Auth::user()->id)
+            ->where('user_id', Auth::guard('web')->user()->id)
             ->get()
             ->first();
 
         if ($user_exam && $user_exam->submitted) {
-            return redirect(url('student/exam'))->with([
+            return redirect(route('student.exam.index'))->with([
                 'flash' => 'Unable to take exam. Test already submitted',
                 'key' => 'error',
             ]);
@@ -121,25 +166,26 @@ class StudentOperation extends Controller
         $exam = Oex_exam_master::where('id', $id)->get()->first();
         $now = Carbon::now();
 
-        if ($now->isAfter(new Carbon($exam->exam_date))) {
-            return redirect(url('student/exam'))->with([
+        if (!$now->isAfter(new Carbon($exam->exam_date))) {
+            return redirect(route('student.exam.index'))->with([
                 'flash' => 'Unable to take exam. Exam deadline was ' . $exam->exam_date,
                 'key' => 'error',
             ]);
         }
 
         // 48 hours to finish exam
-        $userCreatedAt = new Carbon(Auth::user()->created_at);
+        $userCreatedAt = new Carbon(Auth::guard('web')->user()->created_at);
         $userCreatedAtPlusDeadlineDays = $userCreatedAt->addDays(config(EXAM_DEADLINE_AFTER_REGISTRATION, 2));
 
-        if ($userCreatedAtPlusDeadlineDays->isBefore($now)) {
-            return redirect(url('student/exam'))->with([
+        if (!$userCreatedAtPlusDeadlineDays->isBefore($now)) {
+            return redirect(route('student.exam.index'))->with([
                 'flash' => 'Unable to take exam. Time to take exams has elapsed',
                 'key' => 'error',
             ]);
         }
 
         $usedTime = 0;
+
         if ($user_exam && $user_exam->started) {
             $start = new Carbon($user_exam->started);
 
@@ -150,31 +196,32 @@ class StudentOperation extends Controller
             $user_exam->submitted = now();
             $user_exam->update();
 
-            return redirect(url('student/exam'))->with([
-                'flash' => 'Unable to take exam. Exam duration time has elapsed. ' . $usedTime . ' mins has passed since user started exams.',
+            return redirect(route('student.exam.index'))->with([
+                'flash' => 'Unable to take exam. Exam duration time has elapsed. ' . $usedTime . ' mins has passed since user started exams',
                 'key' => 'error',
             ]);
         }
         // dd($question->pluck("id"));
-        return view('student.join_exam', ['question' => $question, 'exam' => $exam, 'usedTime' => $usedTime]);
+
+        return Inertia::render('Student/Exam/JoinExam', compact('questions', 'exam', 'usedTime'));
+
+        // return view('student.join_exam', ['question' => $questions, 'exam' => $exam, 'usedTime' => $usedTime]);
     }
 
     // start exam
-    public function start_exam($id)
+    public function start_exam(Request $request)
     {
+        $id = $request->exam_id;
+
         $user_exam = user_exam::where('exam_id', $id)
-            ->where('user_id', Auth::user()->id)
+            ->where('user_id', Auth::guard('web')->user()->id)
             ->get()
             ->first();
+
         $arr = ['status' => 'true', 'message' => 'started successfully'];
-        if (!$user_exam->started) {
-            user_exam::updateOrCreate(
-                [
-                    'user_id' => Auth::user()->id,
-                    'exam_id' => $id,
-                ],
-                ['started' => Carbon::now()->toDateTimeString()],
-            );
+
+        if ($user_exam && !$user_exam->started) {
+            $user_exam->update(['started' => Carbon::now()->toDateTimeString()]);
         }
 
         return json_encode($arr);
@@ -183,21 +230,22 @@ class StudentOperation extends Controller
     //On submit
     public function submit_questions(Request $request)
     {
-        $std_info = user_exam::where('user_id', Auth::user()->id)
+        $std_info = user_exam::where('user_id', Auth::guard('web')->user()->id)
             ->where('exam_id', $request->exam_id)
             ->get()
             ->first();
 
         if ($std_info && $std_info->submitted) {
             $res = Oex_result::where('exam_id', $request->exam_id)
-                ->where('user_id', Auth::user()->id)
+                ->where('user_id', Auth::guard('web')->user()->id)
                 ->get()
                 ->first();
+
             $yes_ans = $res->yes_ans;
             $total = $res->yes_ans + $res->no_ans;
             $percentage = round(($yes_ans / $total) * 100);
 
-            return redirect(url('student/exam'))->with([
+            return redirect(route('student.exam.index'))->with([
                 // 'flash' => "Test already submitted on this exam. Submission Date: {$std_info->submitted} .Result: {$percentage}% ({$yes_ans}/{$total})",
                 'flash' => "Test already submitted on this exam. Submission Date: {$std_info->submitted}",
                 'key' => 'info',
@@ -207,6 +255,7 @@ class StudentOperation extends Controller
         $yes_ans = 0;
         $no_ans = 0;
         $data = $request->all();
+
         $result = [];
         $exam_set_id = null;
         for ($i = 1; $i <= $request->index; $i++) {
@@ -234,7 +283,7 @@ class StudentOperation extends Controller
         $std_info->submitted = Carbon::now()->toDateTimeString();
         $std_info->update();
 
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
         $userId = $user->userId;
 
         $res = new Oex_result();
@@ -253,7 +302,7 @@ class StudentOperation extends Controller
         // GoogleSheets::updateGoogleSheets($userId, ['result' => $storedResult->yes_ans]);
         TestSubmittedJob::dispatch($user, $res);
 
-        return redirect(url('student/exam'))->with([
+        return redirect(route('student.exam.index'))->with([
             // 'flash' => "Test submitted successfully. Result: {$percentage}%  {$yes_ans}/{$total}",
             'flash' => 'Test submitted successfully.',
             'key' => 'success',
@@ -263,7 +312,7 @@ class StudentOperation extends Controller
     //Applying for exam
     public function apply_exam($id)
     {
-        $checkuser = user_exam::where('user_id', Auth::user()->id)
+        $checkuser = user_exam::where('user_id', Auth::guard('web')->user()->id)
             ->where('exam_id', $id)
             ->get()
             ->first();
@@ -273,7 +322,7 @@ class StudentOperation extends Controller
         } else {
             $exam_user = new user_exam();
 
-            $exam_user->user_id = Auth::user()->id;
+            $exam_user->user_id = Auth::guard('web')->user()->id;
             $exam_user->exam_id = $id;
             $exam_user->std_status = 1;
             $exam_user->exam_joined = 0;
@@ -290,11 +339,11 @@ class StudentOperation extends Controller
     public function view_result($id)
     {
         $data['result_info'] = Oex_result::where('exam_id', $id)
-            ->where('user_id', Auth::user()->id)
+            ->where('user_id', Auth::guard('web')->user()->id)
             ->get()
             ->first();
 
-        $data['student_info'] = User::where('id', Auth::user()->id)
+        $data['student_info'] = User::where('id', Auth::guard('web')->user()->id)
             ->get()
             ->first();
 
@@ -334,56 +383,70 @@ class StudentOperation extends Controller
     //     ]);
     // }
 
-    public function select_session_view($user_id)
+    public function select_session_view(Request $request)
     {
-        $admission = UserAdmission::where('user_id', $user_id)->firstOrFail();
-        $user = User::select('id', 'name', 'userId')->where('userId', $user_id)->first();
+        $user = Auth::guard('web')->user()->only(['id', 'name', 'userId']);
+        $admission = UserAdmission::where('user_id', $user['userId'])->firstOrFail();
+        $course = Course::find($admission->course_id);
+        $sessions = CourseSession::where('course_id', $course->id)->get();
 
-        // if ($admission->confirmed) {
-        //     return view('student.session-select.index', [
-        //         'confirmed' => true,
-        //         'user' => $user,
-        //         'session' => CourseSession::where('id', $admission->session)->first(),
-        //     ]);
-        // }
-        $courseDetails = Course::find($admission->course_id);
-        $sessions = CourseSession::where('course_id', $courseDetails->id)->get();
-        // $sessions->each(function($s){
-        //     $used = UserAdmission::where('session', $s->id)->whereNotNull('confirmed')->count();
+        $sessions = $sessions->map(function ($session) {
+            $session->slotLeft = $session->slotLeft();
+            return $session;
+        });
 
-        // });
-        return view('student.session-select.index', [
-            'user' => $user,
-            'sessions' => $sessions,
-            'course' => $courseDetails,
-            'confirmed' => false,
-            'admission' => $admission,
-            'session' => CourseSession::where('id', $admission->session)->first(),
-        ]);
+        $session = CourseSession::where('id', $admission->session)->first();
+
+        return Inertia::render('Student/Session', compact(
+            'user',
+            'admission',
+            'course',
+            'sessions',
+            'session'
+        ));
     }
 
-    public function confirm_session(Request $request, $user_id)
+    public function confirm_session(Request $request)
     {
-        try {
-            $data = $request->validate([
-                'session_id' => 'required|exists:course_sessions,id',
-            ]);
+        $user = $request->guard('web')->user();
 
-            $admission = UserAdmission::where('user_id', $user_id)->firstOrFail();
+        $data = $request->validate(
+            [
+                'session_id' => 'required|exists:course_sessions,id',
+            ],
+            [],
+            [
+                'session_id' => 'session',
+            ]
+        );
+
+        try {
+            $admission = UserAdmission::where('user_id', $user->userId)->firstOrFail();
             $changingSession = $admission->confirmed && $admission->session;
 
             if ($changingSession && !config(ALLOW_SESSION_CHANGE, false)) {
-                return redirect(url('student/select-session/' . $user_id))->with([
+
+                return redirect()->back()->with([
                     'flash' => 'Unable to change session at this time. Contact administrator',
                     'key' => 'error',
                 ]);
+
+                // return redirect(url('student/select-session/' . $user->userId))->with([
+                //     'flash' => 'Unable to change session at this time. Contact administrator',
+                //     'key' => 'error',
+                // ]);
             }
 
             $courseDetails = Course::find($admission->course_id);
             $session = CourseSession::where('course_id', $courseDetails->id)->where('id', $data['session_id'])->first();
 
             if (!$session) {
-                return redirect(url('student/select-session/' . $user_id))->with([
+                // return redirect(url('student/select-session/' . $user->userId))->with([
+                //     'flash' => 'Unable to confirm session. Try again later',
+                //     'key' => 'error',
+                // ]);
+
+                return redirect()->back()->with([
                     'flash' => 'Unable to confirm session. Try again later',
                     'key' => 'error',
                 ]);
@@ -392,7 +455,12 @@ class StudentOperation extends Controller
             $slotLeft = $session->slotLeft();
 
             if ($slotLeft < 1) {
-                return redirect(url('student/select-session/' . $user_id))->with([
+                // return redirect(url('student/select-session/' . $user->userId))->with([
+                //     'flash' => 'Unable to confirm session. No slots available',
+                //     'key' => 'error',
+                // ]);
+
+                return redirect()->back()->with([
                     'flash' => 'Unable to confirm session. No slots available',
                     'key' => 'error',
                 ]);
@@ -407,16 +475,33 @@ class StudentOperation extends Controller
             if (!$changingSession) {
                 AdmitStudentJob::dispatch($admission);
             }
-            return redirect(url('student/select-session/' . $user_id))->with([
+            // return redirect(url('student/select-session/' . $user->userId))->with([
+            //     'flash' => $changingSession ? 'Session changed successfully' : 'Confirmation successful',
+            //     'key' => 'success',
+            // ]);
+
+            return redirect()->back()->with([
                 'flash' => $changingSession ? 'Session changed successfully' : 'Confirmation successful',
                 'key' => 'success',
             ]);
         } catch (\Exception $e) {
             Log::error($e);
-            return redirect(url('student/select-session/' . $user_id))->with([
+            // return redirect(url('student/select-session/' . $user->userId))->with([
+            //     'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
+            //     'key' => 'error',
+            // ]);
+
+            return redirect()->back()->with([
                 'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
                 'key' => 'error',
             ]);
+
+            // return response()->json([
+            //     'status' => [
+            //         'key' => 'error',
+            //         'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later'
+            //     ]
+            // ]);
         }
     }
 
@@ -424,16 +509,16 @@ class StudentOperation extends Controller
 
     public function change_course()
     {
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
 
-        if ($user->admission) {
-            return redirect()
-                ->back()
-                ->with([
-                    'flash' => 'Student already admitted. Unable to change course.',
-                    'key' => 'error',
-                ]);
-        }
+        // if ($user->admission) {
+        //     return redirect()
+        //         ->back()
+        //         ->with([
+        //             'flash' => 'Student already admitted. Unable to change course.',
+        //             'key' => 'error',
+        //         ]);
+        // }
 
         $currentCourseId = $user->registered_course;
 
@@ -444,6 +529,7 @@ class StudentOperation extends Controller
             $currentCourse = Course::find($currentCourseId);
         }
 
+        return Inertia::render('Student/ChangeCourse', compact('user', 'courses', 'currentCourse'));
         return view('student.change-course', compact('user', 'courses', 'currentCourse'));
     }
 
@@ -455,11 +541,12 @@ class StudentOperation extends Controller
             return redirect()
                 ->back()
                 ->with([
-                    'flash' => 'Students not allowed to change course at this time. Contact the administrators',
                     'key' => 'error',
+                    'flash' => 'Students not allowed to change course at this time. Contact the administrators.',
                 ]);
         }
-        $user = Auth::user();
+
+        $user = Auth::guard('web')->user();
 
         if ($user->admission) {
             return redirect()
@@ -470,9 +557,13 @@ class StudentOperation extends Controller
                 ]);
         }
 
-        $request->validate([
-            'course_id' => 'required|exists:courses,id',
-        ]);
+        $request->validate(
+            [
+                'course_id' => 'required|exists:courses,id',
+            ],
+            [],
+            ['course_id' => 'course']
+        );
 
         // Get course information
         // $course = Course::find($request->course_id);
@@ -485,7 +576,7 @@ class StudentOperation extends Controller
         $user->registered_course = $request->course_id; // Store course_id in exam field
         $user->save();
 
-        return redirect()->route('student.profile')->with('success', 'Course changed successfully.');
+        return redirect()->route('student.profile.edit');
     }
 
     // API function not used
@@ -521,21 +612,22 @@ class StudentOperation extends Controller
         }
     }
 
-    public function delete_admission($user_id, Request $request)
+    public function delete_admission(User $user)
     {
-        $delete_user_admission = UserAdmission::where('user_id', $user_id)->first();
+        $delete_user_admission = UserAdmission::where('user_id', $user->userId)->first();
 
         if ($delete_user_admission) {
             $delete_user_admission->delete();
+
             AdmissionRejection::create([
-                'user_id' => $user_id,
+                'user_id' => $user->userId,
                 'course_id' => $delete_user_admission->course_id,
                 'rejected_at' => now(),
             ]);
 
-            User::where('userId', $user_id)->update(['shortlist' => 0]);
+            $user->update(['shortlist' => 0]);
 
-            return response()->json(['message' => 'User admission and shortlisted deleted successfully.'], 200);
+            return Redirect::route('student.application-status');
         } else {
             return response()->json(['message' => 'User admission not found.'], 404);
         }
@@ -549,7 +641,7 @@ class StudentOperation extends Controller
     public function get_details_page()
     {
         $user = User::select('users.*', 'users.updated_at as user_updated', 'users.created_at as user_created', 'users.name as student_name', 'courses.*', 'course_sessions.session as selected_session', 'course_sessions.*', 'user_admission.*')
-            ->where('userId', Auth::user()->userId)
+            ->where('userId', Auth::guard('web')->user()->userId)
             ->join('user_admission', 'user_admission.user_id', '=', 'users.userId')
             ->join('course_sessions', 'user_admission.session', '=', 'course_sessions.id')
             ->join('courses', 'user_admission.course_id', '=', 'courses.id')
@@ -566,7 +658,7 @@ class StudentOperation extends Controller
 
     public function get_meeting_link_page()
     {
-        $session = CourseSession::find(UserAdmission::where('user_id', Auth::user()->userId)->firstOrFail()->session);
+        $session = CourseSession::find(UserAdmission::where('user_id', Auth::guard('web')->user()->userId)->firstOrFail()->session);
         return view('student.meeting-link', [
             'session' => $session,
         ]);
@@ -574,7 +666,7 @@ class StudentOperation extends Controller
 
     public function updateDetails(Request $request)
     {
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
 
         $rules = [
             'name' => 'sometimes|string|regex:/^[\pL\s\-\' ]+$/u|min:5|max:255|min:4',
@@ -590,7 +682,7 @@ class StudentOperation extends Controller
                 'ghcard' => 'GHA-' . $request->ghcard,
             ]);
         } else {
-            $rules['ghcard'] = ['sometimes', 'string', 'max:20', Rule::unique('users','ghcard')->ignore($user->id)];
+            $rules['ghcard'] = ['sometimes', 'string', 'max:20', Rule::unique('users', 'ghcard')->ignore($user->id)];
         }
 
         $validatedData = $request->validate($rules, [], ['ghcard' => 'Card number']);
@@ -638,5 +730,263 @@ class StudentOperation extends Controller
                 'flash' => 'Your details have been updated successfully.',
                 'key' => 'success',
             ]);
+    }
+
+    public function questionnaire()
+    {
+        $questionnaires = Questionnaire::where('active', true)->latest()->get();
+
+        $questionnaires = $questionnaires->map(function ($questionnaire) {
+            $questionnaire['is_submitted'] = Auth::guard('web')->user()->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->where('is_submitted', true)->exists();
+
+            return $questionnaire;
+        });
+
+        return Inertia::render('Student/Assessment/Index', compact('questionnaires'));
+
+        return view('student.questionnaire', compact('questionnaires'));
+    }
+
+    public function take_questionnaire($code)
+    {
+        $questionnaire = Questionnaire::where('code', $code)->first();
+
+        if (!$questionnaire) {
+            return redirect(route('student.assessment.index'))->with(
+                [
+                    'flash' => 'Questionnaire not found.',
+                    'key' => 'error',
+                ]
+            );
+        }
+
+        $user = Auth::guard('web')->user();
+
+        if (!$user->isAdmitted() && !$user->hasAttendance()) {
+            return redirect(route('student.assessment.index'))->with(
+                [
+                    'flash' => 'You are not allowed to access this form.',
+                    'key' => 'error',
+                ]
+            );
+        }
+
+        $userQuestionnaireResponse = $user->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->first();
+
+        $hasSubmitted = $userQuestionnaireResponse->is_submitted ?? false;
+
+        if ($hasSubmitted) {
+            return redirect(route('student.assessment.index'))->with(
+                [
+                    'flash' => 'You have already taken this assessment.',
+                    'key' => 'error',
+                ]
+            );
+        }
+
+        $instructors = null;
+
+        foreach ($questionnaire->schema as $section) {
+            if (strtolower($section['type']) === 'instructors') {
+                $admission = $user->admission;
+                $instructors = Course::find($admission->course_id)?->assignedAdmins()->get() ?? null;
+            }
+        }
+
+        $responses = $userQuestionnaireResponse['response_data'] ?? [];
+
+        $instructorQuestions = collect($questionnaire->schema)->where('type', 'instructors')->first()['questions'] ?? [];
+
+        return Inertia::render('Student/Assessment/TakeQuestionnaire', compact('questionnaire', 'hasSubmitted', 'instructors', 'instructorQuestions', 'responses'));
+
+        return view('student.take_questionnaire', compact('questionnaire', 'hasSubmitted', 'instructors', 'instructorQuestions', 'responses'));
+    }
+
+    public function store_questionnaire(Request $request)
+    {
+        $code = $request->code;
+        // find index of the instructors schema
+        $instructorSectionIndex =  null;
+        $questionnaire = Questionnaire::where('code', $code)->first();
+
+        collect($questionnaire->schema)->each(function ($section, $index) use (&$instructorSectionIndex) {
+            if ($section['type'] === 'instructors') {
+                $instructorSectionIndex = $index;
+            }
+        });
+
+        $sectionIndex = Str::startsWith($request->section, 'instructor-') ? $instructorSectionIndex : (int)$request->section;
+
+        $instructorSection = collect($questionnaire->schema)->where('type', 'instructors')->first();
+        $section = Str::startsWith($sectionIndex, 'instructor-') ? $instructorSection :  $questionnaire->schema[$sectionIndex];
+        $totalSections = count($questionnaire->schema);
+        $schema = $section['questions'];
+
+
+        $validationRules = [
+            'response_data' => 'required|array',
+        ];
+
+        $customMessages = [
+            'response_data.required' => 'The assessment responses are required.',
+        ];
+
+        $formattedData = [];
+        $attributes = [];
+
+        foreach ($request->input('response_data', []) as $key => $value) {
+            foreach ($schema as $field) {
+                if (strcasecmp($key, $field['title']) == 0) {
+                    $formattedData[$field['field_name']] = is_array($value)
+                        ? array_map('trim', $value)
+                        : trim($value);
+
+                    break;
+                }
+            }
+        }
+
+        $isInstructorSelect = (bool)$request->input('response_data.instructors_select') ?? false;
+        $isInstructorQuestions = (bool)$request->input('instructor_id') ?? false;
+
+        if ($isInstructorSelect) {
+            $validationRules['response_data.instructors'] = 'required|array';
+            $validationRules['response_data.instructors.*'] = 'exists:admins,id';
+
+            $customMessages['response_data.instructors.required'] = 'Please select at least one instructor.';
+            $customMessages['response_data.instructors.*.exists'] = 'The selected instructor is invalid.';
+        } else {
+            foreach ($schema as $field) {
+                $fieldKey = "response_data.{$field['field_name']}";
+
+                $rules = [];
+
+                $attributes[$fieldKey] = Str::remove('_id', Str::remove('response_data.', $fieldKey, true));
+
+                if (!empty($field['validators']['required'])) {
+                    $rules[] = 'required';
+                    $customMessages["{$fieldKey}.required"] = "This field is required.";
+                }
+
+                switch ($field['type']) {
+                    case 'text':
+                    case 'textarea':
+                        $rules[] = 'string';
+                        $customMessages["{$fieldKey}.string"] = "This field must be a string.";
+                        break;
+
+                    case 'radio':
+                    case 'select':
+                        $rules[] = 'string';
+                        $customMessages["{$fieldKey}.string"] = "This field must be a valid option.";
+                        break;
+
+                    case 'checkbox':
+                        $rules[] = 'array';
+                        $customMessages["{$fieldKey}.array"] = "This field must be an array.";
+                        break;
+
+
+                    default:
+                        $rules[] = 'nullable';
+                        break;
+                }
+
+                $validationRules[$fieldKey] = implode('|', $rules);
+                $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|' . $field['rules'] ?? '' : '';
+                $validationRules[$fieldKey] =  $validationRules[$fieldKey] . $additionRules;
+            }
+        }
+
+        $validated = $request->validate($validationRules, $customMessages, $attributes);
+
+        // Load existing draft or create new one
+        $draft = QuestionnaireResponse::firstOrCreate(
+            [
+                'questionnaire_id' => $questionnaire->id,
+                'user_id' => Auth::guard('web')->user()->id,
+            ],
+            [
+                'response_data' => [],
+            ]
+        );
+
+        // Get existing data
+        $existing = $draft->response_data ?? [];
+
+        if ($isInstructorSelect) {
+            // Store selected instructor IDs
+            $existing['selected_instructors'] = $validated['response_data']['instructors'];
+            $existing['completed_instructors'] = [];
+        } elseif ($isInstructorQuestions) {
+            $instructorId = $request->input('instructor_id');
+            // Store the individual instructor’s responses
+            $existing['instructors'][$instructorId] = $validated['response_data'];
+            $existing['completed_instructors'][] = $instructorId;
+        } else {
+            // Store responses for other sections like facility, transport, etc.
+            $existing[$section['title']] = $validated['response_data'];
+        }
+
+        // Check which instructors haven't been filled yet
+        $yetToComplete = collect($existing['selected_instructors'] ?? [])->filter(function ($id) use ($existing) {
+            return !in_array($id, $existing['completed_instructors'] ?? []);
+        })->values()->all();
+
+        $hasNextInstructor = ($isInstructorQuestions || $isInstructorSelect) && !empty($yetToComplete);
+
+        // remaining sections left to complete
+        $remainingSections = collect($questionnaire->schema)->filter(function ($section) use ($existing) {
+            return !isset($existing[$section['title']]);
+        })->keys()->all();
+
+        $isSubmitted =  count($remainingSections) === 0 && count($yetToComplete) === 0;
+
+        // Save the updated response_data
+        $draft->update([
+            'response_data' => $existing,
+            'is_submitted' => $isSubmitted,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'progress' => [
+                'is_submitted' => $isSubmitted,
+                'next_section' => !$isSubmitted ? ($remainingSections[0] ?? null) : null,
+                'next_instructor' => $hasNextInstructor ? $yetToComplete[0] : false,
+                'instructor_section' => $hasNextInstructor ? $sectionIndex : false,
+                'instructor_button_text' => ($sectionIndex >= $totalSections - 1 && count($yetToComplete) === 1) ? 'Submit' : 'Save & Next',
+            ],
+        ]);
+    }
+
+    // Student results page
+    public function results()
+    {
+        $user = Auth::guard('web')->user();
+        $results = \DB::table('user_exams')
+            ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
+            ->leftJoin('oex_results', function($join) {
+                $join->on('user_exams.exam_id', '=', 'oex_results.exam_id')
+                     ->on('user_exams.user_id', '=', 'oex_results.user_id');
+            })
+            ->where('user_exams.user_id', $user->id)
+            ->select([
+                'oex_exam_masters.title as exam_title',
+                'oex_exam_masters.exam_date',
+                'oex_exam_masters.exam_duration',
+                'user_exams.started',
+                'user_exams.submitted',
+                'oex_results.yes_ans',
+                'oex_results.no_ans',
+                'oex_results.result_json',
+                'oex_results.created_at as result_created',
+            ])
+            ->orderByDesc('oex_exam_masters.exam_date')
+            ->get();
+
+        return Inertia::render('Student/Results', [
+            'results' => $results,
+        ]);
     }
 }

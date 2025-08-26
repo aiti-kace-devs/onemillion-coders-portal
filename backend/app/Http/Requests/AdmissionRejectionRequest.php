@@ -25,7 +25,10 @@ class AdmissionRejectionRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'name' => 'required|min:5|max:255'
+           'user_id' => 'required|exists:users,id',
+            'course_id' => 'required|exists:courses,id',
+            'rejected_at' => 'required|date',
+
         ];
     }
 
@@ -37,7 +40,9 @@ class AdmissionRejectionRequest extends FormRequest
     public function attributes()
     {
         return [
-            //
+             'user_id' => 'Student',
+            'course_id' => 'Course',
+            'rejected_at' => 'Rejection date',
         ];
     }
 
@@ -49,7 +54,12 @@ class AdmissionRejectionRequest extends FormRequest
     public function messages()
     {
         return [
-            //
+               'user_id.required' => 'Please select a student.',
+            'user_id.exists' => 'The selected student does not exist.',
+            'course_id.required' => 'Please select a course.',
+            'course_id.exists' => 'The selected course does not exist.',
+            'rejected_at.required' => 'Please provide a rejection date.',
+            'rejected_at.date' => 'The rejection date must be a valid date.',
         ];
     }
 }

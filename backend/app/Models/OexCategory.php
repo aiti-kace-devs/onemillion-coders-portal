@@ -31,5 +31,5 @@ class OexCategory extends Model
         'status' => 'boolean',
     ];
 
-    
+
 }

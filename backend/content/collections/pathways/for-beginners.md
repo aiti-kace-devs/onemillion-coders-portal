@@ -1,7 +1,7 @@
 ---
 id: e204a5ff-2a61-4755-95ea-7974812d4c82
 blueprint: pathway
-title: 'For Beginners with No Experience'
+title: 'Beginners with No Experience'
 subtitle: 'Start from zero and build solid foundations'
 description: 'Perfect for complete beginners who want to enter the tech world with no prior experience required.'
 icon: Play
@@ -88,6 +88,6 @@ sections:
       - 92566b9a-38c6-4f7c-bc0e-bc733983334a
     type: section
     enabled: true
-updated_by: 11
-updated_at: 1753188686
+updated_by: 6
+updated_at: 1753708629
 ---

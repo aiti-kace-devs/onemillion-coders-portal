@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import ProgrammesClient from "./ProgrammesClient";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: "Programmes | One Million Coders",
   description: "Explore our comprehensive range of coding and technology programmes designed to empower the next generation of digital talent.",

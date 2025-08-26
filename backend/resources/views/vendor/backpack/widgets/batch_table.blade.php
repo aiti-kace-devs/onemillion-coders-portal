@@ -1,0 +1,58 @@
+<div class="card h-100">
+    <div class="card-header">Admission Batches</div>
+    <div class="card-body table-responsive">
+        @php
+            $batches = $widget['data']['batches'] ?? [];
+            $counter = 1;
+            $totalAdmitted = $batches->sum('admitted_students_count');
+            $totalCourses = $batches->sum('courses_count');
+        @endphp
+
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>NO</th>
+                    <th>BATCH TITLE - YEAR</th>
+                    <th>ADMITTED STUDENTS</th>
+                    <th>COURSES</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($batches as $batch)
+                    <tr>
+                        <td>{{ $counter++ }}</td>
+                        <td>{{ $batch->title }} - {{ $batch->year }}</td>
+                        <td>
+                            @if($batch->admitted_students_count > 0)
+                                <a href="{{ url("/admin/user?batch_filter={$batch->id}") }}">
+                                    {{ $batch->admitted_students_count }}
+                                </a>
+                            @endif
+                        </td>
+                        <td>
+                            @if($batch->courses_count > 0)
+                                @php
+                                    $encodedIds = urlencode(json_encode($batch->course_ids));
+                                @endphp
+                                <a href="{{ url("/admin/course?id={$encodedIds}") }}">
+                                    {{ $batch->courses_count }}
+                                </a>
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="4">No batches found.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="2" class="text-end text-center">Total</th>
+                    <th>{{ $totalAdmitted }}</th>
+                    <th>{{ $totalCourses }}</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>

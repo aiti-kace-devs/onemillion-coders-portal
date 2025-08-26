@@ -21,6 +21,8 @@ import Button from '../../components/Button';
 import { getPageData } from '../../services/api';
 import { PathwaysPageSkeleton } from '../../components/PathwaysSkeleton';
 
+export const dynamic = 'force-dynamic';
+
 export default function PathwaysPage() {
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -90,7 +92,8 @@ export default function PathwaysPage() {
             className="text-center"
           >
             <h1 className="text-4xl lg:text-6xl font-bold mb-6">
-              {heroData?.name} <span className="text-yellow-400">Pathway</span>
+              {heroData?.name} 
+              {/* <span className="text-yellow-400">Pathway</span> */}
             </h1>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
               {heroData?.description}

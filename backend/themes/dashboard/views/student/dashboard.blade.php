@@ -102,14 +102,12 @@
                                 </div>
 
                                 <!-- Call to Action Button -->
-                                <x-can-take-exam :date="$exam['exam_date']">
-                                    @if ($exam['submitted'] == null)
+                                <!-- <x-can-take-exam :date="$exam['exam_date']"> -->
                                         <a href="{{ url('student/join_exam/' . $exam['exam_id']) }}"
                                             class="btn custom-btn mt-3">
                                             Take Test &nbsp;<i class="fas fa-arrow-circle-right"></i>
                                         </a>
-                                    @endif
-                                </x-can-take-exam>
+                                <!-- </x-can-take-exam> -->
                             </div>
                         </div>
                     @endforeach

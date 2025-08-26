@@ -310,7 +310,7 @@ CRUD::addField([
 
 
 
-    public static function courseFilter(string $columnName, string $label = 'Course Filter'): void
+    public static function courseFilter(string $columnName, string $label = 'Course'): void
     {
         $coursesArray = Course::orderBy('course_name')->pluck('course_name', 'id')->toArray();
         
@@ -318,13 +318,16 @@ CRUD::addField([
             columnName: $columnName,
             label: $label,
             options: $coursesArray,
-            type: 'select2',
+            type: 'select2_multiple',
             callback: function ($value) use ($columnName) {
-                CRUD::addClause('where', $columnName, $value);
+                // Convert string to array if it's not already
+                $values = is_array($value) ? $value : explode(',', $value);
+                
+                // Use whereIn for multiple values
+                CRUD::addClause('whereIn', $columnName, $values);
             },
         );
     }
-
 
     
     public static function addProgrammeFilter(string $columnName, string $label = 'Course Filter'): void
@@ -358,28 +361,6 @@ CRUD::addField([
 
 
 
-    public static function addStudentBatchFilter(string $relationPath = 'admission', string $label = 'Batch')
-    {
-        $batches = Batch::orderBy('title')->pluck('title', 'id')->toArray();
-        
-        FilterHelper::addSelectFilter(
-            columnName: 'batch_filter',
-            label: $label,
-            options: $batches,
-            type: 'select2',
-            callback: function ($batchId) use ($relationPath) {
-                static::addBatchWhereClause($batchId, $relationPath);
-            },
-        );
-    }
-
-    protected static function addBatchWhereClause($batchId, $relationPath)
-    {
-        CRUD::addClause('whereHas', $relationPath, function($query) use ($batchId) {
-            $query->where('batch_id', $batchId);
-        });
-    }
-
     // public static function addStudentBatchFilter(string $label = 'Batch Filter'): void
     // {
     //     $batches = Batch::orderBy('title')->pluck('title', 'id')->toArray();
@@ -398,7 +379,62 @@ CRUD::addField([
     // }
 
 
-    public static function addConfirmedAdmissionFilter(string $label = 'Admission Status')
+        public static function addStudentBatchFilter(string $label = 'Batch')
+    {
+        $batches = Batch::orderBy('title')->pluck('title', 'id')->toArray();
+
+        FilterHelper::addSelectFilter(
+            columnName: 'student_batch_filter',
+            label: $label,
+            options: $batches,
+            type: 'select2',
+            callback: function ($batchId) {
+                static::addBatchWhereClause($batchId);
+            },
+        );
+    }
+
+    protected static function addBatchWhereClause($batchId)
+    {
+        CRUD::addClause('whereHas', 'course.batches', function($query) use ($batchId) {
+            $query->where('course_batches.id', $batchId);
+        });
+    }
+
+
+
+
+
+
+
+
+
+    public static function addStudentBatchFilterFromDashboard(string $relationPath = 'admission', string $label = 'Admitted Student Batch')
+    {
+        $batches = Batch::orderBy('title')->pluck('title', 'id')->toArray();
+        
+        FilterHelper::addSelectFilter(
+            columnName: 'batch_filter',
+            label: $label,
+            options: $batches,
+            type: 'select2',
+            callback: function ($batchId) use ($relationPath) {
+                static::addBatchWhereClauseFromDashboard($batchId, $relationPath);
+            },
+        );
+    }
+
+    protected static function addBatchWhereClauseFromDashboard($batchId, $relationPath)
+    {
+        CRUD::addClause('whereHas', $relationPath, function($query) use ($batchId) {
+            $query->where('batch_id', $batchId);
+        });
+    }
+
+
+
+
+    public static function addConfirmedAdmissionFilter(string $label = 'Admission')
     {
         CRUD::addFilter([
             'name'  => 'confirmed_admission',

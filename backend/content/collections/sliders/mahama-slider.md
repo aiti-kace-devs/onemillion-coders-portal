@@ -2,10 +2,10 @@
 id: c88f7c54-2c3d-4b28-8c9c-a36b1587cb62
 blueprint: slider
 title: 'The One Million Coders Vision'
-media: uploads/images/jdm-1.webp
+media: uploads/images/jdm.jpg
 slider_button_text: 'Learn More About Our Vision'
 updated_by: 11
-updated_at: 1753043253
+updated_at: 1753709915
 slider_button_colour: '#2e7d32'
 slider_button_link: /about
 slider_description: |-

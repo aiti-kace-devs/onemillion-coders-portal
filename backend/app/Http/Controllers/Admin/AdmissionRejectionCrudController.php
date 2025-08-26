@@ -49,7 +49,7 @@ class AdmissionRejectionCrudController extends CrudController
     {
 
         CRUD::column('user_id')->label('Student')->linkTo('user.show');
-        
+
         CRUD::column('rejected_at');
         $this->courseFilter('course_id');
         $this->addCourseField();
@@ -62,7 +62,7 @@ class AdmissionRejectionCrudController extends CrudController
     public function setupShowOperation()
     {
         $this->setupListOperation();
-        
+
     }
 
 

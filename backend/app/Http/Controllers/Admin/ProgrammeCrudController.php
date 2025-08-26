@@ -120,7 +120,7 @@ class ProgrammeCrudController extends CrudController
         $tags = [];
         $keysToRemove = [];
         $data = request()->all();
-       
+
         $programme = $this->crud->getCurrentEntry();
         $this->handleProgrammeTags($programme, $data['tags']);
         $response = $this->traitUpdate();

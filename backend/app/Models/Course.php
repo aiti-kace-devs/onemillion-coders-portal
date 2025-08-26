@@ -14,7 +14,7 @@ class Course extends Model
     use \StatamicRadPack\Runway\Traits\HasRunwayResource;
 
     protected $fillable = [
-        'branch_id', 
+        'branch_id',
         'centre_id',
         'programme_id',
         'course_name',
@@ -44,14 +44,20 @@ class Course extends Model
         return $this->belongsTo(Batch::class);
     }
 
+    public function batches()
+    {
+        return $this->belongsToMany(Batch::class, 'course_batches', 'course_id', 'batch_id');
+    }
+
     public function assignedAdmins()
     {
-        return $this->belongsToMany(Admin::class, 'admin_course', 'course_id', 'admin_id');
+        return $this->belongsToMany(Admin::class, 'admin_course', 'course_id', 'admin_id')
+                    ->withTimestamps();
     }
 
     public function sessions()
     {
-        return $this->hasMany(CourseSession::class, 'course_id',);
+        return $this->hasMany(CourseSession::class, 'course_id');
     }
 
     public function scopeMyAssignedCourses($query)
@@ -59,13 +65,21 @@ class Course extends Model
         $user = auth()->user();
 
         if (!$user) {
-            return $query->whereNull('id');
+            return $query->whereNull('courses.id');
         }
 
         if ($user->can('attendance.status')) {
             return $query;
         } else {
-            return $query->whereIn('courses.id', $user->assignedCourses()->pluck('id')->toArray());
+            // Get the assigned course IDs for the current user
+            $assignedCourseIds = $user->assignedCourses()->pluck('courses.id')->toArray();
+            
+            // If user has no assigned courses, return empty result
+            if (empty($assignedCourseIds)) {
+                return $query->whereNull('courses.id');
+            }
+            
+            return $query->whereIn('courses.id', $assignedCourseIds);
         }
     }
 

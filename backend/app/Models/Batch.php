@@ -36,6 +36,18 @@ class Batch extends Model
 
     }
 
+
+    public function assignedCourseBatches()
+    {
+        return $this->belongsToMany(Course::class, 'course_batches', 'batch_id', 'course_id');
+    }
+
+
+    public function batches()
+    {
+        return $this->assignedCourseBatches();
+    }
+
     public function admittedStudents()
     {
         return $this->hasManyThrough(

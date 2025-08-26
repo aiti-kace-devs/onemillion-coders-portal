@@ -32,8 +32,10 @@ class User extends Authenticatable
         'status',
         'mobile_no',
         'age',
+        'age',
         'password',
         'userId',
+        'card_type',
         'ghcard',
         'gender',
         'network_type',
@@ -60,6 +62,14 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'shortlist' => 'boolean',
     ];
+
+
+
+    public function course()
+    {
+        return $this->belongsTo(Course::class, 'registered_course');
+    }
+
 
     public function isAdmitted()
     {
@@ -119,19 +129,24 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\Oex_result::class, 'user_id', 'id');
     }
 
-    public function course()
-    {
-        return $this->belongsTo(Course::class, 'registered_course');
-    }
-
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new ResetPasswordNotification($token));
     }
 
-    public function getNameWithEmail()
-{
-    return $this->name . ' (' . $this->email . ')';
-}
 
+    public function questionnaire_response()
+    {
+        return $this->hasMany(QuestionnaireResponse::class);
+    }
+
+    public function hasAttendance()
+    {
+        return Attendance::where('user_id', $this->userId)->count() > 0;
+    }
+
+    public function getNameWithEmail()
+    {
+        return $this->name . ' (' . $this->email . ')';
+    }
 }

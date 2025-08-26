@@ -38,6 +38,12 @@ class Programme extends Model
         return $this->belongsToMany(Centre::class, 'courses');
     }
 
+    public function courses()
+    {
+        return $this->hasMany(Course::class);
+    }
+
+
     public function courseModules()
     {
         return $this->hasMany(CourseModule::class, 'programme_id');
