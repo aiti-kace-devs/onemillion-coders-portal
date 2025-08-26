@@ -12,6 +12,7 @@
     "require": {
         "php": "^8.2",
         "backpack/crud": "^6.8",
+        "backpack/filemanager": "^3.0",
         "backpack/permissionmanager": "^7.2",
         "backpack/pro": "^2.2",
         "backpack/theme-tabler": "^1.2",
@@ -33,6 +34,7 @@
         "stackkit/laravel-google-cloud-tasks-queue": "^5.0",
         "statamic-rad-pack/runway": "^8.5",
         "statamic/cms": "^5.58",
+        "statamic/eloquent-driver": "^4.30",
         "tightenco/ziggy": "^2.5",
         "yajra/laravel-datatables-oracle": "^12.1"
     },
@@ -99,10 +101,10 @@
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
-    "repositories": {
-        "backpack": {
+    "repositories": [
+        {
             "type": "composer",
             "url": "https://repo.backpackforlaravel.com/"
         }
-    }
+    ]
 }

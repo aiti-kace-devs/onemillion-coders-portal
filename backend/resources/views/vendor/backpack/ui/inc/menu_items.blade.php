@@ -17,7 +17,7 @@
 </x-backpack::menu-dropdown>
 
 
-<x-backpack::menu-item :title="trans('backpack::crud.file_manager')" icon="la la-folder-open" :link="backpack_url('filemanager')" />
+<x-backpack::menu-item title="File Manager" icon="la la-folder-open" :link="backpack_url('elfinder')" />
 <x-backpack::menu-item title="Manage Branches" icon="la la-code-branch" :link="backpack_url('branch')" />
 <x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
 <x-backpack::menu-item title="Manage Programmes" icon="la la-graduation-cap" :link="backpack_url('programme')" />
@@ -74,3 +74,5 @@
     <x-backpack::menu-dropdown-item title="Permissions" icon="la la-key" :link="backpack_url('permission')" />
 </x-backpack::menu-dropdown> -->
 
+
+{{-- <x-backpack::menu-item :title="trans('backpack::crud.file_manager')" icon="la la-files-o" /> --}}
