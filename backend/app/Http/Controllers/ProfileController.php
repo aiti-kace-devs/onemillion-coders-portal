@@ -29,6 +29,7 @@ class ProfileController extends Controller
 
         $user['isAdmitted'] = $user?->isAdmitted();
 
+
         return Inertia::render('Student/Profile/Edit', [
             'user' => $user
         ]);
@@ -40,21 +41,24 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request)
     {
         $user = $request->user();
-
         $validated = $request->validated();
 
+        // Always update the separate name fields
         $user->fill($validated);
 
+        // Always sync the name field with the separate fields
+        $user->setNameFromFields();
+
+        // Handle previous name tracking
         if ($user->isDirty('name') && !$user->previous_name) {
             $user->previous_name = $user->getOriginal('name');
         }
 
-        if ($validated['name'] == $user->previous_name) {
+        if (isset($validated['name']) && $validated['name'] == $user->previous_name) {
             $user->previous_name = null;
         }
 
         $user->details_updated_at = now();
-
         $user->save();
 
         return Redirect::route('student.profile.edit');

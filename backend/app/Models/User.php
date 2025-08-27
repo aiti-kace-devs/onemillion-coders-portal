@@ -27,6 +27,9 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'first_name',
+        'middle_name',
+        'last_name',
         'email',
         'exam',
         'status',
@@ -148,5 +151,22 @@ class User extends Authenticatable
     public function getNameWithEmail()
     {
         return $this->name . ' (' . $this->email . ')';
+    }
+
+    /**
+     * Get full name from separate fields or fallback to name field
+     */
+    public function getFullNameAttribute()
+    {
+        $parts = array_filter([$this->first_name, $this->middle_name, $this->last_name]);
+        return !empty($parts) ? implode(' ', $parts) : $this->name;
+    }
+
+    /**
+     * Set name from separate fields
+     */
+    public function setNameFromFields()
+    {
+        $this->name = $this->getFullNameAttribute();
     }
 }
