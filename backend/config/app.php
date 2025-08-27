@@ -172,6 +172,7 @@ return [
         /*
          * Application Service Providers...
          */
+        App\Providers\RequestServiceProvider::class,
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
@@ -179,7 +180,7 @@ return [
         // App\Providers\HorizonServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         // GeoSot\EnvEditor\ServiceProvider::class,
-        App\Providers\AppConfigServiceProvider::class,
+        // App\Providers\AppConfigServiceProvider::class,
 
     ],
 
