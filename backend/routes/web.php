@@ -90,59 +90,59 @@ Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
 
 //Route::prefix('admins')-
 // // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
-Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
-Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
-Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
-// Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
-Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
-Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+// Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
+// Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
+// Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
+// // Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
+// Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
+// Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
 
-Route::get('/api/batches', [CourseProgrammeController::class, 'allBatches']);
-Route::get('/api/batch/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
-Route::get('/api/batch/programmes/{id}', [CourseProgrammeController::class, 'programmesByBatch']);
+// Route::get('/api/batches', [CourseProgrammeController::class, 'allBatches']);
+// Route::get('/api/batch/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
+// Route::get('/api/batch/programmes/{id}', [CourseProgrammeController::class, 'programmesByBatch']);
 
 
-Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
-Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
+// Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
+// Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
 
-Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
-Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
-Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
-Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
-Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
-Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
-Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
+// Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
+// Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
+// Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
+// Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
+// Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
+// Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
+// Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
 
-Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
-    ->name('logout');
+// Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
+//     ->name('logout');
 
 //Route::prefix('admins')-
 // // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
-Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
-Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
-Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
-// Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
-Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
-Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+// Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
+// Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
+// Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
+// // Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
+// Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
+// Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
 
-Route::get('/api/batches', [CourseProgrammeController::class, 'allBatches']);
-Route::get('/api/batch/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
-Route::get('/api/batch/programmes/{id}', [CourseProgrammeController::class, 'programmesByBatch']);
+// Route::get('/api/batches', [CourseProgrammeController::class, 'allBatches']);
+// Route::get('/api/batch/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
+// Route::get('/api/batch/programmes/{id}', [CourseProgrammeController::class, 'programmesByBatch']);
 
 
-Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
-Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
+// Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
+// Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
 
-Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
-Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
-Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
-Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
-Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
-Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
-Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
+// Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
+// Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
+// Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
+// Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
+// Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
+// Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
+// Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
 
-Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
-    ->name('logout');
+// Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
+//     ->name('logout');
 
 Route::prefix('admins')
     ->middleware(['auth:admin'])
@@ -348,7 +348,7 @@ Route::prefix('admins')
                 Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])->name('viewAttendanceByDate');
                 // Route::get('/remove-attendance/{id}', [AttendanceController::class, 'removeAttendance'])
                 //     ->name('remove-attendance')
-                    // ->middleware('permission:attendance.delete');
+                // ->middleware('permission:attendance.delete');
                 Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page'])->middleware('permission:attendance.create');
                 // Route::post('/generate_qrcode', [AttendanceController::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
                 Route::post('/generate_qrcode', [AttendanceQRCodeTrait::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
@@ -356,7 +356,7 @@ Route::prefix('admins')
                 Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])->name('viewAttendanceByDate');
                 // Route::get('/remove-attendance/{id}', [AttendanceController::class, 'removeAttendance'])
                 //     ->name('remove-attendance')
-                    // ->middleware('permission:attendance.delete');
+                // ->middleware('permission:attendance.delete');
                 Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page'])->middleware('permission:attendance.create');
                 // Route::post('/generate_qrcode', [AttendanceController::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
                 Route::get('/scan_qrcode', [AdminController::class, 'scan_qrcode_page'])->middleware('permission:attendance.create');
@@ -677,33 +677,35 @@ Route::prefix('student')
             ->middleware(['auth', 'is_admitted']);
         Route::delete('/delete-student-admission/{user_id}', [StudentOperation::class, 'delete_admission'])
             ->name('delete-student-admission')
-            ->middleware(['auth', 'is_admitted']);});
+            ->middleware(['auth', 'is_admitted']);
+    });
 
-        Route::middleware(['auth:web'])->group(function () {
-            // Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');
-            // Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
-            // Route::get('/profile', [StudentOperation::class, 'profile'])->name('profile')->middleware('is_not_admitted');
-            // Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course');
-            // Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course')->middleware('is_not_admitted');
+Route::middleware(['auth:web'])->group(function () {
+    // Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');
+    // Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
+    // Route::get('/profile', [StudentOperation::class, 'profile'])->name('profile')->middleware('is_not_admitted');
+    // Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course');
+    // Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course')->middleware('is_not_admitted');
 
-            // Route::get('/exam', [StudentOperation::class, 'exam']);
-            // Route::get('/join_exam/{id}', [StudentOperation::class, 'join_exam']);
-            // Route::post('/submit_questions', [StudentOperation::class, 'submit_questions']);
-            Route::get('/show_result/{id}', [StudentOperation::class, 'show_result']);
-            Route::get('/apply_exam/{id}', [StudentOperation::class, 'apply_exam']);
-            // Route::get('/view_result/{id}', [StudentOperation::class, 'view_result']);
-            Route::post('/attendance/record', [AttendanceController::class, 'recordAttendance'])->name('attendance.record')->middleware('is_admitted:true');
-            // Route::get('/attendance', [AttendanceController::class, 'viewAttendance'])->name('attendance.show')->middleware('is_admitted:true');
-            Route::get('/id-qrcode', [StudentOperation::class, 'get_details_page'])->middleware('is_admitted:true');
-            Route::get('/scan-qrcode', [StudentOperation::class, 'get_scanner_page']);
-            Route::get('/meeting-link', [StudentOperation::class, 'get_meeting_link_page']);
-            Route::post('/update-details', [StudentOperation::class, 'updateDetails'])->name('updateDetails')->middleware('is_admitted');});
+    // Route::get('/exam', [StudentOperation::class, 'exam']);
+    // Route::get('/join_exam/{id}', [StudentOperation::class, 'join_exam']);
+    // Route::post('/submit_questions', [StudentOperation::class, 'submit_questions']);
+    Route::get('/show_result/{id}', [StudentOperation::class, 'show_result']);
+    Route::get('/apply_exam/{id}', [StudentOperation::class, 'apply_exam']);
+    // Route::get('/view_result/{id}', [StudentOperation::class, 'view_result']);
+    Route::post('/attendance/record', [AttendanceController::class, 'recordAttendance'])->name('attendance.record')->middleware('is_admitted:true');
+    // Route::get('/attendance', [AttendanceController::class, 'viewAttendance'])->name('attendance.show')->middleware('is_admitted:true');
+    Route::get('/id-qrcode', [StudentOperation::class, 'get_details_page'])->middleware('is_admitted:true');
+    Route::get('/scan-qrcode', [StudentOperation::class, 'get_scanner_page']);
+    Route::get('/meeting-link', [StudentOperation::class, 'get_meeting_link_page']);
+    Route::post('/update-details', [StudentOperation::class, 'updateDetails'])->name('updateDetails')->middleware('is_admitted');
+});
 
 
-            // // questionnaire routes
-            // Route::get('/questionnaire', [StudentOperation::class, 'questionnaire'])->name('questionnaire.index');
-            // Route::get('/questionnaire/{code}', [StudentOperation::class, 'take_questionnaire'])->name('questionnaire.take_questionnaire');
-            // Route::post('/questionnaire/{code}', [StudentOperation::class, 'store_questionnaire'])->name('questionnaire.store');
+// // questionnaire routes
+// Route::get('/questionnaire', [StudentOperation::class, 'questionnaire'])->name('questionnaire.index');
+// Route::get('/questionnaire/{code}', [StudentOperation::class, 'take_questionnaire'])->name('questionnaire.take_questionnaire');
+// Route::post('/questionnaire/{code}', [StudentOperation::class, 'store_questionnaire'])->name('questionnaire.store');
 
 
 //             // Route::get('/ateendance', [StudentOperation::class, 'view_result']);
@@ -721,8 +723,7 @@ Route::prefix('student')
 //     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
 //     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 // });
-
-    require __DIR__ . '/auth.php';
+require __DIR__ . '/auth.php';
 
 
 
@@ -761,16 +762,16 @@ Route::get('admin/roles/permissions', function (Request $request) {
 Route::get('admin/test-roles', function () {
     $roles = \Spatie\Permission\Models\Role::with('permissions')->get();
     $permissions = \Spatie\Permission\Models\Permission::all();
-    
+
     return response()->json([
-        'roles' => $roles->map(function($role) {
+        'roles' => $roles->map(function ($role) {
             return [
                 'id' => $role->id,
                 'name' => $role->name,
                 'permissions' => $role->permissions->pluck('id')->toArray()
             ];
         }),
-        'permissions' => $permissions->map(function($permission) {
+        'permissions' => $permissions->map(function ($permission) {
             return [
                 'id' => $permission->id,
                 'name' => $permission->name
