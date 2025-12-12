@@ -24,6 +24,7 @@ import {
   getCourseMatchQuestions,
   getCourseRecommendations,
 } from "../../services/api";
+import { getCourseImage } from "../../utils/courseImages";
 
 export default function CourseMatchPage() {
   const router = useRouter();
@@ -310,6 +311,18 @@ export default function CourseMatchPage() {
                     <div className="flex flex-col lg:flex-row">
                       {/* Course Image */}
                       <div className="lg:w-80 h-64 lg:h-80 flex-shrink-0 relative overflow-hidden">
+                        {/* TEMPORARY: Using static image for consistency instead of API image */}
+                        <Image
+                          // TEMPORARY: Commented out API image
+                          // src={course.image}
+                          src={getCourseImage(course.id)}
+                          alt={course.title}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-700"
+                          sizes="(max-width: 1024px) 100vw, 320px"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                        {/* TEMPORARY: Commented out conditional rendering for API images
                         {course.image ? (
                           <>
                             <Image
@@ -326,6 +339,7 @@ export default function CourseMatchPage() {
                             <FiTarget className="w-16 h-16 text-gray-400" />
                           </div>
                         )}
+                        */}
                       </div>
 
                       {/* Course Content */}
