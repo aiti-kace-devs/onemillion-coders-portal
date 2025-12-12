@@ -19,6 +19,7 @@ import {
   submitRegistration,
 } from "../services/pages";
 import Button from "./Button";
+import { getCourseImage } from "../utils/courseImages";
 import GhanaGradientText from "./GhanaGradients/GhanaGradientText";
 
 const RegistrationDialog = ({ isOpen, onClose, programme }) => {
@@ -328,10 +329,12 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
             {/* Left Side - Course Image (Half of dialog) */}
             <div className="hidden md:block w-1/2 relative">
               <Image
-                src={
-                  programme?.image ||
-                  "/images/hero/Certified-Data-Protection-Manager.jpg"
-                }
+                // TEMPORARY: Commented out API image, using static image for consistency
+                // src={
+                //   programme?.image ||
+                //   "/images/hero/Certified-Data-Protection-Manager.jpg"
+                // }
+                src={getCourseImage(programme?.id)}
                 alt={programme?.title}
                 fill
                 className="object-cover"
