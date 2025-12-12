@@ -4,9 +4,13 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FiClock, FiUsers, FiArrowRight } from "react-icons/fi";
 import Button from "./Button";
+import { getCourseImage } from "../utils/courseImages";
 
 const ProgrammeCard = ({ programme }) => {
   const router = useRouter();
+
+  // TEMPORARY: Use static image instead of API image for consistency
+  const courseImage = getCourseImage(programme.id);
 
   // Category color mapping
   const categoryColors = {
@@ -23,7 +27,9 @@ const ProgrammeCard = ({ programme }) => {
       {/* Image Container */}
       <div className="relative w-full h-48">
         <Image
-          src={programme.image}
+          // TEMPORARY: Commented out API image, using static image for consistency
+          // src={programme.image}
+          src={courseImage}
           alt={programme.title}
           fill
           className="object-cover group-hover:scale-105 transition-transform duration-200"

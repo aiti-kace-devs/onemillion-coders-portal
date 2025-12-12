@@ -21,6 +21,7 @@ import { getProgrammeData } from '../../../services/pages';
 import Button from '../../../components/Button';
 import ProgrammeDetailsSkeleton from '@/components/ProgrammeDetailsSkeleton';
 import RegistrationDialog from '@/components/RegistrationDialog';
+import { getCourseImage } from '../../../utils/courseImages';
 
 export default function CourseDetailsPage() {
   const params = useParams();
@@ -215,7 +216,9 @@ export default function CourseDetailsPage() {
             >
               <div className="relative h-96 lg:h-[500px] rounded-2xl overflow-hidden shadow-2xl">
                 <Image
-                  src={programme.image || '/images/hero/Certified-Data-Protection-Manager.jpg'}
+                  // TEMPORARY: Commented out API image, using static image for consistency
+                  // src={programme.image || '/images/hero/Certified-Data-Protection-Manager.jpg'}
+                  src={getCourseImage(programme.id)}
                   alt={programme.title}
                   fill
                   className="object-cover"
