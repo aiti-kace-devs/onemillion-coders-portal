@@ -49,6 +49,14 @@ Route::group([
     Route::crud('programme', 'ProgrammeCrudController');
     Route::crud('sms-template', 'SmsTemplateCrudController');
     Route::crud('user', 'UserCrudController');
+
+    // Separate CRUD controllers for different student views
+    Route::crud('students-with-admission', 'StudentsWithAdmissionCrudController');
+    Route::crud('students-without-exam-results', 'StudentsWithoutExamResultsCrudController');
+    Route::crud('students-yet-to-accept-admission', 'StudentsYetToAcceptAdmissionCrudController');
+    Route::crud('students-with-exam-results', 'StudentsWithExamResultsCrudController');
+    Route::crud('shortlisted-students', 'ShortlistedStudentsCrudController');
+
     Route::crud('user-admission', 'UserAdmissionCrudController');
     Route::crud('user-exam', 'UserExamCrudController');
     Route::post('/admin/student-verification/{id}/reset', [StudentVerificationCrudController::class, 'resetVerification'])->name('student-verification.reset');

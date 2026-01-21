@@ -1,4 +1,4 @@
-<div class="dropdown d-inline-block">
+<div class="dropdown d-inline-block me-2">
     <button class="btn btn-primary dropdown-toggle" type="button" id="bulkActionsDropdown" data-bs-toggle="dropdown"
         aria-expanded="false">
         <i class="la la-bolt"></i> Bulk Actions

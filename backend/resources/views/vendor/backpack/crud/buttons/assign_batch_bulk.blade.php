@@ -1,5 +1,5 @@
 @if (backpack_user()->can('update'))
-    <div class="btn-group" role="group" style="vertical-align: middle;">
+    <div class="btn-group me-2" role="group" style="vertical-align: middle;">
         <select id="batch_selector" class="form-select" style="width:auto; display:inline-block; min-width:160px; height:38px;">
             <option value="">-- Select Batch --</option>
             @foreach(\App\Models\Batch::orderBy('title')->get() as $batch)

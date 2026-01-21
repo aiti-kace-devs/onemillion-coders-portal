@@ -3,7 +3,7 @@
 <!-- Toastr CSS and JS -->
 
 
-<div class="dropdown d-inline-block">
+<div class="dropdown d-inline-block me-2">
     <button class="btn btn-primary dropdown-toggle" type="button" id="shortlistActionsDropdown" data-bs-toggle="dropdown"
         aria-expanded="false">
         <i class="la la-list"></i> Shortlist Actions

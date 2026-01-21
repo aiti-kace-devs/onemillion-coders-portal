@@ -37,7 +37,6 @@ class UserCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
-    use \Backpack\Pro\Http\Controllers\Operations\CustomViewOperation;
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
@@ -88,7 +87,19 @@ class UserCrudController extends CrudController
         $this->crud->setEntityNameStrings('user', 'users');
         $this->setupFilter();
 
-        $this->crud->query->select(['id','name', 'gender', 'age', 'email', 'mobile_no', 'ghcard']);
+        // Ensure we load the fields needed for relationships & columns
+        $this->crud->query->select([
+            'id',
+            'userId',
+            'registered_course',
+            'shortlist',
+            'name',
+            'gender',
+            'age',
+            'email',
+            'mobile_no',
+            'ghcard',
+        ]);
         $this->addConfirmedAdmissionColumn();
         // $this->setupStudentColumns();
         // FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
@@ -104,8 +115,9 @@ class UserCrudController extends CrudController
         // CRUD::setFromDb(); // set columns from db columns.
         $this->setupStudentColumns();
         // CRUD::disablePersistentTable();
+        CRUD::addButtonFromView('top', 'student_views_dropdown', 'student_views_dropdown', 'beginning');
         CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
-        CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'end');
+        CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'beginning');
         // Add userId column to the list view
         CRUD::addColumn([
             'name' => 'userId',
@@ -122,15 +134,6 @@ class UserCrudController extends CrudController
 
         // Add export options
         CRUD::enableExportButtons();
-
-        // Add custom views
-        $this->runCustomViews([
-            'setupStudentsWithAdmissionView' => 'Students with Admission',
-            'setupStudentsWithoutExamResultsView' => 'Students without Exam Results',
-            'setupStudentsYetToAcceptAdmissionView' => 'Students Yet to Accept Admission',
-            'setupStudentsWithExamResultsView' => 'Students with Exam Results',
-            'setupShortlistedStudentsView' => 'Shortlisted Students',
-        ]);
     }
 
         protected function setupShowOperation()
@@ -234,368 +237,6 @@ class UserCrudController extends CrudController
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
         $this->addStudentBatchFilterFromDashboard('admission');
     }
-    /**
-     * Custom view for students with admission
-     */
-    public function setupStudentsWithAdmissionView()
-    {
-        // CRUD::disableResponsiveTable();
-        // Enable bulk operations for this view
-        CRUD::enableBulkActions();
-        CRUD::setQuery(
-            \App\Models\User::whereHas('admissions', function ($query) {
-                $query->whereNotNull('session');
-            }),
-        );
-        // CRUD::enableFilters();
-        // $this->setupFilter();
-
-        // Add a custom column to show admission status
-        CRUD::addColumn([
-            'name' => 'admission_status',
-            'label' => 'Admission Status',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $admission = $entry->admissions()->whereNotNull('session')->first();
-                return $admission ? 'Admitted' : 'Not Admitted';
-            },
-        ]);
-
-        // Add admission date column
-        CRUD::addColumn([
-            'name' => 'admission_date',
-            'label' => 'Admission Date',
-            'type' => 'date',
-            'value' => function ($entry) {
-                $admission = $entry->admissions()->whereNotNull('session')->first();
-                return $admission ? $admission->created_at : null;
-            },
-        ]);
-
-        // Add course column
-        CRUD::addColumn([
-            'name' => 'admitted_course',
-            'label' => 'Admitted Course',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $admission = $entry->admissions()->whereNotNull('session')->first();
-                if ($admission && $admission->course) {
-                    return $admission->course->course_name ?? 'N/A';
-                }
-                return 'N/A';
-            },
-        ]);
-
-        // Add exam score column
-        CRUD::addColumn([
-            'name' => 'exam_score',
-            'label' => 'Exam Score',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $latestResult = $entry->examResults()->latest()->first();
-                if ($latestResult) {
-                    return $latestResult->result . '%';
-                }
-                return 'N/A';
-            },
-        ]);
-    }
-
-    /**
-     * Custom view for students without exam results
-     */
-    public function setupStudentsWithoutExamResultsView()
-    {
-        // Enable bulk operations for this view
-        CRUD::enableBulkActions();
-        // $this->setupFilter();
-
-        // Filter students who don't have exam results
-        CRUD::setQuery(\App\Models\User::whereDoesntHave('examResults'));
-
-        // Add a custom column to show exam status
-        CRUD::addColumn([
-            'name' => 'exam_status',
-            'label' => 'Exam Status',
-            'type' => 'text',
-            'value' => function ($entry) {
-                return 'No Exam Results';
-            },
-        ]);
-
-        // Add a column to show if student has taken exams
-        CRUD::addColumn([
-            'name' => 'exams_taken',
-            'label' => 'Exams Taken',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $examsTaken = $entry->userExams()->count();
-                return $examsTaken > 0 ? $examsTaken . ' exam(s)' : 'No exams taken';
-            },
-        ]);
-
-        // Add a column to show if student has submitted exams
-        CRUD::addColumn([
-            'name' => 'submitted_exams',
-            'label' => 'Submitted Exams',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $submittedExams = $entry->userExams()->whereNotNull('submitted')->count();
-                return $submittedExams > 0 ? $submittedExams . ' submitted' : 'No submitted exams';
-            },
-        ]);
-    }
-
-    /**
-     * Custom view for students yet to accept admission (session_id is null)
-     */
-    public function setupStudentsYetToAcceptAdmissionView()
-    {
-        // Enable bulk operations for this view
-        CRUD::enableBulkActions();
-        // $this->setupFilter();
-
-        // Filter students who have admission records but session_id is null
-        CRUD::setQuery(
-            \App\Models\User::whereHas('admissions', function ($query) {
-                $query->whereNull('session');
-            }),
-        );
-
-        // Add a custom column to show admission status
-        CRUD::addColumn([
-            'name' => 'admission_status',
-            'label' => 'Admission Status',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $admission = $entry->admissions()->whereNull('session')->first();
-                return $admission ? 'Pending Acceptance' : 'No Admission';
-            },
-        ]);
-
-        // Add admission date column
-        CRUD::addColumn([
-            'name' => 'admission_date',
-            'label' => 'Admission Date',
-            'type' => 'date',
-            'value' => function ($entry) {
-                $admission = $entry->admissions()->whereNull('session')->first();
-                return $admission ? $admission->created_at : null;
-            },
-        ]);
-
-        // Add course column
-        CRUD::addColumn([
-            'name' => 'offered_course',
-            'label' => 'Offered Course',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $admission = $entry->admissions()->whereNull('session')->first();
-                if ($admission && $admission->course) {
-                    return $admission->course->course_name ?? 'N/A';
-                }
-                return 'N/A';
-            },
-        ]);
-
-        // Add email sent status
-        CRUD::addColumn([
-            'name' => 'email_sent',
-            'label' => 'Email Sent',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $admission = $entry->admissions()->whereNull('session')->first();
-                return $admission && $admission->email_sent ? 'Yes' : 'No';
-            },
-        ]);
-
-        // Add exam score column
-        CRUD::addColumn([
-            'name' => 'exam_score',
-            'label' => 'Exam Score',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $latestResult = $entry->examResults()->latest()->first();
-                if ($latestResult) {
-                    return $latestResult->result . '%';
-                }
-                return 'N/A';
-            },
-        ]);
-    }
-
-    /**
-     * Custom view for students with exam results
-     */
-    public function setupStudentsWithExamResultsView()
-    {
-        // Enable bulk operations for this view
-        CRUD::enableBulkActions();
-        // $this->setupFilter();
-
-        // Filter students who have exam results
-        CRUD::setQuery(\App\Models\User::whereHas('examResults'));
-
-        // Add a custom column to show exam results count
-        CRUD::addColumn([
-            'name' => 'exam_results_count',
-            'label' => 'Exam Results',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $resultsCount = $entry->examResults()->count();
-                return $resultsCount . ' result(s)';
-            },
-        ]);
-
-        // Add a column to show latest exam result
-        CRUD::addColumn([
-            'name' => 'latest_exam_result',
-            'label' => 'Latest Result',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $latestResult = $entry->examResults()->latest()->first();
-                if ($latestResult) {
-                    return $latestResult->result . '%';
-                }
-                return 'N/A';
-            },
-        ]);
-
-        // Add a column to show exam name
-        CRUD::addColumn([
-            'name' => 'exam_name',
-            'label' => 'Exam Name',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $latestResult = $entry->examResults()->with('exam')->latest()->first();
-                if ($latestResult && $latestResult->exam) {
-                    return $latestResult->exam->title ?? 'N/A';
-                }
-                return 'N/A';
-            },
-        ]);
-
-        // Add a column to show if student has taken multiple exams
-        CRUD::addColumn([
-            'name' => 'exams_taken',
-            'label' => 'Exams Taken',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $examsTaken = $entry->userExams()->count();
-                return $examsTaken > 0 ? $examsTaken . ' exam(s)' : 'No exams taken';
-            },
-        ]);
-
-        // Add exam score column
-        CRUD::addColumn([
-            'name' => 'exam_score',
-            'label' => 'Exam Score',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $latestResult = $entry->examResults()->latest()->first();
-                if ($latestResult) {
-                    return $latestResult->result . '%';
-                }
-                return 'N/A';
-            },
-        ]);
-        // Add bulk action buttons
-        // CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
-
-        // Add row actions only for this view
-        CRUD::addButton('line', 'view_results', 'view', 'crud::buttons.view_results');
-        CRUD::addButton('line', 'reset_result', 'view', 'crud::buttons.reset_result');
-    }
-
-    /**
-     * Custom view for shortlisted students
-     */
-    public function setupShortlistedStudentsView()
-    {
-        CRUD::removeButtonFromStack('bulk_actions_dropdown', 'top');
-        // Enable bulk operations for this view
-        CRUD::enableBulkActions();
-        // $this->setupFilter();
-
-        // Filter students who are shortlisted (shortlist = 1)
-        CRUD::setQuery(\App\Models\User::where('shortlist', 1));
-
-        // Add a custom column to show shortlist status
-        CRUD::addColumn([
-            'name' => 'shortlist_status',
-            'label' => 'Shortlist Status',
-            'type' => 'text',
-            'value' => function ($entry) {
-                return $entry->shortlist ? 'Shortlisted' : 'Not Shortlisted';
-            },
-        ]);
-
-        // Add exam score column
-        CRUD::addColumn([
-            'name' => 'exam_score',
-            'label' => 'Exam Score',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $latestResult = $entry->examResults()->latest()->first();
-                if ($latestResult) {
-                    return $latestResult->result . '%';
-                }
-                return 'N/A';
-            },
-        ]);
-
-        // Add admission status column
-        CRUD::addColumn([
-            'name' => 'admission_status',
-            'label' => 'Admission Status',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $admission = $entry->admissions()->whereNotNull('session')->first();
-                if ($admission) {
-                    return 'Admitted';
-                }
-                $pendingAdmission = $entry->admissions()->whereNull('session')->first();
-                if ($pendingAdmission) {
-                    return 'Pending Acceptance';
-                }
-                return 'Not Admitted';
-            },
-        ]);
-
-        // Add course column
-        CRUD::addColumn([
-            'name' => 'registered_course',
-            'label' => 'Registered Course',
-            'type' => 'text',
-            'value' => function ($entry) {
-                if ($entry->registered_course && $entry->course) {
-                    return $entry->course->course_name ?? 'N/A';
-                }
-                return 'N/A';
-            },
-        ]);
-
-        // Add exams taken column
-        CRUD::addColumn([
-            'name' => 'exams_taken',
-            'label' => 'Exams Taken',
-            'type' => 'text',
-            'value' => function ($entry) {
-                $examsTaken = $entry->userExams()->count();
-                return $examsTaken > 0 ? $examsTaken . ' exam(s)' : 'No exams taken';
-            },
-        ]);
-
-        // Add the shortlist actions dropdown button (top)
-        CRUD::addButtonFromView('top', 'bulk_shortlist_actions_dropdown', 'bulk_shortlist_actions_dropdown', 'beginning');
-
-        // Remove default edit, preview, delete buttons and add custom row actions dropdown
-        CRUD::removeButton('line', 'update');
-        CRUD::removeButton('line', 'show');
-        CRUD::removeButton('line', 'delete');
-        CRUD::addButton('line', 'shortlist_row_actions_dropdown', 'view', 'crud::buttons.shortlist_row_actions_dropdown');
-    }
-
     /**
      * Handle bulk admit operation via AJAX
      */
