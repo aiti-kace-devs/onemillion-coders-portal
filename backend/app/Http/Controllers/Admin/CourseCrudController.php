@@ -43,7 +43,7 @@ class CourseCrudController extends CrudController
         $this->crud->operation('list', function () {
             WidgetHelper::courseStatisticsWidget();
         });
-        
+
         // Add permission checks
         $this->crud->operation(['list', 'show'], function () {
             $this->crud->addClause('where', function ($query) {
@@ -139,13 +139,13 @@ class CourseCrudController extends CrudController
 
         $this->setupCommonFields();
         $entry = $this->crud->getCurrentEntry();
-        
+
         CRUD::field('centre_id')
             ->default([
                 'id' => $entry->centre_id ?? null,
-                'text' => $entry->centre->title ?? '' 
+                'text' => $entry->centre->title ?? ''
             ]);
-        
+
         CRUD::field('duration')->hint('Updating duration may affect existing schedules');
     }
 

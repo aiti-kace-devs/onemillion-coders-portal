@@ -14,7 +14,7 @@ use App\Models\UserAdmission;
 use App\Models\CourseMatch;
 trait CourseFieldHelpers
 {
-    
+
 
     use FormHelper;
     use GeneralFieldsAndColumns;
@@ -305,7 +305,7 @@ CRUD::addField([
             },
             'escaped' => false,
         ]);
-    } 
+    }
 
 
 
@@ -313,7 +313,7 @@ CRUD::addField([
     public static function courseFilter(string $columnName, string $label = 'Course'): void
     {
         $coursesArray = Course::orderBy('course_name')->pluck('course_name', 'id')->toArray();
-        
+
         FilterHelper::addSelectFilter(
             columnName: $columnName,
             label: $label,
@@ -322,14 +322,14 @@ CRUD::addField([
             callback: function ($value) use ($columnName) {
                 // Convert string to array if it's not already
                 $values = is_array($value) ? $value : explode(',', $value);
-                
+
                 // Use whereIn for multiple values
                 CRUD::addClause('whereIn', $columnName, $values);
             },
         );
     }
 
-    
+
     public static function addProgrammeFilter(string $columnName, string $label = 'Course Filter'): void
     {
         $coursesArray = Programme::orderBy('title')->pluck('title', 'id')->toArray();
@@ -412,7 +412,7 @@ CRUD::addField([
     public static function addStudentBatchFilterFromDashboard(string $relationPath = 'admission', string $label = 'Admitted Student Batch')
     {
         $batches = Batch::orderBy('title')->pluck('title', 'id')->toArray();
-        
+
         FilterHelper::addSelectFilter(
             columnName: 'batch_filter',
             label: $label,

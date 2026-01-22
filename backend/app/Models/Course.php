@@ -73,12 +73,12 @@ class Course extends Model
         } else {
             // Get the assigned course IDs for the current user
             $assignedCourseIds = $user->assignedCourses()->pluck('courses.id')->toArray();
-            
+
             // If user has no assigned courses, return empty result
             if (empty($assignedCourseIds)) {
                 return $query->whereNull('courses.id');
             }
-            
+
             return $query->whereIn('courses.id', $assignedCourseIds);
         }
     }
@@ -118,8 +118,6 @@ class Course extends Model
         $course->location = $branch?->title;
     });
 }
-
-
 
 
 

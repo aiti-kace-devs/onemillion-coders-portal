@@ -70,7 +70,9 @@ class User extends Authenticatable
 
     public function course()
     {
-        return $this->belongsTo(Course::class, 'registered_course');
+        // Link the user to a course using the registered_course column as FK
+        // users.registered_course -> courses.id
+        return $this->belongsTo(Course::class, 'registered_course', 'id');
     }
 
 
