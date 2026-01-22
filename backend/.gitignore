@@ -20,3 +20,4 @@ storage/app/version.json
 storage/app/key.json
 /storage/debugbar
 composerauth.json
+auth.json
