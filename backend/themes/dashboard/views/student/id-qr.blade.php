@@ -45,16 +45,33 @@
                     @csrf
                     {{-- @method('PATCH') --}}
                     <div class="row g-3 flex mb-2 align-items-center">
+                        <!-- Always show separate name fields -->
                         <div class="col-12 mb-2">
-                            <label class="form-label col-12">Fullname (as appears on your Ghana Card/ any National ID)
-                            </label>
-                            <input id="name" type="text" required value=" {{ $user->student_name }}" name="name"
-                                class="form-control col-12  @error('name') is-invalid @enderror"
+                            <label class="form-label col-12">First Name</label>
+                            <input id="first_name" type="text" required value="{{ $user->first_name }}" name="first_name"
+                                class="form-control col-12 @error('first_name') is-invalid @enderror"
                                 @if (detailsUpdated($user)) disabled @endif>
-                            @if ($user->previous_name)
-                                <div class="text-primary">Previous Name: {{ $user->previous_name }}</div>
-                            @endif
-                            @error('name')
+                            @error('first_name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-12 mb-2">
+                            <label class="form-label col-12">Middle Name</label>
+                            <input id="middle_name" type="text" value="{{ $user->middle_name }}" name="middle_name"
+                                class="form-control col-12 @error('middle_name') is-invalid @enderror"
+                                @if (detailsUpdated($user)) disabled @endif>
+                            @error('middle_name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-12 mb-2">
+                            <label class="form-label col-12">Last Name</label>
+                            <input id="last_name" type="text" required value="{{ $user->last_name }}" name="last_name"
+                                class="form-control col-12 @error('last_name') is-invalid @enderror"
+                                @if (detailsUpdated($user)) disabled @endif>
+                            @error('last_name')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -293,5 +310,7 @@
 
             cardTypeSelect.addEventListener("change", togglePrefix);
         });
+
+
     </script>
 @endpush

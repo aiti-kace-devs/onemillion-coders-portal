@@ -669,7 +669,9 @@ class StudentOperation extends Controller
         $user = Auth::guard('web')->user();
 
         $rules = [
-            'name' => 'sometimes|string|regex:/^[\pL\s\-\' ]+$/u|min:5|max:255|min:4',
+            'first_name' => 'sometimes|string|max:255',
+            'middle_name' => 'sometimes|nullable|string|max:255',
+            'last_name' => 'sometimes|string|max:255',
             'gender' => 'sometimes|in:male,female',
             'mobile_no' => 'sometimes|string|phone',
             'network_type' => 'sometimes|in:mtn,telecel,airteltigo',
@@ -705,15 +707,23 @@ class StudentOperation extends Controller
         if (isset($validatedData['mobile_no'])) {
             $user->mobile_no = $validatedData['mobile_no'];
         }
-        if (isset($validatedData['name'])) {
-            if ($user->name != $validatedData['name'] && !$user->previous_name) {
-                $user->previous_name = $user->name;
+
+        // Handle separate name fields
+        if (isset($validatedData['first_name']) || isset($validatedData['middle_name']) || isset($validatedData['last_name'])) {
+            if (isset($validatedData['first_name'])) {
+                $user->first_name = $validatedData['first_name'];
             }
-            if ($validatedData['name'] == $user->previous_name) {
-                $user->previous_name = null;
+            if (isset($validatedData['middle_name'])) {
+                $user->middle_name = $validatedData['middle_name'];
             }
-            $user->name = $validatedData['name'];
+            if (isset($validatedData['last_name'])) {
+                $user->last_name = $validatedData['last_name'];
+            }
+
+            // Update the name field from separate fields
+            $user->setNameFromFields();
         }
+
         if (isset($validatedData['card_type'])) {
             $user->card_type = $validatedData['card_type'];
         }

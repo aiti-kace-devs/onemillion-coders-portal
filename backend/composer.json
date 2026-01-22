@@ -25,6 +25,7 @@
         "laravel/tinker": "^2.8",
         "league/commonmark": "^2.6",
         "maatwebsite/excel": "^3.1",
+        "predis/predis": "*",
         "propaganistas/laravel-phone": "^5.3",
         "qirolab/laravel-themer": "^2.0",
         "rbdwllr/reallysimplejwt": "^5.0",

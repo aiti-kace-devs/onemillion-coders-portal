@@ -43,6 +43,7 @@ COPY docker/fpm/ /etc/php/${PHP_VERSION}/fpm/
 COPY docker/supervisor/ /etc/supervisor/
 COPY docker/entrypoint.sh /entrypoint
 COPY docker/start-nginx.sh /usr/local/bin/start-nginx
+COPY docker/scripts/run-queue-worker.sh /usr/local/bin/run-queue-worker
 
 EXPOSE 8080
 
@@ -52,7 +53,7 @@ COPY . /var/www/html/
 
 RUN composer install --no-dev --optimize-autoloader \
     && chown -R www-data:www-data /var/www/html \
-    && chmod +x /entrypoint /usr/local/bin/start-nginx
+    && chmod +x /entrypoint /usr/local/bin/start-nginx /usr/local/bin/run-queue-worker
 
 RUN chmod +x ./ready-app.sh
 

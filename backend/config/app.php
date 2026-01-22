@@ -180,7 +180,7 @@ return [
         // App\Providers\HorizonServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         // GeoSot\EnvEditor\ServiceProvider::class,
-        // App\Providers\AppConfigServiceProvider::class,
+        App\Providers\AppConfigServiceProvider::class,
 
     ],
 
