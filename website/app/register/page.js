@@ -24,6 +24,7 @@ import {
 } from "../../services/pages";
 import Button from "../../components/Button";
 import GhanaGradientText from "../../components/GhanaGradients/GhanaGradientText";
+import { getCourseImage } from "../../utils/courseImages";
 
 import parsePhoneNumberFromString from "libphonenumber-js";
 
@@ -675,10 +676,12 @@ export default function RegisterPage() {
                       <div className="flex flex-col sm:flex-row gap-4">
                         <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 mx-auto sm:mx-0 border border-gray-200">
                           <Image
-                            src={
-                              course.image ||
-                              "/images/hero/Certified-Data-Protection-Manager.jpg"
-                            }
+                            // TEMPORARY: Commented out API image, using static image for consistency
+                            // src={
+                            //   course.image ||
+                            //   "/images/hero/Certified-Data-Protection-Manager.jpg"
+                            // }
+                            src={getCourseImage(course.id)}
                             alt={course.title}
                             fill
                             className="object-cover"
