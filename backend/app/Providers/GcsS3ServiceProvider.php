@@ -19,7 +19,7 @@ class GcsS3ServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        if (config('app.use_basset_cloud', false)) {
+        if (!config('app.use_basset_cloud', false)) {
             return;
         }
 
@@ -36,6 +36,9 @@ class GcsS3ServiceProvider extends ServiceProvider
                 'url' => env('BASSET_CLOUD_URL', env('GOOGLE_CLOUD_STORAGE_API_URI')),
             ],
         ]);
+
+        // set basset disk
+        config()->set('backpack.basset.disk', 'basset_cloud');
 
         Storage::extend('s3_gcs', function ($app, $config) {
             $s3Config = $this->formatS3Config($config);
