@@ -1,0 +1,119 @@
+services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8082:8080" # Traefik Dashboard
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - omcp-network
+
+  db:
+    image: mysql:8.0
+    container_name: omcp_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_pass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-omcp_db}
+      MYSQL_USER: ${MYSQL_USER:-omcp_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-omcp_pass}
+    volumes:
+      - omcp_db_data:/var/lib/mysql
+    networks:
+      - omcp-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  redis:
+    image: redis:alpine
+    container_name: omcp_redis
+    restart: unless-stopped
+    networks:
+      - omcp-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: omcp_backend
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      - RUN_QUEUE_WORKER=false  
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.omcp.localhost`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.services.backend.loadbalancer.server.port=8080"
+      - "traefik.http.routers.app-user.middlewares=cors"
+      - "traefik.http.middlewares.cors.headers.accesscontrolallowmethods=*"
+      - "traefik.http.middlewares.cors.headers.accesscontrolalloworiginlist=*"
+      - "traefik.http.middlewares.cors.headers.accesscontrolallowheaders=*"
+      - "traefik.http.middlewares.cors.headers.accesscontrolmaxage=100"
+      - "traefik.http.middlewares.cors.headers.addvaryheader=true"
+    networks:
+      - omcp-network
+
+  queue:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: omcp_queue
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      - RUN_QUEUE_WORKER=true
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - omcp-network
+
+  website:
+    build:
+      context: ./website
+      dockerfile: Dockerfile
+      args:
+        - ENVIRONMENT=dev
+    container_name: omcp_website
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    depends_on:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.website.rule=Host(`omcp.localhost`)"
+      - "traefik.http.routers.website.entrypoints=web"
+      - "traefik.http.routers.website.priority=1"
+      - "traefik.http.services.website.loadbalancer.server.port=3000"
+    networks:
+      - omcp-network
+
+networks:
+  omcp-network:
+    driver: bridge
+
+volumes:
+  omcp_db_data:

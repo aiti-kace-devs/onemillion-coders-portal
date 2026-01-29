@@ -1,0 +1,55 @@
+steps:
+  - name: gcr.io/cloud-builders/gcloud
+    id: copy-composer-auth
+    entrypoint: 'bash'
+    args: [ '-c', "gcloud secrets versions access latest --secret=COMPOSER_AUTH --format='get(payload.data)' | tr '_-' '/+' | base64 -d > backend/auth.json" ]
+
+  - name: 'gcr.io/cloud-builders/docker'
+    dir: 'backend'
+    args: ['build', '-t', 'europe-west1-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_CONTAINER}:latest', '-f','docker/Dockerfile.dev', '.']
+    id: 'build-backend-dev-image'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    dir: 'backend'
+    args: ['push', 'europe-west1-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_CONTAINER}:latest']
+    id: 'push-backend-dev-image'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-backend-dev-image'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - 'europe-west1-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_CONTAINER}:latest'
+      - '--region'
+      - 'europe-west1'
+      - '--platform'
+      - 'managed'
+      - '--port'
+      - '8080'
+      - '--set-env-vars'
+      - 'RUN_QUEUE_WORKER=true'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    id: 'update-backend-dev-traffic'
+    args:
+      - 'run'
+      - 'services'
+      - 'update-traffic'
+      - '${_SERVICE_NAME}'
+      - '--to-latest'
+      - '--region'
+      - 'europe-west1'
+
+images:
+  - 'europe-west1-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_CONTAINER}:latest'
+substitutions:
+    _REPO_NAME: omcp-repo
+    _CONTAINER: backend-dev
+    _SERVICE_NAME: omcp-backend-dev
+options:
+  logging: CLOUD_LOGGING_ONLY
+

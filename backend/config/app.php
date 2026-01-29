@@ -180,8 +180,8 @@ return [
         // App\Providers\HorizonServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         // GeoSot\EnvEditor\ServiceProvider::class,
-        // App\Providers\AppConfigServiceProvider::class,
-
+        App\Providers\AppConfigServiceProvider::class,
+        App\Providers\GcsS3ServiceProvider::class,
     ],
 
     /*
@@ -238,10 +238,10 @@ return [
 
     ],
 
-    'version' => '3.11.0',
+    'version' => env('APP_VERSION', '3.11.0'),
     'super_admin_email' => env('SUPER_ADMIN_EMAIL', 'admin@test.com'),
     'super_admin_password' => env('SUPER_ADMIN_PASSWORD', Str::random()),
     'super_admin_name' => env('SUPER_ADMIN_NAME', 'Super Admin'),
-
+    'use_basset_cloud' => env('USE_BASSET_CLOUD', false),
 
 ];

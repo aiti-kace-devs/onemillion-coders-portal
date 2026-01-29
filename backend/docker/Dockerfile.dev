@@ -13,13 +13,13 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PHP_MIN_SPARE_SERVERS=2 \
     PHP_MAX_SPARE_SERVERS=4 \
     PHP_DATE_TIMEZONE=UTC \
-    PHP_DISPLAY_ERRORS=Off \
-    PHP_ERROR_REPORTING=22527 \
-    PHP_MEMORY_LIMIT=256M \
-    PHP_MAX_EXECUTION_TIME=90 \
+    PHP_DISPLAY_ERRORS=On \
+    PHP_ERROR_REPORTING=E_ALL \
+    PHP_MEMORY_LIMIT=512M \
+    PHP_MAX_EXECUTION_TIME=300 \
     PHP_POST_MAX_SIZE=100M \
     PHP_UPLOAD_MAX_FILE_SIZE=100M \
-    PHP_ALLOW_URL_FOPEN=Off
+    PHP_ALLOW_URL_FOPEN=On
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY php/ondrej_ubuntu_php.gpg /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg
@@ -51,7 +51,8 @@ WORKDIR /var/www/html
 
 COPY . /var/www/html/
 
-RUN composer install --no-dev --optimize-autoloader \
+# Development: install with dev dependencies
+RUN composer install --optimize-autoloader \
     && chown -R www-data:www-data /var/www/html \
     && chmod +x /entrypoint /usr/local/bin/start-nginx /usr/local/bin/run-queue-worker
 

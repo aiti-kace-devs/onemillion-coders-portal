@@ -29,8 +29,11 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     default-mysql-client \
     libpq-dev zlib1g-dev \
+    $PHPIZE_DEPS \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath pcntl posix exif \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -62,7 +65,8 @@ RUN chmod +x /usr/local/bin/start-nginx
 # Application setup
 WORKDIR /var/www/html
 COPY composer.json composer.lock ./
-COPY composerauth.json ./auth.json
+
+COPY auth.json ./auth.json
 
 # Install dependencies and optimize
 # ENV CACHE_STORE=memcached
