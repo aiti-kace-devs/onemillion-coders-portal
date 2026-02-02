@@ -1,3 +1,30 @@
+# ==============================================================================
+# OMCP Docker Compose Configuration
+# ==============================================================================
+#
+# SECURITY ARCHITECTURE:
+# ----------------------
+# - Traefik acts as the ONLY gateway to all services
+# - All services use 'expose' instead of 'ports' - they are NOT published to host
+# - Services are only accessible through Traefik on the internal Docker network
+# - Only Traefik exposes port 80 to the host machine
+# - All HTTP traffic must go through the Traefik reverse proxy
+#
+# SERVICE ACCESS:
+# ---------------
+# - Backend API:  http://api.omcp.localhost  (or api.{APP_DOMAIN})
+# - Frontend:     http://omcp.localhost      (or {APP_DOMAIN})
+# - PhpMyAdmin:   http://dbms.omcp.localhost    (Traefik HTTP Basic Auth)
+# - Traefik UI:   http://lb.omcp.localhost      (Traefik HTTP Basic Auth)
+# - Mailpit UI:   http://mail.omcp.localhost    (Traefik HTTP Basic Auth)
+#
+# PROFILES:
+# ---------
+# - backend:  Runs backend services (API, database, redis, queue, mailpit)
+# - frontend: Runs frontend services (website, traefik)
+#
+# ==============================================================================
+
 services:
   traefik:
     profiles: ["backend", "frontend"]
@@ -13,19 +40,17 @@ services:
       # - "8082:8080" # Traefik Dashboard
     labels:
       - "traefik.enable=true"
-      # 1. Create the Router (Dashboard access via /dashboard/)
-      - "traefik.http.routers.api.rule=Host(traefik.${APP_DOMAIN:-omcp.localhost})" # Or your domain
+      # HTTP Basic Auth for dashboard, PhpMyAdmin, Mailpit (credentials from env)
+      - "traefik.http.middlewares.gate-auth.basicauth.users=${TRAEFIK_BASIC_AUTH_USER}:${TRAEFIK_BASIC_AUTH_HASH}"
+
+      # Dashboard (via /dashboard/) - protected by Basic Auth
+      - "traefik.http.routers.api.rule=Host(`lb.${APP_DOMAIN:-omcp.localhost}`)"
       - "traefik.http.routers.api.service=api@internal"
       - "traefik.http.routers.api.entrypoints=web"
-
-      # 2. Attach Auth Middleware
-      - "traefik.http.routers.api.middlewares=auth"
-
-      # 3. Define Auth Credentials (user:password)
-      # Example: admin:password (hashed and escaped)
-      - "traefik.http.middlewares.auth.basicauth.users=admin:${TRAEFIK_ADMIN_PASSWORD:-$$2y$$05$$bz5EaQIwW7KdJ.yFbW6mI..g1FFo0viV4NBkxZzOL24u/W3dvyaNC}"
+      - "traefik.http.routers.api.middlewares=gate-auth"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - ./certs:/etc/traefik/certs:ro
     networks:
       - omcp-network
 
@@ -60,6 +85,55 @@ services:
       timeout: 5s
       retries: 5
 
+  phpmyadmin-storage-init:
+    profiles: ["backend"]
+    image: mysql:8.0
+    container_name: omcp_phpmyadmin_storage_init
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_pass}
+      PMA_CONTROLPASS: ${PMA_CONTROLPASS:-pmapass}
+    volumes:
+      - ./dbms:/scripts:ro
+    command: ["sh", "/scripts/init.sh"]
+    networks:
+      - omcp-network
+
+  phpmyadmin:
+    profiles: ["backend"]
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: omcp_phpmyadmin
+    restart: unless-stopped
+    # NOTE: No ports exposed to host - only accessible through Traefik gateway
+    expose:
+      - "80"
+    environment:
+      - PMA_HOST=db
+      - PMA_PORT=3306
+      - PMA_USER=${MYSQL_USER:-omcp_user}
+      - PMA_PASSWORD=${MYSQL_PASSWORD:-omcp_pass}
+      - PMA_PMADB=phpmyadmin
+      - PMA_CONTROLUSER=pma
+      - PMA_CONTROLPASS=${PMA_CONTROLPASS:-pmapass}
+      - UPLOAD_LIMIT=${PMA_UPLOAD_LIMIT:-256M}
+      - MAX_EXECUTION_TIME=600
+    depends_on:
+      phpmyadmin-storage-init:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.phpmyadmin.rule=Host(`dbms.${APP_DOMAIN:-omcp.localhost}`)"
+      - "traefik.http.routers.phpmyadmin.entrypoints=web"
+      - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
+      - "traefik.http.routers.phpmyadmin.middlewares=gate-auth"
+    networks:
+      - omcp-network
+
   backend:
     profiles: ["backend"]
     build:
@@ -68,8 +142,9 @@ services:
     image: omcp-backend:latest
     container_name: omcp_backend
     restart: unless-stopped
-    env_file:
-      - .env.docker
+    # NOTE: No ports exposed - only accessible through Traefik gateway
+    expose:
+      - "8080" # Internal port only, not published to host
     environment:
       - RUN_QUEUE_WORKER=false
     depends_on:
@@ -82,12 +157,22 @@ services:
       - "traefik.http.routers.backend.rule=Host(`api.${APP_DOMAIN:-omcp.localhost}`)"
       - "traefik.http.routers.backend.entrypoints=web"
       - "traefik.http.services.backend.loadbalancer.server.port=8080"
-      - "traefik.http.routers.app-user.middlewares=cors"
+      # Apply multiple middlewares: CORS and security headers
+      - "traefik.http.routers.backend.middlewares=cors,security-headers"
+      # CORS middleware
       - "traefik.http.middlewares.cors.headers.accesscontrolallowmethods=*"
       - "traefik.http.middlewares.cors.headers.accesscontrolalloworiginlist=*"
       - "traefik.http.middlewares.cors.headers.accesscontrolallowheaders=*"
       - "traefik.http.middlewares.cors.headers.accesscontrolmaxage=100"
       - "traefik.http.middlewares.cors.headers.addvaryheader=true"
+      # Security headers middleware
+      - "traefik.http.middlewares.security-headers.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.security-headers.headers.contenttypenosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.sslredirect=false"
+      - "traefik.http.middlewares.security-headers.headers.stsincludesubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stspreload=true"
+      - "traefik.http.middlewares.security-headers.headers.stsseconds=31536000"
     networks:
       - omcp-network
 
@@ -96,8 +181,6 @@ services:
     image: omcp-backend:latest
     container_name: omcp_queue
     restart: unless-stopped
-    env_file:
-      - .env.docker
     environment:
       - RUN_QUEUE_WORKER=true
     depends_on:
@@ -117,16 +200,23 @@ services:
         - ENVIRONMENT=dev
     container_name: omcp_website
     restart: unless-stopped
-    env_file:
-      - .env.docker
-    depends_on:
-      - backend
+    # NOTE: No ports exposed - only accessible through Traefik gateway
+    expose:
+      - "3000" # Internal port only, not published to host
+    # depends_on:
+    #   - backend
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.website.rule=Host(`${APP_DOMAIN:-omcp.localhost}`)"
       - "traefik.http.routers.website.entrypoints=web"
       - "traefik.http.routers.website.priority=1"
       - "traefik.http.services.website.loadbalancer.server.port=3000"
+      # Apply security headers
+      - "traefik.http.routers.website.middlewares=website-security"
+      - "traefik.http.middlewares.website-security.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.website-security.headers.contenttypenosniff=true"
+      - "traefik.http.middlewares.website-security.headers.frameDeny=true"
+      - "traefik.http.middlewares.website-security.headers.sslredirect=false"
     networks:
       - omcp-network
 
@@ -135,8 +225,10 @@ services:
     image: axllent/mailpit:latest
     container_name: omcp_mailpit
     restart: unless-stopped
+    # NOTE: No ports exposed - only accessible through Traefik gateway
+    expose:
+      - "8025" # Internal port only, not published to host
     environment:
-      - MP_UI_AUTH=${MAILPIT_UI_USERNAME:-admin}:${MAILPIT_UI_PASSWORD:-password}
       - MP_DATA_DIR=/data
     volumes:
       - omcp_mailpit_data:/data
@@ -145,6 +237,11 @@ services:
       - "traefik.http.routers.mailpit.rule=Host(`mail.${APP_DOMAIN:-omcp.localhost}`)"
       - "traefik.http.routers.mailpit.entrypoints=web"
       - "traefik.http.services.mailpit.loadbalancer.server.port=8025"
+      # Basic Auth then security headers
+      - "traefik.http.routers.mailpit.middlewares=gate-auth,mailpit-security"
+      - "traefik.http.middlewares.mailpit-security.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.mailpit-security.headers.contenttypenosniff=true"
+      - "traefik.http.middlewares.mailpit-security.headers.frameDeny=true"
     networks:
       - omcp-network
 

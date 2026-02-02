@@ -8,6 +8,7 @@ This project runs with Docker Compose. It includes:
 - **Backend** – Laravel API (PHP 8.3)
 - **Queue** – Laravel queue worker
 - **Website** – Next.js frontend
+- **PhpMyAdmin** – MySQL management UI (protected by Traefik HTTP Basic Auth)
 
 ## Prerequisites
 
@@ -74,7 +75,7 @@ To save resources and accommodate different development needs, this project uses
 
 | Profile | Purpose | Services Included |
 |:--- |:--- |:--- |
-| **`backend`** | API development / Local Frontend dev | `traefik`, `db`, `redis`, `backend`, `queue`, `mailpit` |
+| **`backend`** | API development / Local Frontend dev | `traefik`, `db`, `redis`, `backend`, `queue`, `mailpit`, `phpmyadmin` |
 | **`frontend`** | Frontend preview / Local Backend dev | `traefik`, `website` |
 
 ### How to use:
@@ -96,14 +97,15 @@ To save resources and accommodate different development needs, this project uses
 
 ## Access the app
 
-| Service            | URL                        |
-|--------------------|----------------------------|
-| **Website**        | http://omcp.localhost      |
-| **API**            | http://api.omcp.localhost  |
-| **Mailpit (UI)**   | http://mail.omcp.localhost |
-| **Traefik dashboard** | http://localhost:8082   |
+| Service              | URL                           | Authentication        |
+|----------------------|-------------------------------|------------------------|
+| **Website**          | http://omcp.localhost         | None                   |
+| **API**              | http://api.omcp.localhost     | None                   |
+| **PhpMyAdmin**       | http://dbms.omcp.localhost    | Traefik HTTP Basic Auth |
+| **Traefik dashboard**| http://traefik.omcp.localhost | Traefik HTTP Basic Auth |
+| **Mailpit (UI)**     | http://mail.omcp.localhost    | Traefik HTTP Basic Auth |
 
-Ensure `omcp.localhost`, `api.omcp.localhost`, and `mail.omcp.localhost` resolve to `127.0.0.1` (e.g. add them to `/etc/hosts` or use a hosts file manager).
+Ensure `omcp.localhost`, `api.omcp.localhost`, `dbms.omcp.localhost`, `lb.omcp.localhost`, and `mail.omcp.localhost` resolve to `127.0.0.1` (e.g. add them to `/etc/hosts` or use a hosts file manager). PhpMyAdmin, Traefik dashboard, and Mailpit use the same Basic Auth credentials from `.env.docker` (`TRAEFIK_BASIC_AUTH_USER` / `TRAEFIK_BASIC_AUTH_HASH`); run Compose with `--env-file .env.docker` so these are set.
 
 **Default super admin** (from `.env.docker`):
 
@@ -165,7 +167,17 @@ The `.env.docker` file contains all configuration for the Docker stack. Below ar
 *   **`NEXT_PUBLIC_API_BASE_URL`**: The URL the frontend uses to contact the API.
 *   **`NEXT_PUBLIC_IMAGE_BASE_URL`**: The URL for serving uploaded images.
 
-### 5. Google Cloud Storage
+### 5. Traefik HTTP Basic Auth (dashboard, PhpMyAdmin, Mailpit)
+*   **`TRAEFIK_BASIC_AUTH_USER`**: Username for HTTP Basic Auth (e.g. `admin`).
+*   **`TRAEFIK_BASIC_AUTH_HASH`**: Password hash in htpasswd format. Generate with: `htpasswd -nb your_user your_password` (use the part after the colon), or `openssl passwd -apr1`. If the hash contains `$`, escape each as `$$` in `.env.docker`.
+*   Run Compose with `--env-file .env.docker` so these are substituted into Traefik labels.
+
+### 6. PhpMyAdmin
+*   **`PMA_UPLOAD_LIMIT`**: Max upload size for imports (default: `256M`).
+*   **`PMA_CONTROLPASS`**: Password for the MySQL `pma` control user used for PhpMyAdmin configuration storage (linked tables) and 2FA. Configuration storage is created automatically on first run from the `./dbms` folder (init script and `create_tables.sql`).
+*   PhpMyAdmin uses `MYSQL_USER` and `MYSQL_PASSWORD` from `.env.docker` to pre-fill the login form.
+
+### 7. Google Cloud Storage
 *   **`USE_BASSET_CLOUD`**: Set to `true` to enable GCS storage for assets.
 *   **`GOOGLE_CLOUD_PROJECT_ID`, `GOOGLE_CLOUD_STORAGE_BUCKET`, etc.**: Credentials for GCS integration.
 
@@ -184,4 +196,5 @@ No manual migrate/seed is required for a standard Docker-based run.
 - **Website/API not loading:** Check that Traefik is up (`docker compose ps`) and that you’re using the URLs above (including `omcp.localhost` / `api.omcp.localhost`).
 - **502 / connection errors:** Wait for `db` and `redis` to be healthy, then restart backend: `docker compose restart backend queue`.
 - **Backend build fails on `auth.json`:** Create `backend/auth.json` with at least `{}` (see step 4).
-- **Logs:** Use `docker compose logs -f backend` or `docker compose logs -f website` to inspect errors.
+- **PhpMyAdmin / Traefik dashboard / Mailpit 401:** Ensure `TRAEFIK_BASIC_AUTH_USER` and `TRAEFIK_BASIC_AUTH_HASH` are set in `.env.docker` and run Compose with `docker compose --env-file .env.docker up -d` so the labels are substituted. Generate a hash with `htpasswd -nb user password` or `openssl passwd -apr1`.
+- **Logs:** Use `docker compose logs -f backend`, `docker compose logs -f website`, or `docker compose logs -f traefik` to inspect errors.
