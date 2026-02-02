@@ -15,7 +15,11 @@ ENV PHP_PM_MAX_CHILDREN=12 \
 
 # COPY docker/php/ondrej_ubuntu_php.gpg /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg
 
-RUN apt-get update && apt-get install -y \
+# Disable xz sandbox so apt/dpkg unpacking works on restricted Linux hosts (Docker/CI)
+ENV XZ_OPTIONS=--no-sandbox
+
+RUN export XZ_OPTIONS=--no-sandbox \
+    && apt-get update && apt-get install -y \
     nginx \
     supervisor \
     git \
