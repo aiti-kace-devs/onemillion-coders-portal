@@ -23,6 +23,11 @@ class GcsS3ServiceProvider extends ServiceProvider
             return;
         }
 
+        // Check for required environment variables to prevent crash in environments where they are missing (like Docker)
+        if (!env('GOOGLE_CLOUD_STORAGE_BUCKET') || !env('GOOGLE_CLOUD_HMAC_ACCESS_ID') || !env('GOOGLE_CLOUD_HMAC_SECRET')) {
+            return;
+        }
+
         // Inject the basset_cloud disk configuration dynamically
         config([
             'filesystems.disks.basset_cloud' => [

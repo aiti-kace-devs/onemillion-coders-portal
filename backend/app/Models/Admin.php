@@ -7,15 +7,24 @@ namespace App\Models;
 use App\Http\Controllers\Traits\CustomTimestamps;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use App\Notifications\ResetPasswordNotification;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 class Admin extends Authenticatable
 {
+    /**
+     * Convert the model to a Statamic user.
+     *
+     * @return \Statamic\Contracts\Auth\User
+     */
+    public function toStatamicUser()
+    {
+        return (new \Statamic\Auth\Eloquent\User)->model($this);
+    }
     use CrudTrait;
     use HasApiTokens, HasFactory, Notifiable, HasRoles, CustomTimestamps;
     protected $guard = 'admin';
@@ -46,15 +55,25 @@ class Admin extends Authenticatable
         'preferences' => 'json',
     ];
 
+
     /**
-     * Hash the password when it's set
+     * Set the password attribute with a double-hashing guard.
      */
     public function setPasswordAttribute($value)
     {
-        if ($value) {
-            $this->attributes['password'] = bcrypt($value);
+        if (empty($value)) {
+            return;
+        }
+
+        // If the value is already a hash, set it directly without re-hashing
+        if (Hash::info($value)['algoName'] !== 'unknown') {
+            $this->attributes['password'] = $value;
+        } else {
+            // If it's plain text, hash it
+            $this->attributes['password'] = Hash::make($value);
         }
     }
+
 
     public function isSuper()
     {
@@ -63,8 +82,8 @@ class Admin extends Authenticatable
     public function assignedCourses()
     {
         return $this->belongsToMany(Course::class, 'admin_course', 'admin_id', 'course_id')
-                    ->select(['courses.id', 'courses.course_name', 'courses.duration', 'courses.status'])
-                    ->withTimestamps();
+            ->select(['courses.id', 'courses.course_name', 'courses.duration', 'courses.status'])
+            ->withTimestamps();
     }
 
     public function courses()
@@ -79,10 +98,7 @@ class Admin extends Authenticatable
 
 
     public function getNameWithEmail()
-{
-    return $this->name . ' (' . $this->email . ')';
-}
-
-
-
+    {
+        return $this->name . ' (' . $this->email . ')';
+    }
 }

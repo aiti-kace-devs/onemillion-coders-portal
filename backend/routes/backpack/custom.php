@@ -14,10 +14,8 @@ use App\Http\Controllers\Admin\DashboardController;
 
 Route::group([
     'prefix' => config('backpack.base.route_prefix', 'admin'),
-    'middleware' => array_merge(
-        (array) config('backpack.base.web_middleware', 'web'),
-        (array) config('backpack.base.middleware_key', 'admin')
-    ),
+    'middleware' =>
+    config('backpack.base.middleware_key', 'admin'),
     'namespace' => 'App\Http\Controllers\Admin',
 ], function () { // custom admin routes
     Route::crud('admin', 'AdminCrudController');
@@ -28,7 +26,7 @@ Route::group([
     Route::post('/user/assign-batch', [UserCrudController::class, 'assignBatch']);
     Route::get('api/centre-by-branch', [CentreController::class, 'filterByBranch']);
     Route::get('admin/exam/{exam_id}/add-question', [OexQuestionMasterCrudController::class, 'addQuestion'])
-    ->name('admin.exam.add-question');
+        ->name('admin.exam.add-question');
     Route::crud('role', 'RoleCrudController');
     Route::crud('admission-rejection', 'AdmissionRejectionCrudController');
     Route::crud('app-config', 'AppConfigCrudController');
@@ -80,12 +78,12 @@ Route::group([
     Route::get('user/filtered-count', 'UserCrudController@getFilteredCount')->name('user.filtered-count');
 
     // Custom routes for AttendanceCrudController non-CRUD methods
-    Route::get('attendance/qr-scanner','AttendanceCrudController@setupScanQrCodePage')->name('attendance.qr-scanner');
-    Route::post('attendance/generate_qrcode','AttendanceCrudController@setupGenerateQrCodeData')->name('attendance.generate_qrcode');
-    Route::post('attendance/confirm_attendance','AttendanceCrudController@setupConfirmAttendance')->name('attendance.confirm_attendance');
-    Route::post('attendance/record_attendance','AttendanceCrudController@setupRecordAttendance')->name('attendance.record_attendance');
-    Route::get('attendance/view_attendance','AttendanceCrudController@setupViewAttendance')->name('attendance.view_attendance');
-    Route::delete('attendance/remove_attendance/{id}','AttendanceCrudController@setupRemoveAttendance')->name('attendance.remove_attendance');
+    Route::get('attendance/qr-scanner', 'AttendanceCrudController@setupScanQrCodePage')->name('attendance.qr-scanner');
+    Route::post('attendance/generate_qrcode', 'AttendanceCrudController@setupGenerateQrCodeData')->name('attendance.generate_qrcode');
+    Route::post('attendance/confirm_attendance', 'AttendanceCrudController@setupConfirmAttendance')->name('attendance.confirm_attendance');
+    Route::post('attendance/record_attendance', 'AttendanceCrudController@setupRecordAttendance')->name('attendance.record_attendance');
+    Route::get('attendance/view_attendance', 'AttendanceCrudController@setupViewAttendance')->name('attendance.view_attendance');
+    Route::delete('attendance/remove_attendance/{id}', 'AttendanceCrudController@setupRemoveAttendance')->name('attendance.remove_attendance');
 
     // Shortlist Actions (Bulk/Group)
     Route::get('user/choose-shortlist-modal', 'UserCrudController@showChooseShortlistModal')->name('user.choose-shortlist-modal');

@@ -26,9 +26,17 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerPolicies();
 
         Gate::before(function ($user, $ability) {
+            $user = backpack_user();
+
             return $user->hasRole('super-admin') ? true : null;
         });
 
-        //
+        // add a policy to allow 'access cp' policy if role is super-admin or page-builder
+        Gate::before(function ($user, $ability) {
+            $user = backpack_user();
+            if ('access cp' == $ability && $user->hasRole('page-builder')) {
+                return true;
+            }
+        });
     }
 }

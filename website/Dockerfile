@@ -10,7 +10,7 @@ RUN npm ci
 #  Stage 2: Build the application
 FROM base AS builder
 
-ARG ENVIRONMENT=qa
+ARG ENVIRONMENT=dev
 
 RUN echo "ENVIRONMENT: ${ENVIRONMENT}"
 

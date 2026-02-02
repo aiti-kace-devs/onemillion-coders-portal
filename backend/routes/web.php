@@ -46,29 +46,14 @@ use Illuminate\Support\Str;
 |
 */
 
-// Route::redirect('/', '/admin');
-// Route::redirect('/', '/admin');
 
-// // Route::get('/', [LandingPageController::class, 'index']);
-// // Route::get('/', [LandingPageController::class, 'index']);
-
-// // Route::get('/available-courses', [LandingPageController::class, 'availableCourses'])->name('available-courses');
-// // Route::get('/available-courses', [LandingPageController::class, 'availableCourses'])->name('available-courses');
-
-// // Route::get('/application', [LandingPageController::class, 'application'])->name('application');
-// // Route::get('/application', [LandingPageController::class, 'application'])->name('application');
-
-// // Route::get('/{course}', [LandingPageController::class, 'courseView'])
-// //     ->where('course', 'cybersecurity-course|ai-course|data-protection-course|protection-expert-course|protection-sup-course|certified-dpf-course|cnst-course')
-// //     ->name('dynamic-course');
-// // Route::get('/{course}', [LandingPageController::class, 'courseView'])
-// //     ->where('course', 'cybersecurity-course|ai-course|data-protection-course|protection-expert-course|protection-sup-course|certified-dpf-course|cnst-course')
-// //     ->name('dynamic-course');
-
-// // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
-// Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
-// routes/web.php
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
+
+// Redirect Statamic login to Backpack login
+Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
+    return redirect()->to(backpack_url('login'));
+})->name('statamic.cp.login');
+
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
 // Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
 Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
@@ -88,61 +73,6 @@ Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
 
 
-//Route::prefix('admins')-
-// // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
-// Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
-// Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
-// Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
-// // Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
-// Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
-// Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
-
-// Route::get('/api/batches', [CourseProgrammeController::class, 'allBatches']);
-// Route::get('/api/batch/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
-// Route::get('/api/batch/programmes/{id}', [CourseProgrammeController::class, 'programmesByBatch']);
-
-
-// Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
-// Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
-
-// Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
-// Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
-// Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
-// Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
-// Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
-// Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
-// Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
-
-// Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
-//     ->name('logout');
-
-//Route::prefix('admins')-
-// // Route::get('/forms/{formCode}', [FormController::class, 'submitForm'])->name('register');
-// Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
-// Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
-// Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
-// // Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
-// Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
-// Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
-
-// Route::get('/api/batches', [CourseProgrammeController::class, 'allBatches']);
-// Route::get('/api/batch/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
-// Route::get('/api/batch/programmes/{id}', [CourseProgrammeController::class, 'programmesByBatch']);
-
-
-// Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
-// Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
-
-// Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
-// Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
-// Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
-// Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
-// Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
-// Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
-// Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
-
-// Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
-//     ->name('logout');
 
 Route::prefix('admins')
     ->middleware(['auth:admin'])
@@ -702,28 +632,6 @@ Route::middleware(['auth:web'])->group(function () {
 });
 
 
-// // questionnaire routes
-// Route::get('/questionnaire', [StudentOperation::class, 'questionnaire'])->name('questionnaire.index');
-// Route::get('/questionnaire/{code}', [StudentOperation::class, 'take_questionnaire'])->name('questionnaire.take_questionnaire');
-// Route::post('/questionnaire/{code}', [StudentOperation::class, 'store_questionnaire'])->name('questionnaire.store');
-
-
-//             // Route::get('/ateendance', [StudentOperation::class, 'view_result']);
-
-//             // Route::get('/view_answer/{id}', [StudentOperation::class, 'view_answer']);
-
-//             Route::post('/start-exam/{id}', [StudentOperation::class, 'start_exam']);
-//             Route::get('/mark_attendance', [AttendanceController::class, 'recordAttendance'])->name('mark-attendance');
-//             Route::get('/logout', [AuthenticatedSessionController::class, 'destroy']);
-//         });
-//     });
-
-// Route::middleware('auth')->group(function () {
-//     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-//     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-//     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-// });
-require __DIR__ . '/auth.php';
 
 
 
@@ -781,5 +689,24 @@ Route::get('admin/test-roles', function () {
 })->middleware(['web']);
 
 
-require __DIR__ . '/backpack/custom.php';
+require __DIR__ . '/auth.php';
+
+// Custom Backpack auth routes with role-based redirect
+Route::group([
+    'prefix'     => config('backpack.base.route_prefix', 'admin'),
+    'namespace'  => 'App\Http\Controllers\Admin\Auth',
+], function () {
+    // Login routes
+    Route::get('login', 'LoginController@showLoginForm')->name('backpack.auth.login')->middleware('guest:admin');
+    Route::post('login', 'LoginController@login')->middleware('guest:admin');
+    Route::get('logout', 'LoginController@logout')->name('backpack.auth.logout');
+    Route::post('logout', 'LoginController@logout');
+
+    // Password Reset Routes - using Backpack's default controllers
+    Route::get('password/reset', '\Backpack\CRUD\app\Http\Controllers\Auth\ForgotPasswordController@showLinkRequestForm')->name('backpack.auth.password.reset');
+    Route::post('password/email', '\Backpack\CRUD\app\Http\Controllers\Auth\ForgotPasswordController@sendResetLinkEmail')->name('backpack.auth.password.email')->middleware('backpack.throttle.password.recovery:' . config('backpack.base.password_recovery_throttle_access'));
+    Route::get('password/reset/{token}', '\Backpack\CRUD\app\Http\Controllers\Auth\ResetPasswordController@showResetForm')->name('backpack.auth.password.reset.token');
+    Route::post('password/reset', '\Backpack\CRUD\app\Http\Controllers\Auth\ResetPasswordController@reset');
+});
+
 require __DIR__ . '/admin.php';

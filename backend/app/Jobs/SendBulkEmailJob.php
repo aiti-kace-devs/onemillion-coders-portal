@@ -15,7 +15,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Qoraiche\MailEclipse\Facades\MailEclipse;
 
 class SendBulkEmailJob implements ShouldQueue
 {
@@ -135,14 +134,14 @@ class SendBulkEmailJob implements ShouldQueue
 
     private function getGenericTemplateEmail(string $content, $subject = null)
     {
-        $replaceContent = MailEclipse::markdownedTemplateToView(false, $content);
+        $replaceContent = MailerHelper::parseMarkdown($content);
         $this->createView($replaceContent);
         return new GenericEmail($replaceContent, $subject, 'email.' . $this->filename);
     }
 
     private function sendBulkGenericTemplateEmail(string|array $emails, string $content, $subject = null, $bulk = false)
     {
-        $replaceContent = MailEclipse::markdownedTemplateToView(false, $content);
+        $replaceContent = MailerHelper::parseMarkdown($content);
         $filename = $this->createView($replaceContent);
         if (!$filename) {
             Log::error('Unable to send bulk image, view not created');

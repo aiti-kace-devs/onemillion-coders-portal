@@ -114,7 +114,7 @@ return [
         App\Http\Middleware\CheckIfAdmin::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         \Backpack\CRUD\app\Http\Middleware\AuthenticateSession::class,
-        \Backpack\CRUD\app\Http\Middleware\UseBackpackAuthGuardInsteadOfDefaultAuthGuard::class,
+        // \Backpack\CRUD\app\Http\Middleware\UseBackpackAuthGuardInsteadOfDefaultAuthGuard::class,
     ],
 
     // Alias for that middleware
@@ -172,7 +172,7 @@ return [
     // Should we use DB transactions when executing multiple queries? For example when creating an entry and it's relationships.
     // By wrapping in a database transaction you ensure that either all queries went ok, or if some failed the whole process
     // is rolled back and considered failed. This is a good setting for data integrity.
-    'useDatabaseTransactions' => false,
+    'useDatabaseTransactions' => true,
 
     /*
     |--------------------------------------------------------------------------

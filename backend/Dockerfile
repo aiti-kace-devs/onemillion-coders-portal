@@ -30,6 +30,8 @@ RUN apt-get update && apt-get install -y \
     default-mysql-client \
     libpq-dev zlib1g-dev \
     $PHPIZE_DEPS \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath pcntl posix exif \
     && pecl install redis \
@@ -60,11 +62,13 @@ COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 COPY docker/start-nginx.sh /usr/local/bin/start-nginx
 RUN chmod +x /usr/local/bin/start-nginx
+COPY docker/scripts/run-queue-worker.sh /usr/local/bin/run-queue-worker
+RUN chmod +x /usr/local/bin/run-queue-worker
 
 
 # Application setup
 WORKDIR /var/www/html
-COPY composer.json composer.lock ./
+COPY composer.json composer.lock package.json package-lock.json* ./
 
 COPY auth.json ./auth.json
 
@@ -77,7 +81,13 @@ COPY auth.json ./auth.json
 RUN composer install --no-dev --optimize-autoloader --no-scripts \
     && rm -rf /composer/cache
 
+# Install npm dependencies
+RUN npm install
+
 COPY . .
+
+# Build assets
+RUN npm run build
 
 RUN chown -R www-data:www-data /var/www/html \
     && mkdir -p  bootstrap/cache storage/framework/sessions storage/app/public/basset storage/logs storage/statamic storage/statamic/stache-locks \

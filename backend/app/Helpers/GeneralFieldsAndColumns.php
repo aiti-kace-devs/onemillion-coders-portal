@@ -17,7 +17,7 @@ trait GeneralFieldsAndColumns
     /**
      * Add a created_on date field
      */
-    public function addCreatedOnField(string $tab = null, string $label = 'Created At', string $format = null): void
+    public function addCreatedOnField(string $tab = '', string $label = 'Created At', string $format = ''): void
     {
         CRUD::field('created_on')
             ->type('datetime')
@@ -29,7 +29,7 @@ trait GeneralFieldsAndColumns
     /**
      * Add an updated_on date field
      */
-    public function addUpdatedOnField(string $tab = null, string $label = 'Updated At', string $format = null): void
+    public function addUpdatedOnField(string $tab = '', string $label = 'Updated At', string $format = ''): void
     {
         CRUD::field('updated_on')
             ->type('datetime')
@@ -41,7 +41,7 @@ trait GeneralFieldsAndColumns
     /**
      * Add an is_active switch field
      */
-    public function addIsActiveField( array $options = null, string $label = 'Status', string $name = 'is_active', string $tab = null): void
+    public function addIsActiveField(array $options = [], string $label = 'Status', string $name = 'is_active', string $tab = ''): void
     {
         CRUD::field($name)
             ->type('switch')
@@ -57,7 +57,7 @@ trait GeneralFieldsAndColumns
     /**
      * Add a name text field
      */
-    public function addNameField(string $tab = null, string $label = 'Name', int $limit = null): void
+    public function addNameField(string $tab = '', string $label = 'Name', int $limit = 0): void
     {
         CRUD::field('name')
             ->type('text')
@@ -72,7 +72,7 @@ trait GeneralFieldsAndColumns
     /**
      * Add a title text field
      */
-    public function addTitleField(string $tab = null, string $label = 'Title', int $limit = null): void
+    public function addTitleField(string $tab = '', string $label = 'Title', int $limit = 0): void
     {
         CRUD::field('title')
             ->type('text')
@@ -89,8 +89,8 @@ trait GeneralFieldsAndColumns
      */
     public function addRelationshipCountField(
         string $relationName,
-        string $label = null,
-        string $tab = null,
+        string $label = '',
+        string $tab = '',
         string $type = 'text'
     ): void {
         CRUD::field($relationName . '_count')
@@ -105,10 +105,10 @@ trait GeneralFieldsAndColumns
      */
     public function addRelationshipField(
         string $relationName,
-        string $label = null,
-        string $tab = null,
+        string $label = '',
+        string $tab = '',
         string $attribute = 'name',
-        string $model = null,
+        string $model = '',
         string $type = 'select2'
     ): void {
         CRUD::field($relationName)
@@ -123,13 +123,13 @@ trait GeneralFieldsAndColumns
     /**
      * Add a tinymce field
      */
-    public function addContentField(string $name = 'content', string $label = 'Content',string $tab = null, int $limit = null): void
+    public function addContentField(string $name = 'content', string $label = 'Content', string $tab = '', int $limit = 0): void
     {
         $attributes = [
             'placeholder' => 'Enter ' . strtolower($label),
         ];
 
-        if ($limit !== null) {
+        if ($limit != 0) {
             $attributes['maxlength'] = $limit;
         }
 
@@ -148,9 +148,9 @@ trait GeneralFieldsAndColumns
         string $label,
         string $entity,
         string $attribute = 'name',
-        string $model = null,
-        string $tab = null,
-        \Closure $options = null
+        string $model = '',
+        string $tab = '',
+        $options = null
     ): void {
         $model = $model ?? 'App\Models\\' . ucfirst($entity);
 
@@ -168,14 +168,14 @@ trait GeneralFieldsAndColumns
     /**
      * Add a description text area field
      */
-    public function addDescriptionField(string $name = 'description', string $label = 'Description', string $tab = null, int $limit = null, int $row = 2): void
+    public function addDescriptionField(string $name = 'description', string $label = 'Description', string $tab = '', int $limit = 0, int $row = 2): void
     {
         $attributes = [
             'placeholder' => 'Enter ' . strtolower($label),
             'rows' => $row
         ];
 
-        if ($limit !== null) {
+        if ($limit != 0) {
             $attributes['maxlength'] = $limit;
         }
 
@@ -189,13 +189,13 @@ trait GeneralFieldsAndColumns
     /**
      * Add a text field
      */
-    public function addTextField(string $name, string $label = 'Title', int $limit = null, string $tab = null): void
+    public function addTextField(string $name, string $label = 'Title', int $limit = 0, string $tab = ''): void
     {
         CRUD::field($name)
             ->type('text')
             ->label($label)
             ->attributes([
-                'maxlength' => $limit ?? $this->defaultStringLimit,
+                'maxlength' => $limit && $limit > 0 ? $limit : $this->defaultStringLimit,
                 'placeholder' => 'Enter ' . strtolower($label),
             ])
             ->when(!is_null($tab), fn($field) => $field->tab($tab));
@@ -207,8 +207,8 @@ trait GeneralFieldsAndColumns
     public function addEnumField(
         string $name = 'status',
         string $label = 'Status',
-        array $options = null,
-        string $tab = null
+        array $options = [],
+        string $tab = ''
     ): void {
         CRUD::field($name)
             ->type('enum')
@@ -227,7 +227,7 @@ trait GeneralFieldsAndColumns
     /**
      * Add a created_on date column
      */
-    public function addCreatedOnColumn(string $label = 'Created At', string $format = null): void
+    public function addCreatedOnColumn(string $label = 'Created At', string $format = ''): void
     {
         CRUD::column('created_on')
             ->type('datetime')
@@ -238,7 +238,7 @@ trait GeneralFieldsAndColumns
     /**
      * Add an updated_on date column
      */
-    public function addUpdatedOnColumn(string $label = 'Updated At', string $format = null): void
+    public function addUpdatedOnColumn(string $label = 'Updated At', string $format = ''): void
     {
         CRUD::column('updated_on')
             ->type('datetime')
@@ -249,7 +249,7 @@ trait GeneralFieldsAndColumns
     /**
      * Add an is_active boolean column
      */
-    public function addIsActiveColumn(string $label = 'Status', array $options = null): void
+    public function addIsActiveColumn(string $label = 'Status', array $options = []): void
     {
         CRUD::column('is_active')
             ->type('boolean')
@@ -293,7 +293,7 @@ trait GeneralFieldsAndColumns
      */
     public function addRelationshipCountColumn(
         string $relationName,
-        string $label = null,
+        string $label = '',
         bool $searchable = false,
         bool $orderable = true
     ): void {
@@ -312,7 +312,7 @@ trait GeneralFieldsAndColumns
      */
     public function addRelationshipColumn(
         string $relationName,
-        string $label = null,
+        string $label = '',
         string $attribute = 'name',
         bool $searchable = true,
         bool $orderable = true

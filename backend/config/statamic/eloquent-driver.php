@@ -102,4 +102,11 @@ return [
         'driver' => 'eloquent',
         'model' => \Statamic\Eloquent\Sites\SiteModel::class,
     ],
+    'users' => [
+        'driver' => 'eloquent',
+        'model' => App\Models\Admin::class,
+        'map' => [
+            'super' => 'is_super',
+        ],
+    ],
 ];

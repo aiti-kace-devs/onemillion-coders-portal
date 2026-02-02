@@ -9,6 +9,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use Illuminate\Support\Facades\DB;
+
 /**
  * Class AdminCrudController
  * @package App\Http\Controllers\Admin
@@ -112,7 +113,6 @@ class AdminCrudController extends CrudController
         if ($entry->userProfile) {
             $this->setupProfileColumns();
         }
-        
     }
 
     /**
@@ -140,21 +140,15 @@ class AdminCrudController extends CrudController
         }
 
         $response = $this->traitStore();
-        
+
         // Get the created admin
         $admin = $this->crud->entry;
-        
-        // Handle password hashing
-        if (request()->has('password') && request()->input('password')) {
-            $admin->password = request()->input('password');
-            $admin->save();
-        }
-        
+
         // Sync the assigned courses
         if (request()->has('courses')) {
             $admin->assignedCourses()->sync(request()->input('courses'));
         }
-        
+
         return $response;
     }
 
@@ -167,21 +161,15 @@ class AdminCrudController extends CrudController
         }
 
         $response = $this->traitUpdate();
-        
+
         // Get the updated admin
         $admin = $this->crud->entry;
-        
-        // Handle password hashing
-        if (request()->has('password') && request()->input('password')) {
-            $admin->password = request()->input('password');
-            $admin->save();
-        }
-        
+
         // Sync the assigned courses
         if (request()->has('courses')) {
             $admin->assignedCourses()->sync(request()->input('courses'));
         }
-        
+
         return $response;
     }
 
@@ -221,8 +209,8 @@ class AdminCrudController extends CrudController
             return redirect(backpack_url('admin/admin'));
         }
     }
-    
-    
+
+
     // No need for setupDeleteOperation unless you want to add custom logic before/after delete
     // Keep only custom endpoints that are not standard CRUD
     // Toggle is_super admin status

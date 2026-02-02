@@ -20,7 +20,7 @@ class UserSeeder extends Seeder
         $user = [
             'name' => config('app.super_admin_name'),
             'email' => config('app.super_admin_email'),
-            'password' => Hash::make(config('app.super_admin_password')),
+            'password' => config('app.super_admin_password'),
             // 'userId' => Str::uuid(),
             'super' => 1,
             'is_super' => 1,

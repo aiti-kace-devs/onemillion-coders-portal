@@ -1,5 +1,6 @@
 services:
   traefik:
+    profiles: ["backend", "frontend"]
     image: traefik:v2.10
     command:
       - "--api.insecure=true"
@@ -15,6 +16,7 @@ services:
       - omcp-network
 
   db:
+    profiles: ["backend"]
     image: mysql:8.0
     container_name: omcp_db
     restart: unless-stopped
@@ -33,6 +35,7 @@ services:
       retries: 10
 
   redis:
+    profiles: ["backend"]
     image: redis:alpine
     container_name: omcp_redis
     restart: unless-stopped
@@ -44,15 +47,17 @@ services:
       retries: 5
 
   backend:
+    profiles: ["backend"]
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: omcp-backend:latest
     container_name: omcp_backend
     restart: unless-stopped
     env_file:
       - .env.docker
     environment:
-      - RUN_QUEUE_WORKER=false  
+      - RUN_QUEUE_WORKER=false
     depends_on:
       db:
         condition: service_healthy
@@ -60,7 +65,7 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`api.omcp.localhost`)"
+      - "traefik.http.routers.backend.rule=Host(`api.${APP_DOMAIN:-omcp.localhost}`)"
       - "traefik.http.routers.backend.entrypoints=web"
       - "traefik.http.services.backend.loadbalancer.server.port=8080"
       - "traefik.http.routers.app-user.middlewares=cors"
@@ -73,9 +78,8 @@ services:
       - omcp-network
 
   queue:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    profiles: ["backend"]
+    image: omcp-backend:latest
     container_name: omcp_queue
     restart: unless-stopped
     env_file:
@@ -91,6 +95,7 @@ services:
       - omcp-network
 
   website:
+    profiles: ["frontend"]
     build:
       context: ./website
       dockerfile: Dockerfile
@@ -104,10 +109,28 @@ services:
       - backend
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.website.rule=Host(`omcp.localhost`)"
+      - "traefik.http.routers.website.rule=Host(`${APP_DOMAIN:-omcp.localhost}`)"
       - "traefik.http.routers.website.entrypoints=web"
       - "traefik.http.routers.website.priority=1"
       - "traefik.http.services.website.loadbalancer.server.port=3000"
+    networks:
+      - omcp-network
+
+  mailpit:
+    profiles: ["backend"]
+    image: axllent/mailpit:latest
+    container_name: omcp_mailpit
+    restart: unless-stopped
+    environment:
+      - MP_UI_AUTH=${MAILPIT_UI_USERNAME:-admin}:${MAILPIT_UI_PASSWORD:-password}
+      - MP_DATA_DIR=/data
+    volumes:
+      - omcp_mailpit_data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mailpit.rule=Host(`mail.${APP_DOMAIN:-omcp.localhost}`)"
+      - "traefik.http.routers.mailpit.entrypoints=web"
+      - "traefik.http.services.mailpit.loadbalancer.server.port=8025"
     networks:
       - omcp-network
 
@@ -117,3 +140,4 @@ networks:
 
 volumes:
   omcp_db_data:
+  omcp_mailpit_data:

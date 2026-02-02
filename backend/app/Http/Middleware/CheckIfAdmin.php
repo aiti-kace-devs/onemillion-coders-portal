@@ -28,9 +28,17 @@ class CheckIfAdmin
      */
     private function checkIfUserIsAdmin(Admin $user)
     {
-        // return ($user->is_admin == 1);
-        return $user->roles()->exists();
-        // return true;
+        $isSuper = $user->isSuper();
+        $hasRoles = $user->roles()->exists();
+
+        \Log::info("Admin Auth Check", [
+            'email' => $user->email,
+            'is_super' => $isSuper,
+            'has_roles' => $hasRoles,
+            'user_id' => $user->id
+        ]);
+
+        return $isSuper || $hasRoles;
     }
 
     /**
@@ -44,7 +52,14 @@ class CheckIfAdmin
         if ($request->ajax() || $request->wantsJson()) {
             return response(trans('backpack::base.unauthorized'), 401);
         } else {
-            return redirect()->guest(backpack_url('login'));
+            // Log the user out to break the infinite redirect loop
+            if (backpack_auth()->check()) {
+                backpack_auth()->logout();
+            }
+
+            return redirect()->guest(backpack_url('login'))->withErrors([
+                'email' => 'You do not have permission to access the admin area.'
+            ]);
         }
     }
 
@@ -57,14 +72,29 @@ class CheckIfAdmin
      */
     public function handle($request, Closure $next)
     {
+        \Log::info("CheckIfAdmin::handle START", [
+            'url' => $request->fullUrl(),
+            'is_guest' => backpack_auth()->guest(),
+            'session_id' => $request->session()->getId(),
+        ]);
+
         if (backpack_auth()->guest()) {
+            \Log::info("CheckIfAdmin: User is GUEST, redirecting to login");
             return $this->respondToUnauthorizedRequest($request);
         }
 
-        if (! $this->checkIfUserIsAdmin(backpack_user())) {
+        $user = backpack_user();
+        \Log::info("CheckIfAdmin: User authenticated", [
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]);
+
+        if (! $this->checkIfUserIsAdmin($user)) {
+            \Log::info("CheckIfAdmin: User FAILED admin check, logging out");
             return $this->respondToUnauthorizedRequest($request);
         }
 
+        \Log::info("CheckIfAdmin: User PASSED admin check, proceeding");
         return $next($request);
     }
 }

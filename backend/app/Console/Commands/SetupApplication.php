@@ -50,7 +50,8 @@ class SetupApplication extends Command
             $this->info('No version change detected (current: ' . $this->currentVersion . ')');
         }
 
-        $this->importFlatFileContent();
+
+        $this->call('storage:link');
 
         // Cache config at the end
         $this->call('optimize');
@@ -136,6 +137,7 @@ class SetupApplication extends Command
 
         // Major version change (1.x.x → 2.x.x)
         if ($current[0] !== $previous[0]) {
+            $this->importFlatFileContent();
             return [
                 ['migrate', '--force'],
                 ['db:seed', '--force'],
@@ -209,20 +211,20 @@ class SetupApplication extends Command
     {
         // run these artisan commands with no interaction
         /**
-         * 
-         * 
+         *
+         *
          */
 
-        $this->call('eloquent:import-assets', ['--no-interaction' => true]);
-        $this->call('eloquent:import-blueprints', ['--no-interaction' => true]);
-        $this->call('eloquent:import-collections', ['--no-interaction' => true]);
-        $this->call('eloquent:import-entries', ['--no-interaction' => true]);
-        $this->call('eloquent:import-forms', ['--no-interaction' => true]);
-        $this->call('eloquent:import-globals', ['--no-interaction' => true]);
-        $this->call('eloquent:import-groups', ['--no-interaction' => true]);
-        $this->call('eloquent:import-navs', ['--no-interaction' => true]);
-        $this->call('eloquent:import-revisions', ['--no-interaction' => true]);
-        $this->call('eloquent:import-taxonomies', ['--no-interaction' => true]);
-        $this->call('eloquent:import-users', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-assets', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-blueprints', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-collections', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-entries', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-forms', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-globals', ['--no-interaction' => true]);
+        // $this->call('statamic:eloquent:import-groups', ['--no-interaction' => true]);
+        // $this->call('statamic:eloquent:import-navs', ['--no-interaction' => true]);
+        // $this->call('statamic:eloquent:import-revisions', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-taxonomies', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-users', ['--no-interaction' => true]);
     }
 }
