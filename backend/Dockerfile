@@ -1,10 +1,8 @@
 FROM php:8.3-fpm
 
-# Disable xz sandbox (fails in Docker/build on some Linux hosts when unpacking Node.js)
-ENV XZ_OPTIONS=--no-sandbox
-
 # Environment variables
 ENV PHP_PM_MAX_CHILDREN=12 \
+    NODE_VERSION=20.18.0 \
     PHP_PM_START_SERVERS=3 \
     PHP_MIN_SPARE_SERVERS=2 \
     PHP_MAX_SPARE_SERVERS=4 \
@@ -35,10 +33,9 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     zlib1g-dev \
     $PHPIZE_DEPS \
-    # 1. Install Node.js using NodeSource setup script
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    # 4. Configure and install PHP extensions
+    # 1. Install Node.js from official binary (tar.gz avoids xz sandbox issues on Linux)
+    && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz" | tar xz -C /usr/local --strip-components=1 \
+    # 2. Configure and install PHP extensions
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath pcntl posix exif \
     && pecl install redis \
