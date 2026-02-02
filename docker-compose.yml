@@ -38,6 +38,8 @@ services:
     ports:
       - "${TRAEFIK_PORT:-80}:80"
       # - "8082:8080" # Traefik Dashboard
+    environment:
+      - DOCKER_API_VERSION=${DOCKER_API_VERSION:-1.44}
     labels:
       - "traefik.enable=true"
       # HTTP Basic Auth for dashboard, PhpMyAdmin, Mailpit (credentials from env)
