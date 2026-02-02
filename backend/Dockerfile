@@ -18,8 +18,9 @@ ENV PHP_PM_MAX_CHILDREN=12 \
 # Disable xz sandbox so apt/dpkg unpacking works on restricted Linux hosts (Docker/CI)
 ENV XZ_OPTIONS=--no-sandbox
 
-RUN export XZ_OPTIONS=--no-sandbox \
-    && apt-get update && apt-get install -y \
+# Install apt packages with --no-triggers, then run triggers with XZ_OPTIONS so dpkg trigger scripts (e.g. libc-bin) see it and xz sandbox does not fail
+RUN apt-get update \
+    && apt-get install -y --no-triggers \
     nginx \
     supervisor \
     git \
@@ -37,6 +38,7 @@ RUN export XZ_OPTIONS=--no-sandbox \
     libpq-dev \
     zlib1g-dev \
     $PHPIZE_DEPS \
+    && XZ_OPTIONS=--no-sandbox dpkg --configure -a \
     # 1. Install Node.js from official binary (tar.gz avoids xz sandbox issues on Linux)
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz" | tar xz -C /usr/local --strip-components=1 \
     # 2. Configure and install PHP extensions
