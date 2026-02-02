@@ -3,13 +3,27 @@ services:
     profiles: ["backend", "frontend"]
     image: traefik:v2.10
     command:
-      - "--api.insecure=true"
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
     ports:
       - "80:80"
-      - "8082:8080" # Traefik Dashboard
+      # - "8082:8080" # Traefik Dashboard
+    labels:
+      - "traefik.enable=true"
+      # 1. Create the Router (Dashboard access via /dashboard/)
+      - "traefik.http.routers.api.rule=Host(traefik.${APP_DOMAIN:-omcp.localhost})" # Or your domain
+      - "traefik.http.routers.api.service=api@internal"
+      - "traefik.http.routers.api.entrypoints=web"
+
+      # 2. Attach Auth Middleware
+      - "traefik.http.routers.api.middlewares=auth"
+
+      # 3. Define Auth Credentials (user:password)
+      # Example: admin:password (hashed and escaped)
+      - "traefik.http.middlewares.auth.basicauth.users=admin:${TRAEFIK_ADMIN_PASSWORD:-$$2y$$05$$bz5EaQIwW7KdJ.yFbW6mI..g1FFo0viV4NBkxZzOL24u/W3dvyaNC}"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
