@@ -21,6 +21,8 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     unzip \
+    gnupg \
+    ca-certificates \
     libpng-dev \
     libwebp-dev \
     libjpeg62-turbo-dev \
@@ -28,9 +30,13 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     libssl-dev \
     default-mysql-client \
-    libpq-dev zlib1g-dev \
+    libpq-dev \
+    zlib1g-dev \
     $PHPIZE_DEPS \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
     && apt-get install -y nodejs \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath pcntl posix exif \
@@ -38,6 +44,7 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-enable redis \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
