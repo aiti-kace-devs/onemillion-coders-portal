@@ -1,5 +1,8 @@
 FROM php:8.3-fpm
 
+# Disable xz sandbox (fails in Docker/build on some Linux hosts when unpacking Node.js)
+ENV XZ_OPTIONS=--no-sandbox
+
 # Environment variables
 ENV PHP_PM_MAX_CHILDREN=12 \
     PHP_PM_START_SERVERS=3 \
