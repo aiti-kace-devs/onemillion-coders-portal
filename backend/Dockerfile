@@ -1,4 +1,4 @@
-FROM php:8.3-fpm
+FROM php:8.3-fpm-bookworm
 
 # Environment variables
 ENV PHP_PM_MAX_CHILDREN=12 \
@@ -13,14 +13,9 @@ ENV PHP_PM_MAX_CHILDREN=12 \
     PHP_OPEN_BASEDIR=/var/www/html:/dev/stdout:/tmp:/var/www:/var/www/.config/gcloud \
     COMPOSER_ALLOW_SUPERUSER=1
 
-# COPY docker/php/ondrej_ubuntu_php.gpg /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg
-
-# Disable xz sandbox so apt/dpkg unpacking works on restricted Linux hosts (Docker/CI)
-ENV XZ_OPTIONS=--no-sandbox
 
 # Install apt packages with --no-triggers, then run triggers with XZ_OPTIONS so dpkg trigger scripts (e.g. libc-bin) see it and xz sandbox does not fail
-RUN apt-get update \
-    && apt-get install -y -o Dpkg::Options::="--no-triggers" \
+RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \
     git \
@@ -38,9 +33,9 @@ RUN apt-get update \
     libpq-dev \
     zlib1g-dev \
     $PHPIZE_DEPS \
-    && XZ_OPTIONS=--no-sandbox dpkg --configure -a \
-    # 1. Install Node.js from official binary (tar.gz avoids xz sandbox issues on Linux)
-    && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz" | tar xz -C /usr/local --strip-components=1 \
+      # 1. Install Node.js using NodeSource setup script
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     # 2. Configure and install PHP extensions
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath pcntl posix exif \
