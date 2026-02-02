@@ -20,7 +20,7 @@ ENV XZ_OPTIONS=--no-sandbox
 
 # Install apt packages with --no-triggers, then run triggers with XZ_OPTIONS so dpkg trigger scripts (e.g. libc-bin) see it and xz sandbox does not fail
 RUN apt-get update \
-    && apt-get install -y --no-triggers \
+    && apt-get install -y -o Dpkg::Options::="--no-triggers" \
     nginx \
     supervisor \
     git \
