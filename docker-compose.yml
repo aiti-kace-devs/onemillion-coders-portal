@@ -147,6 +147,7 @@ services:
       - "8080" # Internal port only, not published to host
     environment:
       - RUN_QUEUE_WORKER=false
+    env_file: .env
     depends_on:
       db:
         condition: service_healthy
@@ -181,6 +182,7 @@ services:
     image: omcp-backend:latest
     container_name: omcp_queue
     restart: unless-stopped
+    env_file: .env
     environment:
       - RUN_QUEUE_WORKER=true
     depends_on:
