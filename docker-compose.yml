@@ -155,7 +155,7 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`api.${APP_DOMAIN:-omcp.localhost}`)"
+      - "traefik.http.routers.backend.rule=Host(`app.${APP_DOMAIN:-omcp.localhost}`)"
       - "traefik.http.routers.backend.entrypoints=web"
       - "traefik.http.services.backend.loadbalancer.server.port=8080"
       # Apply multiple middlewares: CORS and security headers
@@ -190,6 +190,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      backend:
+        condition: service_started
     networks:
       - omcp-network
 
@@ -199,9 +201,10 @@ services:
       context: ./website
       dockerfile: Dockerfile
       args:
-        - ENVIRONMENT=dev
+        - ENVIRONMENT=none
     container_name: omcp_website
     restart: unless-stopped
+    env_file: .env
     # NOTE: No ports exposed - only accessible through Traefik gateway
     expose:
       - "3000" # Internal port only, not published to host

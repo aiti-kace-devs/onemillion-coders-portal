@@ -13,21 +13,22 @@ else
     find storage/statamic -type d -exec chmod 775 {} + && find storage/statamic -type f -exec chmod 664 {} +
     find storage/statamic/stache-locks -type d -exec chmod 775 {} + && find storage/statamic/stache-locks -type f -exec chmod 664 {} +
 
-    # If vendor is missing (e.g. during development with a volume mount), install dependencies
-    if [ ! -f vendor/autoload.php ]; then
-        echo "Vendor directory not found. Running composer install..."
-        composer install --no-dev --optimize-autoloader --no-scripts
-    fi
+
 
     if [[ "${RUN_QUEUE_WORKER:-false}" == "true" ]]; then
         echo "Running as QUEUE WORKER - disabling Nginx and FPM"
         rm -f /etc/supervisor/conf.d/fpm.conf /etc/supervisor/conf.d/nginx.conf
     else
+          # If vendor is missing (e.g. during development with a volume mount), install dependencies
+        if [ ! -f vendor/autoload.php ]; then
+            echo "Vendor directory not found. Running composer install..."
+            composer install --no-dev --optimize-autoloader --no-scripts
+        fi
         echo "Running as WEB SERVER - disabling Queue Worker"
         rm -f /etc/supervisor/conf.d/queue-worker.conf
+        php artisan app:setup-application
     fi
 
-    php artisan app:setup-application
     exec supervisord -n -c /etc/supervisor/supervisord.conf
 fi
 
