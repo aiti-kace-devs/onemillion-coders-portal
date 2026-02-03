@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\RegistrationFormRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Backpack\CRUD\app\Library\CrudPanel\Hooks\Facades\LifecycleHook;
 use App\Helpers\FilterHelper;
 use App\Helpers\StudentFormFieldHelpers;
+
 /**
  * Class FormCrudController
  * @package App\Http\Controllers\Admin
@@ -37,7 +39,7 @@ class FormCrudController extends CrudController
         $this->setSearchResultAttributes(['id', 'title', 'description']);
 
         // Add permission checks
-        $this->crud->operation(['list', 'show'], function () {
+        LifecycleHook::hookInto(['list:before_setup', 'show:before_setup'], function () {
             $this->crud->addClause('where', function ($query) {
                 if (!backpack_user()->can('form.read.all')) {
                     // Add any specific filtering logic here if needed

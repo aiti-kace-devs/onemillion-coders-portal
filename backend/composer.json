@@ -35,7 +35,6 @@
         "spatie/laravel-permission": "^6.16",
         "spatie/laravel-query-builder": "^6.3",
         "stackkit/laravel-google-cloud-tasks-queue": "^5.0",
-        "statamic-rad-pack/runway": "^8.5",
         "statamic/cms": "^5.58",
         "statamic/eloquent-driver": "^4.30",
         "tightenco/ziggy": "^2.5",

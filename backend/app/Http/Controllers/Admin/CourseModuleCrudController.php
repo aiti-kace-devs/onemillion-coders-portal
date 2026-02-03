@@ -10,6 +10,7 @@ use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\FilterHelper;
 use App\Helpers\CourseFieldHelpers;
 use App\Helpers\WidgetHelper;
+
 /**
  * Class CourseModuleCrudController
  * @package App\Http\Controllers\Admin
@@ -27,7 +28,7 @@ class CourseModuleCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -35,20 +36,18 @@ class CourseModuleCrudController extends CrudController
         CRUD::setModel(\App\Models\CourseModule::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-module');
         CRUD::setEntityNameStrings('course module', 'course modules');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::courseModuleStatisticsWidget();
-        });
     }
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
     protected function setupListOperation()
     {
+        WidgetHelper::courseModuleStatisticsWidget();
+
         CRUD::column('title')->type('textarea');
         FilterHelper::addGenericRelationshipColumn('programme', 'Course', 'programme', 'title');
         FilterHelper::addBooleanColumn('status', 'status');
@@ -64,7 +63,7 @@ class CourseModuleCrudController extends CrudController
     }
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
@@ -96,13 +95,12 @@ class CourseModuleCrudController extends CrudController
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
-
+        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
     }
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */

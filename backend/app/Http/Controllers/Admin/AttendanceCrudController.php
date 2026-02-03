@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\AttendanceRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Backpack\CRUD\app\Library\CrudPanel\Hooks\Facades\LifecycleHook;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\Course;
@@ -47,7 +48,7 @@ class AttendanceCrudController extends CrudController
         $this->crud->denyAccess('create');
 
         // Add permission checks
-        $this->crud->operation(['list', 'show'], function () {
+        LifecycleHook::hookInto(['list:before_setup', 'show:before_setup'], function () {
             $this->crud->addClause('where', function ($query) {
                 if (!backpack_user()->can('attendance.read.all')) {
                     // Add any specific filtering logic here if needed
@@ -86,8 +87,8 @@ class AttendanceCrudController extends CrudController
             ->pluck('session', 'session')
             ->toArray();
 
-        FilterHelper::addSelectFilter('session', 'Filter Session', $sessions, 'select2', function($value) {
-            CRUD::addClause('whereHas', 'courseSession', function($query) use ($value) {
+        FilterHelper::addSelectFilter('session', 'Filter Session', $sessions, 'select2', function ($value) {
+            CRUD::addClause('whereHas', 'courseSession', function ($query) use ($value) {
                 $query->where('course_sessions.session', $value);
             });
         });

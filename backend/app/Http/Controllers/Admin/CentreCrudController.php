@@ -11,6 +11,7 @@ use App\Helpers\GeneralFieldsAndColumns;
 use Illuminate\Http\Request;
 use App\Helpers\FilterHelper;
 use App\Helpers\WidgetHelper;
+
 /**
  * Class CentreCrudController
  * @package App\Http\Controllers\Admin
@@ -35,10 +36,6 @@ class CentreCrudController extends CrudController
         CRUD::setModel(\App\Models\Centre::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/centre');
         CRUD::setEntityNameStrings('centre', 'centres');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::centreStatisticsWidget();
-        });
     }
 
     /**
@@ -49,6 +46,8 @@ class CentreCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::centreStatisticsWidget();
+
         CRUD::column('title')->type('textarea');
         CRUD::column('branch_id')->label('Branch')->linkTo('branch.show');
         FilterHelper::addBooleanColumn('status', 'status');
@@ -79,21 +78,20 @@ class CentreCrudController extends CrudController
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
-CRUD::addField([
-    'name'        => 'branch_id',
-    'label'       => 'Branch',
-    'type'        => 'select',
-    'entity'      => 'branch',
-    'model'       => Branch::class,
-    'attribute'   => 'title',
-    'allows_null' => true,
-    'default'     => null,
-    'wrapper'     => ['class' => 'form-group col-6'],
-]);
+        CRUD::addField([
+            'name'        => 'branch_id',
+            'label'       => 'Branch',
+            'type'        => 'select',
+            'entity'      => 'branch',
+            'model'       => Branch::class,
+            'attribute'   => 'title',
+            'allows_null' => true,
+            'default'     => null,
+            'wrapper'     => ['class' => 'form-group col-6'],
+        ]);
 
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
-
+        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
     }
 
     /**
@@ -120,8 +118,4 @@ CRUD::addField([
             ->get()
             ->map(fn($centre) => ['id' => $centre->id, 'text' => $centre->title]);
     }
-
-
-
-
 }

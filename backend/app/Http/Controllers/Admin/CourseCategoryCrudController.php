@@ -25,7 +25,7 @@ class CourseCategoryCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -33,20 +33,18 @@ class CourseCategoryCrudController extends CrudController
         CRUD::setModel(\App\Models\CourseCategory::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-category');
         CRUD::setEntityNameStrings('course category', 'course categories');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::courseCategoryStatisticsWidget();
-        });
     }
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
     protected function setupListOperation()
     {
+        WidgetHelper::courseCategoryStatisticsWidget();
+
         CRUD::column('title')->type('textarea');
         CRUD::column('description')->type('textarea');
         FilterHelper::addBooleanColumn('status', 'status');
@@ -57,7 +55,7 @@ class CourseCategoryCrudController extends CrudController
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
@@ -86,13 +84,12 @@ class CourseCategoryCrudController extends CrudController
             'wrapper' => ['class' => 'form-group col-5'],
         ]);
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
-
+        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
     }
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */

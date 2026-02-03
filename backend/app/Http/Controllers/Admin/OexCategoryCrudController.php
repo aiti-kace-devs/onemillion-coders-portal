@@ -8,6 +8,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\FilterHelper;
 use App\Helpers\WidgetHelper;
 use App\Helpers\GeneralFieldsAndColumns;
+
 /**
  * Class OexCategoryCrudController
  * @package App\Http\Controllers\Admin
@@ -32,10 +33,6 @@ class OexCategoryCrudController extends CrudController
         CRUD::setModel(\App\Models\OexCategory::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/category');
         CRUD::setEntityNameStrings('category', 'categories');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::categorytatisticsWidget();
-        });
     }
 
     /**
@@ -46,6 +43,8 @@ class OexCategoryCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::categorytatisticsWidget();
+
         CRUD::column('name')->type('text');
         FilterHelper::addBooleanColumn('status', 'status');
         CRUD::column('created_at');
@@ -54,9 +53,9 @@ class OexCategoryCrudController extends CrudController
         CRUD::enableExportButtons();
     }
 
-        protected function setupShowOperation()
+    protected function setupShowOperation()
     {
-          $this->setupListOperation();
+        $this->setupListOperation();
     }
 
     /**
@@ -75,7 +74,7 @@ class OexCategoryCrudController extends CrudController
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
     }
 
     /**

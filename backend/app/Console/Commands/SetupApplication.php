@@ -221,6 +221,7 @@ class SetupApplication extends Command
         $this->call('statamic:eloquent:import-entries', ['--no-interaction' => true]);
         $this->call('statamic:eloquent:import-forms', ['--no-interaction' => true]);
         $this->call('statamic:eloquent:import-globals', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-taxonomies', ['--no-interaction' => true]);
         $this->call('statamic:eloquent:import-users', ['--no-interaction' => true]);
     }
 }

@@ -9,6 +9,7 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\Course;
 use App\Helpers\CourseFieldHelpers;
+
 /**
  * Class CourseSessionCrudController
  * @package App\Http\Controllers\Admin
@@ -33,10 +34,6 @@ class CourseSessionCrudController extends CrudController
         CRUD::setModel(\App\Models\CourseSession::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-session');
         CRUD::setEntityNameStrings('course session', 'course sessions');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::courseSessionStatisticsWidget();
-        });
     }
 
     /**
@@ -47,6 +44,8 @@ class CourseSessionCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::courseSessionStatisticsWidget();
+
         CRUD::column('name')->type('textarea');
         CRUD::column('limit');
         CRUD::column('course_time');

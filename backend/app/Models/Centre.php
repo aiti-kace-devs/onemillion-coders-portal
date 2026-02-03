@@ -10,7 +10,6 @@ class Centre extends Model
 {
     use CrudTrait;
     use HasFactory;
-    use \StatamicRadPack\Runway\Traits\HasRunwayResource;
 
 
     protected $fillable = [

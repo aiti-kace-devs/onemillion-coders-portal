@@ -10,6 +10,7 @@ use App\Helpers\CourseFieldHelpers;
 use App\Helpers\FilterHelper;
 use App\Models\Centre;
 use App\Models\Admin;
+
 /**
  * Class StudentVerificationCrudController
  * @package App\Http\Controllers\Admin
@@ -26,7 +27,7 @@ class StudentVerificationCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -39,20 +40,18 @@ class StudentVerificationCrudController extends CrudController
         CRUD::denyAccess('update');
         CRUD::denyAccess('delete');
         CRUD::denyAccess('show');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::verificationStatisticsWidget();
-        });
     }
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
     protected function setupListOperation()
     {
+        WidgetHelper::verificationStatisticsWidget();
+
         CRUD::addColumn([
             'name' => 'name_previous_name',
             'label' => 'Fullname (Previous Name)',
@@ -86,10 +85,10 @@ class StudentVerificationCrudController extends CrudController
         $this->courseFilter('registered_course');
         FilterHelper::addNullableColumnFilter('verification_status', 'verification_date', 'Verified');
         $admins = Admin::whereIn('id', function ($query) {
-        $query->select('verified_by')
-            ->from('users')
-            ->whereNotNull('verified_by')
-            ->groupBy('verified_by');
+            $query->select('verified_by')
+                ->from('users')
+                ->whereNotNull('verified_by')
+                ->groupBy('verified_by');
         })->pluck('name', 'id')->toArray();
 
         CRUD::filter('verified_by')
@@ -105,7 +104,7 @@ class StudentVerificationCrudController extends CrudController
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
@@ -122,7 +121,7 @@ class StudentVerificationCrudController extends CrudController
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */
@@ -146,5 +145,4 @@ class StudentVerificationCrudController extends CrudController
         \Alert::success('Verification has been reset successfully')->flash();
         return back();
     }
-
 }

@@ -10,6 +10,7 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\OexCategory;
 use App\Helpers\CourseFieldHelpers;
+
 /**
  * Class OexExamMasterCrudController
  * @package App\Http\Controllers\Admin
@@ -35,10 +36,6 @@ class OexExamMasterCrudController extends CrudController
         CRUD::setModel(\App\Models\OexExamMaster::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/manage-exam');
         CRUD::setEntityNameStrings('manage exam', 'manage exams');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::manageExamStatisticsWidget();
-        });
     }
 
     /**
@@ -49,6 +46,8 @@ class OexExamMasterCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::manageExamStatisticsWidget();
+
         CRUD::column('title');
         FilterHelper::addCategoryColumn();
         CRUD::column('passmark');
@@ -97,15 +96,15 @@ class OexExamMasterCrudController extends CrudController
 
 
         CRUD::addField([
-    'name' => 'category',
-    'label' => 'Category',
-    'type' => 'select2',
-    'entity' => 'categoryRelation',
-    'attribute' => 'name',
-    'model' => OexCategory::class,
-    'allows_null' => false,
-    'wrapper' => ['class' => 'form-group col-6'],
-]);
+            'name' => 'category',
+            'label' => 'Category',
+            'type' => 'select2',
+            'entity' => 'categoryRelation',
+            'attribute' => 'name',
+            'model' => OexCategory::class,
+            'allows_null' => false,
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
 
         CRUD::addField([
             'name' => 'exam_duration',
@@ -116,14 +115,14 @@ class OexExamMasterCrudController extends CrudController
         ]);
 
 
-                CRUD::addField([
+        CRUD::addField([
             'name' => 'passmark',
             'label' => 'Passmark',
             'type'      => 'number',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
 
 
         CRUD::addField([
@@ -132,7 +131,6 @@ class OexExamMasterCrudController extends CrudController
             'type'      => 'date',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
-
     }
 
     /**
@@ -145,7 +143,4 @@ class OexExamMasterCrudController extends CrudController
     {
         $this->setupCreateOperation();
     }
-
-
-
 }

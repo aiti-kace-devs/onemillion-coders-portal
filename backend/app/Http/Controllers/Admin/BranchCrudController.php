@@ -8,6 +8,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\FilterHelper;
 use App\Helpers\WidgetHelper;
+
 /**
  * Class BranchCrudController
  * @package App\Http\Controllers\Admin
@@ -32,10 +33,6 @@ class BranchCrudController extends CrudController
         CRUD::setModel(\App\Models\Branch::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/branch');
         CRUD::setEntityNameStrings('branch', 'branches');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::branchStatisticsWidget();
-        });
     }
 
     /**
@@ -46,6 +43,8 @@ class BranchCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::branchStatisticsWidget();
+
         CRUD::column('title');
         FilterHelper::addBooleanColumn('status', 'status');
         CRUD::column('created_at');
@@ -69,7 +68,7 @@ class BranchCrudController extends CrudController
     {
         CRUD::setValidation(BranchRequest::class);
         CRUD::field('title')->type('text');
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
     }
 
     /**

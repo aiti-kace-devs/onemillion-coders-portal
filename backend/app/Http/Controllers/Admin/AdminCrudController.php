@@ -6,6 +6,7 @@ use App\Http\Requests\AdminRequest;
 use App\Models\Admin;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Backpack\CRUD\app\Library\CrudPanel\Hooks\Facades\LifecycleHook;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use Illuminate\Support\Facades\DB;
@@ -44,12 +45,8 @@ class AdminCrudController extends CrudController
         $this->setSearchableColumns(['email', 'name']);
         $this->setSearchResultAttributes(['id', 'email', 'name']);
 
-        $this->crud->operation('list', function () {
-            WidgetHelper::adminStatisticsWidget();
-        });
-
         // Add permission checks
-        $this->crud->operation(['list', 'show'], function () {
+        LifecycleHook::hookInto(['list:before_setup', 'show:before_setup'], function () {
             $this->crud->addClause('where', function ($query) {
                 if (!backpack_user()->can('admin.read.all')) {
                     $query->where('id', backpack_user()->id);
@@ -66,6 +63,8 @@ class AdminCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::adminStatisticsWidget();
+
         // Check permissions
         if (!backpack_user()->can('admin.read.all')) {
             abort(403, 'Unauthorized action.');

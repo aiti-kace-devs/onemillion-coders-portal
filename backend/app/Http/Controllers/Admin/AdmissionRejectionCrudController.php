@@ -9,6 +9,7 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Helpers\CourseFieldHelpers;
 use App\Models\Course;
+
 /**
  * Class AdmissionRejectionCrudController
  * @package App\Http\Controllers\Admin
@@ -33,10 +34,6 @@ class AdmissionRejectionCrudController extends CrudController
         CRUD::setModel(\App\Models\AdmissionRejection::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/admission-rejection');
         CRUD::setEntityNameStrings('admission rejection', 'admission rejections');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::admissionRejectionWidgets();
-        });
     }
 
     /**
@@ -47,6 +44,7 @@ class AdmissionRejectionCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::admissionRejectionWidgets();
 
         CRUD::column('user_id')->label('Student')->linkTo('user.show');
 
@@ -62,7 +60,6 @@ class AdmissionRejectionCrudController extends CrudController
     public function setupShowOperation()
     {
         $this->setupListOperation();
-
     }
 
 

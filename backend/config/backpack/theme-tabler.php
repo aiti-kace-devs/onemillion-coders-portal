@@ -41,6 +41,7 @@ return [
     'styles' => [
         base_path('vendor/backpack/theme-tabler/resources/assets/css/color-adjustments.css'),
         base_path('vendor/backpack/theme-tabler/resources/assets/css/colors.css'),
+        base_path('vendor/backpack/theme-tabler/resources/assets/css/skins/fuzzy-background.css'),
     ],
 
     /**
@@ -118,7 +119,7 @@ return [
          * For links to be visible on different background colors use: "navbar-dark", "navbar-light".
          *
          */
-        'topHeader' => null,
+        'topHeader' => 'bg-light-blue navbar-dark',
 
         /**
          * Applies only for Vertical Menu Layout

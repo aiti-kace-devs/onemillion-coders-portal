@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\BatchRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Backpack\CRUD\app\Library\CrudPanel\Hooks\Facades\LifecycleHook;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\Batch;
 use App\Helpers\CourseFieldHelpers;
+
 /**
  * Class BatchCrudController
  * @package App\Http\Controllers\Admin
@@ -42,12 +44,8 @@ class BatchCrudController extends CrudController
         $this->setSearchableColumns(['name', 'description']);
         $this->setSearchResultAttributes(['id', 'name', 'description']);
 
-        $this->crud->operation('list', function () {
-            WidgetHelper::admissionBatchStatisticsWidget();
-        });
-
         // Add permission checks
-        $this->crud->operation(['list', 'show'], function () {
+        LifecycleHook::hookInto(['list:before_setup', 'show:before_setup'], function () {
             $this->crud->addClause('where', function ($query) {
                 if (!backpack_user()->can('batch.read.all')) {
                     // Add any specific filtering logic here if needed
@@ -64,6 +62,8 @@ class BatchCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::admissionBatchStatisticsWidget();
+
         // Check permissions
         if (!backpack_user()->can('batch.read.all')) {
             abort(403, 'Unauthorized action.');
@@ -98,11 +98,11 @@ class BatchCrudController extends CrudController
             'function' => function ($entry) {
                 // Get course IDs (not batch IDs) from the relationship
                 $courseIds = $entry->assignedCourseBatches()
-                                ->with('course') // eager load course relationship if needed
-                                ->pluck('course_id') // explicitly pluck course_id
-                                ->unique() // remove duplicates if any
-                                ->values() // reset array keys
-                                ->toArray();
+                    ->with('course') // eager load course relationship if needed
+                    ->pluck('course_id') // explicitly pluck course_id
+                    ->unique() // remove duplicates if any
+                    ->values() // reset array keys
+                    ->toArray();
 
                 $courseCount = count($courseIds);
 
@@ -131,12 +131,12 @@ class BatchCrudController extends CrudController
                     return "<a href='{$url}'>{$admittedCount}</a>";
                 }
 
-                return ''; 
+                return '';
             },
             'escaped' => false,
         ]);
 
-        
+
 
         // CRUD::column('total_completed_students')->label('Total Completed');
         FilterHelper::addBooleanColumn('completed', 'completed');
@@ -210,9 +210,9 @@ class BatchCrudController extends CrudController
             // 'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status', 'General Info');
+        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status', 'General Info');
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Completed', 'completed', 'General Info');
+        $this->addIsActiveField([true  => 'True', false => 'False'], 'Completed', 'completed', 'General Info');
     }
 
     /**
@@ -258,15 +258,15 @@ class BatchCrudController extends CrudController
         }
 
         $response = $this->traitStore();
-        
+
         // Get the created batch
         $batch = $this->crud->entry;
-        
+
         // Sync the assigned batches
         if (request()->has('batches')) {
             $batch->assignedCourseBatches()->sync(request()->input('batches'));
         }
-        
+
         return $response;
     }
 
@@ -281,15 +281,15 @@ class BatchCrudController extends CrudController
         }
 
         $response = $this->traitUpdate();
-        
+
         // Get the updated batch
         $batch = $this->crud->entry;
-        
+
         // Sync the assigned batches
         if (request()->has('batches')) {
             $batch->assignedCourseBatches()->sync(request()->input('batches'));
         }
-        
+
         return $response;
     }
 }

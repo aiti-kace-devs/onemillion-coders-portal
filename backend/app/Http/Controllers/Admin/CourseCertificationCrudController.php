@@ -10,6 +10,7 @@ use App\Helpers\CourseFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Models\Programme;
 use App\Helpers\GeneralFieldsAndColumns;
+
 /**
  * Class CourseCertificationCrudController
  * @package App\Http\Controllers\Admin
@@ -27,7 +28,7 @@ class CourseCertificationCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -35,20 +36,18 @@ class CourseCertificationCrudController extends CrudController
         CRUD::setModel(\App\Models\CourseCertification::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-certification');
         CRUD::setEntityNameStrings('course certification', 'course certifications');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::courseCertificationStatisticsWidget();
-        });
     }
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
     protected function setupListOperation()
     {
+        WidgetHelper::courseCertificationStatisticsWidget();
+
         CRUD::column('title')->type('textarea');
         FilterHelper::addGenericRelationshipColumn('programme', 'Course', 'programme', 'title');
         CRUD::column('type')->type('text');
@@ -71,7 +70,7 @@ class CourseCertificationCrudController extends CrudController
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
@@ -113,12 +112,12 @@ class CourseCertificationCrudController extends CrudController
             'hint' => 'eg. Industry-recognized certification that validates your skills and expertise.'
         ]);
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
     }
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */

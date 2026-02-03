@@ -10,11 +10,11 @@ return [
     //     'model' => \Statamic\Eloquent\Assets\AssetContainerModel::class,
     // ],
 
-    'assets' => [
-        'driver' => 'eloquent',
-        'model' => \Statamic\Eloquent\Assets\AssetModel::class,
-        'asset' => \Statamic\Eloquent\Assets\Asset::class,
-    ],
+    // 'assets' => [
+    //     'driver' => 'eloquent',
+    //     'model' => \Statamic\Eloquent\Assets\AssetModel::class,
+    //     'asset' => \Statamic\Eloquent\Assets\Asset::class,
+    // ],
 
     'blueprints' => [
         'driver' => 'eloquent',

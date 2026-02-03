@@ -1,8 +1,10 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
+use Backpack\CRUD\app\Library\CrudPanel\Hooks\Facades\LifecycleHook;
 use Backpack\PermissionManager\app\Http\Requests\RoleStoreCrudRequest as StoreRequest;
 use Backpack\PermissionManager\app\Http\Requests\RoleUpdateCrudRequest as UpdateRequest;
 use Spatie\Permission\PermissionRegistrar;
@@ -34,7 +36,7 @@ class RoleCrudController extends CrudController
         $this->setSearchResultAttributes(['id', 'name', 'guard_name']);
 
         // Add permission checks
-        $this->crud->operation(['list', 'show'], function () {
+        LifecycleHook::hookInto(['list:before_setup', 'show:before_setup'], function () {
             $this->crud->addClause('where', function ($query) {
                 if (!backpack_user()->can('role.read.all')) {
                     // Add any specific filtering logic here if needed

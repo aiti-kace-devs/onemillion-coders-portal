@@ -2,9 +2,9 @@
 
 @php
     $defaultBreadcrumbs = [
-      trans('backpack::crud.admin') => url(config('backpack.base.route_prefix'), 'dashboard'),
-      $crud->entity_name_plural => url($crud->route),
-      trans('backpack::crud.reorder') => false,
+        trans('backpack::crud.admin') => url(config('backpack.base.route_prefix'), 'dashboard'),
+        $crud->entity_name_plural => url($crud->route),
+        trans('backpack::crud.reorder') => false,
     ];
 
     $columns = $crud->getOperationSetting('reorderColumnNames');
@@ -14,57 +14,60 @@
 @endphp
 
 @section('header')
-    <section class="header-operation container-fluid animated fadeIn d-flex align-items-baseline d-print-none" bp-section="page-header">
+    <section class="header-operation container-fluid animated fadeIn d-flex align-items-baseline d-print-none"
+        bp-section="page-header">
         <h1 class="text-capitalize mb-0" bp-section="page-heading">{!! $crud->getHeading() ?? $crud->entity_name_plural !!}</h1>
-        <p class="ms-2 ml-2 mb-0" bp-section="page-subheading">{!! $crud->getSubheading() ?? trans('backpack::crud.reorder').' '.$crud->entity_name_plural !!}</p>
+        <p class="ms-2 ml-2 mb-0" bp-section="page-subheading">{!! $crud->getSubheading() ?? trans('backpack::crud.reorder') . ' ' . $crud->entity_name_plural !!}</p>
         @if ($crud->hasAccess('list'))
             <p class="ms-2 ml-2 mb-0" bp-section="page-subheading-back-button">
-                <small><a href="{{ url($crud->route) }}" class="d-print-none font-sm"><i class="la la-angle-double-left"></i> {{ trans('backpack::crud.back_to_all') }} <span>{{ $crud->entity_name_plural }}</span></a></small>
+                <small><a href="{{ url($crud->route) }}" class="d-print-none font-sm"><i class="la la-angle-double-left"></i>
+                        {{ trans('backpack::crud.back_to_all') }} <span>{{ $crud->entity_name_plural }}</span></a></small>
             </p>
         @endif
     </section>
 @endsection
 
 @section('content')
-<?php
-if(!function_exists('tree_element')) {
-    function tree_element($entry, $key, $all_entries, $crud) {
-        $columns = $crud->getOperationSetting('reorderColumnNames');
-
-        if (! isset($entry->tree_element_shown)) {
-            // mark the element as shown
-            $all_entries[$key]->tree_element_shown = true;
-            $entry->tree_element_shown = true;
-            $entryLabel = $crud->get('reorder.escaped') ? e(object_get($entry, $crud->get('reorder.label'))) : object_get($entry, $crud->get('reorder.label'));
-            // show the tree element
-            echo '<li id="list_'.$entry->getKey().'">';
-            echo '<div><span class="disclose"><span></span></span>'.$entryLabel.'</div>';
-
-            // see if this element has any children
-            $children = [];
-            foreach ($all_entries as $key => $subentry) {
-                if ($subentry->{$columns['parent_id']} == $entry->getKey()) {
-                    $children[] = $subentry;
+    <?php
+    if (!function_exists('tree_element')) {
+        function tree_element($entry, $key, $all_entries, $crud)
+        {
+            $columns = $crud->getOperationSetting('reorderColumnNames');
+    
+            if (!isset($entry->tree_element_shown)) {
+                // mark the element as shown
+                $all_entries[$key]->tree_element_shown = true;
+                $entry->tree_element_shown = true;
+                $entryLabel = $crud->get('reorder.escaped') ? e(object_get($entry, $crud->get('reorder.label'))) : object_get($entry, $crud->get('reorder.label'));
+                // show the tree element
+                echo '<li id="list_' . $entry->getKey() . '">';
+                echo '<div><span class="disclose"><span></span></span>' . $entryLabel . '</div>';
+    
+                // see if this element has any children
+                $children = [];
+                foreach ($all_entries as $key => $subentry) {
+                    if ($subentry->{$columns['parent_id']} == $entry->getKey()) {
+                        $children[] = $subentry;
+                    }
                 }
-            }
-
-            $children = collect($children)->sortBy($columns['lft']);
-
-            // if it does have children, show them
-            if (count($children)) {
-                echo '<ol>';
-                foreach ($children as $key => $child) {
-                    $children[$key] = tree_element($child, $child->getKey(), $all_entries, $crud);
+    
+                $children = collect($children)->sortBy($columns['lft']);
+    
+                // if it does have children, show them
+                if (count($children)) {
+                    echo '<ol>';
+                    foreach ($children as $key => $child) {
+                        $children[$key] = tree_element($child, $child->getKey(), $all_entries, $crud);
+                    }
+                    echo '</ol>';
                 }
-                echo '</ol>';
+                echo '</li>';
             }
-            echo '</li>';
+    
+            return $entry;
         }
-
-        return $entry;
     }
-}
-
+    
     ?>
 
     <div class="row mt-4" bp-section="crud-operation-reorder">
@@ -73,22 +76,27 @@ if(!function_exists('tree_element')) {
                 <p>{{ trans('backpack::crud.reorder_text') }}</p>
 
                 <ol class="sortable mt-0 mb-0">
-                <?php
-                    $all_entries = collect($entries->all())->sortBy($columns['lft'])->keyBy($crud->getModel()->getKeyName());
+                    <?php
+                    $all_entries = collect($entries->all())
+                        ->sortBy($columns['lft'])
+                        ->keyBy($crud->getModel()->getKeyName());
                     $root_entries = $all_entries->filter(function ($item) use ($columns) {
                         return $item->{$columns['parent_id']} == 0;
                     });
                     foreach ($root_entries as $key => $entry) {
                         $root_entries[$key] = tree_element($entry, $key, $all_entries, $crud);
                     }
-                ?>
+                    ?>
                 </ol>
 
             </div>{{-- /.card --}}
 
             <div class="mt-3">
-                <button id="toArray" class="btn btn-success text-light" data-style="zoom-in"><i class="la la-save"></i> {{ trans('backpack::crud.save') }}</button>
-                <a href="{{ $crud->hasAccess('list') ? url($crud->route) : url()->previous() }}" class="btn btn-secondary text-decoration-none"><span class="la la-ban"></span> &nbsp;{{ trans('backpack::crud.cancel') }}</a>
+                <button id="toArray" class="btn btn-success text-light" data-style="zoom-in"><i class="la la-save"></i>
+                    {{ trans('backpack::crud.save') }}</button>
+                <a href="{{ $crud->hasAccess('list') ? url($crud->route) : url()->previous() }}"
+                    class="btn btn-secondary text-decoration-none"><span class="la la-ban"></span>
+                    &nbsp;{{ trans('backpack::crud.cancel') }}</a>
             </div>
 
         </div>
@@ -101,9 +109,9 @@ if(!function_exists('tree_element')) {
         .ui-sortable .placeholder {
             outline: 1px dashed #4183C4;
             /*-webkit-border-radius: 3px;
-            -moz-border-radius: 3px;
-            border-radius: 3px;
-            margin: -1px;*/
+                -moz-border-radius: 3px;
+                border-radius: 3px;
+                margin: -1px;*/
         }
 
         .ui-sortable .mjs-nestedSortable-error {
@@ -117,7 +125,8 @@ if(!function_exists('tree_element')) {
             padding-left: 30px;
         }
 
-        ol.sortable, ol.sortable ol {
+        ol.sortable,
+        ol.sortable ol {
             margin: 0 0 0 25px;
             padding: 0;
             list-style-type: none;
@@ -132,7 +141,7 @@ if(!function_exists('tree_element')) {
             padding: 0;
         }
 
-        .sortable li div  {
+        .sortable li div {
             border: 1px solid #ddd;
             -webkit-border-radius: 3px;
             -moz-border-radius: 3px;
@@ -166,19 +175,19 @@ if(!function_exists('tree_element')) {
             display: none;
         }
 
-        .sortable li.mjs-nestedSortable-collapsed > ol {
+        .sortable li.mjs-nestedSortable-collapsed>ol {
             display: none;
         }
 
-        .sortable li.mjs-nestedSortable-branch > div > .disclose {
+        .sortable li.mjs-nestedSortable-branch>div>.disclose {
             display: inline-block;
         }
 
-        .sortable li.mjs-nestedSortable-collapsed > div > .disclose > span:before {
+        .sortable li.mjs-nestedSortable-collapsed>div>.disclose>span:before {
             content: '+ ';
         }
 
-        .sortable li.mjs-nestedSortable-expanded > div > .disclose > span:before {
+        .sortable li.mjs-nestedSortable-expanded>div>.disclose>span:before {
             content: '- ';
         }
 
@@ -197,10 +206,15 @@ if(!function_exists('tree_element')) {
 
         .ui-sortable h3 {
             font-size: 1em;
-            margin: 1em 0 .3em;;
+            margin: 1em 0 .3em;
+            ;
         }
 
-        .ui-sortable p, .ui-sortable ol, .ui-sortable ul, .ui-sortable pre, .ui-sortable form {
+        .ui-sortable p,
+        .ui-sortable ol,
+        .ui-sortable ul,
+        .ui-sortable pre,
+        .ui-sortable form {
             margin-top: 0;
             margin-bottom: 1em;
         }
@@ -229,14 +243,15 @@ if(!function_exists('tree_element')) {
 @endsection
 
 @section('after_scripts')
-    @basset('https://cdn.jsdelivr.net/npm/jquery-ui@1.13.2/dist/jquery-ui.min.js')
+    @basset('https://unpkg.com/jquery-ui@1.13.2/dist/jquery-ui.min.js')
     @basset(base_path('vendor/backpack/crud/src/resources/assets/libs/jquery.mjs.nestedSortable2.js'))
 
     <script type="text/javascript">
         jQuery(document).ready(function($) {
-            var isRtl = Boolean("{{ (config('backpack.base.html_direction') === 'rtl') ? true : false }}");
-            if(isRtl) {
-                $( " <style> .ui-sortable ol {margin: 0;padding: 0;padding-right: 30px;}ol.sortable, ol.sortable ol {margin: 0 25px 0 0;padding: 0;list-style-type: none;}.ui-sortable dd {margin: 0;padding: 0 1.5em 0 0;}</style>" ).appendTo( "head" )
+            var isRtl = Boolean("{{ config('backpack.base.html_direction') === 'rtl' ? true : false }}");
+            if (isRtl) {
+                $(" <style> .ui-sortable ol {margin: 0;padding: 0;padding-right: 30px;}ol.sortable, ol.sortable ol {margin: 0 25px 0 0;padding: 0;list-style-type: none;}.ui-sortable dd {margin: 0;padding: 0 1.5em 0 0;}</style>")
+                    .appendTo("head")
             }
             // initialize the nested sortable plugin
             $('.sortable').nestedSortable({
@@ -258,22 +273,28 @@ if(!function_exists('tree_element')) {
             });
 
             $('.disclose').on('click', function() {
-                $(this).closest('li').toggleClass('mjs-nestedSortable-collapsed').toggleClass('mjs-nestedSortable-expanded');
+                $(this).closest('li').toggleClass('mjs-nestedSortable-collapsed').toggleClass(
+                    'mjs-nestedSortable-expanded');
             });
 
-            $('#toArray').click(function(e){
+            $('#toArray').click(function(e) {
                 // get the current tree order
-                arraied = $('ol.sortable').nestedSortable('toArray', {startDepthCount: 0, expression: /(.+)_(.+)/ });
+                arraied = $('ol.sortable').nestedSortable('toArray', {
+                    startDepthCount: 0,
+                    expression: /(.+)_(.+)/
+                });
 
                 // log it
                 //console.log(arraied);
 
                 // send it with POST
                 $.ajax({
-                    url: '{{ url(Request::path()) }}',
-                    type: 'POST',
-                    data: { tree: JSON.stringify(arraied) },
-                })
+                        url: '{{ url(Request::path()) }}',
+                        type: 'POST',
+                        data: {
+                            tree: JSON.stringify(arraied)
+                        },
+                    })
                     .done(function() {
                         new Noty({
                             type: "success",

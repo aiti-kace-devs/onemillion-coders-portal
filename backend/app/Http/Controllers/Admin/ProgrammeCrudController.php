@@ -41,10 +41,6 @@ class ProgrammeCrudController extends CrudController
         CRUD::setModel(\App\Models\Programme::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/programme');
         CRUD::setEntityNameStrings('programme', 'programmes');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::programmeStatisticsWidget();
-        });
     }
 
     /**
@@ -55,6 +51,8 @@ class ProgrammeCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::programmeStatisticsWidget();
+
         CRUD::column('title')->type('textarea');
         FilterHelper::addGenericRelationshipColumn('category', 'Course Category', 'course-category', 'title');
         CRUD::column('duration');
@@ -169,7 +167,7 @@ class ProgrammeCrudController extends CrudController
         }
     }
 
-     protected function handleProgrammeTags($programme, $tags = [])
+    protected function handleProgrammeTags($programme, $tags = [])
     {
         $programme->tags()->sync($tags);
     }

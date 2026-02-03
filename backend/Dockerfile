@@ -98,7 +98,7 @@ RUN npm run build
 RUN chown -R www-data:www-data /var/www/html \
     && mkdir -p  bootstrap/cache storage/framework/sessions storage/app/public/basset storage/logs storage/statamic storage/statamic/stache-locks \
     && mkdir -p  bootstrap/cache storage/framework/views \
-    && mkdir -p  bootstrap/cache storage/framework/cache \
+    && mkdir -p  bootstrap/cache storage/framework/cache storage/framework/cache/data\
     && chmod -R 775 storage bootstrap/cache
 
 EXPOSE 8080
