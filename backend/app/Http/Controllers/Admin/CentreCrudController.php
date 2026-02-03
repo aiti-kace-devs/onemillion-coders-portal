@@ -79,18 +79,49 @@ class CentreCrudController extends CrudController
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
-CRUD::addField([
-    'name'        => 'branch_id',
-    'label'       => 'Branch',
-    'type'        => 'select',
-    'entity'      => 'branch',
-    'model'       => Branch::class,
-    'attribute'   => 'title',
-    'allows_null' => true,
-    'default'     => null,
-    'wrapper'     => ['class' => 'form-group col-6'],
-]);
+        CRUD::addField([
+            'name'        => 'branch_id',
+            'label'       => 'Branch',
+            'type'        => 'select',
+            'entity'      => 'branch',
+            'model'       => Branch::class,
+            'attribute'   => 'title',
+            'allows_null' => true,
+            'default'     => null,
+            'wrapper'     => ['class' => 'form-group col-6'],
+        ]);
 
+
+        CRUD::addField([
+            'name' => 'gps_address',
+            'label' => 'GPS Address',
+            'type'      => 'textarea',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+
+        CRUD::addField([
+            'name' => 'pwd_notes',
+            'label' => 'PWD Notes',
+            'type'      => 'textarea',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Is PWD Friendly', 'is_pwd_friendly');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Wheelchair Accessible', 'wheelchair_accessible');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Has Access Ramp', 'has_access_ramp');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Has Accessible Toilet', 'has_accessible_toilet');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Has Elevator', 'has_elevator');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Supports Hearing Impaired', 'supports_hearing_impaired');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Supports Visually Impaired', 'supports_visually_impaired');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Staff Trained for PWDs', 'staff_trained_for_pwd');
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
 

@@ -64,7 +64,7 @@ class AttendanceCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        // Check permissions
+        // Permission check
         if (!backpack_user()->can('attendance.read.all')) {
             abort(403, 'Unauthorized action.');
         }
@@ -72,29 +72,48 @@ class AttendanceCrudController extends CrudController
         CRUD::column('user_id')->label('Student')->linkTo('user.show');
         FilterHelper::addGenericRelationshipColumn('user', 'Email', 'user', 'email');
         FilterHelper::addGenericRelationshipColumn('course', 'Course', 'course', 'course_name');
+
         CRUD::addColumn([
-            'name' => 'courseSession.session',
+            'name'  => 'courseSession.session',
             'label' => 'Session',
-            'type' => 'text',
+            'type'  => 'text',
         ]);
 
         CRUD::column('date');
-        $this->addStudentBatchFilter('userAdmission', 'Student Batch');
-        $this->courseFilter('course_id');
-        $sessions = \App\Models\CourseSession::select('session')
-            ->distinct()
-            ->pluck('session', 'session')
-            ->toArray();
 
-        FilterHelper::addSelectFilter('session', 'Filter Session', $sessions, 'select2', function($value) {
-            CRUD::addClause('whereHas', 'courseSession', function($query) use ($value) {
-                $query->where('course_sessions.session', $value);
-            });
-        });
+        if (backpack_user()->is_super) {
+            $this->addStudentBatchFilter('userAdmission', 'Student Batch');
+        }
+
+        if (backpack_user()->is_super) {
+            $this->courseFilter('course_id');
+        }
+
+
+        if (backpack_user()->is_super) {
+            $sessions = \App\Models\CourseSession::select('session')
+                ->distinct()
+                ->pluck('session', 'session')
+                ->toArray();
+
+            FilterHelper::addSelectFilter(
+                'session',
+                'Filter Session',
+                $sessions,
+                'select2',
+                function ($value) {
+                    CRUD::addClause('whereHas', 'courseSession', function ($query) use ($value) {
+                        $query->where('course_sessions.session', $value);
+                    });
+                }
+            );
+        }
 
         FilterHelper::addDateRangeFilter('date', 'Filter BY Date');
+        
         CRUD::enableExportButtons();
     }
+
 
     /**
      * Define what happens when the Create operation is loaded.
