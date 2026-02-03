@@ -11,73 +11,73 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class SendExamLoginCredentialsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    public $std;
-    public $plainPassword;
 
-    /**
-     * Create a new job instance.
-     *
-     * @return void
-     */
+    public int $userId;
+    public string $plainPassword;
 
-    public function __construct(User $std, string $plainPassword)
+    protected ?User $std = null;
+
+    public function __construct(int $userId, string $plainPassword)
     {
-        $this->std = $std;
+        $this->userId = $userId;
         $this->plainPassword = $plainPassword;
     }
 
-    /**
-     * Execute the job.
-     *
-     * @return void
-     */
     public function handle()
     {
+        $this->std = User::find($this->userId);
+
+        if (!$this->std) {
+            Log::error('SendExamLoginCredentialsJob: User not found', [
+                'user_id' => $this->userId
+            ]);
+            return;
+        }
+
+        Log::info('SendExamLoginCredentialsJob triggered', [
+            'user_id' => $this->std->id
+        ]);
+
         $deadline = $this->exam_deadline();
 
         MailerHelper::sendTemplateEmail(
             AFTER_REGISTRATION_EMAIL,
             $this->std->email,
             [
-                'name' => $this->std->name,
+                'name'     => $this->std->name,
                 'deadline' => $deadline,
                 'password' => $this->plainPassword,
-                'email' => $this->std->email,
-                'examUrl' => url('/student/exam')
+                'email'    => $this->std->email,
+                'examUrl'  => url('/student/exam'),
             ],
             'One Million Coders Login Credentials'
         );
     }
 
-    private function exam_deadline()
+    private function exam_deadline(): string
     {
         $registered = $this->std->created_at;
         $now = Carbon::now();
-        $exam_id = $this->std->exam;
 
-        $date = Oex_exam_master::find($exam_id)->exam_date;
+        $exam = Oex_exam_master::find($this->std->exam);
+        $date = $exam?->exam_date ?? $now;
 
-        $leftToDeadline = $now->diffInHours(new Carbon($date));
+        $studentDeadline = (new Carbon($registered))
+            ->addDays(config('EXAM_DEADLINE_AFTER_REGISTRATION', 2));
 
-        $deadline = $date;
-        $hoursLeft = $leftToDeadline;
+        $hoursLeft = $now->diffInHours($studentDeadline);
+        $daysLeft  = $now->diffInDays($studentDeadline);
 
-        $studentDeadline = (new Carbon($registered))->addDays(config(EXAM_DEADLINE_AFTER_REGISTRATION, 2));
-        $studentHoursLeft = $now->diffInHours($studentDeadline);
-        $studentDaysLeft = $now->diffInDays($studentDeadline);
+        $deadlineText = $daysLeft > 3
+            ? "$daysLeft days"
+            : "$hoursLeft hour(s)";
 
-
-        if ($studentHoursLeft < $leftToDeadline) {
-            $deadline = $studentDeadline->toDateString();
-            $hoursLeft = $studentHoursLeft;
-        }
-
-        $dealineText = $studentDaysLeft > 3 ? " $studentDaysLeft days" : "$hoursLeft hour(s)";
-
-        return "$deadline in $dealineText";
+        return $studentDeadline->toDateString() . " in $deadlineText";
     }
 }

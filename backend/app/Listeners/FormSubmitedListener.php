@@ -20,9 +20,7 @@ class FormSubmitedListener implements ShouldQueue
         //
     }
 
-    /**
-     * Handle the event.
-     */
+
     public function handle(FormSubmittedEvent $event): void
     {
 
