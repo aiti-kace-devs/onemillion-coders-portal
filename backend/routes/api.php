@@ -32,8 +32,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page']);
 // });
 
-Route::post('/add-student', [FormResponseController::class, 'store']);
-// Route::post('/add-student', [CreateStudentAPIController::class, 'store'])->middleware('api'); // This applies the api middleware group
+// Route::post('/api/add-student', [FormResponseController::class, 'store']);
+// Route::post('/api/add-student', [CreateStudentAPIController::class, 'store'])->middleware('api'); // This applies the api middleware group
 
 
 

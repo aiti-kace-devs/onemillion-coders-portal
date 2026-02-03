@@ -69,6 +69,7 @@ use Illuminate\Support\Str;
 // Route::post('/api/form-responses/', [FormResponseController::class, 'store'])->name('admin.form_responses.store');
 // routes/web.php
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
+Route::post('/api/add-student', [FormResponseController::class, 'store']);      
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
 // Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
 Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);

@@ -85,16 +85,25 @@ class FormResponseController extends Controller
      */
     public function store(Request $request)
     {
-        // \Log::info('STORE: Start', $request->all());
+        $formUuid = $request->input('form_uuid');
 
-        $uuid = '6c004031-4efb-4b51-890f-0c3788defedf';
-        $form = Form::where('uuid',$uuid)->first();
-        // \Log::info('STORE: Form fetched', ['form' => $form]);
-        // dd($form);
-        if (!$form) {
-            \Log::error('STORE: Form not found for UUID', ['uuid' => $uuid]);
-            abort(404, 'Form not found');
+        if (!$formUuid) {
+            return response()->json([
+                'success' => false,
+                'message' => 'form_uuid is required'
+            ], 400);
         }
+
+        $form = Form::where('uuid', $formUuid)->first();
+
+        if (!$form) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Form not found'
+            ], 404);
+        }
+
+        // \Log::info('STORE: Form fetched', ['form' => $form]);
         $schema = $form->schema;
         // dd($schema);
         // \Log::info('STORE: Schema loaded', ['schema' => $schema]);
@@ -216,18 +225,14 @@ class FormResponseController extends Controller
                     $rules[] = 'nullable';
                     break;
             }
-            Log::info('below switch');
             $validationRules[$fieldKey] = implode('|', $rules);
             $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|' . $field['rules'] ?? '' : '';
             $validationRules[$fieldKey] =  $validationRules[$fieldKey] . $additionRules;
-            Log::info('end of switch statement');
         }
 
-        \Log::info('Get validationRules', ['validationRules' => $validationRules]);
-        // dd($validationRules, $attributes);
+
         $validated = $request->validate($validationRules, $customMessages, $attributes);
 
-        // Handle file uploads
         foreach ($schema as $field) {
             if ($field['type'] === 'file' && $request->hasFile("response_data.{$field['field_name']}")) {
                 $destinationPath = 'form/uploads/';
@@ -235,12 +240,10 @@ class FormResponseController extends Controller
 
                 $fileName = time() . '.' . $file->getClientOriginalExtension();
 
-                // Delete old image if it exists
                 if (\Storage::disk('public')->exists($destinationPath . $fileName)) {
                     \Storage::disk('public')->delete($destinationPath . $fileName);
                 }
 
-                // Save new image
                 \Storage::disk('public')->putFileAs($destinationPath, $file, $fileName);
 
                 $validated['response_data'][$field['field_name']] = $fileName;
@@ -250,9 +253,6 @@ class FormResponseController extends Controller
         $response = new FormResponse($validated);
 
         $form->responses()->save($response);
-
-        Log::info($validated['response_data']);
-        Log::info($fieldName);
 
         FormSubmittedEvent::dispatch($validated['response_data'], $response->id, $fieldName);
 

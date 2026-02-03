@@ -30,4 +30,8 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'arkesel' => [
+        'key' => env('ARKESEL_SMS_API_KEY'),
+    ],
+
 ];

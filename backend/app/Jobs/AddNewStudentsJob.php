@@ -116,20 +116,37 @@ class AddNewStudentsJob implements ShouldQueue
                 ]
             );
 
-            if ($existingUser == null) {
-                // $userId = $std->userId;
-                // GoogleSheets::updateGoogleSheets($userId, ["registered" => true, "result" => "N/A"]);
-                event(new UserRegistered($std, $plainPassword));
-                if (config(SEND_SMS_AFTER_REGISTRATION, true)) {
-                    $smsContent = SmsHelper::getTemplate(AFTER_REGISTRATION_SMS, [
-                        'name' => $student['name'],
-                    ]) ?? '';;
-                    $details['message'] = $smsContent;
-                    $details['phonenumber'] = $student['mobile_no'];
+            if ((bool) config('SEND_SMS_AFTER_REGISTRATION', true)) {
 
-                    SendSMSAfterRegistrationJob::dispatch($details);
+                $smsContent = SmsHelper::getTemplate(
+                    'AFTER_REGISTRATION_SMS',
+                    [
+                        'name' => $student['name'],
+                    ]
+                ) ?? '';
+
+                if (!empty($smsContent)) {
+                    SendSMSAfterRegistrationJob::dispatch([
+                        'message' => $smsContent,
+                        'phonenumber' => $student['mobile_no'],
+                    ]);
                 }
             }
+
+            // if ($existingUser == null) {
+            //     // $userId = $std->userId;
+            //     // GoogleSheets::updateGoogleSheets($userId, ["registered" => true, "result" => "N/A"]);
+            //     event(new UserRegistered($std, $plainPassword));
+            //     if (config(SEND_SMS_AFTER_REGISTRATION, true)) {
+            //         $smsContent = SmsHelper::getTemplate(AFTER_REGISTRATION_SMS, [
+            //             'name' => $student['name'],
+            //         ]) ?? '';;
+            //         $details['message'] = $smsContent;
+            //         $details['phonenumber'] = $student['mobile_no'];
+
+            //         SendSMSAfterRegistrationJob::dispatch($details);
+            //     }
+            // }
         }
 
         if (!empty($errors)) {
