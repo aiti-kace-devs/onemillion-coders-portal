@@ -113,8 +113,8 @@ services:
     environment:
       - PMA_HOST=db
       - PMA_PORT=3306
-      - PMA_USER=${MYSQL_USER:-omcp_user}
-      - PMA_PASSWORD=${MYSQL_PASSWORD:-omcp_pass}
+      - PMA_USER=root
+      - PMA_PASSWORD=${MYSQL_ROOT_PASSWORD:-root_pass}
       - PMA_PMADB=phpmyadmin
       - PMA_CONTROLUSER=pma
       - PMA_CONTROLPASS=${PMA_CONTROLPASS:-pmapass}

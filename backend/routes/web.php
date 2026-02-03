@@ -46,6 +46,7 @@ use Illuminate\Support\Str;
 |
 */
 
+Route::redirect('/', '/login');
 
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
 
