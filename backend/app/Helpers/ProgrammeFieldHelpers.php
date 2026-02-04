@@ -268,27 +268,29 @@ trait ProgrammeFieldHelpers
         $tagFieldNames = [];
 
         foreach ($courseMatches as $courseMatch) {
-
-            $fieldName = 'course_match[' . $courseMatch->id . ']';
-
-            $tagFieldNames[] = $fieldName;
+            $name = 'course_match_' . $courseMatch->id;
+            $tagFieldNames[] = $name;
 
             CRUD::addField([
-                'name' => $fieldName,
-                'label' => $courseMatch->question,
-                'type' => 'select2_multiple',
-                'entity' => 'tags',
-                'attribute' => 'answer',
-                'model' => CourseMatchOption::class,
-                'pivot' => true,
+                'name'        => $name,
+                'label'       => $courseMatch->question,
+                'type'        => 'select2_multiple',
+
+                // IMPORTANT
+                'fake'        => true,   // 👈 stops Backpack from calling Programme::course_match_3()
+                'store_in'    => 'tags', // optional, but nice for grouping
+
+                'model'       => CourseMatchOption::class,
+                'attribute'   => 'answer',
                 'allows_null' => true,
+
                 'options' => function ($query) use ($courseMatch) {
                     return $query->where('course_match_id', $courseMatch->id)->get();
                 },
             ]);
         }
 
-        $this->addFieldsToTab('Tags', true, $tagFieldNames);
+
 
 
 
