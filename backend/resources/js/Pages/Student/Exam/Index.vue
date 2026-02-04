@@ -8,6 +8,7 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  showResultsToStudents: Boolean,
 });
 
 const page = usePage();
@@ -90,12 +91,13 @@ const overallProgress = computed(() =>
     <div class="pt-3">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          <Link
+          <div
             v-for="(exam, key) in examList"
             :key="exam.exam_id"
-            :href="route('student.join-exam', exam.exam_id)"
+            class="relative group bg-white rounded-xl shadow p-6 flex flex-col"
           >
-            <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
+            <Link :href="route('student.join-exam', exam.exam_id)" class="block flex-1">
+              <div class="flex flex-col h-full">
               <!-- Status badge -->
               <span
                 class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
@@ -174,8 +176,24 @@ const overallProgress = computed(() =>
                   </p>
                 </div>
               </div>
+              </div>
+            </Link>
+            
+            <!-- View Results Button -->
+            <div
+              v-if="
+                getExamStatus(exam) === 'completed' && props.showResultsToStudents
+              "
+              class="mt-4 pt-3 border-t border-gray-100"
+            >
+              <Link
+                :href="`/view_result/${exam.exam_id}`"
+                class="w-full inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 disabled:opacity-25 transition ease-in-out duration-150"
+              >
+                View Results
+              </Link>
             </div>
-          </Link>
+          </div>
         </div>
       </div>
     </div>

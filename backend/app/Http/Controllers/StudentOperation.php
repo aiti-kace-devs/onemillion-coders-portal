@@ -28,6 +28,7 @@ use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use App\Models\AppConfig;
 
 class StudentOperation extends Controller
 {
@@ -69,8 +70,8 @@ class StudentOperation extends Controller
 
             return $questionnaire;
         });
-
-        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires'));
+        $showResultsToStudents = AppConfig::getValue(SHOW_RESULTS_TO_STUDENTS);
+        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires', 'showResultsToStudents'));
 
         // $data['portal_exams'] = Oex_exam_master::select(['oex_exam_masters.*', 'oex_categories.name as cat_name'])
         //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
@@ -136,7 +137,8 @@ class StudentOperation extends Controller
             ->get()
             ->toArray();
 
-        return Inertia::render('Student/Exam/Index', compact('exams'));
+        $showResultsToStudents = AppConfig::getValue(SHOW_RESULTS_TO_STUDENTS);
+        return Inertia::render('Student/Exam/Index', compact('exams', 'showResultsToStudents'));
     }
 
     //join exam page
@@ -338,18 +340,41 @@ class StudentOperation extends Controller
     //View Result
     public function view_result($id)
     {
-        $data['result_info'] = Oex_result::where('exam_id', $id)
-            ->where('user_id', Auth::guard('web')->user()->id)
-            ->get()
+        $user = Auth::guard('web')->user();
+
+        $exam = Oex_exam_master::where('id', $id)->first();
+
+        if (!$exam) {
+            abort(404);
+        }
+
+        $showResultsToStudents = AppConfig::getValue(SHOW_RESULTS_TO_STUDENTS);
+        if (!$showResultsToStudents) {
+            return redirect()
+                ->route('student.results')
+                ->with([
+                    'flash' => 'Results for this exam are not available.',
+                    'key' => 'info',
+                ]);
+        }
+
+        $result = Oex_result::where('exam_id', $id)
+            ->where('user_id', $user->id)
             ->first();
 
-        $data['student_info'] = User::where('id', Auth::guard('web')->user()->id)
-            ->get()
-            ->first();
-
-        $data['exam_info'] = Oex_exam_master::where('id', $id)->get()->first();
-
-        return view('student.view_result', $data);
+        if (!$result) {
+            return redirect()
+                ->route('student.results')
+                ->with([
+                    'flash' => 'No result found for this exam.',
+                    'key' => 'info',
+                ]);
+        }
+        return Inertia::render('Student/Exam/Result', [
+            'exam' => $exam,
+            'result' => $result,
+            'student' => $user,
+        ]);
     }
 
     //View answer

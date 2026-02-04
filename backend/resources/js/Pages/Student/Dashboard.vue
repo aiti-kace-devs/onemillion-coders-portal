@@ -6,6 +6,7 @@ import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
 const props = defineProps({
   exams: Object,
   questionnaires: Object,
+  showResultsToStudents: Boolean,
 });
 
 const user = computed(() => usePage().props.auth?.user || {});
@@ -81,8 +82,8 @@ const overallProgress = computed(() =>
               Quick Access
             </p>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Link :href="route('student.application-status')">
-                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
+              <Link :href="route('student.application-status')" class="block h-full">
+                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
                   <!-- Icon and Title -->
                   <div class="flex items-center gap-3 mb-2">
                     <span
@@ -106,8 +107,8 @@ const overallProgress = computed(() =>
                 </div>
               </Link>
 
-              <Link v-if="user.isAdmitted" :href="route('student.results')">
-                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
+              <Link v-if="user.isAdmitted" :href="route('student.results')" class="block h-full">
+                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
                   <!-- Icon and Title -->
                   <div class="flex items-center gap-3 mb-2">
                     <span
@@ -127,8 +128,8 @@ const overallProgress = computed(() =>
                 </div>
               </Link>
 
-              <Link :href="route('student.assessment.index')" v-if="user.isAdmitted">
-                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
+              <Link :href="route('student.assessment.index')" v-if="user.isAdmitted" class="block h-full">
+                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
                   <!-- Icon and Title -->
                   <div class="flex items-center gap-3 mb-2">
                     <span
@@ -152,8 +153,8 @@ const overallProgress = computed(() =>
                 </div>
               </Link>
 
-              <Link v-if="user.isAdmitted" :href="route('student.attendance.show')">
-                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
+              <Link v-if="user.isAdmitted" :href="route('student.attendance.show')" class="block h-full">
+                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
                   <!-- Icon and Title -->
                   <div class="flex items-center gap-3 mb-2">
                     <span
@@ -172,8 +173,8 @@ const overallProgress = computed(() =>
                 </div>
               </Link>
 
-              <Link v-if="!user.isAdmitted" :href="route('student.change-course')">
-                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
+              <Link v-if="!user.isAdmitted" :href="route('student.change-course')" class="block h-full">
+                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
                   <!-- Icon and Title -->
                   <div class="flex items-center gap-3 mb-2">
                     <span
@@ -198,12 +199,12 @@ const overallProgress = computed(() =>
           <div>
             <p class="mb-2 text-sm font-medium text-gray-800 leading-tight">Test</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              <Link
+              <div
                 v-for="(exam, key) in examList"
                 :key="exam.exam_id"
-                :href="route('student.join-exam', exam.exam_id)"
+                class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full"
               >
-                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
+                <Link :href="route('student.join-exam', exam.exam_id)" class="block flex-1">
                   <!-- Status badge -->
                   <span
                     class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
@@ -284,8 +285,15 @@ const overallProgress = computed(() =>
                       </p>
                     </div>
                   </div>
+                </Link>
+
+                <!-- View Results Button -->
+                <div v-if="getExamStatus(exam) === 'completed' && props.showResultsToStudents" class="mt-4 pt-3 border-t border-gray-100">
+                  <Link :href="`/view_result/${exam.exam_id}`" class="w-full inline-flex justify-center items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 disabled:opacity-25 transition ease-in-out duration-150">
+                    View Results
+                  </Link>
                 </div>
-              </Link>
+              </div>
             </div>
           </div>
 
@@ -301,8 +309,9 @@ const overallProgress = computed(() =>
                 v-for="(questionnaire, key) in questionnaires"
                 :key="questionnaire.id"
                 :href="route('student.assessment.take-questionnaire', questionnaire.code)"
+                class="block h-full"
               >
-                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col">
+                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
                   <!-- Status badge -->
                   <span
                     class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"

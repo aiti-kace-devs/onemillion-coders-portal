@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\AppConfigRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Illuminate\Http\Request;
+use App\Models\AppConfig;
 use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\FilterHelper;
 /**
@@ -43,7 +45,12 @@ class AppConfigCrudController extends CrudController
     {
         CRUD::column('key')->type('textarea')->label('Name');
         CRUD::column('type')->type('text')->label('Type');
-        CRUD::column('value')->label('Value');
+        CRUD::addColumn([
+            'name' => 'value',
+            'label' => 'Value',
+            'type' => 'view',
+            'view' => 'admin.app_config.value_column', 
+        ]);
         FilterHelper::addBooleanColumn('is_cached', 'Is Cached');
         CRUD::column('created_at');
         FilterHelper::addBooleanFilter('is_cached');
@@ -100,5 +107,19 @@ class AppConfigCrudController extends CrudController
             ->type('text')
             ->attributes(['readonly' => 'readonly']);
         $this->setupCreateOperation();
+    }
+
+    public function toggleValue(Request $request, $id)
+    {
+        $config = AppConfig::findOrFail($id);
+        
+        if($config->type !== 'boolean') {
+            return response()->json(['status' => 'error', 'message' => 'Not a boolean config'], 400);
+        }
+        
+        $config->value = $request->input('value');
+        $config->save();
+        
+        return response()->json(['status' => 'success', 'message' => 'Updated successfully']);
     }
 }
