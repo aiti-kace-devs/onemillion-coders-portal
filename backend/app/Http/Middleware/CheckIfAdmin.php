@@ -31,13 +31,6 @@ class CheckIfAdmin
         $isSuper = $user->isSuper();
         $hasRoles = $user->roles()->exists();
 
-        \Log::info("Admin Auth Check", [
-            'email' => $user->email,
-            'is_super' => $isSuper,
-            'has_roles' => $hasRoles,
-            'user_id' => $user->id
-        ]);
-
         return $isSuper || $hasRoles;
     }
 
@@ -72,29 +65,14 @@ class CheckIfAdmin
      */
     public function handle($request, Closure $next)
     {
-        \Log::info("CheckIfAdmin::handle START", [
-            'url' => $request->fullUrl(),
-            'is_guest' => backpack_auth()->guest(),
-            'session_id' => $request->session()->getId(),
-        ]);
-
         if (backpack_auth()->guest()) {
-            \Log::info("CheckIfAdmin: User is GUEST, redirecting to login");
             return $this->respondToUnauthorizedRequest($request);
         }
 
-        $user = backpack_user();
-        \Log::info("CheckIfAdmin: User authenticated", [
-            'user_id' => $user->id,
-            'email' => $user->email,
-        ]);
-
-        if (! $this->checkIfUserIsAdmin($user)) {
-            \Log::info("CheckIfAdmin: User FAILED admin check, logging out");
+        if (! $this->checkIfUserIsAdmin(backpack_user())) {
             return $this->respondToUnauthorizedRequest($request);
         }
 
-        \Log::info("CheckIfAdmin: User PASSED admin check, proceeding");
         return $next($request);
     }
 }
