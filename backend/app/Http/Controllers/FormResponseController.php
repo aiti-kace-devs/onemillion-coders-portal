@@ -13,6 +13,8 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
+
 
 class FormResponseController extends Controller
 {
@@ -83,19 +85,20 @@ class FormResponseController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+
     public function store(Request $request)
     {
+        // 1️⃣ Check for form UUID
         $formUuid = $request->input('form_uuid');
-
         if (!$formUuid) {
             return response()->json([
                 'success' => false,
-                'message' => 'form_uuid is required'
+                'message' => 'Form UUID is required'
             ], 400);
         }
 
+        // 2️⃣ Fetch form
         $form = Form::where('uuid', $formUuid)->first();
-
         if (!$form) {
             return response()->json([
                 'success' => false,
@@ -103,168 +106,130 @@ class FormResponseController extends Controller
             ], 404);
         }
 
-        // \Log::info('STORE: Form fetched', ['form' => $form]);
         $schema = $form->schema;
-        // dd($schema);
-        // \Log::info('STORE: Schema loaded', ['schema' => $schema]);
 
-        // $validationRules = $form->getValidationRules();
-        $validationRules = [
-            'response_data' => 'required|array',
-        ];
-
-        $customMessages = [
-            'response_data.required' => 'The form responses are required.',
-        ];
-
-
-        $formattedData = [];
+        $validationRules = [];
+        $customMessages = [];
         $attributes = [];
+        $phoneFieldName = null;
 
-        foreach ($request->input('response_data', []) as $key => $value) {
-            foreach ($schema as $field) {
-                if (strcasecmp($key, $field['title']) == 0) {
-                    $formattedData[$field['field_name']] = trim($value);
-                    break;
-                }
-            }
-        }
-        
+        // 3️⃣ Build dynamic validation rules
         foreach ($schema as $field) {
-            $fieldKey = $field['type'] == 'select_course' ? 'response_data.course_id' : "response_data.{$field['field_name']}";
-
-            $fieldTitle = ucwords(str_replace('_', ' ', $field['title']));
-
+            $fieldName = $field['field_name'];
+            $inputField = $fieldName; // always match field_name from schema
+            $fieldTitle = ucwords(str_replace(['-', '_'], ' ', $field['title']));
             $rules = [];
 
-            $attributes[$fieldKey] = Str::remove('_id', Str::remove('response_data.', $fieldKey, true));
+            $attributes[$inputField] = $fieldTitle;
 
+            // Required
             if (!empty($field['validators']['required'])) {
                 $rules[] = 'required';
-                $customMessages["{$fieldKey}.required"] = "{$fieldTitle} is required.";
+                $customMessages["{$inputField}.required"] = "{$fieldTitle} is required.";
+            } else {
+                $rules[] = 'nullable';
             }
 
+            // Unique validation
             if (!empty($field['validators']['unique'])) {
-                $valueToCheck = $formattedData[$field['field_name']] ?? null;
-            
-                if (!empty($valueToCheck)) {
+                $value = $request->input($inputField);
+                if ($value) {
                     $userFieldMap = [
                         'email' => 'email',
                         'phone' => 'mobile_no',
                     ];
-            
-                    $dbColumn = $userFieldMap[$field['field_name']] ?? null;
-            
-                    if ($dbColumn) {
-                        $exists = User::where($dbColumn, $valueToCheck)->exists();
-            
-                        if ($exists) {
-                            throw \Illuminate\Validation\ValidationException::withMessages([
-                                $fieldKey => ["{$fieldTitle} has already been taken."]
-                            ]);
-                        }
+                    $dbColumn = $userFieldMap[$fieldName] ?? null;
+                    if ($dbColumn && User::where($dbColumn, $value)->exists()) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            $inputField => ["{$fieldTitle} has already been taken."]
+                        ]);
                     }
                 }
             }
-            
+
+            // Type-specific rules
             switch ($field['type']) {
                 case 'text':
-                case 'textarea':
-                    $rules[] = 'string';
-                    $customMessages["{$fieldKey}.string"] = "This field must be a string.";
-                    break;
-
+                case 'textarea': $rules[] = 'string'; break;
                 case 'radio':
-                case 'select':
-                    $rules[] = 'string';
-                    $customMessages["{$fieldKey}.string"] = "This field must be a valid option.";
-                    break;
-
-                case 'number':
-                    $rules[] = 'numeric';
-                    $customMessages["{$fieldKey}.numeric"] = "This field must be a number.";
-                    break;
-
-                case 'email':
-                    $rules[] = 'email';
-                    $customMessages["{$fieldKey}.email"] = "This field must be a valid email address.";
-                    break;
-
-                case 'checkbox':
-                    $rules[] = 'array';
-                    $customMessages["{$fieldKey}.array"] = "This field must be an array.";
-                    break;
-
+                case 'select': $rules[] = 'string'; break;
+                case 'number': $rules[] = 'numeric'; break;
+                case 'email': $rules[] = 'email'; break;
+                case 'checkbox': $rules[] = 'array'; break;
                 case 'file':
                     $rules[] = 'file';
                     $rules[] = 'max:2048';
-
                     if (!empty($field['options'])) {
                         $allowedMimes = array_map('trim', explode(',', strtolower($field['options'])));
                         $rules[] = 'mimes:' . implode(',', $allowedMimes);
-                        $customMessages["{$fieldKey}.mimes"] = "Must be a file of type: " . implode(', ', $allowedMimes) . ".";
                     }
-
-                    $customMessages["{$fieldKey}.file"] = "This field must be a file.";
-                    $customMessages["{$fieldKey}.max"] = "The file must not be greater than 2MB.";
-
                     break;
-
                 case 'select_course':
                     $rules[] = 'exists:courses,id';
-                    $customMessages["{$fieldKey}.exists"] = "The selected course is invalid";
                     break;
-
                 case 'phonenumber':
                     $rules[] = 'phone';
-                    $customMessages["{$fieldKey}.phone"] = "This must be a valid phonenumber.";
-                    $fieldName = $field['field_name'];
-                    break;
-
-                default:
-                    $rules[] = 'nullable';
+                    $phoneFieldName = $fieldName;
                     break;
             }
-            $validationRules[$fieldKey] = implode('|', $rules);
-            $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|' . $field['rules'] ?? '' : '';
-            $validationRules[$fieldKey] =  $validationRules[$fieldKey] . $additionRules;
+
+            if (!empty($field['rules'])) {
+                $rules[] = $field['rules'];
+            }
+
+            $validationRules[$inputField] = implode('|', $rules);
         }
 
-
+        // 4️⃣ Validate
         $validated = $request->validate($validationRules, $customMessages, $attributes);
 
+        // 5️⃣ Handle file uploads
         foreach ($schema as $field) {
-            if ($field['type'] === 'file' && $request->hasFile("response_data.{$field['field_name']}")) {
+            if ($field['type'] === 'file' && $request->hasFile($field['field_name'])) {
+                $file = $request->file($field['field_name']);
                 $destinationPath = 'form/uploads/';
-                $file = $request->file("response_data.{$field['field_name']}");
+                $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
 
-                $fileName = time() . '.' . $file->getClientOriginalExtension();
+                Storage::disk('public')->putFileAs($destinationPath, $file, $fileName);
 
-                if (\Storage::disk('public')->exists($destinationPath . $fileName)) {
-                    \Storage::disk('public')->delete($destinationPath . $fileName);
-                }
-
-                \Storage::disk('public')->putFileAs($destinationPath, $file, $fileName);
-
-                $validated['response_data'][$field['field_name']] = $fileName;
+                $validated[$field['field_name']] = [
+                    'name' => $fileName,
+                    'url' => Storage::url($destinationPath . $fileName),
+                ];
             }
         }
 
-        $response = new FormResponse($validated);
+        // 6️⃣ Prepare response_data
+        $responseData = [];
+        foreach ($schema as $field) {
+            $fieldName = $field['field_name'];
+            $responseData[$fieldName] = $validated[$fieldName] ?? $request->input($fieldName);
+        }
 
+        // 7️⃣ Save response
+        $response = new FormResponse([
+            'form_id' => $form->id,
+            'response_data' => $responseData
+        ]);
         $form->responses()->save($response);
 
-        FormSubmittedEvent::dispatch($validated['response_data'], $response->id, $fieldName);
-
+        
+        // 8️⃣ Dispatch event
+        if ($phoneFieldName) {
+            FormSubmittedEvent::dispatch($responseData, $response->id, $phoneFieldName);
+        }
 
         return response()->json([
-                'success' => true,
-                'message' => 'Student created successfully',
-                'data' => $response
-            ], 201);
-
-
+            'success' => true,
+            'message' => 'Student created successfully',
+            'data' => $response
+        ], 201);
     }
+
+
+
+
+
 
 
     /**

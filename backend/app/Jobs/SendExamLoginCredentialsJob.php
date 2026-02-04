@@ -46,11 +46,19 @@ class SendExamLoginCredentialsJob implements ShouldQueue
 
         $deadline = $this->exam_deadline();
 
+        $fullName = trim(
+            ($this->std->first_name ?? '') . ' ' .
+            ($this->std->middle_name ?? '') . ' ' .
+            ($this->std->last_name ?? '')
+        );
+
+        $fullName = preg_replace('/\s+/', ' ', $fullName);
+
         MailerHelper::sendTemplateEmail(
             AFTER_REGISTRATION_EMAIL,
             $this->std->email,
             [
-                'name'     => $this->std->name,
+                'name'     => $fullName,
                 'deadline' => $deadline,
                 'password' => $this->plainPassword,
                 'email'    => $this->std->email,
@@ -58,6 +66,7 @@ class SendExamLoginCredentialsJob implements ShouldQueue
             ],
             'One Million Coders Login Credentials'
         );
+
     }
 
     private function exam_deadline(): string

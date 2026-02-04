@@ -37,7 +37,10 @@ class AddNewStudentsJob implements ShouldQueue
 
         foreach ($this->students as $student) {
             $validator = Validator::make($student, [
-                'name' => 'required',
+                'name' => 'nullable',
+                'first_name' => 'required',
+                'middle_name' => 'nullable',
+                'last_name' => 'required',
                 'email' => 'required|email',
                 'mobile_no' => 'required',
                 'gender' => 'required',
@@ -47,6 +50,7 @@ class AddNewStudentsJob implements ShouldQueue
                 'userId' => 'required',
                 'password' => 'sometimes',
                 'exam_name' => 'sometimes',
+                'ghcard' => 'nullable',
                 'form_response_id' => 'required'
             ]);
 
@@ -80,6 +84,9 @@ class AddNewStudentsJob implements ShouldQueue
                 // Create a new student
                 $std = new User();
                 $std->name = $student['name'];
+                $std->first_name = $student['first_name'];
+                $std->middle_name = $student['middle_name'];
+                $std->last_name = $student['last_name'];
                 $std->email = $student['email'];
                 $std->mobile_no = $student['mobile_no'];
                 $std->exam = $student['exam'];
@@ -89,6 +96,7 @@ class AddNewStudentsJob implements ShouldQueue
                 $std->age  = $student['age'];
                 $std->gender = $student['gender'];
                 $std->status = 1;
+                $std->ghcard = $student['ghcard'] ?? null;
                 $std->form_response_id = $student['form_response_id'];
                 $std->save();
 

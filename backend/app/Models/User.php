@@ -172,3 +172,5 @@ class User extends Authenticatable
         $this->name = $this->getFullNameAttribute();
     }
 }
+
+
