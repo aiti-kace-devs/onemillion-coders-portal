@@ -73,6 +73,10 @@
     <x-backpack::menu-item title="Registration Form" icon="la la-wpforms" :link="backpack_url('form')" />
 @endcan
 
+@can('student.read.all')
+    <x-backpack::menu-item title="Manage Students" icon="la la-user-graduate" :link="backpack_url('manage-student')" />
+@endcan
+
 @can('category.read.all')
     <x-backpack::menu-item title="Manage Exam Categories" icon="la la-layer-group" :link="backpack_url('category')" />
 @endcan
