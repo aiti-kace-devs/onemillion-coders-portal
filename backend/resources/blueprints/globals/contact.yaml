@@ -5,32 +5,32 @@ tabs:
       -
         fields:
           -
-            handle: contact_us
             field:
-              type: replicator
-              display: 'Contact Us'
               sets:
                 new_set_group:
-                  display: 'New Set Group'
                   sets:
                     contact:
-                      display: Contact
                       fields:
                         -
-                          handle: name
                           field:
                             type: text
+                            width: 50
                             display: Name
-                            width: 50
                             validate:
                               - required
+                          handle: name
                         -
-                          handle: value
                           field:
                             type: text
-                            display: Value
                             width: 50
+                            display: Value
                             validate:
                               - required
+                          handle: value
                         -
                           import: icons
+                      display: Contact
+                  display: 'New Set Group'
+              type: replicator
+              display: 'Contact Us'
+            handle: contact_us

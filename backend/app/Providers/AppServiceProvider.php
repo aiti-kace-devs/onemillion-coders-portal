@@ -18,7 +18,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        // Bind custom AssetContainerContents to handle GCS dirname issue
+        $this->app->bind(
+            \Statamic\Assets\AssetContainerContents::class,
+            \App\Overrides\AssetContainerContents::class
+        );
+
+        // Replace Statamic import-assets command with GCS-compatible version
+        $this->app->bind(
+            \Statamic\Eloquent\Commands\ImportAssets::class,
+            \App\Console\Commands\ImportAssetsCommand::class
+        );
     }
 
     /**

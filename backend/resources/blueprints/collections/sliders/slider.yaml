@@ -5,26 +5,26 @@ tabs:
       -
         fields:
           -
-            handle: title
             field:
               type: text
               required: true
               validate:
                 - required
+            handle: title
           -
-            handle: content
             field:
               type: markdown
               localizable: true
               escape_markup: true
+            handle: content
           -
-            handle: media
             field:
-              max_files: 1
-              container: google_cloud
               type: assets
-              display: Media
               folder: uploads
+              display: Media
+              container: google_cloud
+              max_files: 1
+            handle: media
           -
             import: button
             prefix: slider_
@@ -37,9 +37,9 @@ tabs:
       -
         fields:
           -
-            handle: slug
             field:
               type: slug
-              localizable: true
               validate: 'max:200'
+              localizable: true
+            handle: slug
 title: Slider

@@ -1,4 +1,3 @@
-title: MediaBlock
 tabs:
   main:
     display: Main
@@ -6,23 +5,23 @@ tabs:
       -
         fields:
           -
-            handle: title
             field:
               type: text
               required: true
               validate:
                 - required
+            handle: title
           -
-            handle: content
             field:
-              max_files: 1
-              min_files: 1
               mode: grid
-              container: public
               type: assets
               display: content
               validate:
                 - required
+              container: public
+              max_files: 1
+              min_files: 1
+            handle: content
           -
             import: details
           -
@@ -33,8 +32,9 @@ tabs:
       -
         fields:
           -
-            handle: slug
             field:
               type: slug
-              localizable: true
               validate: 'max:200'
+              localizable: true
+            handle: slug
+title: MediaBlock

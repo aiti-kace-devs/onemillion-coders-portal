@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import {
   FiX,
   FiMapPin,
@@ -17,6 +18,7 @@ import {
   getProgrammeLocations,
   getRegistrationForm,
   submitRegistration,
+  getConsentData,
 } from "../services/pages";
 import Button from "./Button";
 import { getCourseImage } from "../utils/courseImages";
@@ -38,6 +40,8 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
   const [formData, setFormData] = useState({});
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [consentContent, setConsentContent] = useState("");
 
   // Fetch programme locations
   const fetchLocations = useCallback(async () => {
@@ -65,9 +69,27 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
       setCentre(null);
       setFormData({});
       setFormErrors({});
+      setConsentAccepted(false);
+      setConsentContent("");
       fetchLocations();
     }
   }, [isOpen, programme?.id, fetchLocations]);
+
+  // Fetch consent content when form step is shown
+  useEffect(() => {
+    if (step !== 2 || !isOpen) return;
+    let cancelled = false;
+    getConsentData()
+      .then((res) => {
+        if (cancelled) return;
+        const raw = res?.data ?? res;
+        setConsentContent(raw?.content ?? "");
+      })
+      .catch(() => {
+        if (!cancelled) setConsentContent("");
+      });
+    return () => { cancelled = true; };
+  }, [step, isOpen]);
 
   // Fetch form schema when moving to form step
   const fetchFormSchema = async () => {
@@ -156,6 +178,10 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
           }
         }
       });
+
+    if (!consentAccepted) {
+      errors.consent = "You must accept the terms and privacy policy to register.";
+    }
 
     return errors;
   };
@@ -650,6 +676,42 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
                                 )}
                             </div>
                           ))}
+
+                        {/* Consent block */}
+                        <div className="space-y-3 pt-4 border-t border-gray-200">
+                          <p className="text-sm text-gray-700 leading-relaxed">
+                            I have read the {" "}
+                            <Link
+                              href="/terms-and-privacy"
+                              className="text-yellow-600 hover:text-yellow-700 font-medium underline underline-offset-2"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Terms & Privacy Policy
+                            </Link>
+                            {consentContent ? " " : ""}
+                            {consentContent ? (
+                              <span dangerouslySetInnerHTML={{ __html: consentContent }} />
+                            ) : null}
+                          </p>
+                          <label className="flex items-start gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={consentAccepted}
+                              onChange={(e) => setConsentAccepted(e.target.checked)}
+                              className="mt-1 w-4 h-4 rounded border-gray-300 text-yellow-500 focus:ring-yellow-500"
+                            />
+                            <span className="text-sm text-gray-700">
+                              I accept the terms and privacy policy
+                            </span>
+                          </label>
+                          {formErrors.consent && (
+                            <p className="mt-1 text-sm text-red-600 flex items-center">
+                              <FiAlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                              {formErrors.consent}
+                            </p>
+                          )}
+                        </div>
 
                         <div className="flex space-x-4 pt-4">
                           <Button

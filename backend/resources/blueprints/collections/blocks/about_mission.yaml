@@ -1,4 +1,3 @@
-title: 'About Mission'
 tabs:
   main:
     display: Main
@@ -6,35 +5,36 @@ tabs:
       -
         fields:
           -
-            handle: title
             field:
               type: text
               required: true
               validate:
                 - required
+            handle: title
           -
-            handle: content
             field:
-              escape_markup: true
               type: markdown
               display: Content
+              escape_markup: true
+            handle: content
           -
-            handle: images
             field:
+              type: assets
+              folder: uploads
+              display: Images
+              container: google_cloud
               max_files: 3
               min_files: 1
-              container: google_cloud
-              folder: uploads
-              type: assets
-              display: Images
+            handle: images
   sidebar:
     display: Sidebar
     sections:
       -
         fields:
           -
-            handle: slug
             field:
               type: slug
-              localizable: true
               validate: 'max:200'
+              localizable: true
+            handle: slug
+title: 'About Mission'

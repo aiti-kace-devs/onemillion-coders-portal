@@ -152,14 +152,15 @@ export default function PathwayDetailPage() {
 
               {/* CTA Button */}
               <div className="flex">
+                <Link href="/register">
                 <Button
-                  onClick={() => window.open('https://onemillioncoders.gov.gh/available-courses', '_blank')}
                   variant="primary"
                   icon={FiPlay}
                   className="!bg-white !text-gray-900 hover:!bg-gray-100"
-                >
+                  >
                   Start Your Journey
                 </Button>
+                  </Link>
               </div>
             </motion.div>
 
@@ -173,7 +174,7 @@ export default function PathwayDetailPage() {
               <div className="relative h-96 lg:h-[500px] rounded-2xl overflow-hidden shadow-2xl">
                 {pathway.hero_image && (
                   <Image
-                    src={`${process.env.NEXT_PUBLIC_IMAGE_BASE_URL}/${pathway.hero_image}`}
+                    src={pathway.hero_image.url}
                     alt={pathway.title}
                     fill
                     className="object-cover"

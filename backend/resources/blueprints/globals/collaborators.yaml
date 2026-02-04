@@ -5,45 +5,45 @@ tabs:
       -
         fields:
           -
-            handle: name
             field:
               type: text
               display: Name
+            handle: name
           -
-            handle: description
             field:
               type: textarea
               display: Description
+            handle: description
           -
-            handle: collaborators
             field:
-              type: replicator
-              display: Collaborators
               sets:
                 new_set_group:
-                  display: 'New Set Group'
                   sets:
                     collaborator:
-                      display: Collaborator
                       fields:
                         -
-                          handle: name
                           field:
                             type: text
-                            display: Name
                             width: 50
+                            display: Name
+                          handle: name
                         -
-                          handle: image
                           field:
+                            type: assets
+                            width: 50
+                            folder: uploads
+                            display: Image
+                            container: google_cloud
                             max_files: 1
                             min_files: 1
-                            container: google_cloud
-                            folder: uploads
-                            type: assets
-                            display: Image
-                            width: 50
+                          handle: image
                         -
-                          handle: url
                           field:
                             type: link
                             display: Url
+                          handle: url
+                      display: Collaborator
+                  display: 'New Set Group'
+              type: replicator
+              display: Collaborators
+            handle: collaborators

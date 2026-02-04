@@ -144,7 +144,7 @@ export default function AboutClient({ data }) {
                 <Image
                   src={
                     heroData.about_details_media
-                      ? `${process.env.NEXT_PUBLIC_IMAGE_BASE_URL}/${heroData.about_details_media}`
+                      ? heroData.about_details_media.url
                       : "/images/about/1million1-1.jpg"
                   }
                   alt="One Million Coders Training"

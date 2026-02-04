@@ -5,16 +5,16 @@ return [
     'connection' => env('STATAMIC_ELOQUENT_CONNECTION', ''),
     'table_prefix' => env('STATAMIC_ELOQUENT_PREFIX', 'cms_'),
 
-    // 'asset_containers' => [
-    //     'driver' => 'eloquent',
-    //     'model' => \Statamic\Eloquent\Assets\AssetContainerModel::class,
-    // ],
+    'asset_containers' => [
+        'driver' => 'eloquent',
+        'model' => \Statamic\Eloquent\Assets\AssetContainerModel::class,
+    ],
 
-    // 'assets' => [
-    //     'driver' => 'eloquent',
-    //     'model' => \Statamic\Eloquent\Assets\AssetModel::class,
-    //     'asset' => \Statamic\Eloquent\Assets\Asset::class,
-    // ],
+    'assets' => [
+        'driver' => 'eloquent',
+        'model' => \Statamic\Eloquent\Assets\AssetModel::class,
+        'asset' => \Statamic\Eloquent\Assets\Asset::class,
+    ],
 
     'blueprints' => [
         'driver' => 'eloquent',
