@@ -135,7 +135,7 @@ export default function PathwaysPage() {
                   <div className="relative h-48 overflow-hidden">
                     {pathway.hero_image && (
                       <Image
-                        src={`${process.env.NEXT_PUBLIC_IMAGE_BASE_URL}/${pathway.hero_image}`}
+                        src={`${pathway.hero_image.url}`}
                         alt={pathway.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -241,14 +241,15 @@ export default function PathwaysPage() {
                   View All Programs
                 </Button>
               </Link>
-              <Button
-                onClick={() => window.open('https://onemillioncoders.gov.gh/available-courses', '_blank')}
-                variant="outline"
-                size="large"
-                className="!border-gray-900 !text-gray-900 hover:!bg-gray-900 hover:!text-white"
-              >
-                Register
-              </Button>
+             <Link href="/register">
+                <Button
+                  variant="outline"
+                  size="large"
+                  className="!border-gray-900 !text-gray-900 hover:!bg-gray-900 hover:!text-white"
+                >
+                  Register
+                </Button>
+              </Link>
             </div>
           </motion.div>
         </div>

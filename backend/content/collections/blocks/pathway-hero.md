@@ -1,28 +1,28 @@
 ---
 id: 33df2562-df7f-4f40-b534-f7a8fee493d2
 blueprint: pathway
+name: 'Find Your Pathway'
 title: 'Pathway Hero'
-description: 'Every journey is unique. Discover the learning path designed specifically for your background, goals, and circumstances in the One Million Coders programmme.'
 metrics:
   -
     id: md4lhej7
-    number: '6'
-    description: 'Specialized Pathways'
     type: metric
+    number: '6'
     enabled: true
+    description: 'Specialized Pathways'
   -
     id: md4lhqip
-    number: 50K+
-    description: 'Success Stories'
     type: metric
+    number: 50K+
     enabled: false
+    description: 'Success Stories'
   -
     id: md4li6gb
-    number: 100%
-    description: 'Personalized Support'
     type: metric
+    number: 100%
     enabled: true
+    description: 'Personalized Support'
 updated_by: 6
-updated_at: 1753711355
-name: 'Find Your Pathway'
+description: 'Every journey is unique. Discover the learning path designed specifically for your background, goals, and circumstances in the One Million Coders programmme.'
+updated_at: 2025-08-26T18:50:04+00:00
 ---

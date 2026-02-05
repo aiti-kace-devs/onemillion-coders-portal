@@ -7,7 +7,7 @@ images:
   - uploads/images/about-2.webp
   - uploads/images/imillioncoders.webp
 updated_by: 11
-updated_at: 1752594502
+updated_at: 2025-07-15T19:12:48+00:00
 ---
 To bridge Ghana's digital skills gap by providing world-class technology training to one million young Ghanaians, creating sustainable employment opportunities and positioning Ghana as a leading digital economy in Africa.
 
