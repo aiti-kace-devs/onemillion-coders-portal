@@ -5,11 +5,13 @@ namespace App\Models;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use StatamicRadPack\Runway\Traits\HasRunwayResource;
 
 class Course extends Model
 {
     use CrudTrait;
     use HasFactory;
+    use HasRunwayResource;
 
     protected $fillable = [
         'branch_id',
