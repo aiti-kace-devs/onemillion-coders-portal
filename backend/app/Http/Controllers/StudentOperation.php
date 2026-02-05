@@ -28,7 +28,7 @@ use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use App\Models\AppConfig;
+
 
 class StudentOperation extends Controller
 {
@@ -70,7 +70,7 @@ class StudentOperation extends Controller
 
             return $questionnaire;
         });
-        $showResultsToStudents = AppConfig::getValue(SHOW_RESULTS_TO_STUDENTS);
+        $showResultsToStudents = config(SHOW_RESULTS_TO_STUDENTS, false);
         return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires', 'showResultsToStudents'));
 
         // $data['portal_exams'] = Oex_exam_master::select(['oex_exam_masters.*', 'oex_categories.name as cat_name'])
@@ -137,7 +137,7 @@ class StudentOperation extends Controller
             ->get()
             ->toArray();
 
-        $showResultsToStudents = AppConfig::getValue(SHOW_RESULTS_TO_STUDENTS);
+        $showResultsToStudents = config(SHOW_RESULTS_TO_STUDENTS, false);
         return Inertia::render('Student/Exam/Index', compact('exams', 'showResultsToStudents'));
     }
 
@@ -348,7 +348,7 @@ class StudentOperation extends Controller
             abort(404);
         }
 
-        $showResultsToStudents = AppConfig::getValue(SHOW_RESULTS_TO_STUDENTS);
+        $showResultsToStudents = config(SHOW_RESULTS_TO_STUDENTS, false);
         if (!$showResultsToStudents) {
             return redirect()
                 ->route('student.results')
