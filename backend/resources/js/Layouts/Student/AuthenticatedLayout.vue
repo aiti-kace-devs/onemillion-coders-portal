@@ -43,7 +43,7 @@ const user = auth?.user || {};
       @click.away="isSidebarCollapsed = true"
     >
       <div
-        class="h-full flex flex-col group-[.sidebar-collapsed]/container:overflow-visible"
+        class="h-[calc(100vh-100px)] overflow-hidden group-[.sidebar-collapsed]/container:overflow-visible"
       >
         <div
           class="p-2 lg:py-2 lg:px-0 flex items-start justify-between lg:flex-none w-full"
@@ -82,7 +82,7 @@ const user = auth?.user || {};
           </button>
         </div>
 
-        <nav class="mt-3 grid w-full space-y-2 flex-1">
+        <nav class="mt-3 grid w-full space-y-2">
           <SidebarNavLink
             :active="route().current('student.dashboard')"
             :href="route('student.dashboard')"
