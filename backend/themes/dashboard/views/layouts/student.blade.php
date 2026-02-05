@@ -173,7 +173,7 @@
                                         class="nav-link {{ request()->is('student/select-session*') ? 'active' : '' }}">
                                         <i class="nav-icon fas fa-check"></i>
                                         <p>
-                                            Choose Session
+                                            Change Session
                                         </p>
                                     </a>
                                 </li>

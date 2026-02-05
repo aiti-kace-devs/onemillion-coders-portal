@@ -98,7 +98,7 @@ trait UserFieldHelpers
             'label' => 'Location',
             'type' => 'closure',
             'function' => function ($entry) {
-                $admission = $entry->admission;
+                $admission = $entry->admissions()->whereNotNull('confirmed')->first() ?? $entry->admission;
                 return $admission?->location ?? '-';
             },
         ]);
@@ -109,7 +109,7 @@ trait UserFieldHelpers
             'label' => 'Session',
             'type' => 'closure',
             'function' => function ($entry) {
-                $admission = $entry->admission;
+                $admission = $entry->admissions()->whereNotNull('confirmed')->first() ?? $entry->admission;
                 if (!$admission?->session) {
                     return '-';
                 }

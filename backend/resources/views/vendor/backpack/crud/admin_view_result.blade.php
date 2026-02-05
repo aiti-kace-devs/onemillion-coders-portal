@@ -9,6 +9,13 @@
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card mt-4 mx-auto">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Result</span>
+                {{-- Back to student preview --}}
+                <a href="{{ url(config('backpack.base.route_prefix').'/manage-student/'.$student_info->id.'/show') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="la la-arrow-left"></i> Back to Preview
+                </a>
+            </div>
             <div class="card-body">
                 <h2 class="text-center">Student information</h2>
                 <table class="table">

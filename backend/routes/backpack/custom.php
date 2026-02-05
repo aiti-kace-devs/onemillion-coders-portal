@@ -99,6 +99,9 @@ Route::group([
     Route::post('user/{user}/choose-session', 'UserCrudController@chooseSession')->name('user.choose-session');
     Route::delete('user/delete-admission/{user_id}', 'UserCrudController@deleteAdmission')->name('user.delete-admission');
 
+    // Manage Student preview page actions (use ManageStudentCrudController for delete to also clear shortlist)
+    Route::delete('manage-student/delete-admission/{user_id}', [ManageStudentCrudController::class, 'deleteAdmission'])->name('manage-student.delete-admission');
+
     // View Results for a student (admin panel, Backpack)
     Route::get('admin_view_result/{id}', 'UserCrudController@viewResult');
     // Reset Result for a student (admin panel, Backpack)

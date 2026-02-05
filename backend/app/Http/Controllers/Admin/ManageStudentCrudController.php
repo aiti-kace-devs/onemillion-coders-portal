@@ -122,11 +122,13 @@ class ManageStudentCrudController extends CrudController
 
     protected function setupShowOperation()
     {
+        $this->crud->query->with(['admission', 'course', 'examResults.exam']);
         $this->setupManageStudentShowColumns();
         $this->crud->set('show.setFromDb', false);
+        $this->crud->setShowView('vendor.backpack.crud.manage_student_show');
 
         // Add action buttons for the preview page
-        CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
+        CRUD::addButtonFromView('line', 'manage_student_actions', 'crud::buttons.manage_student_actions', 'end');
     }
     /**
      * Define what happens when the Create operation is loaded.

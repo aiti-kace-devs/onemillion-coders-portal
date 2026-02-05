@@ -186,6 +186,12 @@ trait BulkStudentActionsTrait
                 );
             }
 
+            // ensure student is shortlisted before/when admitting
+            if (!$user->shortlist) {
+                $user->shortlist = 1;
+                $user->save();
+            }
+
             // Now use the userId field for operations
             $user_id = $user->userId;
             CreateStudentAdmissionJob::dispatch($user, $course, $session);
@@ -197,6 +203,12 @@ trait BulkStudentActionsTrait
         } elseif (count($validated['user_ids'] ?? []) > 0) {
             $users = User::whereIn('id', $validated['user_ids'])->get();
             foreach ($users as $user) {
+                // ensure student is shortlisted before/when admitting
+                if (!$user->shortlist) {
+                    $user->shortlist = 1;
+                    $user->save();
+                }
+
                 $user_id = $user->userId;
                 CreateStudentAdmissionJob::dispatch($user, $course, $session);
                 $admittedCount++;
