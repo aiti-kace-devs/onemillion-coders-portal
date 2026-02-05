@@ -91,7 +91,7 @@ class AddNewStudentsJob implements ShouldQueue
                 $std->mobile_no = $student['mobile_no'];
                 $std->exam = $student['exam'];
                 $std->userId = $student['userId'];
-                $std->password = Hash::make($plainPassword);
+                $std->password = $plainPassword;
                 $std->registered_course = $student['registered_course'];
                 $std->age  = $student['age'];
                 $std->gender = $student['gender'];

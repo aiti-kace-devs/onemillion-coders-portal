@@ -8,6 +8,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\CourseFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
+
 /**
  * Class CourseMatchOptionCrudController
  * @package App\Http\Controllers\Admin
@@ -24,7 +25,7 @@ class CourseMatchOptionCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -32,20 +33,18 @@ class CourseMatchOptionCrudController extends CrudController
         CRUD::setModel(\App\Models\CourseMatchOption::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-match-option');
         CRUD::setEntityNameStrings('course match option', 'course match options');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::CourseMatchOptionStatisticsWidget();
-        });
     }
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
     protected function setupListOperation()
     {
+        WidgetHelper::CourseMatchOptionStatisticsWidget();
+
         CRUD::column('value');
         CRUD::column('answer');
         CRUD::column('description');
@@ -57,7 +56,7 @@ class CourseMatchOptionCrudController extends CrudController
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
@@ -69,7 +68,7 @@ class CourseMatchOptionCrudController extends CrudController
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */

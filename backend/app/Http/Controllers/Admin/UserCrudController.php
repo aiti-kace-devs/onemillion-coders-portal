@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\UserRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Backpack\CRUD\app\Library\CrudPanel\Hooks\Facades\LifecycleHook;
 use App\Http\Controllers\Traits\BulkStudentActionsTrait;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\ShortlistActionsTrait;
@@ -17,6 +18,7 @@ use App\Helpers\FilterHelper;
 use Illuminate\Support\Facades\View;
 use App\Http\Controllers\Traits\GetsFilteredQuery;
 use Illuminate\Support\Facades\Log;
+
 /**
  * Class UserCrudController
  * @package App\Http\Controllers\Admin
@@ -55,12 +57,8 @@ class UserCrudController extends CrudController
         $this->setSearchableColumns(['name', 'email', 'mobile_no']);
         $this->setSearchResultAttributes(['id', 'name', 'email', 'mobile_no']);
 
-        $this->crud->operation('list', function () {
-            WidgetHelper::userStatisticsWidget();
-        });
-
         // Add permission checks
-        $this->crud->operation(['list', 'show'], function () {
+        LifecycleHook::hookInto(['list:before_setup', 'show:before_setup'], function () {
             $this->crud->addClause('where', function ($query) {
                 if (!backpack_user()->can('student.read.all')) {
                     // Add any specific filtering logic here if needed
@@ -77,6 +75,8 @@ class UserCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::userStatisticsWidget();
+
         // Check permissions
         if (!backpack_user()->can('student.read.all')) {
             abort(403, 'Unauthorized action.');
@@ -136,7 +136,7 @@ class UserCrudController extends CrudController
         CRUD::enableExportButtons();
     }
 
-        protected function setupShowOperation()
+    protected function setupShowOperation()
     {
         $this->setupShowStudentColumns();
     }

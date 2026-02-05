@@ -25,8 +25,9 @@ class SendBulkEmailRequest extends FormRequest
     {
         return [
             'subject' => 'required',
-            'message' => 'sometimes',
-            'template' => 'required_if:message,null',
+            // require at least one of message or template
+            'message' => 'nullable|required_without:template',
+            'template' => 'nullable|required_without:message',
             'student_ids' => 'required_without:select_all_in_query|nullable|array',
             'student_ids.*' => 'exists:users,id',
             'select_all_in_query' => 'sometimes|boolean',
@@ -44,5 +45,26 @@ class SendBulkEmailRequest extends FormRequest
         return [
             'student_ids.*' => 'student',
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     *
+     * Ensure that when using the GenericEmail mailable as template,
+     * a message body is always provided, since that template has no default content.
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $template = $this->input('template');
+            $message = $this->input('message');
+
+            if ($template === \App\Mail\GenericEmail::class && (is_null($message) || $message === '')) {
+                $validator->errors()->add(
+                    'message',
+                    'A message is required when using the generic email template.'
+                );
+            }
+        });
     }
 }

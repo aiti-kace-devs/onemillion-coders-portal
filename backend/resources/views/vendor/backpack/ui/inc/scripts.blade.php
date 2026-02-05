@@ -1,11 +1,11 @@
-@basset('https://cdn.jsdelivr.net/npm/jquery@3.6.1/dist/jquery.min.js')
-@basset('https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js')
-@basset('https://cdn.jsdelivr.net/npm/noty@3.2.0-beta-deprecated/lib/noty.min.js')
-@basset('https://cdn.jsdelivr.net/npm/sweetalert@2.1.2/dist/sweetalert.min.js')
+@basset('https://unpkg.com/jquery@3.6.1/dist/jquery.min.js')
+@basset('https://unpkg.com/@popperjs/core@2.11.6/dist/umd/popper.min.js')
+@basset('https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.min.js')
+@basset('https://unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js')
 
 @if (backpack_theme_config('scripts') && count(backpack_theme_config('scripts')))
     @foreach (backpack_theme_config('scripts') as $path)
-        @if(is_array($path))
+        @if (is_array($path))
             @basset(...$path)
         @else
             @basset($path)
@@ -25,7 +25,7 @@
 
 @include(backpack_view('inc.alerts'))
 
-@if(config('app.debug'))
+@if (config('app.debug'))
     @include('crud::inc.ajax_error_frame')
 @endif
 

@@ -32,8 +32,28 @@ trait BulkStudentActionsTrait
         $validated = $request->validated();
 
         if ($request->has('select_all_in_query')) {
-            $query = $this->getFilteredQuery($request);
-            $validated['student_ids'] = $query->pluck('id')->toArray();
+            $query = $this->getFilteredQuery($request)->select('id');
+            $chunkSize = 500;
+            $totalDispatched = 0;
+            $query->chunkById($chunkSize, function ($users) use (&$validated, &$totalDispatched) {
+                $ids = $users->pluck('id')->toArray();
+                if (!empty($ids)) {
+                    $chunkPayload = array_merge($validated, ['student_ids' => $ids]);
+                    SendBulkEmailJob::dispatch($chunkPayload);
+                    $totalDispatched += count($ids);
+                }
+            });
+
+            if ($totalDispatched === 0) {
+                return response()->json(
+                    ['message' => 'No students selected.'],
+                    422,
+                );
+            }
+
+            return response()->json([
+                'message' => "Email sending initiated for {$totalDispatched} student(s).",
+            ]);
         }
 
         if (empty($validated['student_ids'])) {
@@ -57,8 +77,28 @@ trait BulkStudentActionsTrait
         $validated = $request->validated();
 
         if ($request->has('select_all_in_query')) {
-            $query = $this->getFilteredQuery($request);
-            $validated['student_ids'] = $query->pluck('id')->toArray();
+            $query = $this->getFilteredQuery($request)->select('id');
+            $chunkSize = 500;
+            $totalDispatched = 0;
+            $query->chunkById($chunkSize, function ($users) use (&$validated, &$totalDispatched) {
+                $ids = $users->pluck('id')->toArray();
+                if (!empty($ids)) {
+                    $chunkPayload = array_merge($validated, ['student_ids' => $ids]);
+                    SendBulkSMSJob::dispatch($chunkPayload);
+                    $totalDispatched += count($ids);
+                }
+            });
+
+            if ($totalDispatched === 0) {
+                return response()->json(
+                    ['message' => 'No students selected.'],
+                    422,
+                );
+            }
+
+            return response()->json([
+                'message' => "SMS sending initiated for {$totalDispatched} student(s).",
+            ]);
         }
 
         if (empty($validated['student_ids'])) {

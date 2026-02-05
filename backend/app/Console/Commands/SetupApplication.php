@@ -50,6 +50,9 @@ class SetupApplication extends Command
             $this->info('No version change detected (current: ' . $this->currentVersion . ')');
         }
 
+
+        $this->call('storage:link');
+
         // Cache config at the end
         $this->call('optimize');
 
@@ -134,10 +137,11 @@ class SetupApplication extends Command
 
         // Major version change (1.x.x → 2.x.x)
         if ($current[0] !== $previous[0]) {
+            $this->importFlatFileContent();
             return [
                 ['migrate', '--force'],
-                'basset:fresh',
                 ['db:seed', '--force'],
+                ['basset:cache'],
                 // 'optimize:clear',
                 // 'optimize',
             ];
@@ -201,5 +205,23 @@ class SetupApplication extends Command
             $this->error('Error retrieving stored version: ' . $e->getMessage());
             return null;
         }
+    }
+
+    protected function importFlatFileContent()
+    {
+        // run these artisan commands with no interaction
+        /**
+         *
+         *
+         */
+
+        $this->call('statamic:eloquent:import-assets', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-blueprints', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-collections', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-entries', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-forms', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-globals', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-taxonomies', ['--no-interaction' => true]);
+        $this->call('statamic:eloquent:import-users', ['--no-interaction' => true]);
     }
 }

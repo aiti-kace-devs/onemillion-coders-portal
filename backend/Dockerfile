@@ -1,7 +1,8 @@
-FROM php:8.3-fpm
+FROM php:8.3-fpm-bookworm
 
 # Environment variables
 ENV PHP_PM_MAX_CHILDREN=12 \
+    NODE_VERSION=20.18.0 \
     PHP_PM_START_SERVERS=3 \
     PHP_MIN_SPARE_SERVERS=2 \
     PHP_MAX_SPARE_SERVERS=4 \
@@ -12,15 +13,16 @@ ENV PHP_PM_MAX_CHILDREN=12 \
     PHP_OPEN_BASEDIR=/var/www/html:/dev/stdout:/tmp:/var/www:/var/www/.config/gcloud \
     COMPOSER_ALLOW_SUPERUSER=1
 
-# COPY docker/php/ondrej_ubuntu_php.gpg /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg
 
-# Install system dependencies
+# Install apt packages with --no-triggers, then run triggers with XZ_OPTIONS so dpkg trigger scripts (e.g. libc-bin) see it and xz sandbox does not fail
 RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \
     git \
     curl \
     unzip \
+    gnupg \
+    ca-certificates \
     libpng-dev \
     libwebp-dev \
     libjpeg62-turbo-dev \
@@ -28,9 +30,18 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     libssl-dev \
     default-mysql-client \
-    libpq-dev zlib1g-dev \
+    libpq-dev \
+    zlib1g-dev \
+    $PHPIZE_DEPS \
+      # 1. Install Node.js using NodeSource setup script
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    # 2. Configure and install PHP extensions
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip opcache bcmath pcntl posix exif \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    # 5. Cleanup
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -57,12 +68,15 @@ COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 COPY docker/start-nginx.sh /usr/local/bin/start-nginx
 RUN chmod +x /usr/local/bin/start-nginx
+COPY docker/scripts/run-queue-worker.sh /usr/local/bin/run-queue-worker
+RUN chmod +x /usr/local/bin/run-queue-worker
 
 
 # Application setup
 WORKDIR /var/www/html
-COPY composer.json composer.lock ./
-COPY composerauth.json ./auth.json
+COPY composer.json composer.lock package.json package-lock.json* ./
+
+COPY auth.json ./auth.json
 
 # Install dependencies and optimize
 # ENV CACHE_STORE=memcached
@@ -73,12 +87,18 @@ COPY composerauth.json ./auth.json
 RUN composer install --no-dev --optimize-autoloader --no-scripts \
     && rm -rf /composer/cache
 
+# Install npm dependencies
+RUN npm install
+
 COPY . .
+
+# Build assets
+RUN npm run build
 
 RUN chown -R www-data:www-data /var/www/html \
     && mkdir -p  bootstrap/cache storage/framework/sessions storage/app/public/basset storage/logs storage/statamic storage/statamic/stache-locks \
     && mkdir -p  bootstrap/cache storage/framework/views \
-    && mkdir -p  bootstrap/cache storage/framework/cache \
+    && mkdir -p  bootstrap/cache storage/framework/cache storage/framework/cache/data\
     && chmod -R 775 storage bootstrap/cache
 
 EXPOSE 8080

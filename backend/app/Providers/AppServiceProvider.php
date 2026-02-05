@@ -4,7 +4,10 @@ namespace App\Providers;
 
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Statamic\Facades\CP\Nav;
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,7 +28,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        Paginator::useBootstrapFour();
+        // Paginator::useBootstrapFour();
 
         if ($this->app->isLocal()) {
             // Set CSP nonce for Laravel Debugbar during development
@@ -49,7 +52,7 @@ class AppServiceProvider extends ServiceProvider
         );
 
         // View composer for $mailable in Backpack modals
-        \View::composer([
+        View::composer([
             'admin.send-bulk-email',
             'vendor.backpack.crud.modals.bulk_email',
         ], function ($view) {
@@ -61,13 +64,25 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
 
-        \View::composer('vendor.backpack.crud.modals.bulk_email', function ($view) {
+        View::composer('vendor.backpack.crud.modals.bulk_email', function ($view) {
             $view->with('mailable', \App\Helpers\MailerHelper::getMailableClasses());
         });
 
-        \View::composer('vendor.backpack.crud.modals.admit', function ($view) {
+        View::composer('vendor.backpack.crud.modals.admit', function ($view) {
             $view->with('courses', \App\Models\Course::pluck('course_name', 'id')->toArray());
             $view->with('sessions', \App\Models\CourseSession::all());
+        });
+
+        // Add Backpack Dashboard link to Statamic navigation
+        Nav::extend(function ($nav) {
+            // Remove Users/Roles sections from Statamic navigation to avoid conflicts with Backpack
+            $nav->remove('Users');
+
+            // Add Backpack dashboard link
+            $nav->create('Backpack')
+                ->icon('terminal')
+                ->section('Tools')
+                ->url(route('backpack.dashboard'));
         });
     }
 }

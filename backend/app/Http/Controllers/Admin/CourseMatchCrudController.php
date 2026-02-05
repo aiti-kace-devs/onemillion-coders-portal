@@ -9,6 +9,7 @@ use App\Helpers\CourseFieldHelpers;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
+
 /**
  * Class CourseMatchCrudController
  * @package App\Http\Controllers\Admin
@@ -29,7 +30,7 @@ class CourseMatchCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -37,20 +38,18 @@ class CourseMatchCrudController extends CrudController
         CRUD::setModel(\App\Models\CourseMatch::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-match');
         CRUD::setEntityNameStrings('course match', 'course matches');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::courseMatchStatisticsWidget();
-        });
     }
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
     protected function setupListOperation()
     {
+        WidgetHelper::courseMatchStatisticsWidget();
+
         CRUD::column('tag');
         CRUD::column('question');
         CRUD::column('description');
@@ -62,7 +61,7 @@ class CourseMatchCrudController extends CrudController
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
@@ -74,10 +73,10 @@ class CourseMatchCrudController extends CrudController
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
-     */protected function setupUpdateOperation()
+     */ protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
 
@@ -123,7 +122,7 @@ class CourseMatchCrudController extends CrudController
             DB::table('programme_course_match_options')
                 ->whereIn('course_match_option_id', $toDelete)
                 ->delete();
-                
+
             $courseMatch->courseMatchOptions()->whereIn('id', $toDelete)->delete();
         }
         foreach ($options as $option) {
@@ -148,7 +147,4 @@ class CourseMatchCrudController extends CrudController
             }
         }
     }
-
-
-
 }

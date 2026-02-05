@@ -6,7 +6,7 @@ import { apiRequest } from "./api.js";
  */
 export const getHomepageData = async () => {
   try {
-    const response = await apiRequest("/pages/homepage");
+    const response = await apiRequest("pages/homepage");
     return response.data;
   } catch (error) {
     console.error("Error fetching homepage data:", error);

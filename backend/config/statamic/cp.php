@@ -15,6 +15,8 @@ return [
 
     'route' => env('CP_ROUTE', 'cp'),
 
+    'guard' => 'admin',
+
     /*
     |--------------------------------------------------------------------------
     | Authentication
@@ -26,8 +28,8 @@ return [
     */
 
     'auth' => [
-        'enabled' => true,
-        'redirect_to' => null,
+        'enabled' => false,
+        'redirect_to' => '/admin/login',
     ],
 
     /*
@@ -40,7 +42,7 @@ return [
     |
     */
 
-    'start_page' => 'dashboard',
+    'start_page' => 'collections/pages',
 
     /*
     |--------------------------------------------------------------------------
@@ -156,5 +158,11 @@ return [
 
     'thumbnail_presets' => [
         // 'medium' => 800,
+    ],
+
+    'middleware' => [
+        'web',
+        \App\Http\Middleware\CheckIfAdmin::class, // Use your existing admin check
+        'permission'
     ],
 ];

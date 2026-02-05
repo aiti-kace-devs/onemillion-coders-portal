@@ -51,6 +51,12 @@ class Kernel extends HttpKernel
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
+
+        // Backpack admin middleware group - inherits web middleware + adds admin checks
+        'admin' => [
+            'web',
+            \App\Http\Middleware\CheckIfAdmin::class,
+        ],
     ];
 
     /**

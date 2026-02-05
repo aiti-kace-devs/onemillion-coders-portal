@@ -8,10 +8,25 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use Qoraiche\MailEclipse\MailEclipse;
 
 class MailerHelper
 {
+    /**
+     * Replicate MailEclipse's markdown to blade conversion logic.
+     * Converts [component]: # into @component
+     */
+    public static function parseMarkdown($content)
+    {
+        $components = ['component', 'endcomponent', 'slot', 'endslot', 'include', 'if', 'else', 'endif', 'foreach', 'endforeach'];
+
+        foreach ($components as $component) {
+            $pattern = "/\[{$component}]:\s?#\s?/i";
+            $content = preg_replace($pattern, "@{$component}", $content);
+        }
+
+        return $content;
+    }
+
     public static function getMailableClasses()
     {
         $mailables = [];
@@ -55,7 +70,7 @@ class MailerHelper
 
     public static function sendGenericTemplateEmail(string|array $emails, string $content, $subject = null, $bulk = false, $data = [])
     {
-        $replaceContent = MailEclipse::markdownedTemplateToView(false, $content);
+        $replaceContent = static::parseMarkdown($content);
         $filename = static::createView($replaceContent);
         if (!$filename) {
             Log::error('Unable to send bulk image, view not created');

@@ -28,9 +28,10 @@ class CheckIfAdmin
      */
     private function checkIfUserIsAdmin(Admin $user)
     {
-        // return ($user->is_admin == 1);
-        return $user->roles()->exists();
-        // return true;
+        $isSuper = $user->isSuper();
+        $hasRoles = $user->roles()->exists();
+
+        return $isSuper || $hasRoles;
     }
 
     /**
@@ -44,7 +45,14 @@ class CheckIfAdmin
         if ($request->ajax() || $request->wantsJson()) {
             return response(trans('backpack::base.unauthorized'), 401);
         } else {
-            return redirect()->guest(backpack_url('login'));
+            // Log the user out to break the infinite redirect loop
+            if (backpack_auth()->check()) {
+                backpack_auth()->logout();
+            }
+
+            return redirect()->guest(backpack_url('login'))->withErrors([
+                'email' => 'You do not have permission to access the admin area.'
+            ]);
         }
     }
 

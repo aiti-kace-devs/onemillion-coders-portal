@@ -1,0 +1,8 @@
+services:
+  backend:
+    volumes:
+      - ./backend:/var/www/html
+
+  queue:
+    volumes:
+      - ./backend:/var/www/html

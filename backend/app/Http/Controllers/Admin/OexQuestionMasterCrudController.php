@@ -11,6 +11,7 @@ use App\Models\OexCategory;
 use App\Helpers\CourseFieldHelpers;
 use App\Helpers\UserFieldHelpers;
 use App\Models\OexQuestionMaster;
+
 /**
  * Class OexQuestionMasterCrudController
  * @package App\Http\Controllers\Admin
@@ -40,15 +41,9 @@ class OexQuestionMasterCrudController extends CrudController
         CRUD::setRoute(config('backpack.base.route_prefix') . '/question-master');
         CRUD::setEntityNameStrings('question master', 'question masters');
 
-        $this->crud->operation('list', function () {
-           $examId = request()->get('exam_id');
-           WidgetHelper::manageQuestionStatisticsWidget($examId);
-        });
-
         if (request()->has('exam_id')) {
             $this->crud->addClause('where', 'exam_id', request()->get('exam_id'));
         }
-
     }
 
     /**
@@ -60,6 +55,7 @@ class OexQuestionMasterCrudController extends CrudController
     protected function setupListOperation()
     {
         $examId = request()->get('exam_id');
+        WidgetHelper::manageQuestionStatisticsWidget($examId);
 
         if ($examId) {
             $exam = \App\Models\OexExamMaster::find($examId);
@@ -68,19 +64,18 @@ class OexQuestionMasterCrudController extends CrudController
 
             $this->crud->addButtonFromView('top', 'add_question_with_exam', 'view', 'beginning');
             $this->crud->addButtonFromView('top', 'back_to_exam', 'view', 'end');
-
         }
 
         if ($examId) {
-        $this->crud->addClause('where', 'exam_id', $examId);
+            $this->crud->addClause('where', 'exam_id', $examId);
         }
 
         if ($examId) {
-             CRUD::addField([
+            CRUD::addField([
                 'name'  => 'exam_id',
                 'type'  => 'hidden',
                 'value' => $examId,
-              ]);
+            ]);
         }
         CRUD::addColumn([
             'name' => 'questions',
@@ -172,14 +167,14 @@ class OexQuestionMasterCrudController extends CrudController
             'label' => 'Select correct option',
             'type' => 'select_from_array',
             'options' => [
-            'Option1' => 'Option 1',
-            'Option2' => 'Option 2',
-            'Option3' => 'Option 3',
-            'Option4' => 'Option 4',
+                'Option1' => 'Option 1',
+                'Option2' => 'Option 2',
+                'Option3' => 'Option 3',
+                'Option4' => 'Option 4',
 
-                ],
-                'wrapper' => ['class' => 'form-group col-6'],
-                'allows_null' => false,
+            ],
+            'wrapper' => ['class' => 'form-group col-6'],
+            'allows_null' => false,
         ]);
 
         $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
@@ -193,42 +188,40 @@ class OexQuestionMasterCrudController extends CrudController
      * @return void
      */
     protected function setupUpdateOperation()
-{
-    $this->setupCreateOperation();
+    {
+        $this->setupCreateOperation();
 
-    $entry = $this->crud->getCurrentEntry();
+        $entry = $this->crud->getCurrentEntry();
 
-    $this->crud->modifyField('questions', [
-        'default' => $entry->questions ?? ''
-    ]);
+        $this->crud->modifyField('questions', [
+            'default' => $entry->questions ?? ''
+        ]);
 
-    $this->crud->modifyField('options1', [
-        'default' => $entry->options['option1'] ?? ''
-    ]);
+        $this->crud->modifyField('options1', [
+            'default' => $entry->options['option1'] ?? ''
+        ]);
 
-    $this->crud->modifyField('options2', [
-        'default' => $entry->options['option2'] ?? ''
-    ]);
+        $this->crud->modifyField('options2', [
+            'default' => $entry->options['option2'] ?? ''
+        ]);
 
-    $this->crud->modifyField('options3', [
-        'default' => $entry->options['option3'] ?? ''
-    ]);
+        $this->crud->modifyField('options3', [
+            'default' => $entry->options['option3'] ?? ''
+        ]);
 
-    $this->crud->modifyField('options4', [
-        'default' => $entry->options['option4'] ?? ''
-    ]);
+        $this->crud->modifyField('options4', [
+            'default' => $entry->options['option4'] ?? ''
+        ]);
 
-    $selectedAnswer = $this->determineSelectedAnswer($entry);
-    $this->crud->modifyField('ans', [
-        'default' => $selectedAnswer
-    ]);
+        $selectedAnswer = $this->determineSelectedAnswer($entry);
+        $this->crud->modifyField('ans', [
+            'default' => $selectedAnswer
+        ]);
 
-    $this->crud->modifyField('status', [
-        'default' => $entry->status ?? false
-    ]);
-
-
-}
+        $this->crud->modifyField('status', [
+            'default' => $entry->status ?? false
+        ]);
+    }
 
 
 
@@ -257,7 +250,7 @@ class OexQuestionMasterCrudController extends CrudController
             'option4' => $request->input('options4', ''),
         ];
 
-        $options = array_filter($options, function($value) {
+        $options = array_filter($options, function ($value) {
             return $value !== null && $value !== '';
         });
 
@@ -298,7 +291,7 @@ class OexQuestionMasterCrudController extends CrudController
         ]);
 
         \Alert::success(trans('backpack::crud.insert_success'))->flash();
-        return redirect(backpack_url('question-master').'?exam_id='.$exam_id);
+        return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);
     }
 
     public function update()
@@ -321,7 +314,7 @@ class OexQuestionMasterCrudController extends CrudController
         ]);
 
         \Alert::success(trans('backpack::crud.update_success'))->flash();
-        return redirect(backpack_url('question-master').'?exam_id='.$exam_id);
+        return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);
     }
 
 
@@ -329,7 +322,4 @@ class OexQuestionMasterCrudController extends CrudController
     {
         return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);
     }
-
-
-
 }

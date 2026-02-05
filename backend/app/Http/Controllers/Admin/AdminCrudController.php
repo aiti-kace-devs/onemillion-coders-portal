@@ -6,9 +6,11 @@ use App\Http\Requests\AdminRequest;
 use App\Models\Admin;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Backpack\CRUD\app\Library\CrudPanel\Hooks\Facades\LifecycleHook;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use Illuminate\Support\Facades\DB;
+
 /**
  * Class AdminCrudController
  * @package App\Http\Controllers\Admin
@@ -43,12 +45,8 @@ class AdminCrudController extends CrudController
         $this->setSearchableColumns(['email', 'name']);
         $this->setSearchResultAttributes(['id', 'email', 'name']);
 
-        $this->crud->operation('list', function () {
-            WidgetHelper::adminStatisticsWidget();
-        });
-
         // Add permission checks
-        $this->crud->operation(['list', 'show'], function () {
+        LifecycleHook::hookInto(['list:before_setup', 'show:before_setup'], function () {
             $this->crud->addClause('where', function ($query) {
                 if (!backpack_user()->can('admin.read.all')) {
                     $query->where('id', backpack_user()->id);
@@ -65,6 +63,8 @@ class AdminCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::adminStatisticsWidget();
+
         // Check permissions
         if (!backpack_user()->can('admin.read.all')) {
             abort(403, 'Unauthorized action.');
@@ -112,7 +112,6 @@ class AdminCrudController extends CrudController
         if ($entry->userProfile) {
             $this->setupProfileColumns();
         }
-        
     }
 
     /**
@@ -140,21 +139,15 @@ class AdminCrudController extends CrudController
         }
 
         $response = $this->traitStore();
-        
+
         // Get the created admin
         $admin = $this->crud->entry;
-        
-        // Handle password hashing
-        if (request()->has('password') && request()->input('password')) {
-            $admin->password = request()->input('password');
-            $admin->save();
-        }
-        
+
         // Sync the assigned courses
         if (request()->has('courses')) {
             $admin->assignedCourses()->sync(request()->input('courses'));
         }
-        
+
         return $response;
     }
 
@@ -167,21 +160,15 @@ class AdminCrudController extends CrudController
         }
 
         $response = $this->traitUpdate();
-        
+
         // Get the updated admin
         $admin = $this->crud->entry;
-        
-        // Handle password hashing
-        if (request()->has('password') && request()->input('password')) {
-            $admin->password = request()->input('password');
-            $admin->save();
-        }
-        
+
         // Sync the assigned courses
         if (request()->has('courses')) {
             $admin->assignedCourses()->sync(request()->input('courses'));
         }
-        
+
         return $response;
     }
 
@@ -221,8 +208,8 @@ class AdminCrudController extends CrudController
             return redirect(backpack_url('admin/admin'));
         }
     }
-    
-    
+
+
     // No need for setupDeleteOperation unless you want to add custom logic before/after delete
     // Keep only custom endpoints that are not standard CRUD
     // Toggle is_super admin status

@@ -4,10 +4,9 @@ namespace App\Models;
 
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use App\Notifications\ResetPasswordNotification;
-use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
@@ -65,6 +64,26 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'shortlist' => 'boolean',
     ];
+
+
+
+    /**
+     * Set the password attribute with a double-hashing guard.
+     */
+    public function setPasswordAttribute($value)
+    {
+        if (empty($value)) {
+            return;
+        }
+
+        // If the value is already a hash, set it directly without re-hashing
+        if (Hash::info($value)['algoName'] !== 'unknown') {
+            $this->attributes['password'] = $value;
+        } else {
+            // If it's plain text, hash it
+            $this->attributes['password'] = Hash::make($value);
+        }
+    }
 
 
 

@@ -28,7 +28,7 @@ return [
      * Pick a login page layout.
      * Possible values: default, illustration, cover
      */
-    'auth_layout' => 'cover', // default, illustration, cover
+    'auth_layout' => 'illustration', // default, illustration, cover
 
     /**
      * Here you can easily load your own extra css styles.
@@ -41,6 +41,7 @@ return [
     'styles' => [
         base_path('vendor/backpack/theme-tabler/resources/assets/css/color-adjustments.css'),
         base_path('vendor/backpack/theme-tabler/resources/assets/css/colors.css'),
+        base_path('vendor/backpack/theme-tabler/resources/assets/css/skins/fuzzy-background.css'),
     ],
 
     /**
@@ -80,12 +81,12 @@ return [
         /**
          * When true, the content area will take the whole screen width.
          */
-        'useFluidContainers' => false,
+        'useFluidContainers' => true,
 
         /**
          * When true, the sidebar content for vertical layouts will not scroll with the rest of the content.
          */
-        'sidebarFixed' => false,
+        'sidebarFixed' => true,
 
         /**
          * When true, horizontal layouts will display the classic top bar on top to free some space when multiple nav items are used.
@@ -95,7 +96,7 @@ return [
         /**
          * When true, the password input will have a toggle button to show/hide the password.
          */
-        'showPasswordVisibilityToggler' => false,
+        'showPasswordVisibilityToggler' => true,
     ],
 
     /**
@@ -118,7 +119,7 @@ return [
          * For links to be visible on different background colors use: "navbar-dark", "navbar-light".
          *
          */
-        'topHeader' => null,
+        'topHeader' => 'bg-light-blue navbar-dark',
 
         /**
          * Applies only for Vertical Menu Layout

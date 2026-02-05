@@ -12,7 +12,7 @@ use Exception;
 class PermissionSeeder extends Seeder
 {
     use WithoutModelEvents;
-    
+
     /**
      * Run the database seeds.
      */
@@ -20,28 +20,49 @@ class PermissionSeeder extends Seeder
     {
         // Define resources based on menu items
         $resources = [
-            'dashboard', 'admin', 'role', 'batch', 'user-admission', 'student-verification',
-            'filemanager', 'branch', 'centre', 'programme', 'course', 'course-session',
-            'course-category', 'course-module', 'course-certification', 'course-match',
-            'course-match-option', 'attendance', 'form', 'category', 'manage-exam',
-            'qr-scanner', 'student', 'email-template', 'sms-template', 'app-config'
+            'dashboard',
+            'admin',
+            'role',
+            'batch',
+            'user-admission',
+            'student-verification',
+            'filemanager',
+            'branch',
+            'centre',
+            'programme',
+            'course',
+            'course-session',
+            'course-category',
+            'course-module',
+            'course-certification',
+            'course-match',
+            'course-match-option',
+            'attendance',
+            'form',
+            'category',
+            'manage-exam',
+            'qr-scanner',
+            'student',
+            'email-template',
+            'sms-template',
+            'app-config'
         ];
-        
+
         // Define actions
         $actions = ['create', 'read', 'update', 'delete', 'status'];
-        
+
         // Define scoped actions (actions that can be scoped)
         $scopedActions = ['read', 'update', 'delete'];
-        
+
         // Define extra scopes
         $extraScopes = ['all', 'self'];
-        
+
         // Define special student actions
         $specialStudentActions = ['shortlist', 'admit', 'bulk-sms', 'bulk-email', 'verify', 'assign-batch'];
-        
+
         // Define special permissions
         $specialPermissions = ['monitor', 'config', 'page-editor', 'manager', 'permission', 'export', 'import'];
-        
+
         // Define resource statuses for specific resources
         $resourceStatuses = [
             'student' => ['all', 'active', 'inactive', 'verified', 'unverified'],
@@ -50,12 +71,19 @@ class PermissionSeeder extends Seeder
             'attendance' => ['all', 'present', 'absent', 'late'],
             'manage-exam' => ['all', 'active', 'inactive', 'completed', 'pending'],
         ];
-        
+
         // Define roles
         $roles = [
-            'super-admin', 'admission-officer', 'notification-officer', 'administrator',
-            'app-administrator', 'attendance-officer', 'page-builder', 'course-manager',
-            'exam-manager', 'student-manager'
+            'super-admin',
+            'admission-officer',
+            'notification-officer',
+            'administrator',
+            'app-administrator',
+            'attendance-officer',
+            'page-builder',
+            'course-manager',
+            'exam-manager',
+            'student-manager'
         ];
 
         // Create basic permissions for all resources
@@ -100,7 +128,7 @@ class PermissionSeeder extends Seeder
 
         // SUPER ADMIN ROLE - All permissions
         $superAdminRole = Role::findByName('super-admin', 'admin');
-        $superAdminRole->syncPermissions(Permission::all());
+        $superAdminRole->permissions()->sync(Permission::pluck('id')->toArray());
 
         // ADMISSION OFFICER ROLE
         $admissionOfficerRole = Role::findByName('admission-officer', 'admin');
@@ -110,7 +138,7 @@ class PermissionSeeder extends Seeder
             ['all', 'self'],
             ['student' => ['shortlist', 'admit', 'verify', 'assign-batch']]
         );
-        $admissionOfficerRole->syncPermissions($admissionOfficerPermissions);
+        $admissionOfficerRole->permissions()->sync($admissionOfficerPermissions->pluck('id')->toArray());
 
         // NOTIFICATION OFFICER ROLE
         $notificationOfficerRole = Role::findByName('notification-officer', 'admin');
@@ -120,7 +148,7 @@ class PermissionSeeder extends Seeder
             ['all'],
             ['student' => ['bulk-sms', 'bulk-email']]
         );
-        $notificationOfficerRole->syncPermissions($notificationOfficerPermissions);
+        $notificationOfficerRole->permissions()->sync($notificationOfficerPermissions->pluck('id')->toArray());
 
         // ATTENDANCE OFFICER ROLE
         $attendanceOfficerRole = Role::findByName('attendance-officer', 'admin');
@@ -130,7 +158,7 @@ class PermissionSeeder extends Seeder
             ['all', 'self'],
             ['attendance' => ['present', 'absent', 'late'], 'qr-scanner' => ['scan', 'generate'], 'student-verification' => ['verify']]
         );
-        $attendanceOfficerRole->syncPermissions($attendanceOfficerPermissions);
+        $attendanceOfficerRole->permissions()->sync($attendanceOfficerPermissions->pluck('id')->toArray());
 
         // COURSE MANAGER ROLE
         $courseManagerRole = Role::findByName('course-manager', 'admin');
@@ -140,7 +168,7 @@ class PermissionSeeder extends Seeder
             ['all'],
             ['course' => ['active', 'inactive', 'published', 'draft']]
         );
-        $courseManagerRole->syncPermissions($courseManagerPermissions);
+        $courseManagerRole->permissions()->sync($courseManagerPermissions->pluck('id')->toArray());
 
         // EXAM MANAGER ROLE
         $examManagerRole = Role::findByName('exam-manager', 'admin');
@@ -150,7 +178,7 @@ class PermissionSeeder extends Seeder
             ['all'],
             ['manage-exam' => ['active', 'inactive', 'completed', 'pending']]
         );
-        $examManagerRole->syncPermissions($examManagerPermissions);
+        $examManagerRole->permissions()->sync($examManagerPermissions->pluck('id')->toArray());
 
         // STUDENT MANAGER ROLE
         $studentManagerRole = Role::findByName('student-manager', 'admin');
@@ -160,7 +188,7 @@ class PermissionSeeder extends Seeder
             ['all', 'self'],
             ['student' => ['shortlist', 'verify'], 'user-admission' => ['pending', 'approved', 'rejected', 'shortlisted']]
         );
-        $studentManagerRole->syncPermissions($studentManagerPermissions);
+        $studentManagerRole->permissions()->sync($studentManagerPermissions->pluck('id')->toArray());
 
         // ADMINISTRATOR ROLE
         $administratorRole = Role::findByName('administrator', 'admin');
@@ -170,7 +198,7 @@ class PermissionSeeder extends Seeder
             ['all'],
             ['student' => ['shortlist', 'admit', 'verify'], 'user-admission' => ['pending', 'approved', 'rejected', 'shortlisted']]
         );
-        $administratorRole->syncPermissions($administratorPermissions);
+        $administratorRole->permissions()->sync($administratorPermissions->pluck('id')->toArray());
 
         // APP ADMINISTRATOR ROLE
         $appAdministratorRole = Role::findByName('app-administrator', 'admin');
@@ -182,7 +210,7 @@ class PermissionSeeder extends Seeder
         $appAdministratorPermissions = $appAdministratorPermissions->merge(
             $this->findResourcePermissions(['manage'], ['monitor', 'config', 'manager'], ['all'])
         );
-        $appAdministratorRole->syncPermissions($appAdministratorPermissions);
+        $appAdministratorRole->permissions()->sync($appAdministratorPermissions->pluck('id')->toArray());
 
         // PAGE BUILDER ROLE
         $pageBuilderRole = Role::findByName('page-builder', 'admin');
@@ -191,7 +219,7 @@ class PermissionSeeder extends Seeder
             ['page-editor'],
             ['all']
         );
-        $pageBuilderRole->syncPermissions($pageBuilderPermissions);
+        $pageBuilderRole->permissions()->sync($pageBuilderPermissions->pluck('id')->toArray());
 
         // Try granting super admin role to admin user from config
         try {
@@ -207,7 +235,7 @@ class PermissionSeeder extends Seeder
     private function findResourcePermissions($resources, $actions, $scopes, $customStatuses = [])
     {
         $permissionNames = [];
-        
+
         foreach ($resources as $resource) {
             foreach ($actions as $action) {
                 if (in_array($action, ['read', 'update', 'delete'])) {
@@ -225,7 +253,7 @@ class PermissionSeeder extends Seeder
                 }
             }
         }
-        
+
         return Permission::whereIn('name', $permissionNames)->get();
     }
 }

@@ -11,6 +11,7 @@ use App\Helpers\GeneralFieldsAndColumns;
 use Illuminate\Http\Request;
 use App\Helpers\FilterHelper;
 use App\Helpers\WidgetHelper;
+
 /**
  * Class CentreCrudController
  * @package App\Http\Controllers\Admin
@@ -35,10 +36,6 @@ class CentreCrudController extends CrudController
         CRUD::setModel(\App\Models\Centre::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/centre');
         CRUD::setEntityNameStrings('centre', 'centres');
-
-        $this->crud->operation('list', function () {
-            WidgetHelper::centreStatisticsWidget();
-        });
     }
 
     /**
@@ -49,6 +46,8 @@ class CentreCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::centreStatisticsWidget();
+
         CRUD::column('title')->type('textarea');
         CRUD::column('branch_id')->label('Branch')->linkTo('branch.show');
         FilterHelper::addBooleanColumn('status', 'status');
@@ -151,8 +150,4 @@ class CentreCrudController extends CrudController
             ->get()
             ->map(fn($centre) => ['id' => $centre->id, 'text' => $centre->title]);
     }
-
-
-
-
 }

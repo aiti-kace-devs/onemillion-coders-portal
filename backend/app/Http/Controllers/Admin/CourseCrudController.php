@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\CourseRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Backpack\CRUD\app\Library\CrudPanel\Hooks\Facades\LifecycleHook;
 use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\CourseFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\Course;
+
 /**
  * Class CourseCrudController
  * @package App\Http\Controllers\Admin
@@ -40,12 +42,8 @@ class CourseCrudController extends CrudController
         $this->setSearchableColumns(['course_name', 'description']);
         $this->setSearchResultAttributes(['id', 'course_name', 'description']);
 
-        $this->crud->operation('list', function () {
-            WidgetHelper::courseStatisticsWidget();
-        });
-
         // Add permission checks
-        $this->crud->operation(['list', 'show'], function () {
+        LifecycleHook::hookInto(['list:before_setup', 'show:before_setup'], function () {
             $this->crud->addClause('where', function ($query) {
                 if (!backpack_user()->can('course.read.all')) {
                     // Add any specific filtering logic here if needed
@@ -64,6 +62,8 @@ class CourseCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        WidgetHelper::courseStatisticsWidget();
+
         // Check permissions
         if (!backpack_user()->can('course.read.all')) {
             abort(403, 'Unauthorized action.');

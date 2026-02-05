@@ -4,6 +4,7 @@ namespace App;
 
 use Illuminate\Http\Request;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Backpack\CRUD\app\Library\CrudPanel\Hooks\Facades\LifecycleHook;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
@@ -76,7 +77,7 @@ trait SearchableCRUD
     {
         $this->crud->allowAccess('performSearch');
 
-        $this->crud->operation('performSearch', function () {
+        LifecycleHook::hookInto('performSearch:before_setup', function () {
             $this->crud->loadDefaultOperationSettingsFromConfig();
         });
     }

@@ -4,6 +4,11 @@ node_modules/
 
 # IDE
 .history
+node_modules
+/.vscode
+/.vite
+vendor
+.env.docker
 .vscode/
 .idea/
 

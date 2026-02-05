@@ -19,7 +19,8 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:3000'],
+    // fetch from envs and merge with default
+    'allowed_origins' => array_merge(env('ALLOWED_ORIGINS', []), ['http://localhost:3000', 'http://omcp.localhost']),
 
     'allowed_origins_patterns' => [],
 

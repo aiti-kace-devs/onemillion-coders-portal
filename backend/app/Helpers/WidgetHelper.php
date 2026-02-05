@@ -24,6 +24,7 @@ use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\DB;
 use App\Models\CourseMatch;
 use App\Models\CourseMatchOption;
+
 class WidgetHelper
 {
     /**
@@ -141,356 +142,355 @@ class WidgetHelper
 
 
 
-public static function attendanceWidgets()
-{
-    $topCoursesToday = Attendance::whereDate('date', today())
-        ->select('course_id')
-        ->selectRaw('COUNT(*) as total_attendance')
-        ->groupBy('course_id')
-        ->orderByDesc('total_attendance')
-        ->with('course')
-        ->take(4)
-        ->get();
+    public static function attendanceWidgets()
+    {
+        $topCoursesToday = Attendance::whereDate('date', today())
+            ->select('course_id')
+            ->selectRaw('COUNT(*) as total_attendance')
+            ->groupBy('course_id')
+            ->orderByDesc('total_attendance')
+            ->with('course')
+            ->take(4)
+            ->get();
 
-    $widgets = [];
+        $widgets = [];
 
-    foreach ($topCoursesToday as $attendance) {
-        $courseName = optional($attendance->course)->course_name ?? 'Unknown';
-        $total = $attendance->total_attendance;
+        foreach ($topCoursesToday as $attendance) {
+            $courseName = optional($attendance->course)->course_name ?? 'Unknown';
+            $total = $attendance->total_attendance;
 
-        $widgets[] = [
-            'type' => 'progress_white',
-            'progress' => 100,
-            'description' => $courseName,
-            'value' => number_format($total),
-            'progressClass' => 'bg-primary',
-            'hint' => 'Total Attendance for today',
-        ];
+            $widgets[] = [
+                'type' => 'progress_white',
+                'progress' => 100,
+                'description' => $courseName,
+                'value' => number_format($total),
+                'progressClass' => 'bg-primary',
+                'hint' => 'Total Attendance for today',
+            ];
+        }
+
+        if (count($widgets)) {
+            Widget::add([
+                'type' => 'div',
+                'class' => 'row',
+                'content' => $widgets,
+            ]);
+        } else {
+            Widget::add([
+                'type' => 'alert',
+                'class' => 'alert alert-warning',
+                'content' => 'No attendance recorded for today.',
+            ]);
+        }
     }
 
-    if (count($widgets)) {
+
+
+
+
+    public static function categorytatisticsWidget()
+    {
+        $totalCategories = OexCategory::count();
+        $activeCategories = OexCategory::where('status', 1)->count();
+        $inactiveCategories = OexCategory::where('status', 0)->count();
+        $recentCategories = OexCategory::whereDate('created_at', '>=', now()->subDays(30))->count();
+
+        $getPercent = function ($count) use ($totalCategories) {
+            return $totalCategories > 0 ? round(($count / $totalCategories) * 100) : 0;
+        };
+
         Widget::add([
             'type' => 'div',
-            'class' => 'row',
-            'content' => $widgets,
-        ]);
-    } else {
-        Widget::add([
-            'type' => 'alert',
-            'class' => 'alert alert-warning',
-            'content' => 'No attendance recorded for today.',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalCategories),
+                    'description' => 'Total Categories',
+                    'value' => number_format($totalCategories),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'All registered Categories.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeCategories),
+                    'description' => 'Active Categories',
+                    'value' => number_format($activeCategories),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Categories currently active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveCategories),
+                    'description' => 'Inactive Categories',
+                    'value' => number_format($inactiveCategories),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Categories currently inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($recentCategories),
+                    'description' => 'New Categories (30 Days)',
+                    'value' => number_format($recentCategories),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'Categories added in the last 30 days.',
+                ],
+            ],
         ]);
     }
 
-}
 
 
 
 
+    public static function branchStatisticsWidget()
+    {
+        $totalBranches = Branch::count();
+        $activeBranches = Branch::where('status', 1)->count();
+        $inactiveBranches = Branch::where('status', 0)->count();
+        $recentBranches = Branch::whereDate('created_at', '>=', now()->subDays(30))->count();
 
-public static function categorytatisticsWidget()
-{
-    $totalCategories = OexCategory::count();
-    $activeCategories = OexCategory::where('status', 1)->count();
-    $inactiveCategories = OexCategory::where('status', 0)->count();
-    $recentCategories = OexCategory::whereDate('created_at', '>=', now()->subDays(30))->count();
+        $getPercent = function ($count) use ($totalBranches) {
+            return $totalBranches > 0 ? round(($count / $totalBranches) * 100) : 0;
+        };
 
-    $getPercent = function ($count) use ($totalCategories) {
-        return $totalCategories > 0 ? round(($count / $totalCategories) * 100) : 0;
-    };
-
-    Widget::add([
-        'type' => 'div',
-        'class' => 'row mb-4',
-        'content' => [
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($totalCategories),
-                'description' => 'Total Categories',
-                'value' => number_format($totalCategories),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalBranches),
+                    'description' => 'Total Branches',
+                    'value' => number_format($totalBranches),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'All registered Categories.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($activeCategories),
-                'description' => 'Active Categories',
-                'value' => number_format($activeCategories),
-                'progressClass' => 'progress-bar bg-success',
-                'hint' => 'Categories currently active.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($inactiveCategories),
-                'description' => 'Inactive Categories',
-                'value' => number_format($inactiveCategories),
-                'progressClass' => 'progress-bar bg-danger',
-                'hint' => 'Categories currently inactive.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($recentCategories),
-                'description' => 'New Categories (30 Days)',
-                'value' => number_format($recentCategories),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+                    'hint' => 'All registered branches.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeBranches),
+                    'description' => 'Active Branches',
+                    'value' => number_format($activeBranches),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Branches currently active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveBranches),
+                    'description' => 'Inactive Branches',
+                    'value' => number_format($inactiveBranches),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Branches currently inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($recentBranches),
+                    'description' => 'New Branches (30 Days)',
+                    'value' => number_format($recentBranches),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'Categories added in the last 30 days.',
+                    'hint' => 'Branches added in the last 30 days.',
+                ],
             ],
-        ],
-    ]);
-}
+        ]);
+    }
 
 
 
 
 
-public static function branchStatisticsWidget()
-{
-    $totalBranches = Branch::count();
-    $activeBranches = Branch::where('status', 1)->count();
-    $inactiveBranches = Branch::where('status', 0)->count();
-    $recentBranches = Branch::whereDate('created_at', '>=', now()->subDays(30))->count();
 
-    $getPercent = function ($count) use ($totalBranches) {
-        return $totalBranches > 0 ? round(($count / $totalBranches) * 100) : 0;
-    };
+    public static function centreStatisticsWidget()
+    {
+        $totalCenters = Centre::count();
+        $activeCenters = Centre::where('status', 1)->count();
+        $inactiveCenters = Centre::where('status', 0)->count();
+        $recentCenters = Centre::whereDate('created_at', '>=', now()->subDays(30))->count();
 
-    Widget::add([
-        'type' => 'div',
-        'class' => 'row mb-4',
-        'content' => [
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($totalBranches),
-                'description' => 'Total Branches',
-                'value' => number_format($totalBranches),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+        $getPercent = function ($count) use ($totalCenters) {
+            return $totalCenters > 0 ? round(($count / $totalCenters) * 100) : 0;
+        };
+
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalCenters),
+                    'description' => 'Total Centers',
+                    'value' => number_format($totalCenters),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'All registered branches.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($activeBranches),
-                'description' => 'Active Branches',
-                'value' => number_format($activeBranches),
-                'progressClass' => 'progress-bar bg-success',
-                'hint' => 'Branches currently active.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($inactiveBranches),
-                'description' => 'Inactive Branches',
-                'value' => number_format($inactiveBranches),
-                'progressClass' => 'progress-bar bg-danger',
-                'hint' => 'Branches currently inactive.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($recentBranches),
-                'description' => 'New Branches (30 Days)',
-                'value' => number_format($recentBranches),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+                    'hint' => 'All registered Centers.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeCenters),
+                    'description' => 'Active Centers',
+                    'value' => number_format($activeCenters),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Centers currently active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveCenters),
+                    'description' => 'Inactive Centers',
+                    'value' => number_format($inactiveCenters),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Centers currently inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($recentCenters),
+                    'description' => 'New Centers (30 Days)',
+                    'value' => number_format($recentCenters),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'Branches added in the last 30 days.',
+                    'hint' => 'Centers added in the last 30 days.',
+                ],
             ],
-        ],
-    ]);
-}
-
-
-
-
-
-
-public static function centreStatisticsWidget()
-{
-    $totalCenters = Centre::count();
-    $activeCenters = Centre::where('status', 1)->count();
-    $inactiveCenters = Centre::where('status', 0)->count();
-    $recentCenters = Centre::whereDate('created_at', '>=', now()->subDays(30))->count();
-
-    $getPercent = function ($count) use ($totalCenters) {
-        return $totalCenters > 0 ? round(($count / $totalCenters) * 100) : 0;
-    };
-
-    Widget::add([
-        'type' => 'div',
-        'class' => 'row mb-4',
-        'content' => [
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($totalCenters),
-                'description' => 'Total Centers',
-                'value' => number_format($totalCenters),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
-                        'style' => 'background-color:rgb(40, 127, 167);',
-                    ],
-                'hint' => 'All registered Centers.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($activeCenters),
-                'description' => 'Active Centers',
-                'value' => number_format($activeCenters),
-                'progressClass' => 'progress-bar bg-success',
-                'hint' => 'Centers currently active.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($inactiveCenters),
-                'description' => 'Inactive Centers',
-                'value' => number_format($inactiveCenters),
-                'progressClass' => 'progress-bar bg-danger',
-                'hint' => 'Centers currently inactive.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($recentCenters),
-                'description' => 'New Centers (30 Days)',
-                'value' => number_format($recentCenters),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
-                        'style' => 'background-color:rgb(40, 127, 167);',
-                    ],
-                'hint' => 'Centers added in the last 30 days.',
-            ],
-        ],
-    ]);
-}
+        ]);
+    }
 
 
 
 
 
     public static function courseStatisticsWidget()
-{
-    $totalCourses = Course::count();
-    $activeCourses = Course::where('status', 1)->count();
-    $inactiveCourses = Course::where('status', 0)->count();
-    $ongoingCourses = Course::whereDate('start_date', '<=', now())
-        ->whereDate('end_date', '>=', now())
-        ->count();
+    {
+        $totalCourses = Course::count();
+        $activeCourses = Course::where('status', 1)->count();
+        $inactiveCourses = Course::where('status', 0)->count();
+        $ongoingCourses = Course::whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now())
+            ->count();
 
-    $getPercent = function ($count) use ($totalCourses) {
-        return $totalCourses > 0 ? round(($count / $totalCourses) * 100) : 0;
-    };
+        $getPercent = function ($count) use ($totalCourses) {
+            return $totalCourses > 0 ? round(($count / $totalCourses) * 100) : 0;
+        };
 
-    Widget::add([
-        'type' => 'div',
-        'class' => 'row mb-4',
-        'content' => [
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($totalCourses),
-                'description' => 'Total Courses',
-                'value' => number_format($totalCourses),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalCourses),
+                    'description' => 'Total Courses',
+                    'value' => number_format($totalCourses),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'All registered Courses.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($activeCourses),
-                'description' => 'Active Courses',
-                'value' => number_format($activeCourses),
-                'progressClass' => 'progress-bar bg-success',
-                'hint' => 'Courses marked as active.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($inactiveCourses),
-                'description' => 'Inactive Courses',
-                'value' => number_format($inactiveCourses),
-                'progressClass' => 'progress-bar bg-danger',
-                'hint' => 'Courses marked as inactive.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($ongoingCourses),
-                'description' => 'Ongoing Courses',
-                'value' => number_format($ongoingCourses),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+                    'hint' => 'All registered Courses.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeCourses),
+                    'description' => 'Active Courses',
+                    'value' => number_format($activeCourses),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Courses marked as active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveCourses),
+                    'description' => 'Inactive Courses',
+                    'value' => number_format($inactiveCourses),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Courses marked as inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($ongoingCourses),
+                    'description' => 'Ongoing Courses',
+                    'value' => number_format($ongoingCourses),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'Courses currently in session.',
+                    'hint' => 'Courses currently in session.',
+                ],
             ],
-        ],
-    ]);
-}
+        ]);
+    }
 
 
 
 
-public static function courseSessionStatisticsWidget()
-{
-    $totalSessions = CourseSession::count();
-    $activeSessions = CourseSession::where('status', 1)->count();
-    $inactiveSessions = CourseSession::where('status', 0)->count();
+    public static function courseSessionStatisticsWidget()
+    {
+        $totalSessions = CourseSession::count();
+        $activeSessions = CourseSession::where('status', 1)->count();
+        $inactiveSessions = CourseSession::where('status', 0)->count();
 
-    $upcomingSessions = CourseSession::where('course_time', '>', now())->count();
+        $upcomingSessions = CourseSession::where('course_time', '>', now())->count();
 
-    $getPercent = function ($count) use ($totalSessions) {
-        return $totalSessions > 0 ? round(($count / $totalSessions) * 100) : 0;
-    };
+        $getPercent = function ($count) use ($totalSessions) {
+            return $totalSessions > 0 ? round(($count / $totalSessions) * 100) : 0;
+        };
 
-    Widget::add([
-        'type' => 'div',
-        'class' => 'row mb-4',
-        'content' => [
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($totalSessions),
-                'description' => 'Total Sessions',
-                'value' => number_format($totalSessions),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalSessions),
+                    'description' => 'Total Sessions',
+                    'value' => number_format($totalSessions),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'All course sessions.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($activeSessions),
-                'description' => 'Active Sessions',
-                'value' => number_format($activeSessions),
-                'progressClass' => 'progress-bar bg-success',
-                'hint' => 'Sessions currently marked active.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($inactiveSessions),
-                'description' => 'Inactive Sessions',
-                'value' => number_format($inactiveSessions),
-                'progressClass' => 'progress-bar bg-danger',
-                'hint' => 'Sessions marked inactive.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($upcomingSessions),
-                'description' => 'Upcoming Sessions',
-                'value' => number_format($upcomingSessions),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+                    'hint' => 'All course sessions.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeSessions),
+                    'description' => 'Active Sessions',
+                    'value' => number_format($activeSessions),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Sessions currently marked active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveSessions),
+                    'description' => 'Inactive Sessions',
+                    'value' => number_format($inactiveSessions),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Sessions marked inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($upcomingSessions),
+                    'description' => 'Upcoming Sessions',
+                    'value' => number_format($upcomingSessions),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'Sessions starting in the future.',
+                    'hint' => 'Sessions starting in the future.',
+                ],
             ],
-        ],
-    ]);
-}
+        ]);
+    }
 
 
 
@@ -498,62 +498,62 @@ public static function courseSessionStatisticsWidget()
 
 
 
-public static function courseCategoryStatisticsWidget()
-{
-    $totalCourseCategorys = CourseCategory::count();
-    $activeCourseCategorys = CourseCategory::where('status', 1)->count();
-    $inactiveCourseCategorys = CourseCategory::where('status', 0)->count();
-    $recentCourseCategorys = CourseCategory::whereDate('created_at', '>=', now()->subDays(30))->count();
+    public static function courseCategoryStatisticsWidget()
+    {
+        $totalCourseCategorys = CourseCategory::count();
+        $activeCourseCategorys = CourseCategory::where('status', 1)->count();
+        $inactiveCourseCategorys = CourseCategory::where('status', 0)->count();
+        $recentCourseCategorys = CourseCategory::whereDate('created_at', '>=', now()->subDays(30))->count();
 
-    $getPercent = function ($count) use ($totalCourseCategorys) {
-        return $totalCourseCategorys > 0 ? round(($count / $totalCourseCategorys) * 100) : 0;
-    };
+        $getPercent = function ($count) use ($totalCourseCategorys) {
+            return $totalCourseCategorys > 0 ? round(($count / $totalCourseCategorys) * 100) : 0;
+        };
 
-    Widget::add([
-        'type' => 'div',
-        'class' => 'row mb-4',
-        'content' => [
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($totalCourseCategorys),
-                'description' => 'Total Course Categories',
-                'value' => number_format($totalCourseCategorys),
-                'progressClass' => 'progress-bar bg-primary',
-                // 'wrapper' => [
-                //         'style' => 'background-color:rgb(40, 127, 167);',
-                // ],
-                'hint' => 'All registered Course Categories'
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($activeCourseCategorys),
-                'description' => 'Active Course Categories',
-                'value' => number_format($activeCourseCategorys),
-                'progressClass' => 'progress-bar bg-success',
-                'hint' => 'Course Categories currently active.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($inactiveCourseCategorys),
-                'description' => 'Inactive Course Categories',
-                'value' => number_format($inactiveCourseCategorys),
-                'progressClass' => 'progress-bar bg-danger',
-                'hint' => 'Course Categories currently inactive.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($recentCourseCategorys),
-                'description' => 'New Course Categories (30 Days)',
-                'value' => number_format($recentCourseCategorys),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalCourseCategorys),
+                    'description' => 'Total Course Categories',
+                    'value' => number_format($totalCourseCategorys),
+                    'progressClass' => 'progress-bar bg-primary',
+                    // 'wrapper' => [
+                    //         'style' => 'background-color:rgb(40, 127, 167);',
+                    // ],
+                    'hint' => 'All registered Course Categories'
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeCourseCategorys),
+                    'description' => 'Active Course Categories',
+                    'value' => number_format($activeCourseCategorys),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Course Categories currently active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveCourseCategorys),
+                    'description' => 'Inactive Course Categories',
+                    'value' => number_format($inactiveCourseCategorys),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Course Categories currently inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($recentCourseCategorys),
+                    'description' => 'New Course Categories (30 Days)',
+                    'value' => number_format($recentCourseCategorys),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'Categories added in the last 30 days.',
+                    'hint' => 'Categories added in the last 30 days.',
+                ],
             ],
-        ],
-    ]);
-}
+        ]);
+    }
 
 
 
@@ -563,185 +563,185 @@ public static function courseCategoryStatisticsWidget()
 
 
 
-public static function courseModuleStatisticsWidget()
-{
-    $totalCourseModules = CourseModule::count();
-    $activeCourseModules = CourseModule::where('status', 1)->count();
-    $inactiveCourseModules = CourseModule::where('status', 0)->count();
-    $recentCourseModules = CourseModule::whereDate('created_at', '>=', now()->subDays(30))->count();
+    public static function courseModuleStatisticsWidget()
+    {
+        $totalCourseModules = CourseModule::count();
+        $activeCourseModules = CourseModule::where('status', 1)->count();
+        $inactiveCourseModules = CourseModule::where('status', 0)->count();
+        $recentCourseModules = CourseModule::whereDate('created_at', '>=', now()->subDays(30))->count();
 
-    $getPercent = function ($count) use ($totalCourseModules) {
-        return $totalCourseModules > 0 ? round(($count / $totalCourseModules) * 100) : 0;
-    };
+        $getPercent = function ($count) use ($totalCourseModules) {
+            return $totalCourseModules > 0 ? round(($count / $totalCourseModules) * 100) : 0;
+        };
 
-    Widget::add([
-        'type' => 'div',
-        'class' => 'row mb-4',
-        'content' => [
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($totalCourseModules),
-                'description' => 'Total Course Modules',
-                'value' => number_format($totalCourseModules),
-                'progressClass' => 'progress-bar bg-primary',
-                // 'wrapper' => [
-                //         'style' => 'background-color:rgb(40, 127, 167);',
-                // ],
-                'hint' => 'All registered Course Modules',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($activeCourseModules),
-                'description' => 'Active Course Modules',
-                'value' => number_format($activeCourseModules),
-                'progressClass' => 'progress-bar bg-success',
-                'hint' => 'Course Modules currently active.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($inactiveCourseModules),
-                'description' => 'Inactive Course Modules',
-                'value' => number_format($inactiveCourseModules),
-                'progressClass' => 'progress-bar bg-danger',
-                'hint' => 'Course Modules currently inactive.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($recentCourseModules),
-                'description' => 'New Course Modules (30 Days)',
-                'value' => number_format($recentCourseModules),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalCourseModules),
+                    'description' => 'Total Course Modules',
+                    'value' => number_format($totalCourseModules),
+                    'progressClass' => 'progress-bar bg-primary',
+                    // 'wrapper' => [
+                    //         'style' => 'background-color:rgb(40, 127, 167);',
+                    // ],
+                    'hint' => 'All registered Course Modules',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeCourseModules),
+                    'description' => 'Active Course Modules',
+                    'value' => number_format($activeCourseModules),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Course Modules currently active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveCourseModules),
+                    'description' => 'Inactive Course Modules',
+                    'value' => number_format($inactiveCourseModules),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Course Modules currently inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($recentCourseModules),
+                    'description' => 'New Course Modules (30 Days)',
+                    'value' => number_format($recentCourseModules),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'Modules added in the last 30 days.',
+                    'hint' => 'Modules added in the last 30 days.',
+                ],
             ],
-        ],
-    ]);
-}
+        ]);
+    }
 
 
 
-public static function programmeStatisticsWidget()
-{
-    $totalProgrammes = Programme::count();
-    $activeProgrammes = Programme::where('status', 1)->count();
-    $inactiveProgrammes = Programme::where('status', 0)->count();
-    $ongoingProgrammes = Programme::whereDate('start_date', '<=', now())
-        ->whereDate('end_date', '>=', now())
-        ->count();
+    public static function programmeStatisticsWidget()
+    {
+        $totalProgrammes = Programme::count();
+        $activeProgrammes = Programme::where('status', 1)->count();
+        $inactiveProgrammes = Programme::where('status', 0)->count();
+        $ongoingProgrammes = Programme::whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now())
+            ->count();
 
-    $getPercent = function ($count) use ($totalProgrammes) {
-        return $totalProgrammes > 0 ? round(($count / $totalProgrammes) * 100) : 0;
-    };
+        $getPercent = function ($count) use ($totalProgrammes) {
+            return $totalProgrammes > 0 ? round(($count / $totalProgrammes) * 100) : 0;
+        };
 
-    Widget::add([
-        'type' => 'div',
-        'class' => 'row mb-4',
-        'content' => [
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($totalProgrammes),
-                'description' => 'Total Programmes',
-                'value' => number_format($totalProgrammes),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalProgrammes),
+                    'description' => 'Total Programmes',
+                    'value' => number_format($totalProgrammes),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'All registered programmes.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($activeProgrammes),
-                'description' => 'Active Programmes',
-                'value' => number_format($activeProgrammes),
-                'progressClass' => 'progress-bar bg-success',
-                'hint' => 'Programmes marked as active.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($inactiveProgrammes),
-                'description' => 'Inactive Programmes',
-                'value' => number_format($inactiveProgrammes),
-                'progressClass' => 'progress-bar bg-danger',
-                'hint' => 'Programmes marked as inactive.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($ongoingProgrammes),
-                'description' => 'Ongoing Programmes',
-                'value' => number_format($ongoingProgrammes),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+                    'hint' => 'All registered programmes.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeProgrammes),
+                    'description' => 'Active Programmes',
+                    'value' => number_format($activeProgrammes),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Programmes marked as active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveProgrammes),
+                    'description' => 'Inactive Programmes',
+                    'value' => number_format($inactiveProgrammes),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Programmes marked as inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($ongoingProgrammes),
+                    'description' => 'Ongoing Programmes',
+                    'value' => number_format($ongoingProgrammes),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'Programmes currently in session.',
+                    'hint' => 'Programmes currently in session.',
+                ],
             ],
-        ],
-    ]);
-}
+        ]);
+    }
 
 
 
 
 
     public static function manageExamStatisticsWidget()
-{
-    $totalExams = OexExamMaster::count();
-    $activeExams = OexExamMaster::where('status', 1)->count();
-    $inactiveExams = OexExamMaster::where('status', 0)->count();
-    $ongoingExams = OexExamMaster::whereDate('exam_date', '>=', now())
-        ->count();
+    {
+        $totalExams = OexExamMaster::count();
+        $activeExams = OexExamMaster::where('status', 1)->count();
+        $inactiveExams = OexExamMaster::where('status', 0)->count();
+        $ongoingExams = OexExamMaster::whereDate('exam_date', '>=', now())
+            ->count();
 
-    $getPercent = function ($count) use ($totalExams) {
-        return $totalExams > 0 ? round(($count / $totalExams) * 100) : 0;
-    };
+        $getPercent = function ($count) use ($totalExams) {
+            return $totalExams > 0 ? round(($count / $totalExams) * 100) : 0;
+        };
 
-    Widget::add([
-        'type' => 'div',
-        'class' => 'row mb-4',
-        'content' => [
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($totalExams),
-                'description' => 'Total Exams',
-                'value' => number_format($totalExams),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalExams),
+                    'description' => 'Total Exams',
+                    'value' => number_format($totalExams),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'All registered Exams.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($activeExams),
-                'description' => 'Active Exams',
-                'value' => number_format($activeExams),
-                'progressClass' => 'progress-bar bg-success',
-                'hint' => 'Exams marked as active.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($inactiveExams),
-                'description' => 'Inactive Exams',
-                'value' => number_format($inactiveExams),
-                'progressClass' => 'progress-bar bg-danger',
-                'hint' => 'Exams marked as inactive.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($ongoingExams),
-                'description' => 'Ongoing Exams',
-                'value' => number_format($ongoingExams),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+                    'hint' => 'All registered Exams.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeExams),
+                    'description' => 'Active Exams',
+                    'value' => number_format($activeExams),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Exams marked as active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveExams),
+                    'description' => 'Inactive Exams',
+                    'value' => number_format($inactiveExams),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Exams marked as inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($ongoingExams),
+                    'description' => 'Ongoing Exams',
+                    'value' => number_format($ongoingExams),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'Exams currently in session.',
+                    'hint' => 'Exams currently in session.',
+                ],
             ],
-        ],
-    ]);
-}
+        ]);
+    }
 
 
 
@@ -751,69 +751,69 @@ public static function programmeStatisticsWidget()
 
 
     public static function manageQuestionStatisticsWidget($examId = null)
-{
-    $questionQuery = OexQuestionMaster::query();
-    if ($examId) {
-        $questionQuery->where('exam_id', $examId);
+    {
+        $questionQuery = OexQuestionMaster::query();
+        if ($examId) {
+            $questionQuery->where('exam_id', $examId);
+        }
+
+        $totalQuestions = $questionQuery->count();
+
+        $activeQuestion = (clone $questionQuery)->where('status', 1)->count();
+        $inactiveQuestion = (clone $questionQuery)->where('status', 0)->count();
+        $questionWithoutAnswers = (clone $questionQuery)->whereNull('ans')->count();
+
+
+
+        $getPercent = function ($count) use ($totalQuestions) {
+            return $totalQuestions > 0 ? round(($count / $totalQuestions) * 100) : 0;
+        };
+
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalQuestions),
+                    'description' => 'Total Questions',
+                    'value' => number_format($totalQuestions),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'All registered Questions.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeQuestion),
+                    'description' => 'Active Questions',
+                    'value' => number_format($activeQuestion),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Questions marked as active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveQuestion),
+                    'description' => 'Inactive Questions',
+                    'value' => number_format($inactiveQuestion),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Questions marked as inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($questionWithoutAnswers),
+                    'description' => 'Questions without Answers',
+                    'value' => number_format($questionWithoutAnswers),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'Questions without Answers.',
+                ],
+            ],
+        ]);
     }
-
-    $totalQuestions = $questionQuery->count();
-
-    $activeQuestion = (clone $questionQuery)->where('status', 1)->count();
-    $inactiveQuestion = (clone $questionQuery)->where('status', 0)->count();
-    $questionWithoutAnswers = (clone $questionQuery)->whereNull('ans')->count();
-
-    
-
-    $getPercent = function ($count) use ($totalQuestions) {
-        return $totalQuestions > 0 ? round(($count / $totalQuestions) * 100) : 0;
-    };
-
-    Widget::add([
-        'type' => 'div',
-        'class' => 'row mb-4',
-        'content' => [
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($totalQuestions),
-                'description' => 'Total Questions',
-                'value' => number_format($totalQuestions),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
-                    'style' => 'background-color:rgb(40, 127, 167);',
-                ],
-                'hint' => 'All registered Questions.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($activeQuestion),
-                'description' => 'Active Questions',
-                'value' => number_format($activeQuestion),
-                'progressClass' => 'progress-bar bg-success',
-                'hint' => 'Questions marked as active.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($inactiveQuestion),
-                'description' => 'Inactive Questions',
-                'value' => number_format($inactiveQuestion),
-                'progressClass' => 'progress-bar bg-danger',
-                'hint' => 'Questions marked as inactive.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($questionWithoutAnswers),
-                'description' => 'Questions without Answers',
-                'value' => number_format($questionWithoutAnswers),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
-                    'style' => 'background-color:rgb(40, 127, 167);',
-                ],
-                'hint' => 'Questions without Answers.',
-            ],
-        ],
-    ]);
-}
 
 
 
@@ -828,74 +828,74 @@ public static function programmeStatisticsWidget()
 
 
     public static function userStatisticsWidget()
-{
-    $totalUsers = User::count();
+    {
+        $totalUsers = User::count();
 
-    $admittedUsers = User::whereExists(function ($query) {
-        $query->select(\DB::raw(1))
-            ->from('user_admission')
-            ->whereColumn('user_admission.user_id', 'users.userId')
-            ->whereNotNull('user_admission.confirmed');
-    })->count();
+        $admittedUsers = User::whereExists(function ($query) {
+            $query->select(\DB::raw(1))
+                ->from('user_admission')
+                ->whereColumn('user_admission.user_id', 'users.userId')
+                ->whereNotNull('user_admission.confirmed');
+        })->count();
 
-    $shortlistedUsers = User::where('shortlist', 1)->count();
+        $shortlistedUsers = User::where('shortlist', 1)->count();
 
-    $todaysAdmittedUsers = User::whereExists(function ($query) {
-        $query->select(\DB::raw(1))
-            ->from('user_admission')
-            ->whereColumn('user_admission.user_id', 'users.userId')
-            ->whereDate('user_admission.confirmed', today());
-    })->count();
+        $todaysAdmittedUsers = User::whereExists(function ($query) {
+            $query->select(\DB::raw(1))
+                ->from('user_admission')
+                ->whereColumn('user_admission.user_id', 'users.userId')
+                ->whereDate('user_admission.confirmed', today());
+        })->count();
 
-    $getPercent = function ($count) use ($totalUsers) {
-        return $totalUsers > 0 ? round(($count / $totalUsers) * 100) : 0;
-    };
+        $getPercent = function ($count) use ($totalUsers) {
+            return $totalUsers > 0 ? round(($count / $totalUsers) * 100) : 0;
+        };
 
-    Widget::add([
-        'type' => 'div',
-        'class' => 'row mb-4',
-        'content' => [
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($totalUsers),
-                'description' => 'Total Students',
-                'value' => number_format($totalUsers),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalUsers),
+                    'description' => 'Total Students',
+                    'value' => number_format($totalUsers),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'All registered students in the system.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($admittedUsers),
-                'description' => 'Admitted Students',
-                'value' => number_format($admittedUsers),
-                'progressClass' => 'progress-bar bg-primary',
-                'hint' => 'Students with confirmed admission.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($shortlistedUsers),
-                'description' => 'Shortlisted Students',
-                'value' => number_format($shortlistedUsers),
-                'progressClass' => 'progress-bar bg-primary',
-                'hint' => 'Students marked as shortlisted.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($todaysAdmittedUsers),
-                'description' => "Today's Admitted Students",
-                'value' => number_format($todaysAdmittedUsers),
-                'progressClass' => 'progress-bar bg-primary',
-                'wrapper' => [
+                    'hint' => 'All registered students in the system.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($admittedUsers),
+                    'description' => 'Admitted Students',
+                    'value' => number_format($admittedUsers),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'hint' => 'Students with confirmed admission.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($shortlistedUsers),
+                    'description' => 'Shortlisted Students',
+                    'value' => number_format($shortlistedUsers),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'hint' => 'Students marked as shortlisted.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($todaysAdmittedUsers),
+                    'description' => "Today's Admitted Students",
+                    'value' => number_format($todaysAdmittedUsers),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                'hint' => 'Students admitted today.',
-            ],
-        ]
-    ]);
-}
+                    'hint' => 'Students admitted today.',
+                ],
+            ]
+        ]);
+    }
 
 
 
@@ -930,7 +930,7 @@ public static function programmeStatisticsWidget()
                     'value' => number_format($totalStudents),
                     'progressClass' => 'progress-bar bg-primary',
                     'wrapper' => [
-                            'style' => 'background-color:rgb(40, 127, 167);',
+                        'style' => 'background-color:rgb(40, 127, 167);',
                     ],
                     'hint' => 'All Total Students',
                 ],
@@ -957,7 +957,7 @@ public static function programmeStatisticsWidget()
                     'value' => number_format($recentlyUpdated),
                     'progressClass' => 'progress-bar bg-primary',
                     'wrapper' => [
-                            'style' => 'background-color:rgb(40, 127, 167);',
+                        'style' => 'background-color:rgb(40, 127, 167);',
                     ],
                     'hint' => 'Recently Updated (30 Days)',
                 ]
@@ -973,61 +973,61 @@ public static function programmeStatisticsWidget()
 
 
     public static function courseCertificationStatisticsWidget()
-{
-    $totalCourseCertifications = CourseCertification::count();
-    $activeCourseCertifications = CourseCertification::where('status', 1)->count();
-    $inactiveCourseCertifications = CourseCertification::where('status', 0)->count();
-    $recentCourseCertifications = CourseCertification::whereDate('created_at', '>=', now()->subDays(30))->count();
+    {
+        $totalCourseCertifications = CourseCertification::count();
+        $activeCourseCertifications = CourseCertification::where('status', 1)->count();
+        $inactiveCourseCertifications = CourseCertification::where('status', 0)->count();
+        $recentCourseCertifications = CourseCertification::whereDate('created_at', '>=', now()->subDays(30))->count();
 
-    $getPercent = function ($count) use ($totalCourseCertifications) {
-        return $totalCourseCertifications > 0 ? round(($count / $totalCourseCertifications) * 100) : 0;
-    };
+        $getPercent = function ($count) use ($totalCourseCertifications) {
+            return $totalCourseCertifications > 0 ? round(($count / $totalCourseCertifications) * 100) : 0;
+        };
 
-    Widget::add([
-        'type' => 'div',
-        'class' => 'row mb-4',
-        'content' => [
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($totalCourseCertifications),
-                'description' => 'Total Course Certifications',
-                'value' => number_format($totalCourseCertifications),
-                'progressClass' => 'progress-bar bg-primary',
-                // 'wrapper' => [
-                //         'style' => 'background-color:rgb(40, 127, 167);',
-                // ],
-                'hint' => 'All Course Certifications',
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($totalCourseCertifications),
+                    'description' => 'Total Course Certifications',
+                    'value' => number_format($totalCourseCertifications),
+                    'progressClass' => 'progress-bar bg-primary',
+                    // 'wrapper' => [
+                    //         'style' => 'background-color:rgb(40, 127, 167);',
+                    // ],
+                    'hint' => 'All Course Certifications',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($activeCourseCertifications),
+                    'description' => 'Active Course Certifications',
+                    'value' => number_format($activeCourseCertifications),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Course Certifications currently active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($inactiveCourseCertifications),
+                    'description' => 'Inactive Course Certifications',
+                    'value' => number_format($inactiveCourseCertifications),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Course Certifications currently inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $getPercent($recentCourseCertifications),
+                    'description' => 'New Course Certifications (30 Days)',
+                    'value' => number_format($recentCourseCertifications),
+                    'progressClass' => 'progress-bar bg-primary',
+                    // 'wrapper' => [
+                    //         'style' => 'background-color:rgb(40, 127, 167);',
+                    //     ],
+                    'hint' => 'Modules added in the last 30 days.',
+                ],
             ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($activeCourseCertifications),
-                'description' => 'Active Course Certifications',
-                'value' => number_format($activeCourseCertifications),
-                'progressClass' => 'progress-bar bg-success',
-                'hint' => 'Course Certifications currently active.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($inactiveCourseCertifications),
-                'description' => 'Inactive Course Certifications',
-                'value' => number_format($inactiveCourseCertifications),
-                'progressClass' => 'progress-bar bg-danger',
-                'hint' => 'Course Certifications currently inactive.',
-            ],
-            [
-                'type' => 'progress_white',
-                'progress' => $getPercent($recentCourseCertifications),
-                'description' => 'New Course Certifications (30 Days)',
-                'value' => number_format($recentCourseCertifications),
-                'progressClass' => 'progress-bar bg-primary',
-                // 'wrapper' => [
-                //         'style' => 'background-color:rgb(40, 127, 167);',
-                //     ],
-                'hint' => 'Modules added in the last 30 days.',
-            ],
-        ],
-    ]);
-}
+        ]);
+    }
 
 
 
@@ -1041,8 +1041,8 @@ public static function programmeStatisticsWidget()
         $activeBatchs = Batch::where('completed', 1)->count();
         $inactiveBatchs = Batch::where('completed', 0)->count();
         $ongoingBatches = Batch::whereDate('start_date', '<=', now())
-        ->whereDate('end_date', '>=', now())
-        ->count();
+            ->whereDate('end_date', '>=', now())
+            ->count();
 
         $getPercent = function ($count) use ($totalBatchs) {
             return $totalBatchs > 0 ? round(($count / $totalBatchs) * 100) : 0;
@@ -1059,7 +1059,7 @@ public static function programmeStatisticsWidget()
                     'value' => number_format($totalBatchs),
                     'progressClass' => 'progress-bar bg-primary',
                     'wrapper' => [
-                            'style' => 'background-color:rgb(40, 127, 167);',
+                        'style' => 'background-color:rgb(40, 127, 167);',
                     ],
                     'hint' => 'All Admission Batches',
                 ],
@@ -1086,8 +1086,8 @@ public static function programmeStatisticsWidget()
                     'value' => number_format($ongoingBatches),
                     'progressClass' => 'progress-bar bg-primary',
                     'wrapper' => [
-                            'style' => 'background-color:rgb(40, 127, 167);',
-                        ],
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
                     'hint' => 'Batches currently in session.',
                 ],
             ],
@@ -1121,7 +1121,7 @@ public static function programmeStatisticsWidget()
                     'value' => number_format($totalCourseMatchOptions),
                     'progressClass' => 'progress-bar bg-primary',
                     'wrapper' => [
-                            'style' => 'background-color:rgb(40, 127, 167);',
+                        'style' => 'background-color:rgb(40, 127, 167);',
                     ],
                     'hint' => 'All Course Matches',
                 ],
@@ -1148,8 +1148,8 @@ public static function programmeStatisticsWidget()
                     'value' => number_format($recentCourseMatchOptions),
                     'progressClass' => 'progress-bar bg-primary',
                     'wrapper' => [
-                            'style' => 'background-color:rgb(40, 127, 167);',
-                        ],
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
                     'hint' => 'Matches added in the last 30 days.',
                 ],
             ],
@@ -1181,7 +1181,7 @@ public static function programmeStatisticsWidget()
                     'value' => number_format($totalCourseMatches),
                     'progressClass' => 'progress-bar bg-primary',
                     'wrapper' => [
-                            'style' => 'background-color:rgb(40, 127, 167);',
+                        'style' => 'background-color:rgb(40, 127, 167);',
                     ],
                     'hint' => 'All Course Match Options',
                 ],
@@ -1208,23 +1208,11 @@ public static function programmeStatisticsWidget()
                     'value' => number_format($recentCourseMatches),
                     'progressClass' => 'progress-bar bg-primary',
                     'wrapper' => [
-                            'style' => 'background-color:rgb(40, 127, 167);',
-                        ],
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
                     'hint' => 'Options added in the last 30 days.',
                 ],
             ],
         ]);
     }
-
-
-
-
-
-
-
-
-
-
-
-
 }

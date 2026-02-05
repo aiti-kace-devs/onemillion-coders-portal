@@ -131,9 +131,9 @@ return [
     'tables' => [
         'users' => 'admins',
         'role_user' => 'role_admin',
-        'roles' => false,
+        'roles' => 'roles',
         'group_user' => 'group_admin',
-        'groups' => false,
+        'groups' => 'groups',
     ],
 
     /*
@@ -163,7 +163,7 @@ return [
     */
 
     'impersonate' => [
-        'enabled' => env('STATAMIC_IMPERSONATE_ENABLED', true),
+        'enabled' => env('STATAMIC_IMPERSONATE_ENABLED', false),
         'redirect' => env('STATAMIC_IMPERSONATE_REDIRECT', null),
     ],
 
