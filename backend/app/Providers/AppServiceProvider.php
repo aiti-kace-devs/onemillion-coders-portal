@@ -29,6 +29,12 @@ class AppServiceProvider extends ServiceProvider
             \Statamic\Eloquent\Commands\ImportAssets::class,
             \App\Console\Commands\ImportAssetsCommand::class
         );
+
+        // Replace Statamic export-assets command with writeMeta null fix
+        $this->app->bind(
+            \Statamic\Eloquent\Commands\ExportAssets::class,
+            \App\Console\Commands\ExportAssetsCommand::class
+        );
     }
 
     /**
