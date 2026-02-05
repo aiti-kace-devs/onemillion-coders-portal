@@ -57,6 +57,51 @@ export const getTestimonialsData = async () => {
 };
 
 /**
+ * Fetch footer data
+ * @returns {Promise<Object>} - Footer data
+ */
+export const getFooterData = async () => {
+  try {
+    const response = await apiRequest("/pages/footer");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching footer data:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch a global set by handle (e.g. terms_and_privacy, consent)
+ * @param {string} handle - Global set handle
+ * @returns {Promise<Object>} - Global data (typically includes content key)
+ */
+export const getGlobalByHandle = async (handle) => {
+  try {
+    const response = await apiRequest(`/globals/${handle}`);
+    return response;
+  } catch (error) {
+    console.error(`Error fetching global ${handle}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch terms and privacy content
+ * @returns {Promise<Object>} - Terms and privacy global (key: content)
+ */
+export const getTermsAndPrivacyData = async () => {
+  return getGlobalByHandle("terms_and_privacy");
+};
+
+/**
+ * Fetch consent content for registration
+ * @returns {Promise<Object>} - Consent global (key: content)
+ */
+export const getConsentData = async () => {
+  return getGlobalByHandle("consent");
+};
+
+/**
  * Fetch about data
  * @returns {Promise<Object>} - About data
  */

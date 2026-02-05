@@ -4,23 +4,23 @@ tabs:
       -
         fields:
           -
-            handle: title
             field:
               type: text
               required: true
+            handle: title
           -
-            handle: content
             field:
               type: markdown
               localizable: true
+            handle: content
   sidebar:
     sections:
       -
         fields:
           -
-            handle: slug
             field:
               type: slug
-              localizable: true
               validate: 'max:200'
+              localizable: true
+            handle: slug
 title: Block

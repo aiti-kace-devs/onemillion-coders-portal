@@ -1,4 +1,3 @@
-title: TextBlock
 tabs:
   main:
     display: Main
@@ -6,19 +5,19 @@ tabs:
       -
         fields:
           -
-            handle: title
             field:
               type: text
               required: true
               validate:
                 - required
+            handle: title
           -
             import: details
           -
-            handle: content
             field:
               type: text
               display: content
+            handle: content
           -
             import: button
   sidebar:
@@ -27,8 +26,9 @@ tabs:
       -
         fields:
           -
-            handle: slug
             field:
               type: slug
-              localizable: true
               validate: 'max:200'
+              localizable: true
+            handle: slug
+title: TextBlock

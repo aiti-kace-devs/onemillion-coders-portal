@@ -13,6 +13,18 @@ const nextConfig = {
         hostname: 'cdn.msme.gikace.org',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'storage.googleapis.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.omcp.gikace.org',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };

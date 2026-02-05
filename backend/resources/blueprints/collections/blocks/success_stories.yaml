@@ -1,4 +1,3 @@
-title: Success-Stories
 tabs:
   main:
     display: Main
@@ -6,59 +5,60 @@ tabs:
       -
         fields:
           -
-            handle: title
             field:
               type: text
               required: true
               validate:
                 - required
+            handle: title
           -
             import: details
           -
-            handle: stories
             field:
-              type: replicator
-              display: Stories
               sets:
                 new_set_group:
-                  display: 'New Set Group'
                   sets:
                     story:
-                      display: Story
                       fields:
                         -
-                          handle: graduate_name
                           field:
                             type: text
-                            display: 'Graduate Name'
                             width: 33
+                            display: 'Graduate Name'
                             validate:
                               - required
+                          handle: graduate_name
                         -
-                          handle: program_completed
                           field:
                             type: text
+                            width: 33
                             display: 'Program Completed'
-                            width: 33
+                          handle: program_completed
                         -
-                          handle: sector
                           field:
                             type: text
-                            display: Sector
                             width: 33
+                            display: Sector
+                          handle: sector
                         -
-                          handle: message
                           field:
                             type: textarea
                             display: Message
+                          handle: message
+                      display: Story
+                  display: 'New Set Group'
+              type: replicator
+              display: Stories
+            handle: stories
   sidebar:
     display: Sidebar
     sections:
       -
         fields:
           -
-            handle: slug
             field:
               type: slug
-              localizable: true
               validate: 'max:200'
+              localizable: true
+            handle: slug
+title: Success-Stories

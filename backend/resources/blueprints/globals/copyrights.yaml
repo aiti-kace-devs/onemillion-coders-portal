@@ -5,31 +5,31 @@ tabs:
       -
         fields:
           -
-            handle: copyright
             field:
               type: text
               display: Copyright
+            handle: copyright
           -
-            handle: footer_links
             field:
-              type: replicator
-              display: 'Footer Links'
               sets:
                 new_set_group:
-                  display: 'New Set Group'
                   sets:
                     link:
-                      display: Link
                       fields:
                         -
-                          handle: name
                           field:
                             type: text
-                            display: Name
                             width: 33
+                            display: Name
+                          handle: name
                         -
-                          handle: url
                           field:
                             type: link
-                            display: Url
                             width: 66
+                            display: Url
+                          handle: url
+                      display: Link
+                  display: 'New Set Group'
+              type: replicator
+              display: 'Footer Links'
+            handle: footer_links

@@ -1,36 +1,36 @@
-title: Link
 tabs:
   main:
     sections:
       -
         fields:
           -
-            handle: title
             field:
               type: text
+            handle: title
           -
-            handle: redirect
             field:
               type: group
-              required: true
               width: '100'
               fields:
                 -
-                  handle: url
                   field:
                     type: link
-                    required: true
                     width: '100'
                     display: Location
+                    required: true
+                  handle: url
                 -
-                  handle: status
                   field:
                     type: radio
+                    width: '100'
                     inline: 'true'
-                    required: true
+                    default: 302
+                    display: 'HTTP Status'
                     options:
                       301: '301 (Permanent)'
                       302: '302 (Temporary)'
-                    width: '100'
-                    display: 'HTTP Status'
-                    default: 302
+                    required: true
+                  handle: status
+              required: true
+            handle: redirect
+title: Link
