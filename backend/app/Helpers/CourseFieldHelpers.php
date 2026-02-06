@@ -379,7 +379,7 @@ CRUD::addField([
     // }
 
 
-        public static function addStudentBatchFilter(string $label = 'Batch')
+    public static function addStudentBatchFilter(string $label = 'Batch')
     {
         $batches = Batch::orderBy('title')->pluck('title', 'id')->toArray();
 

@@ -24,17 +24,14 @@
                         <td>{{ $batch->title }} - {{ $batch->year }}</td>
                         <td>
                             @if($batch->admitted_students_count > 0)
-                                <a href="{{ url("/admin/user?batch_id={$batch->id}&confirmed_admission=1") }}">
+                                <a href="{{ url("/admin/user?batch_id={$batch->batch_id}&confirmed_admission=1") }}">
                                     {{ $batch->admitted_students_count }}
                                 </a>
                             @endif
                         </td>
                         <td>
                             @if($batch->courses_count > 0)
-                                @php
-                                    $encodedIds = urlencode(json_encode($batch->course_ids));
-                                @endphp
-                                <a href="{{ url("/admin/course?id={$encodedIds}") }}">
+                                <a href="{{ url("/admin/course-batch?batch_id={$batch->batch_id}") }}">
                                     {{ $batch->courses_count }}
                                 </a>
                             @endif

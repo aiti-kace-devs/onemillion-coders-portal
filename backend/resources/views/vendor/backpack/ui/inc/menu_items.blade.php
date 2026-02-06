@@ -145,3 +145,5 @@
 
 
 {{-- <x-backpack::menu-item :title="trans('backpack::crud.file_manager')" icon="la la-files-o" /> --}}
+
+<!-- <x-backpack::menu-item title="Course batches" icon="la la-question" :link="backpack_url('course-batch')" /> -->

@@ -5,16 +5,18 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\UserRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-use App\Http\Controllers\Traits\BulkStudentActionsTrait;
-use Illuminate\Http\Request;
-use App\Http\Controllers\Traits\ShortlistActionsTrait;
-use App\Http\Controllers\Traits\ShortlistRowActionsTrait;
-use App\Models\UserAdmission;
+use App\Http\Requests\ChangeAdmissionRequest;
+use App\Http\Requests\ChooseSessionRequest;
+use App\Models\Course;
 use App\Models\User;
+use App\Models\CourseSession;
+use App\Models\CourseBatch;
+use App\Models\Batch;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use Illuminate\Support\Facades\View;
+use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\GetsFilteredQuery;
 use Illuminate\Support\Facades\Log;
 /**
@@ -24,11 +26,15 @@ use Illuminate\Support\Facades\Log;
  */
 class ManageStudentCrudController extends CrudController
 {
-    use BulkStudentActionsTrait {
+    use \App\Http\Controllers\Traits\BulkStudentActionsTrait {
         admitStudent as traitAdmitStudent;
     }
-    use ShortlistActionsTrait;
-    use ShortlistRowActionsTrait;
+    use \App\Http\Controllers\Traits\ShortlistActionsTrait;
+    use \App\Http\Controllers\Traits\ShortlistRowActionsTrait {
+        changeAdmission as traitChangeAdmission;
+        chooseSession as traitChooseSession;
+        deleteAdmission as traitDeleteAdmission;
+    }
     use \App\SearchableCRUD;
     use UserFieldHelpers;
     use GetsFilteredQuery;
@@ -122,8 +128,11 @@ class ManageStudentCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        $this->setupManageStudentShowColumns();
+        // Don't call setupManageStudentShowColumns() - we use custom view instead
         $this->crud->set('show.setFromDb', false);
+        
+        // Set custom show view
+        $this->crud->setShowView('vendor.backpack.crud.manage_student_show');
 
         // Add action buttons for the preview page
         CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
@@ -163,7 +172,83 @@ class ManageStudentCrudController extends CrudController
             abort(403, 'Unauthorized action.');
         }
 
-        $this->setupCreateOperation();
+        $this->setupStudentUpdateFields();
+    }
+
+    /**
+     * Setup organized student update fields with tabs
+     */
+    protected function setupStudentUpdateFields()
+    {
+        // Personal Information Tab
+        CRUD::addField([
+            'name' => 'personal_info_header',
+            'type' => 'custom_html',
+            'value' => '<h5 class="mb-3"><i class="la la-user"></i> Personal Information</h5>',
+            'tab' => 'Personal Info',
+        ]);
+        
+        CRUD::field('name')
+            ->type('text')
+            ->label('Full Name')
+            ->tab('Personal Info');
+            
+        CRUD::field('gender')
+            ->type('select2')
+            ->label('Gender')
+            ->options([
+                'male' => 'Male',
+                'female' => 'Female',
+            ])
+            ->tab('Personal Info');
+            
+        CRUD::field('age')
+            ->type('number')
+            ->label('Age')
+            ->tab('Personal Info');
+            
+        CRUD::field('ghcard')
+            ->type('text')
+            ->label('Ghana Card Number')
+            ->tab('Personal Info');
+
+        // Contact Information Tab
+        CRUD::addField([
+            'name' => 'contact_info_header',
+            'type' => 'custom_html',
+            'value' => '<h5 class="mb-3"><i class="la la-envelope"></i> Contact Information</h5>',
+            'tab' => 'Contact Info',
+        ]);
+        
+        CRUD::field('email')
+            ->type('email')
+            ->label('Email')
+            ->tab('Contact Info');
+            
+        CRUD::field('mobile_no')
+            ->type('text')
+            ->label('Mobile Number')
+            ->tab('Contact Info');
+
+        // Course Information Tab
+        CRUD::addField([
+            'name' => 'course_info_header',
+            'type' => 'custom_html',
+            'value' => '<h5 class="mb-3"><i class="la la-graduation-cap"></i> Course Information</h5>',
+            'tab' => 'Course Info',
+        ]);
+        
+        CRUD::field('registered_course')
+            ->type('text')
+            ->label('Registered Course')
+            ->tab('Course Info');
+            
+        CRUD::addField([
+            'name' => 'shortlist',
+            'type' => 'checkbox',
+            'label' => 'Shortlisted',
+            'tab' => 'Course Info',
+        ]);
     }
 
     /**
@@ -429,6 +514,133 @@ class ManageStudentCrudController extends CrudController
             \Log::error('Error deleting admission:', ['user_id' => $user_id, 'error' => $e->getMessage()]);
             return response()->json(['message' => 'Failed to delete admission.'], 500);
         }
+    }
+
+    /**
+     * Change admission for a student
+     */
+    public function changeAdmission(ChangeAdmissionRequest $request, $userId)
+    {
+        return $this->traitChangeAdmission($request, $userId);
+    }
+
+    /**
+     * Choose session for a student
+     */
+    public function chooseSession(ChooseSessionRequest $request, $userId)
+    {
+        return $this->traitChooseSession($request, $userId);
+    }
+
+    /**
+     * Get courses list for dropdown (filtered by running batches)
+     */
+    public function getCoursesAjax()
+    {
+        // Get courses from running batches (where batch end_date >= today)
+        $runningBatchCourseIds = CourseBatch::whereHas('batch', function ($query) {
+                $query->where('end_date', '>=', now()->toDateString())
+                      ->orWhereNull('end_date');
+            })
+            ->pluck('course_id')
+            ->unique()
+            ->toArray();
+        
+        $courses = Course::whereIn('id', $runningBatchCourseIds)
+            ->select('id', 'course_name')
+            ->get();
+            
+        return response()->json($courses);
+    }
+
+    /**
+     * Get sessions list for dropdown (filtered by course)
+     */
+    public function getSessionsAjax(Request $request)
+    {
+        $courseId = $request->input('course_id');
+        $sessions = CourseSession::where('course_id', $courseId)
+            ->select('id', 'name', 'course_id')
+            ->get();
+        return response()->json($sessions);
+    }
+
+    /**
+     * Get student metrics for preview page
+     */
+    public function getStudentMetrics($userId)
+    {
+        $user = User::findOrFail($userId);
+        
+        // Basic info
+        $basicInfo = [
+            'name' => $user->name,
+            'email' => $user->email,
+            'mobile_no' => $user->mobile_no,
+            'gender' => $user->gender,
+            'age' => $user->age,
+            'registered_course' => $user->registered_course,
+        ];
+        
+        // Admission info
+        $admission = $user->admissions()->first();
+        $admissionInfo = [
+            'has_admission' => $admission ? true : false,
+            'course_id' => $admission?->course_id,
+            'session_id' => $admission?->session,
+            'confirmed' => $admission?->confirmed,
+            'batch_id' => $admission?->batch_id,
+            'location' => $admission?->location,
+        ];
+        
+        // Exam results
+        $examResults = $user->examResults()->with('exam')->get();
+        $examMetrics = [
+            'total_exams' => $examResults->count(),
+            'results' => $examResults->map(function($result) {
+                return [
+                    'exam_name' => $result->exam?->title ?? 'N/A',
+                    'score' => $result->yes_ans,
+                    'total' => $result->yes_ans + $result->no_ans,
+                    'percentage' => ($result->yes_ans + $result->no_ans) > 0 
+                        ? round(($result->yes_ans / ($result->yes_ans + $result->no_ans)) * 100, 2) 
+                        : 0,
+                    'attempted_at' => $result->created_at,
+                ];
+            }),
+            'latest_score_percentage' => $examResults->first() ? (
+                ($examResults->first()->yes_ans + $examResults->first()->no_ans) > 0
+                    ? round(($examResults->first()->yes_ans / ($examResults->first()->yes_ans + $examResults->first()->no_ans)) * 100, 2)
+                    : 0
+            ) : null,
+        ];
+        
+        // Attendance
+        $attendanceRecords = $user->attendances()->get();
+        $attendanceMetrics = [
+            'total_sessions' => $attendanceRecords->count(),
+            'present' => $attendanceRecords->where('status', 'present')->count(),
+            'absent' => $attendanceRecords->where('status', 'absent')->count(),
+            'late' => $attendanceRecords->where('status', 'late')->count(),
+            'excused' => $attendanceRecords->where('status', 'excused')->count(),
+            'attendance_rate' => $attendanceRecords->count() > 0 
+                ? round(($attendanceRecords->where('status', 'present')->count() / $attendanceRecords->count()) * 100, 2) 
+                : 0,
+            'records' => $attendanceRecords->map(function($record) {
+                return [
+                    'date' => $record->created_at,
+                    'status' => $record->status,
+                    'check_in_time' => $record->check_in_time,
+                ];
+            }),
+        ];
+        
+        return response()->json([
+            'basic_info' => $basicInfo,
+            'admission_info' => $admissionInfo,
+            'exam_metrics' => $examMetrics,
+            'attendance_metrics' => $attendanceMetrics,
+        ]);
     }
 
     // Remove the proxy methods for AJAX endpoints, as the trait methods are used directly.

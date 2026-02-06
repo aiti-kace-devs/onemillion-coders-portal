@@ -108,7 +108,8 @@ class BatchCrudController extends CrudController
 
                 if ($courseCount > 0) {
                     $encodedIds = urlencode(json_encode($courseIds));
-                    $url = url("/admin/course?id={$encodedIds}");
+                    // Filter by both batch_id and course_ids
+                    $url = url("/admin/course-batch?batch_id={$entry->id}&course_id={$encodedIds}");
 
                     return "<a href='{$url}'>{$courseCount}</a>";
                 }

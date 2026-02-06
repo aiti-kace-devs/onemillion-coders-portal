@@ -50,6 +50,19 @@ Route::group([
     Route::crud('user', 'UserCrudController');
     Route::crud('manage-student', 'ManageStudentCrudController');
 
+    // Manage Student actions (Per Student)
+    Route::post('manage-student/{user}/change-admission', 'ManageStudentCrudController@changeAdmission')->name('manage-student.change-admission');
+    Route::post('manage-student/{user}/choose-session', 'ManageStudentCrudController@chooseSession')->name('manage-student.choose-session');
+    Route::delete('manage-student/delete-admission/{user_id}', 'ManageStudentCrudController@deleteAdmission')->name('manage-student.delete-admission');
+    
+    // AJAX routes for student metrics and dropdowns
+    Route::get('manage-student/{user}/metrics', 'ManageStudentCrudController@getStudentMetrics')->name('manage-student.metrics');
+    Route::get('manage-student/courses-ajax', 'ManageStudentCrudController@getCoursesAjax')->name('manage-student.courses-ajax');
+    Route::get('manage-student/sessions-ajax', 'ManageStudentCrudController@getSessionsAjax')->name('manage-student.sessions-ajax');
+    
+    // Use UserCrudController's bulkAdmit for single student admission
+    Route::post('manage-student/bulk-admit', 'UserCrudController@bulkAdmit')->name('manage-student.bulk-admit');
+
     // Separate CRUD controllers for different student views
     Route::crud('students-with-admission', 'StudentsWithAdmissionCrudController');
     Route::crud('students-without-exam-results', 'StudentsWithoutExamResultsCrudController');
@@ -107,6 +120,7 @@ Route::group([
     Route::crud('course-match-option', 'CourseMatchOptionCrudController');
     
     // Route::crud('media', 'MediaCrudController');
+    Route::crud('course-batch', 'CourseBatchCrudController');
 }); // this should be the absolute last line of this file
 
 /**

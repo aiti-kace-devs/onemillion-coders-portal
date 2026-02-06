@@ -12,6 +12,7 @@ use App\Http\Controllers\Traits\ShortlistActionsTrait;
 use App\Http\Controllers\Traits\ShortlistRowActionsTrait;
 use App\Models\UserAdmission;
 use App\Models\User;
+use App\Models\CourseBatch;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
@@ -202,21 +203,44 @@ class UserCrudController extends CrudController
         ]);
 
         $updated = 0;
+        $notFound = [];
         $studentIds = $request->student_ids;
 
         $userIds = User::whereIn('id', $studentIds)->pluck('userId')->toArray();
 
         foreach (array_chunk($userIds, 100) as $chunk) {
-            $affected = UserAdmission::whereIn('user_id', $chunk)
-                ->update(['batch_id' => $request->batch_id]);
-            $updated += $affected;
+            $admissions = UserAdmission::whereIn('user_id', $chunk)->get();
+            
+            foreach ($admissions as $admission) {
+                // Find the course_batches record that matches the student's course_id
+                $courseBatch = CourseBatch::where('course_id', $admission->course_id)->first();
+                
+                if ($courseBatch) {
+                    $admission->course_batch_id = $courseBatch->id;
+                    $admission->save();
+                    $updated++;
+                } else {
+                    $notFound[] = $admission->user_id;
+                }
+            }
         }
 
         if ($updated === 0) {
+            if (!empty($notFound)) {
+                return response()->json([
+                    'message' => 'No admissions updated. No matching course_batches found for the students\' courses.',
+                    'not_found' => $notFound
+                ], 400);
+            }
             return response()->json(['message' => 'No admissions updated.'], 400);
         }
 
-        return response()->json(['message' => 'Batch assignment successful']);
+        $message = 'Batch assignment successful';
+        if (!empty($notFound)) {
+            $message .= '. However, ' . count($notFound) . ' students could not be updated because no matching course_batches were found for their courses.';
+        }
+
+        return response()->json(['message' => $message, 'updated' => $updated]);
     }
 
 
