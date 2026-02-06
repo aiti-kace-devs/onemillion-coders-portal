@@ -63,6 +63,9 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'shortlist' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'status' => 'boolean',
     ];
 
 
@@ -189,5 +192,61 @@ class User extends Authenticatable
     public function setNameFromFields()
     {
         $this->name = $this->getFullNameAttribute();
+    }
+
+    public function examEligibilityStatus($exam_id): array
+    {
+        $user_exam = user_exam::where('exam_id', $exam_id)
+            ->where('user_id', $this->id)
+            ->get()
+            ->first();
+
+        if ($user_exam?->submitted) {
+            return [
+                'status' => false,
+                'message' => "Test already submitted on this exam. Submission Date:  $user_exam->submitted",
+            ];
+        }
+
+        $exam = Oex_exam_master::where('id', $exam_id)->get()->first();
+        if (now()->isAfter($exam->exam_date)) {
+            return [
+                'status' => false,
+                'message' =>  "Unable to take exam. Exam deadline was  {$exam->exam_date->format(config('app.fulldate_format'))}",
+            ];
+        }
+
+        $userCreatedAtPlusDeadlineDays = $this->created_at->addDays(config(EXAM_DEADLINE_AFTER_REGISTRATION, 7));
+
+
+        if ($userCreatedAtPlusDeadlineDays->isBefore(now())) {
+            return [
+                'status' => false,
+                'message' => 'Unable to take exam. Time to take exams has elapsed',
+            ];
+        }
+
+        $usedTime = 0;
+
+        if ($user_exam?->started) {
+            $usedTime = now()->diffInMinutes($user_exam->started);
+        }
+
+        if ($usedTime > $exam->exam_duration) {
+            // time elapsed update exam status
+            $user_exam->submitted = now();
+            $user_exam->update();
+
+            return [
+                'status' => false,
+                'message' => "Unable to take exam. Exam duration time has elapsed.  $usedTime  minutes has passed since user started exams",
+                'usedTime' => $usedTime,
+            ];
+        }
+
+        return [
+            'status' => true,
+            'message' => 'true',
+        ];
     }
 }

@@ -9,14 +9,17 @@ class Oex_exam_master extends Model
 {
     use HasFactory;
 
-    protected $table="oex_exam_masters";
+    protected $table = "oex_exam_masters";
 
-    protected $primaryKey="id";
+    protected $primaryKey = "id";
 
-    protected $fillable=['title','category','passmark', 'exam_date','status','exam_duration'];
+    protected $fillable = ['title', 'category', 'passmark', 'exam_date', 'status', 'exam_duration'];
 
     protected $casts = [
         'status' => 'boolean',
+        'exam_date' => 'datetime',
+        'passmark' => 'integer',
+        'exam_duration' => 'integer',
     ];
 
     public function category()

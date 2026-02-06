@@ -243,5 +243,6 @@ return [
     'super_admin_password' => env('SUPER_ADMIN_PASSWORD', Str::random()),
     'super_admin_name' => env('SUPER_ADMIN_NAME', 'Super Admin'),
     'use_basset_cloud' => env('USE_BASSET_CLOUD', false),
+    'fulldate_format' => 'l, jS F, Y'
 
 ];

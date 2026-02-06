@@ -46,14 +46,13 @@ use Illuminate\Support\Str;
 |
 */
 
-Route::redirect('/', '/login');
 
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
 
 // Redirect Statamic login to Backpack login
 Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
     return redirect()->to(backpack_url('login'));
-})->name('statamic.cp.login');
+});
 
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
 // Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
@@ -623,7 +622,7 @@ Route::middleware(['auth:web'])->group(function () {
     // Route::post('/submit_questions', [StudentOperation::class, 'submit_questions']);
     Route::get('/show_result/{id}', [StudentOperation::class, 'show_result']);
     Route::get('/apply_exam/{id}', [StudentOperation::class, 'apply_exam']);
-    Route::get('/view_result/{id}', [StudentOperation::class, 'view_result']);
+    // Route::get('/view_result/{id}', [StudentOperation::class, 'view_result']);
     Route::post('/attendance/record', [AttendanceController::class, 'recordAttendance'])->name('attendance.record')->middleware('is_admitted:true');
     // Route::get('/attendance', [AttendanceController::class, 'viewAttendance'])->name('attendance.show')->middleware('is_admitted:true');
     Route::get('/id-qrcode', [StudentOperation::class, 'get_details_page'])->middleware('is_admitted:true');

@@ -111,9 +111,7 @@ class StudentOperation extends Controller
     //Exam page
     public function exam()
     {
-        if (!Auth::guard('web')->user()->isAdmitted()) {
-            return redirect(route('student.profile.edit'));
-        }
+        // Admission check removed - students can view/take exams before admission
 
         // $student_info = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.title', 'oex_exam_masters.exam_date', 'users.created_at as registered'])
         //     ->join('users', 'users.id', '=', 'user_exams.user_id')
@@ -144,66 +142,20 @@ class StudentOperation extends Controller
     //join exam page
     public function join_exam($id)
     {
-        if (!Auth::guard('web')->user()->isAdmitted()) {
-            return redirect(route('student.profile.edit'));
-        }
 
-        $questionSets = Oex_question_master::select('exam_set_id')->distinct()->pluck('exam_set_id');
-        $randomExamId = $questionSets->random();
-        $questions = Oex_question_master::where('exam_set_id', $randomExamId)->inRandomOrder()->get();
-
-        // $question = Oex_question_master::where('exam_id', $id)->inRandomOrder()->get();
-        $user_exam = user_exam::where('exam_id', $id)
-            ->where('user_id', Auth::guard('web')->user()->id)
-            ->get()
-            ->first();
-
-        if ($user_exam && $user_exam->submitted) {
+        $user = Auth::guard('web')->user();
+        $eligibilityStatus = $user->examEligibilityStatus($id);
+        // dd($question->pluck("id"));
+        if (!$eligibilityStatus['status']) {
             return redirect(route('student.exam.index'))->with([
-                'flash' => 'Unable to take exam. Test already submitted',
-                'key' => 'error',
-            ]);
-        }
-
-        $exam = Oex_exam_master::where('id', $id)->get()->first();
-        $now = Carbon::now();
-
-        if (!$now->isAfter(new Carbon($exam->exam_date))) {
-            return redirect(route('student.exam.index'))->with([
-                'flash' => 'Unable to take exam. Exam deadline was ' . $exam->exam_date,
-                'key' => 'error',
-            ]);
-        }
-
-        // 48 hours to finish exam
-        $userCreatedAt = new Carbon(Auth::guard('web')->user()->created_at);
-        $userCreatedAtPlusDeadlineDays = $userCreatedAt->addDays(config(EXAM_DEADLINE_AFTER_REGISTRATION, 2));
-
-        if (!$userCreatedAtPlusDeadlineDays->isBefore($now)) {
-            return redirect(route('student.exam.index'))->with([
-                'flash' => 'Unable to take exam. Time to take exams has elapsed',
-                'key' => 'error',
-            ]);
-        }
-
-        $usedTime = 0;
-
-        if ($user_exam && $user_exam->started) {
-            $start = new Carbon($user_exam->started);
-
-            $usedTime = $now->diffInMinutes($start);
-        }
-        if ($usedTime > $exam->exam_duration) {
-            // time elapsed update exam status
-            $user_exam->submitted = now();
-            $user_exam->update();
-
-            return redirect(route('student.exam.index'))->with([
-                'flash' => 'Unable to take exam. Exam duration time has elapsed. ' . $usedTime . ' mins has passed since user started exams',
+                'flash' => $eligibilityStatus['message'],
                 'key' => 'error',
             ]);
         }
         // dd($question->pluck("id"));
+        $exam = Oex_exam_master::where('id', $id)->get()->first();
+        $questions = [];
+        $usedTime = $eligibilityStatus['usedTime'] ?? 0;
 
         return Inertia::render('Student/Exam/JoinExam', compact('questions', 'exam', 'usedTime'));
 
@@ -214,24 +166,47 @@ class StudentOperation extends Controller
     public function start_exam(Request $request)
     {
         $id = $request->exam_id;
+        $user = Auth::guard('web')->user();
+        $eligibilityStatus = $user->examEligibilityStatus($id);
+        // dd($question->pluck("id"));
+        if (!$eligibilityStatus['status']) {
+            return redirect(route('student.exam.index'))->with([
+                'flash' => $eligibilityStatus['message'],
+                'key' => 'error',
+            ]);
+        }
 
         $user_exam = user_exam::where('exam_id', $id)
             ->where('user_id', Auth::guard('web')->user()->id)
             ->get()
             ->first();
 
-        $arr = ['status' => 'true', 'message' => 'started successfully'];
+
+        $questionSets = Oex_question_master::select('exam_set_id')->distinct()->pluck('exam_set_id');
+        $randomExamId = $questionSets->random();
+        $questions = Oex_question_master::select(
+            [
+                "id",
+                "exam_set_id",
+                "questions",
+                "options",
+            ]
+        )->where('exam_set_id', $randomExamId)->inRandomOrder()->get();
 
         if ($user_exam && !$user_exam->started) {
             $user_exam->update(['started' => Carbon::now()->toDateTimeString()]);
         }
+        $data = ['status' => 'true', 'message' => 'started successfully'];
+        $data['questions'] = $questions;
 
-        return json_encode($arr);
+        return response()->json($data);
     }
 
     //On submit
     public function submit_questions(Request $request)
     {
+        $user = Auth::guard('web')->user();
+
         $std_info = user_exam::where('user_id', Auth::guard('web')->user()->id)
             ->where('exam_id', $request->exam_id)
             ->get()
@@ -239,7 +214,7 @@ class StudentOperation extends Controller
 
         if ($std_info && $std_info->submitted) {
             $res = Oex_result::where('exam_id', $request->exam_id)
-                ->where('user_id', Auth::guard('web')->user()->id)
+                ->where('user_id', $user->id)
                 ->get()
                 ->first();
 
@@ -285,7 +260,6 @@ class StudentOperation extends Controller
         $std_info->submitted = Carbon::now()->toDateTimeString();
         $std_info->update();
 
-        $user = Auth::guard('web')->user();
         $userId = $user->userId;
 
         $res = new Oex_result();
@@ -296,7 +270,7 @@ class StudentOperation extends Controller
         $res->result_json = json_encode($result);
         $total = $yes_ans + $no_ans;
         $res->exam_set = $exam_set_id;
-        $percentage = round(($yes_ans / $total) * 100);
+        // $percentage = $total > 0 ? round(($yes_ans / $total) * 100) : 0;
         $res->save();
         // $storedResult = Oex_result::where('user_id', $user->id)
         //     ->where('exam_id', $request->exam_id)
@@ -1001,9 +975,9 @@ class StudentOperation extends Controller
         $user = Auth::guard('web')->user();
         $results = \DB::table('user_exams')
             ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-            ->leftJoin('oex_results', function($join) {
+            ->leftJoin('oex_results', function ($join) {
                 $join->on('user_exams.exam_id', '=', 'oex_results.exam_id')
-                     ->on('user_exams.user_id', '=', 'oex_results.user_id');
+                    ->on('user_exams.user_id', '=', 'oex_results.user_id');
             })
             ->where('user_exams.user_id', $user->id)
             ->select([
