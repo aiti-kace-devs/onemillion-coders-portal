@@ -85,7 +85,7 @@ const percentageScore = computed(() => {
             <div>
               <dt class="font-medium text-gray-500">Exam date</dt>
               <dd class="mt-1 text-gray-900">
-                {{ exam.exam_date }}
+                {{ exam.formatted_exam_date }}
               </dd>
             </div>
           </dl>

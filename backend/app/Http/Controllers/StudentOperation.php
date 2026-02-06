@@ -322,6 +322,8 @@ class StudentOperation extends Controller
             abort(404);
         }
 
+        $exam->formatted_exam_date = Carbon::parse($exam->exam_date)->format(config('app.fulldate_format'));
+
         $showResultsToStudents = config(SHOW_RESULTS_TO_STUDENTS, false);
         if (!$showResultsToStudents) {
             return redirect()
@@ -815,7 +817,7 @@ class StudentOperation extends Controller
     {
         $code = $request->code;
         // find index of the instructors schema
-        $instructorSectionIndex =  null;
+        $instructorSectionIndex = null;
         $questionnaire = Questionnaire::where('code', $code)->first();
 
         collect($questionnaire->schema)->each(function ($section, $index) use (&$instructorSectionIndex) {
@@ -824,10 +826,10 @@ class StudentOperation extends Controller
             }
         });
 
-        $sectionIndex = Str::startsWith($request->section, 'instructor-') ? $instructorSectionIndex : (int)$request->section;
+        $sectionIndex = Str::startsWith($request->section, 'instructor-') ? $instructorSectionIndex : (int) $request->section;
 
         $instructorSection = collect($questionnaire->schema)->where('type', 'instructors')->first();
-        $section = Str::startsWith($sectionIndex, 'instructor-') ? $instructorSection :  $questionnaire->schema[$sectionIndex];
+        $section = Str::startsWith($sectionIndex, 'instructor-') ? $instructorSection : $questionnaire->schema[$sectionIndex];
         $totalSections = count($questionnaire->schema);
         $schema = $section['questions'];
 
@@ -855,8 +857,8 @@ class StudentOperation extends Controller
             }
         }
 
-        $isInstructorSelect = (bool)$request->input('response_data.instructors_select') ?? false;
-        $isInstructorQuestions = (bool)$request->input('instructor_id') ?? false;
+        $isInstructorSelect = (bool) $request->input('response_data.instructors_select') ?? false;
+        $isInstructorQuestions = (bool) $request->input('instructor_id') ?? false;
 
         if ($isInstructorSelect) {
             $validationRules['response_data.instructors'] = 'required|array';
@@ -903,7 +905,7 @@ class StudentOperation extends Controller
 
                 $validationRules[$fieldKey] = implode('|', $rules);
                 $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|' . $field['rules'] ?? '' : '';
-                $validationRules[$fieldKey] =  $validationRules[$fieldKey] . $additionRules;
+                $validationRules[$fieldKey] = $validationRules[$fieldKey] . $additionRules;
             }
         }
 
@@ -949,7 +951,7 @@ class StudentOperation extends Controller
             return !isset($existing[$section['title']]);
         })->keys()->all();
 
-        $isSubmitted =  count($remainingSections) === 0 && count($yetToComplete) === 0;
+        $isSubmitted = count($remainingSections) === 0 && count($yetToComplete) === 0;
 
         // Save the updated response_data
         $draft->update([

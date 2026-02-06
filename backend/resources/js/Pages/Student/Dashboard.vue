@@ -154,7 +154,7 @@ const overallProgress = computed(() =>
                     </div>
                     <div>
                         <p class="mb-2 text-sm font-medium text-gray-800 leading-tight">Test</p>
-                        <ExamCard :examList="examList" />
+                        <ExamCard :examList="examList" :showResultsToStudents/>
                     </div>
 
                     <div v-if="user.isAdmitted">

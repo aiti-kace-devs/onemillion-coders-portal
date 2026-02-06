@@ -26,4 +26,18 @@ class Oex_exam_master extends Model
     {
         return $this->belongsTo(Oex_category::class, 'category', 'id');
     }
+
+    public function questions()
+    {
+        return $this->hasMany(OexQuestionMaster::class, 'exam_id');
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::addGlobalScope('questions_count', function ($query) {
+            $query->withCount('questions');
+        });
+    }
 }
