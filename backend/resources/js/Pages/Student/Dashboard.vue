@@ -7,7 +7,6 @@ import ExamCard from "../../Components/ExamCard.vue";
 const props = defineProps({
     exams: Object,
     questionnaires: Object,
-    showResultsToStudents: Boolean,
 });
 
 const user = computed(() => usePage().props.auth?.user || {});
@@ -154,7 +153,7 @@ const overallProgress = computed(() =>
                     </div>
                     <div>
                         <p class="mb-2 text-sm font-medium text-gray-800 leading-tight">Test</p>
-                        <ExamCard :examList="examList" :showResultsToStudents/>
+                        <ExamCard :examList="examList" />
                     </div>
 
                     <div v-if="user.isAdmitted">
