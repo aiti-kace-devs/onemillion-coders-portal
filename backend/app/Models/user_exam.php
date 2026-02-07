@@ -14,6 +14,13 @@ class user_exam extends Model
 
     protected $fillable = ['user_id', 'exam_id', 'std_status', 'exam_joined', 'started', 'submitted'];
 
+    protected $casts = [
+        'std_status' => 'boolean',
+        'exam_joined' => 'boolean',
+        'started' => 'datetime',
+        'submitted' => 'datetime',
+    ];
+
     public function result()
     {
         return $this->hasOne(Oex_result::class, 'user_id', 'user_id');

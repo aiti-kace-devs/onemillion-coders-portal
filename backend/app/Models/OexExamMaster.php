@@ -17,6 +17,7 @@ class OexExamMaster extends Model
     protected $fillable=['title','category','passmark', 'exam_date','status','exam_duration'];
     protected $casts = [
         'status' => 'boolean',
+
     ];
 
     public function categoryRelation()

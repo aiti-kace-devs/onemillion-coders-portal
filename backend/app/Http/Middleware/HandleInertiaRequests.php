@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AppConfig;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -34,16 +35,18 @@ class HandleInertiaRequests extends Middleware
 
         $route = Route::current();
 
-        if($request->is('admin*')){
+        if ($request->is('admin*')) {
             return [
                 ...parent::share($request),
                 'auth' => [
                     'user' => $request->user()
                 ]
-                ];
-            }
+            ];
+        }
 
         $user = Auth::guard('web')->user();
+        $configs = AppConfig::pluck('value', 'key')->all();
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -58,6 +61,7 @@ class HandleInertiaRequests extends Middleware
                     )
                     : null,
             ],
+            'config' => $configs,
             'flash' => [
                 'message' => fn() => $request->session()->get('flash'),
                 'key' => fn() => $request->session()->get('key'),

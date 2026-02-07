@@ -42,6 +42,10 @@ return [
         base_path('vendor/backpack/theme-tabler/resources/assets/css/color-adjustments.css'),
         base_path('vendor/backpack/theme-tabler/resources/assets/css/colors.css'),
         base_path('vendor/backpack/theme-tabler/resources/assets/css/skins/fuzzy-background.css'),
+        base_path('vendor/backpack/theme-tabler/resources/assets/css/skins/backpack-color-palette.css'),
+        base_path('vendor/backpack/theme-tabler/resources/assets/css/skins/glass.css'),
+
+
     ],
 
     /**
