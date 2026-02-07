@@ -5,32 +5,32 @@ tabs:
       -
         fields:
           -
-            handle: title
             field:
               type: text
               required: true
               validate:
                 - required
+            handle: title
           -
-            handle: content
             field:
               type: markdown
               localizable: true
               escape_markup: true
+            handle: content
           -
-            handle: block_items
             field:
               type: entries
               display: 'Block Items'
+            handle: block_items
   sidebar:
     display: Sidebar
     sections:
       -
         fields:
           -
-            handle: slug
             field:
               type: slug
-              localizable: true
               validate: 'max:200'
+              localizable: true
+            handle: slug
 title: Block

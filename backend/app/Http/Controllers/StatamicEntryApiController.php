@@ -150,15 +150,15 @@ class StatamicEntryApiController extends Controller
         }
 
         //footer
-        $footer = [
-            'contact_us' => GlobalSet::findByHandle('contact')->in('default')->toAugmentedArray(),
-            'quick_links' => GlobalSet::findByHandle('quick_links')->in('default')->toAugmentedArray(),
-            'copyrights' => GlobalSet::findByHandle('copyrights')->in('default')->toAugmentedArray(),
-            'collaborators' => GlobalSet::findByHandle('collaborators')->in('default')->toAugmentedArray(),
-            'social_media' => GlobalSet::findByHandle('social_media')->in('default')->toAugmentedArray(),
-        ];
+        // $footer = [
+        //     'contact_us' => GlobalSet::findByHandle('contact')->in('default')->toAugmentedArray(),
+        //     'quick_links' => GlobalSet::findByHandle('quick_links')->in('default')->toAugmentedArray(),
+        //     'copyrights' => GlobalSet::findByHandle('copyrights')->in('default')->toAugmentedArray(),
+        //     'collaborators' => GlobalSet::findByHandle('collaborators')->in('default')->toAugmentedArray(),
+        //     'social_media' => GlobalSet::findByHandle('social_media')->in('default')->toAugmentedArray(),
+        // ];
 
-        return response()->json(['data' => $data,'footer' => $footer]);
+        return response()->json(['data' => $data]);
     }
 
     /**
@@ -256,8 +256,7 @@ class StatamicEntryApiController extends Controller
                                         ->filter()
                                         ->values()
                                         ->all();
-
-                                    }
+                                }
                                 return $blockWithRelated;
                             }, $fieldValue);
                         } else {
@@ -352,13 +351,13 @@ class StatamicEntryApiController extends Controller
                     'id' => $asset->id(),
                     'url' => $asset->url(),
                     'path' => $asset->path(),
-                    'basename' => $asset->basename(),
-                    'extension' => $asset->extension(),
+                    // 'basename' => $asset->basename(),
+                    // 'extension' => $asset->extension(),
                     'mime_type' => $asset->mimeType(),
                     // 'size' => $asset->size(),
                     // 'last_modified' => $asset->lastModified(),
                     'alt' => $asset->get('alt'),
-                    'meta' => $asset->meta(),
+                    // 'meta' => $asset->meta(),
                 ];
             }
         }
@@ -371,7 +370,7 @@ class StatamicEntryApiController extends Controller
     private function isAssetField($fieldName)
     {
         // You can customize this logic based on your blueprints/field naming
-        $assetFieldNames = ['media', 'image', 'images', 'asset', 'assets', 'file', 'files', 'gallery'];
+        $assetFieldNames = ['media', 'image', 'images', 'asset', 'assets', 'file', 'files', 'gallery', 'hero_image', 'about_details_media'];
         return in_array($fieldName, $assetFieldNames);
     }
 
@@ -510,5 +509,21 @@ class StatamicEntryApiController extends Controller
                 'total' => $entries->count(),
             ]
         ]);
+    }
+
+    /**
+     * Get Footer detais
+     */
+    public function footer(Request $request): JsonResponse
+    {
+        $footer = [
+            'contact_us' => GlobalSet::findByHandle('contact')->in('default')->toArray(),
+            'quick_links' => GlobalSet::findByHandle('quick_links')->in('default')->toAugmentedArray(),
+            'copyrights' => GlobalSet::findByHandle('copyrights')->in('default')->toAugmentedArray(),
+            'collaborators' => GlobalSet::findByHandle('collaborators')->in('default')->toArray(),
+            'social_media' => GlobalSet::findByHandle('social_media')->in('default')->toAugmentedArray(),
+        ];
+
+        return response()->json(['data' => $footer]);
     }
 }

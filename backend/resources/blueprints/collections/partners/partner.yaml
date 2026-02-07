@@ -5,42 +5,42 @@ tabs:
       -
         fields:
           -
-            handle: slug
             field:
               type: slug
-              localizable: true
               validate:
                 - 'max:200'
+              localizable: true
+            handle: slug
           -
-            handle: title
             field:
               type: text
-              required: true
               width: 50
+              required: true
               validate:
                 - required
+            handle: title
           -
-            handle: caption
             field:
               type: text
-              display: Caption
               width: 50
+              display: Caption
+            handle: caption
           -
-            handle: image
             field:
-              max_files: 1
-              min_files: 1
-              container: google_cloud
-              folder: uploads
               type: assets
+              folder: uploads
               display: Image
               validate:
                 - required
+              container: google_cloud
+              max_files: 1
+              min_files: 1
+            handle: image
           -
-            handle: link_field
             field:
               type: link
               display: Link
+            handle: link_field
   sidebar:
     display: Sidebar
     sections:

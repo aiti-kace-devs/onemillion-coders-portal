@@ -5,35 +5,35 @@ tabs:
       -
         fields:
           -
-            handle: quick_links
             field:
-              type: replicator
-              display: 'Quick Links'
               sets:
                 new_set_group:
-                  display: 'New Set Group'
                   sets:
                     quick_link:
-                      display: 'Quick Link'
                       fields:
                         -
-                          handle: name
                           field:
                             type: text
+                            width: 50
                             display: Name
                             validate:
                               - required
-                            width: 50
+                          handle: name
                         -
-                          handle: caption
                           field:
                             type: text
-                            display: Caption
                             width: 50
+                            display: Caption
+                          handle: caption
                         -
-                          handle: link
                           field:
                             type: link
                             display: Link
                             validate:
                               - required
+                          handle: link
+                      display: 'Quick Link'
+                  display: 'New Set Group'
+              type: replicator
+              display: 'Quick Links'
+            handle: quick_links

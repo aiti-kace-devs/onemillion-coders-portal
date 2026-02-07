@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+
 Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
 Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
 
@@ -45,7 +46,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 | Custom API endpoints for Statamic entries with eager loading
 |
 */
+Route::get('/pages/footer', [StatamicEntryApiController::class, 'footer']);
 Route::get('/pages/{slug}', [StatamicEntryApiController::class, 'showPageBySlug']);
+
 
 Route::name('custom.')->group(function () {
     // Get all entries with optional filtering and related entries

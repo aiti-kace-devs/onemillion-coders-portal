@@ -21,13 +21,8 @@ const CTASection = () => {
             this pathway.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
+           <Link href="/register">
             <Button
-              onClick={() =>
-                window.open(
-                  "https://onemillioncoders.gov.gh/available-courses",
-                  "_blank"
-                )
-              }
               variant="outline"
               size="large"
               icon={FiPlay}
@@ -35,6 +30,7 @@ const CTASection = () => {
             >
               Register
             </Button>
+            </Link>
             <Link href="/programmes">
               <Button
                 variant="outline"
@@ -42,7 +38,7 @@ const CTASection = () => {
                 icon={FiArrowRight}
                 className="!border-gray-900 !text-gray-900 hover:!bg-gray-900 hover:!text-white"
               >
-                View All Programs
+                View All Programmes
               </Button>
             </Link>
           </div>
