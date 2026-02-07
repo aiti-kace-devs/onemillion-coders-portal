@@ -30,4 +30,12 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'recaptcha' => [
+        'site_key' => env('RECAPTCHA_SITE_KEY'),
+        'api_key' => env('RECAPTCHA_API_KEY'),
+        'project_id' => env('GOOGLE_CLOUD_PROJECT_ID'),
+        'max_risk_analysis_score' => env('RECAPTCHA_MAX_RISK_ANALYSIS_SCORE', 0.5),
+        'skip_recaptcha' => env('RECAPTCHA_SKIP', false),
+    ],
+
 ];

@@ -6,6 +6,7 @@ import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 // import { ZiggyVue } from '../../vendor/tightenco/ziggy/dist/vue.m';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
+import { VueReCaptcha } from 'vue-recaptcha-v3';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -16,7 +17,22 @@ createInertiaApp({
         return createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
-            .mount(el);
+            .use(VueReCaptcha, {
+          siteKey: props.initialPage.props.recaptcha_site_key,
+          loaderOptions: { useEnterprise: true },
+          container: {
+            parameters: {
+              badge: 'topright',
+            }
+          }
+        ,
+        scriptProps: {
+          async: false,
+          defer: false,
+          appendTo: 'head',
+          nonce: undefined,
+      }})
+    .mount(el);
     },
     progress: {
         color: '#4B5563',

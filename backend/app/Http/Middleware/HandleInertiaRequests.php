@@ -34,14 +34,14 @@ class HandleInertiaRequests extends Middleware
 
         $route = Route::current();
 
-        if($request->is('admin*')){
+        if ($request->is('admin*')) {
             return [
                 ...parent::share($request),
                 'auth' => [
                     'user' => $request->user()
                 ]
-                ];
-            }
+            ];
+        }
 
         $user = Auth::guard('web')->user();
         return [
@@ -62,6 +62,7 @@ class HandleInertiaRequests extends Middleware
                 'message' => fn() => $request->session()->get('flash'),
                 'key' => fn() => $request->session()->get('key'),
             ],
+            'recaptcha_site_key' => config('services.recaptcha.site_key'),
         ];
     }
 }

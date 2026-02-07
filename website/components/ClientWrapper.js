@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import SplashScreen from "./SplashScreen";
+import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 
 export default function ClientWrapper({ children }) {
   const [showSplash, setShowSplash] = useState(false);
@@ -24,28 +25,38 @@ export default function ClientWrapper({ children }) {
 
   // Don't render splash screen during SSR
   if (!isClient) {
-    return <>{children}</>;
+    return(  <GoogleReCaptchaProvider reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+      
+     useEnterprise={true}
+     container={{
+        parameters: {
+          badge: 'bottomright', // Ensures the script knows where to render
+        }
+      }}
+      scriptProps={{
+        async: false,
+        defer: false,
+        appendTo: 'head',
+        nonce: undefined,
+      }}>{children}</GoogleReCaptchaProvider>);
   }
 
   return (
-    <>
+    <GoogleReCaptchaProvider reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+    useEnterprise={true}
+    container={{
+        parameters: {
+          badge: 'bottomright', // Ensures the script knows where to render
+        }
+      }}
+    scriptProps={{
+      async: false,
+      defer: false,
+      appendTo: 'head',
+      nonce: undefined,
+    }}>
       {showSplash && <SplashScreen onDismiss={handleSplashDismiss} />}
       {children}
-    </>
+    </GoogleReCaptchaProvider>
   );
-}
-
-
-
-const data = {
-  "form_uuid": "6c004031-4efb-4b51-890f-0c3788defedf",
-  "response_data": {
-      "name": "John Doe",
-      "email": "john@doe.com",
-      "age": "20–24",
-      "highest-level-of-education": "Degree",
-      "phone": "+233542323133",
-      "gender": "Male",
-      "course_id": "27"
-  }
-}
+}  

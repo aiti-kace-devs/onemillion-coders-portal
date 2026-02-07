@@ -30,8 +30,13 @@ import { getCourseImage } from "../../utils/courseImages";
 
 import parsePhoneNumberFromString from "libphonenumber-js";
 
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
+
+
+
 export default function RegisterPage() {
   const router = useRouter();
+  const { executeRecaptcha } = useGoogleReCaptcha();
 
   // State management
   const [step, setStep] = useState(1); // 1: region, 2: center, 3: course, 4: form, 5: success
@@ -236,6 +241,7 @@ export default function RegisterPage() {
 
     return errors;
   };
+    
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -251,6 +257,13 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!executeRecaptcha) {
+      setError("Failed to verify reCaptcha.");
+      return;
+    }
+
+    const token = await executeRecaptcha('register_form'); 
+
     try {
       setSubmitting(true);
 
@@ -262,6 +275,7 @@ export default function RegisterPage() {
         region_id: selectedRegion.id,
         centre_id: selectedCentre.id,
         form_uuid: formSchema.uuid,
+        recaptcha_token: token,
       };
 
       await submitRegistration(submissionData);
@@ -381,6 +395,7 @@ export default function RegisterPage() {
   };
 
   return (
+
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
@@ -1007,6 +1022,6 @@ export default function RegisterPage() {
           )}
         </motion.div>
       </div>
-    </div>
+    </div> 
   );
 }
