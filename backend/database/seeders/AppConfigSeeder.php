@@ -17,7 +17,7 @@ class AppConfigSeeder extends Seeder
     {
         //
         try {
-            DB::table('app_configs')->insert([
+            DB::table('app_configs')->insertOrIgnore([
                 [
                     'key' => EXAM_DEADLINE_AFTER_REGISTRATION,
                     'value' => 7,
@@ -100,6 +100,14 @@ class AppConfigSeeder extends Seeder
                 ],
                 [
                     'key' => SEND_SMS_AFTER_ADMISSION_CONFIRMATION,
+                    'value' => 1,
+                    'type' => 'boolean',
+                    'is_cached' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'key' => SHOW_RESULTS_TO_STUDENTS,
                     'value' => 1,
                     'type' => 'boolean',
                     'is_cached' => true,

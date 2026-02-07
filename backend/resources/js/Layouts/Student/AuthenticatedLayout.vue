@@ -161,7 +161,7 @@ const user = auth?.user || {};
           </template>
 
           <SidebarNavLink
-            :href="route('logout')"
+            :href="route('auth.logout')"
             :label="'Log Out'"
             :method="'post'"
             :as="'button'"
