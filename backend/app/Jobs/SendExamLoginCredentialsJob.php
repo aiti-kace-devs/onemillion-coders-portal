@@ -75,9 +75,9 @@ class SendExamLoginCredentialsJob implements ShouldQueue
         $now = Carbon::now();
 
         $exam = Oex_exam_master::find($this->std->exam);
-        $date = $exam?->exam_date ?? $now;
+        $date = $exam?->exam_date ?? now();
 
-        $studentDeadline = (new Carbon($registered))
+        $studentDeadline = $registered
             ->addDays(config('EXAM_DEADLINE_AFTER_REGISTRATION', 2));
 
         $hoursLeft = $now->diffInHours($studentDeadline);

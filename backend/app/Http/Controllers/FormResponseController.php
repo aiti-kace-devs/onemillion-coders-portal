@@ -88,7 +88,6 @@ class FormResponseController extends Controller
 
     public function store(Request $request)
     {
-        // 1️⃣ Check for form UUID
         $formUuid = $request->input('form_uuid');
         if (!$formUuid) {
             return response()->json([
@@ -97,7 +96,6 @@ class FormResponseController extends Controller
             ], 400);
         }
 
-        // 2️⃣ Fetch form
         $form = Form::where('uuid', $formUuid)->first();
         if (!$form) {
             return response()->json([
@@ -113,16 +111,14 @@ class FormResponseController extends Controller
         $attributes = [];
         $phoneFieldName = null;
 
-        // 3️⃣ Build dynamic validation rules
         foreach ($schema as $field) {
             $fieldName = $field['field_name'];
-            $inputField = $fieldName; // always match field_name from schema
+            $inputField = $fieldName;
             $fieldTitle = ucwords(str_replace(['-', '_'], ' ', $field['title']));
             $rules = [];
 
             $attributes[$inputField] = $fieldTitle;
 
-            // Required
             if (!empty($field['validators']['required'])) {
                 $rules[] = 'required';
                 $customMessages["{$inputField}.required"] = "{$fieldTitle} is required.";
@@ -130,7 +126,6 @@ class FormResponseController extends Controller
                 $rules[] = 'nullable';
             }
 
-            // Unique validation
             if (!empty($field['validators']['unique'])) {
                 $value = $request->input($inputField);
                 if ($value) {
@@ -147,7 +142,6 @@ class FormResponseController extends Controller
                 }
             }
 
-            // Type-specific rules
             switch ($field['type']) {
                 case 'text':
                 case 'textarea': $rules[] = 'string'; break;
@@ -180,10 +174,8 @@ class FormResponseController extends Controller
             $validationRules[$inputField] = implode('|', $rules);
         }
 
-        // 4️⃣ Validate
         $validated = $request->validate($validationRules, $customMessages, $attributes);
 
-        // 5️⃣ Handle file uploads
         foreach ($schema as $field) {
             if ($field['type'] === 'file' && $request->hasFile($field['field_name'])) {
                 $file = $request->file($field['field_name']);
@@ -199,14 +191,12 @@ class FormResponseController extends Controller
             }
         }
 
-        // 6️⃣ Prepare response_data
         $responseData = [];
         foreach ($schema as $field) {
             $fieldName = $field['field_name'];
             $responseData[$fieldName] = $validated[$fieldName] ?? $request->input($fieldName);
         }
 
-        // 7️⃣ Save response
         $response = new FormResponse([
             'form_id' => $form->id,
             'response_data' => $responseData
@@ -214,10 +204,7 @@ class FormResponseController extends Controller
         $form->responses()->save($response);
 
         
-        // 8️⃣ Dispatch event
-        if ($phoneFieldName) {
-            FormSubmittedEvent::dispatch($responseData, $response->id, $phoneFieldName);
-        }
+        FormSubmittedEvent::dispatch($responseData, $response->id, $phoneFieldName);
 
         return response()->json([
             'success' => true,

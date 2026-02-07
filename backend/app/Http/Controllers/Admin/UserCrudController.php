@@ -227,9 +227,7 @@ class UserCrudController extends CrudController
     public function setupFilter()
     {
         // $this->addStudentBatchFilter('Batch Filter');
-        if (backpack_user()->is_super) {
-            $this->courseFilter('registered_course');
-        }
+        $this->courseFilter('registered_course');
         $this->addConfirmedAdmissionFilter();
         $this->addAdmissionLocationFilter();
         $this->addAdmittedAtFilter();
@@ -237,9 +235,7 @@ class UserCrudController extends CrudController
         FilterHelper::addAgeRangeFilter();
         FilterHelper::addGenderFilter();
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
-        if (backpack_user()->is_super) {
-            $this->addStudentBatchFilterFromDashboard('admission');
-        }
+        $this->addStudentBatchFilterFromDashboard('admission');
     }
 
     
