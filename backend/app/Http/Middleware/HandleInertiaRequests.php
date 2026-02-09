@@ -45,7 +45,14 @@ class HandleInertiaRequests extends Middleware
         }
 
         $user = Auth::guard('web')->user();
-        $configs = AppConfig::pluck('value', 'key')->all();
+
+        $configs = AppConfig::whereIn('key', [
+            SHOW_RESULTS_TO_STUDENTS,
+            ALLOW_COURSE_CHANGE,
+            ALLOW_SESSION_CHANGE,
+            EXAM_DEADLINE_AFTER_REGISTRATION
+        ])
+            ->pluck('value', 'key')->all();
 
         return [
             ...parent::share($request),
@@ -66,6 +73,7 @@ class HandleInertiaRequests extends Middleware
                 'message' => fn() => $request->session()->get('flash'),
                 'key' => fn() => $request->session()->get('key'),
             ],
+            'recaptcha_site_key' => config('services.recaptcha.site_key'),
         ];
     }
 }

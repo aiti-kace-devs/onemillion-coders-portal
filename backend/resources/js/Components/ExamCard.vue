@@ -6,11 +6,10 @@ import PrimaryButton from "./PrimaryButton.vue";
 
 const props = defineProps({
     examList: Array,
-    showResultsToStudents: Boolean,
 });
 
 const EXAM_DEADLINE_AFTER_REGISTRATION = usePage().props.config?.['EXAM_DEADLINE_AFTER_REGISTRATION'] || 14;
-// const SHOW_RESULTS_TO_STUDENTS = usePage().props.config?.['SHOW_RESULTS_TO_STUDENTS'] || false; // Removed as it is now passed as a prop
+const SHOW_RESULTS_TO_STUDENTS = usePage().props.config?.['SHOW_RESULTS_TO_STUDENTS'] || false;
 const user = usePage().props.auth?.user || {};
 
 
@@ -114,7 +113,7 @@ const getExamDeadline = (examDate, registeredAt) => {
             </Link>
 
             <!-- View Results Button -->
-            <div v-if="getExamStatus(exam) === 'completed' && showResultsToStudents"
+            <div v-if="getExamStatus(exam) === 'completed' && SHOW_RESULTS_TO_STUDENTS"
                 class="mt-4 pt-3 border-t border-gray-100">
 
                 <PrimaryButton>

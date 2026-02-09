@@ -9,7 +9,6 @@ const props = defineProps({
         type: Object,
         required: true,
     },
-    showResultsToStudents: Boolean,
 });
 
 const page = usePage();
@@ -66,7 +65,7 @@ const overallProgress = computed(() =>
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Exam</h2>
         </template>
         <div class="pt-3">
-            <ExamCard :examList="examList" :showResultsToStudents="showResultsToStudents" />
+            <ExamCard :examList="examList" />
         </div>
     </AuthenticatedLayout>
 </template>

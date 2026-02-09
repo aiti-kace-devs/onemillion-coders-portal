@@ -70,8 +70,7 @@ class StudentOperation extends Controller
 
             return $questionnaire;
         });
-        $showResultsToStudents = config(SHOW_RESULTS_TO_STUDENTS, false);
-        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires', 'showResultsToStudents'));
+        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires'));
 
         // $data['portal_exams'] = Oex_exam_master::select(['oex_exam_masters.*', 'oex_categories.name as cat_name'])
         //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
@@ -135,8 +134,8 @@ class StudentOperation extends Controller
             ->get()
             ->toArray();
 
-        $showResultsToStudents = config(SHOW_RESULTS_TO_STUDENTS, false);
-        return Inertia::render('Student/Exam/Index', compact('exams', 'showResultsToStudents'));
+
+        return Inertia::render('Student/Exam/Index', compact('exams'));
     }
 
     //join exam page

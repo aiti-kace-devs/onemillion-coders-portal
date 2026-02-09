@@ -31,6 +31,8 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         // Manually authenticate users
+        //validate recaptcha when not in development
+
         $credentials = $request->only('email', 'password');
 
         if (!Auth::guard('web')->attempt($credentials, $request->boolean('remember'))) {
