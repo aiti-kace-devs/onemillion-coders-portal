@@ -50,6 +50,7 @@ class CentreCrudController extends CrudController
 
         CRUD::column('title')->type('textarea');
         CRUD::column('branch_id')->label('Branch')->linkTo('branch.show');
+        FilterHelper::addBooleanColumn('is_pwd_friendly', 'is_pwd_friendly');
         FilterHelper::addBooleanColumn('status', 'status');
         CRUD::column('created_at');
         FilterHelper::addBooleanFilter('status');

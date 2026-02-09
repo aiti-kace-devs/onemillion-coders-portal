@@ -42,6 +42,14 @@ class Batch extends Model
         return $this->belongsToMany(Course::class, 'course_batches', 'batch_id', 'course_id');
     }
 
+    /**
+     * Get the course batches for this admission batch
+     */
+    public function courseBatches()
+    {
+        return $this->hasMany(CourseBatch::class, 'batch_id');
+    }
+
 
     public function batches()
     {
