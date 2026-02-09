@@ -11,8 +11,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class SendExamLoginCredentialsJob implements ShouldQueue
 {
@@ -34,15 +32,8 @@ class SendExamLoginCredentialsJob implements ShouldQueue
         $this->std = User::find($this->userId);
 
         if (!$this->std) {
-            Log::error('SendExamLoginCredentialsJob: User not found', [
-                'user_id' => $this->userId
-            ]);
             return;
         }
-
-        Log::info('SendExamLoginCredentialsJob triggered', [
-            'user_id' => $this->std->id
-        ]);
 
         $deadline = $this->exam_deadline();
 
