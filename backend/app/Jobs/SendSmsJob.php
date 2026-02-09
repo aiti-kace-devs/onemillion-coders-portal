@@ -3,9 +3,7 @@
 namespace App\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -41,7 +39,7 @@ class SendSmsJob implements ShouldQueue
         try {
             $apiKey = env('ARKESEL_SMS_API_KEY');
 
-            $sender = str(env('SMS_SENDER_NAME', '1M-CODERS'), 0, 11);
+            $sender = substr(env('SMS_SENDER_NAME', '1M-CODERS'), 0, 11);
 
             $response = Http::withHeaders([
                 'api-key' => $apiKey

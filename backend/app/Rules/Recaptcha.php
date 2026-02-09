@@ -5,11 +5,7 @@ namespace App\Rules;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Support\Facades\Http;
-use Google\Cloud\RecaptchaEnterprise\V1\Client\RecaptchaEnterpriseServiceClient;
-use Google\Cloud\RecaptchaEnterprise\V1\Event;
-use Google\Cloud\RecaptchaEnterprise\V1\Assessment;
-use Google\Cloud\RecaptchaEnterprise\V1\CreateAssessmentRequest;
-use Google\Cloud\RecaptchaEnterprise\V1\TokenProperties\InvalidReason;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class Recaptcha implements ValidationRule
@@ -38,30 +34,35 @@ class Recaptcha implements ValidationRule
             return;
         }
 
-        $projectId = config('services.recaptcha.project_id');
-        $siteKey = config('services.recaptcha.site_key');
-        $apiKey = config('services.recaptcha.api_key');
-        $maxRiskAnalysisScore = config('services.recaptcha.max_risk_analysis_score');
+        try {
+            $projectId = config('services.recaptcha.project_id');
+            $siteKey = config('services.recaptcha.site_key');
+            $apiKey = config('services.recaptcha.api_key');
+            $maxRiskAnalysisScore = config('services.recaptcha.max_risk_analysis_score');
 
-        // Enterprise Assessment Endpoint
-        $url = "https://recaptchaenterprise.googleapis.com/v1/projects/{$projectId}/assessments?key={$apiKey}";
+            // Enterprise Assessment Endpoint
+            $url = "https://recaptchaenterprise.googleapis.com/v1/projects/{$projectId}/assessments?key={$apiKey}";
 
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-        ])->post($url, [
-            'event' => [
-                'token' => $value,
-                'siteKey' => $siteKey,
-                'expectedAction' => $this->action,
-            ],
-        ]);
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post($url, [
+                'event' => [
+                    'token' => $value,
+                    'siteKey' => $siteKey,
+                    'expectedAction' => $this->action,
+                ],
+            ]);
 
-        $data = $response->json();
+            $data = $response->json();
 
-        $sameAction = $data['tokenProperties']['action'] === $this->action;
+            $sameAction = $data['tokenProperties']['action'] === $this->action;
 
-        // Check if token is valid and score is sufficient (0.5+ is usually human)
-        if (!$sameAction || !($data['tokenProperties']['valid'] ?? false) || ($data['riskAnalysis']['score'] ?? 0) < $maxRiskAnalysisScore) {
+            // Check if token is valid and score is sufficient (0.5+ is usually human)
+            if (!$sameAction || !($data['tokenProperties']['valid'] ?? false) || ($data['riskAnalysis']['score'] ?? 0) < $maxRiskAnalysisScore) {
+                $fail('The reCAPTCHA verification failed. Please try again.');
+            }
+        } catch (Throwable $th) {
+            Log::error($th);
             $fail('The reCAPTCHA verification failed. Please try again.');
         }
     }
