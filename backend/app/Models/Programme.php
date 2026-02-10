@@ -71,7 +71,16 @@ class Programme extends Model
         return $this->belongsToMany(CourseMatchOption::class, 'programme_course_match_options', 'programme_id', 'course_match_option_id');
     }
 
-
+    /**
+     * Get all rules assigned to this programme
+     */
+    public function rules()
+    {
+        return $this->morphToMany(Rule::class, 'ruleable', 'rule_assignments')
+            ->withPivot(['value', 'priority'])
+            ->withTimestamps()
+            ->orderBy('rule_assignments.priority', 'asc');
+    }
 
     protected static function booted()
     {

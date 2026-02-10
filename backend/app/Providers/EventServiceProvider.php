@@ -31,7 +31,10 @@ class EventServiceProvider extends ServiceProvider
         ],
         \Illuminate\Queue\Events\JobProcessed::class => [
             EmailSentListener::class
-        ]
+        ],
+        \App\Events\AdmissionRejected::class => [
+            \App\Listeners\ReplaceRejectedAdmission::class,
+        ],
     ];
 
     /**

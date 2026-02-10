@@ -114,6 +114,14 @@ class AppConfigSeeder extends Seeder
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
+                [
+                    'key' => MINIMUM_EXAM_PASS_PERCENTAGE,
+                    'value' => 50,
+                    'type' => 'integer',
+                    'is_cached' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
             ]);
         } catch (\Exception $e) {
             echo $e->getMessage();

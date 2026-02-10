@@ -110,6 +110,16 @@ Route::group([
     Route::get('utilities', [UtilitiesController::class, 'index'])->name('admin.utilities.index');
     Route::post('utilities/run', [UtilitiesController::class, 'run'])->name('admin.utilities.run');
 
+    // Admission Engine Routes
+    Route::crud('admission-rule', 'RuleCrudController');
+    Route::crud('rule-pipeline', 'RulePipelineCrudController');
+    Route::crud('admission-run', 'AdmissionRunCrudController');
+    
+    // Custom admission operations
+    Route::get('admission/run', 'AdmissionRunCrudController@runAdmission')->name('admission.run');
+    Route::post('admission/preview', 'AdmissionRunCrudController@previewAdmission')->name('admission.preview');
+    Route::post('admission/execute', 'AdmissionRunCrudController@executeAdmission')->name('admission.execute');
+
     // Route::crud('media', 'MediaCrudController');
 }); // this should be the absolute last line of this file
 

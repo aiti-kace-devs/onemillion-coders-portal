@@ -40,6 +40,7 @@ class User extends Authenticatable
         'card_type',
         'ghcard',
         'gender',
+        'educational_level',
         'network_type',
         'registered_course',
         'shortlist'

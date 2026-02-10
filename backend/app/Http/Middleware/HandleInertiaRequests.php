@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\AppConfig;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -46,14 +45,6 @@ class HandleInertiaRequests extends Middleware
 
         $user = Auth::guard('web')->user();
 
-        $configs = AppConfig::whereIn('key', [
-            SHOW_RESULTS_TO_STUDENTS,
-            ALLOW_COURSE_CHANGE,
-            ALLOW_SESSION_CHANGE,
-            EXAM_DEADLINE_AFTER_REGISTRATION
-        ])
-            ->pluck('value', 'key')->all();
-
         return [
             ...parent::share($request),
             'auth' => [
@@ -68,7 +59,12 @@ class HandleInertiaRequests extends Middleware
                     )
                     : null,
             ],
-            'config' => $configs,
+            'config' => [
+                SHOW_RESULTS_TO_STUDENTS => config(SHOW_RESULTS_TO_STUDENTS),
+                ALLOW_COURSE_CHANGE => config(ALLOW_COURSE_CHANGE),
+                ALLOW_SESSION_CHANGE => config(ALLOW_SESSION_CHANGE),
+                EXAM_DEADLINE_AFTER_REGISTRATION => config(EXAM_DEADLINE_AFTER_REGISTRATION),
+            ],
             'flash' => [
                 'message' => fn() => $request->session()->get('flash'),
                 'key' => fn() => $request->session()->get('key'),

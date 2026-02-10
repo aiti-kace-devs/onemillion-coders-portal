@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Helpers\MailerHelper;
 use App\Helpers\SmsHelper;
+use App\Models\AdmissionRun;
 use App\Models\Course;
 use App\Models\CourseSession;
 use App\Models\User;
@@ -22,8 +23,13 @@ class CreateStudentAdmissionJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public ?User $student, public ?Course $course = null, public ?CourseSession $session = null)
-    {
+    public function __construct(
+        public $student,
+        public $course = null,
+        public ?CourseSession $session = null,
+        public string $source = 'manual',
+        public ?int $admissionRunId = null
+    ) {
         //
     }
 
@@ -32,17 +38,23 @@ class CreateStudentAdmissionJob implements ShouldQueue
      */
     public function handle(): void
     {
-        if (!$this->student) return;
 
-        $course = $this->course ?? Course::find($this->student->registered_course);
+        $student = $this->student instanceof User ? $this->student : User::find($this->student);
+
+        if (!$student) return;
+
+        $course = $this->course instanceof Course ? $this->course : Course::find($student->registered_course);
         if (!$course) return;
 
         $changingAdmission = false;
 
 
-        $existingAdmission = UserAdmission::where('user_id', $this->student->userId)->first();
+        $existingAdmission = UserAdmission::where('user_id', $student->userId)
+            ->where('course_id', $course->id)
+            ->first();
+
         if ($existingAdmission && !$this->session) {
-            if (!$existingAdmission->email_sent) {
+            if (false == $existingAdmission->email_sent) {
                 $this->sendAdmissionEmail();
                 $existingAdmission->update(['email_sent' => now()]);
             }
@@ -53,6 +65,8 @@ class CreateStudentAdmissionJob implements ShouldQueue
             'user_id' => $this->student->userId,
             'course_id' => $course->id,
             'email_sent' => now(),
+            'admission_source' => $this->source,
+            'admission_run_id' => $this->admissionRunId,
         ];
 
         if ($existingAdmission?->session) {
@@ -103,6 +117,8 @@ class CreateStudentAdmissionJob implements ShouldQueue
                 'url' => url('student/select-session/' . $this->student->userId),
                 'duration' => $this->course->duration ?? $this->course->programme->duration
             ], subject: $subject);
+
+            AdmissionRun::find($this->admissionRunId)?->increment('emailed_count');
         }
     }
 }

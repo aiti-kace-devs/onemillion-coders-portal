@@ -69,6 +69,14 @@
     <x-backpack::menu-item title="View Attendances" icon="la la-calendar-check" :link="backpack_url('attendance')" />
 @endcan
 
+{{-- Admissions (Automated) Menu --}}
+<x-backpack::menu-dropdown title="Admissions (Automated)" icon="la la-robot">
+    <x-backpack::menu-dropdown-item title="Run Admission" icon="la la-play-circle" :link="backpack_url('admission/run')" />
+    <x-backpack::menu-dropdown-item title="Admission Rules" icon="la la-cog" :link="backpack_url('admission-rule')" />
+    <x-backpack::menu-dropdown-item title="Rule Pipeline" icon="la la-stream" :link="backpack_url('rule-pipeline')" />
+    <x-backpack::menu-dropdown-item title="Admission History" icon="la la-history" :link="backpack_url('admission-run')" />
+</x-backpack::menu-dropdown>
+
 @can('form.read.all')
     <x-backpack::menu-item title="Registration Form" icon="la la-wpforms" :link="backpack_url('form')" />
 @endcan

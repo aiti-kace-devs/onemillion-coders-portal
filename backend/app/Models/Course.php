@@ -21,10 +21,16 @@ class Course extends Model
         'start_date',
         'end_date',
         'status',
+        'auto_admit_on',
+        'auto_admit_limit',
+        'auto_admit_enabled',
     ];
 
     protected $casts = [
         'status' => 'boolean',
+        'auto_admit_on' => 'date',
+        'auto_admit_enabled' => 'boolean',
+        'last_auto_admit_at' => 'datetime',
     ];
 
     public function centre()
@@ -56,6 +62,32 @@ class Course extends Model
     public function sessions()
     {
         return $this->hasMany(CourseSession::class, 'course_id');
+    }
+
+    /**
+     * Get all rules assigned to this course
+     */
+    public function rules()
+    {
+        return $this->morphToMany(Rule::class, 'ruleable', 'rule_assignments')
+            ->withPivot(['value', 'priority'])
+            ->withTimestamps()
+            ->orderBy('rule_assignments.priority', 'asc');
+    }
+
+    /**
+     * Get effective rules for admission
+     * Returns course rules if exists, otherwise inherits from programme
+     */
+    public function getEffectiveRules()
+    {
+        $courseRules = $this->rules()->where('is_active', true)->get();
+
+        if ($courseRules->isNotEmpty()) {
+            return $courseRules;
+        }
+        // Fallback to programme rules
+        return $this->programme->rules()->where('is_active', true)->get();
     }
 
     public function scopeMyAssignedCourses($query)
