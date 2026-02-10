@@ -72,8 +72,8 @@ class OexQuestionMasterCrudController extends CrudController
 
         if ($examId) {
             CRUD::addField([
-                'name'  => 'exam_id',
-                'type'  => 'hidden',
+                'name' => 'exam_id',
+                'type' => 'hidden',
                 'value' => $examId,
             ]);
         }
@@ -82,6 +82,13 @@ class OexQuestionMasterCrudController extends CrudController
             'label' => 'questions',
             'type' => 'textarea',
             'escaped' => false,
+        ]);
+        CRUD::addColumn([
+            'name' => 'programme_id',
+            'label' => 'Programme',
+            'entity' => 'programme',
+            'attribute' => 'title',
+            'model' => "App\Models\Programme",
         ]);
         CRUD::column('ans')->type('textarea');
         FilterHelper::addBooleanColumn('status', 'status');
@@ -122,6 +129,17 @@ class OexQuestionMasterCrudController extends CrudController
             'name' => 'exam_set_id',
             'type' => 'hidden',
             'value' => 1,
+        ]);
+
+        CRUD::addField([
+            'name' => 'programme_id',
+            'label' => 'Select Programme',
+            'type' => 'select',
+            'entity' => 'programme',
+            'attribute' => 'title',
+            'model' => "App\Models\Programme",
+            'wrapper' => ['class' => 'form-group col-12'],
+            'allows_null' => true,
         ]);
 
         CRUD::addField([
@@ -284,6 +302,7 @@ class OexQuestionMasterCrudController extends CrudController
         OexQuestionMaster::create([
             'exam_id' => $exam_id,
             'exam_set_id' => 1,
+            'programme_id' => $request->input('programme_id'),
             'questions' => $request->input('questions', ''),
             'options' => $transformed['options'],
             'ans' => $transformed['actualAns'],
@@ -307,6 +326,7 @@ class OexQuestionMasterCrudController extends CrudController
         $entry->update([
             'exam_id' => $exam_id,
             'exam_set_id' => 1,
+            'programme_id' => $request->input('programme_id', $entry->programme_id),
             'questions' => $request->input('questions', ''),
             'options' => $transformed['options'],
             'ans' => $transformed['actualAns'],

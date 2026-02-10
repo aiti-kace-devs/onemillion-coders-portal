@@ -181,7 +181,22 @@ class StudentOperation extends Controller
             ->first();
 
 
-        $questionSets = Oex_question_master::select('exam_set_id')->distinct()->pluck('exam_set_id');
+        $programme_id = $user->course?->programme_id;
+
+        $questionSetsQuery = Oex_question_master::select('exam_set_id')->distinct();
+
+        if ($programme_id) {
+            $questionSetsQuery->where('programme_id', $programme_id);
+        } else {
+            $questionSetsQuery->whereNull('programme_id');
+        }
+
+        $questionSets = $questionSetsQuery->pluck('exam_set_id');
+
+        if ($questionSets->isEmpty()) {
+            return response()->json(['status' => 'false', 'message' => 'No questions found for your programme.']);
+        }
+
         $randomExamId = $questionSets->random();
         $questions = Oex_question_master::select(
             [
