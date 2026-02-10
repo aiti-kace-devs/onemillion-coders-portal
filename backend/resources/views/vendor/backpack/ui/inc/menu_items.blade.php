@@ -43,6 +43,9 @@
         @can('course.read.all')
             <x-backpack::menu-dropdown-item title="Courses" icon="la la-book" :link="backpack_url('course')" />
         @endcan
+        @can('course.read.all')
+            <x-backpack::menu-dropdown-item title="Manage Course batches" icon="la la-question" :link="backpack_url('course-batch')" />
+        @endcan
         @can('course-session.read.all')
             <x-backpack::menu-dropdown-item title="Course Sessions" icon="la la-clock" :link="backpack_url('course-session')" />
         @endcan
@@ -146,4 +149,3 @@
 
 {{-- <x-backpack::menu-item :title="trans('backpack::crud.file_manager')" icon="la la-files-o" /> --}}
 
-<!-- <x-backpack::menu-item title="Course batches" icon="la la-question" :link="backpack_url('course-batch')" /> -->

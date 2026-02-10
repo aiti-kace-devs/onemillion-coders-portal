@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Requests\CourseBatchRequest;
+use App\Http\Requests\CourseRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Models\Course;
 use App\Models\Batch;
-use App\Models\UserAdmission;
-use App\Models\Attendance;
-use Illuminate\Support\Facades\View;
-
+use App\Models\Programme;
+use App\Models\Centre;
+use App\Helpers\FilterHelper;
+use App\Helpers\CourseFieldHelpers;
 /**
  * Class CourseBatchCrudController
  * @package App\Http\Controllers\Admin
@@ -31,7 +31,7 @@ class CourseBatchCrudController extends CrudController
      */
     public function setup()
     {
-        CRUD::setModel(\App\Models\CourseBatch::class);
+        CRUD::setModel(Course::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-batch');
         CRUD::setEntityNameStrings('Manage Course Batches', 'Manage Course Batches');
     }
@@ -47,18 +47,14 @@ class CourseBatchCrudController extends CrudController
         $this->setupFilters();
 
         CRUD::addColumn([
-            'name' => 'course.course_name',
-            'label' => 'Course',
+            'name' => 'course_name',
+            'label' => 'Course Name',
             'type' => 'text',
-            'attribute' => 'course_name',
         ]);
 
-        CRUD::addColumn([
-            'name' => 'batch.title',
-            'label' => 'Batch',
-            'type' => 'text',
-            'attribute' => 'title',
-        ]);
+        
+        FilterHelper::addGenericRelationshipColumn('batch', 'Batch', 'batch', 'title');
+        FilterHelper::addGenericRelationshipColumn('centre', 'Centre', 'centre', 'title');   
 
         CRUD::addColumn([
             'name' => 'duration',
@@ -93,19 +89,38 @@ class CourseBatchCrudController extends CrudController
         
         // Basic info columns
         CRUD::addColumn([
-            'name' => 'course.course_name',
-            'label' => 'Course',
+            'name' => 'course_name',
+            'label' => 'Course Name',
             'type' => 'text',
         ]);
 
         CRUD::addColumn([
-            'name' => 'batch.title',
+            'name' => 'batch_title',
             'label' => 'Batch',
-            'type' => 'text',
+            'type' => 'closure',
+            'function_count' => 1,
+            'function' => function($entry) {
+                $url = url('admin/batch/'.$entry->batch_id.'/show');
+                return '<a href="'.$url.'" class="text-primary font-bold">'.$entry->batch->title.'</a>';
+            },
+            'escaped' => false,
+        ]);
+
+        CRUD::addColumn([
+            'name' => 'centre_title',
+            'label' => 'Centre',
+            'type' => 'closure',
+            'function_count' => 1,
+            'function' => function($entry) {
+                $url = url('admin/centre/'.$entry->centre_id.'/show');
+                return '<a href="'.$url.'" class="text-primary font-bold">'.$entry->centre->name.'</a>';
+            },
+            'escaped' => false,
         ]);
 
         CRUD::addColumn([
             'name' => 'duration',
+            'label' => 'Duration',
             'label' => 'Duration',
             'type' => 'text',
         ]);
@@ -128,6 +143,17 @@ class CourseBatchCrudController extends CrudController
      */
     protected function setupFilters()
     {
+
+        CRUD::filter('ongoing')
+        ->type('simple')
+        ->label('Ongoing Batch Courses')
+        ->whenActive(function () {
+            $this->crud->query->whereHas('batch', function ($query) {
+                $query->whereDate('start_date', '<=', now()->toDateString())
+                      ->whereDate('end_date', '>=', now()->toDateString());
+            });
+        });
+        
         // Batch filter
         $batches = Batch::all()->pluck('title', 'id')->toArray();
         CRUD::addFilter([
@@ -172,17 +198,7 @@ class CourseBatchCrudController extends CrudController
      */
     protected function setupCreateOperation()
     {
-        CRUD::setValidation(CourseBatchRequest::class);
-
-        CRUD::addField([
-            'name' => 'course_id',
-            'label' => 'Course',
-            'type' => 'select2',
-            'entity' => 'course',
-            'attribute' => 'course_name',
-            'model' => \App\Models\Course::class,
-            'placeholder' => 'Select a course',
-        ]);
+        CRUD::setValidation(CourseRequest::class);
 
         CRUD::addField([
             'name' => 'batch_id',
@@ -192,6 +208,26 @@ class CourseBatchCrudController extends CrudController
             'attribute' => 'title',
             'model' => \App\Models\Batch::class,
             'placeholder' => 'Select a batch',
+        ]);
+
+        CRUD::addField([
+            'name' => 'programme_id',
+            'label' => 'Programme',
+            'type' => 'select2',
+            'entity' => 'programme',
+            'attribute' => 'title',
+            'model' => \App\Models\Programme::class,
+            'placeholder' => 'Select a programme',
+        ]);
+
+        CRUD::addField([
+            'name' => 'centre_id',
+            'label' => 'Centre',
+            'type' => 'select2',
+            'entity' => 'centre',
+            'attribute' => 'name',
+            'model' => \App\Models\Centre::class,
+            'placeholder' => 'Select a centre',
         ]);
 
         CRUD::addField([

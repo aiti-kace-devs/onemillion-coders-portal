@@ -11,6 +11,7 @@ use App\Helpers\FilterHelper;
 use App\Models\Batch;
 use App\Helpers\CourseFieldHelpers;
 
+
 /**
  * Class BatchCrudController
  * @package App\Http\Controllers\Admin
@@ -107,7 +108,6 @@ class BatchCrudController extends CrudController
 
                 if ($courseCount > 0) {
                     $encodedIds = urlencode(json_encode($courseIds));
-                    // Filter by batch_id and course_ids
                     $url = url("/admin/course-batch?batch_id={$entry->id}&course_id={$encodedIds}");
 
                     return "<a href='{$url}'>{$courseCount}</a>";
