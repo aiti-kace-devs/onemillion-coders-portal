@@ -26,13 +26,6 @@ class SendSmsJob implements ShouldQueue
     public function handle(): void
     {
         $logOnly = (bool) config('sms.log_only', true);
-
-        Log::channel('single')->info('📨 SMS DISPATCH REQUEST', [
-            'mode' => $logOnly ? 'LOG_ONLY' : 'LIVE',
-            'recipients' => $this->phone,
-            'message' => $this->message,
-        ]);
-
         if ($logOnly) {
             return;
         }
@@ -47,15 +40,7 @@ class SendSmsJob implements ShouldQueue
                 'sandbox' => (bool) config('sms.use_sandbox', true),
             ]);
 
-            Log::info('SMS SENT SUCCESSFULLY', [
-                'response' => $response->json(),
-            ]);
         } catch (\Throwable $e) {
-            Log::error('SMS SEND FAILED', [
-                'recipients' => $this->phone,
-                'message' => $this->message,
-                'error' => $e->getMessage(),
-            ]);
         }
     }
 }

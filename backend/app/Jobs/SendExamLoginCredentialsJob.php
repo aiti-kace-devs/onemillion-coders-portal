@@ -34,15 +34,8 @@ class SendExamLoginCredentialsJob implements ShouldQueue
         $this->std = User::find($this->userId);
 
         if (!$this->std) {
-            Log::error('SendExamLoginCredentialsJob: User not found', [
-                'user_id' => $this->userId
-            ]);
             return;
         }
-
-        Log::info('SendExamLoginCredentialsJob triggered', [
-            'user_id' => $this->std->id
-        ]);
 
         $deadline = $this->exam_deadline();
 
@@ -75,9 +68,9 @@ class SendExamLoginCredentialsJob implements ShouldQueue
         $now = Carbon::now();
 
         $exam = Oex_exam_master::find($this->std->exam);
-        $date = $exam?->exam_date ?? $now;
+        $date = $exam?->exam_date ?? now();
 
-        $studentDeadline = (new Carbon($registered))
+        $studentDeadline = $registered
             ->addDays(config('EXAM_DEADLINE_AFTER_REGISTRATION', 2));
 
         $hoursLeft = $now->diffInHours($studentDeadline);

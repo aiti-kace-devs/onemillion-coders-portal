@@ -5,43 +5,43 @@ tabs:
       -
         fields:
           -
-            handle: title
             field:
               type: text
+              display: Name
               required: true
               validate:
                 - required
-              display: Name
+            handle: title
           -
-            handle: profession
             field:
               type: text
               display: Profession
+            handle: profession
           -
-            handle: image
             field:
+              type: assets
+              folder: uploads
+              display: Image
+              container: google_cloud
               max_files: 1
               min_files: 1
-              container: google_cloud
-              folder: uploads
-              type: assets
-              display: Image
+            handle: image
           -
-            handle: message
             field:
               type: textarea
               display: Message
               validate:
                 - required
+            handle: message
   sidebar:
     display: Sidebar
     sections:
       -
         fields:
           -
-            handle: slug
             field:
               type: slug
-              localizable: true
               validate: 'max:200'
+              localizable: true
+            handle: slug
 title: Testimony

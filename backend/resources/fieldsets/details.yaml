@@ -1,46 +1,46 @@
 title: Details
 fields:
   -
-    handle: name
     field:
       type: text
       display: Name
+    handle: name
   -
-    handle: caption
     field:
       type: text
       display: Caption
+    handle: caption
   -
-    handle: icon
     field:
       type: icon
       display: Icon
+    handle: icon
   -
-    handle: colour
     field:
       type: color
       display: Colour
+    handle: colour
   -
-    handle: value
     field:
       type: text
       display: Value
+    handle: value
   -
-    handle: details_media
     field:
-      container: google_cloud
       type: assets
-      display: Media
-      max_files: 1
       folder: uploads
+      display: Media
+      container: google_cloud
+      max_files: 1
+    handle: details_media
   -
-    handle: button_text
     field:
       type: text
       display: 'Button Text'
+    handle: button_text
   -
-    handle: description
     field:
-      escape_markup: true
       type: markdown
       display: Description
+      escape_markup: true
+    handle: description

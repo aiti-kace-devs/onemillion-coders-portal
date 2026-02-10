@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AppConfig;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -34,16 +35,25 @@ class HandleInertiaRequests extends Middleware
 
         $route = Route::current();
 
-        if($request->is('admin*')){
+        if ($request->is('admin*')) {
             return [
                 ...parent::share($request),
                 'auth' => [
                     'user' => $request->user()
                 ]
-                ];
-            }
+            ];
+        }
 
         $user = Auth::guard('web')->user();
+
+        $configs = AppConfig::whereIn('key', [
+            SHOW_RESULTS_TO_STUDENTS,
+            ALLOW_COURSE_CHANGE,
+            ALLOW_SESSION_CHANGE,
+            EXAM_DEADLINE_AFTER_REGISTRATION
+        ])
+            ->pluck('value', 'key')->all();
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -58,10 +68,12 @@ class HandleInertiaRequests extends Middleware
                     )
                     : null,
             ],
+            'config' => $configs,
             'flash' => [
                 'message' => fn() => $request->session()->get('flash'),
                 'key' => fn() => $request->session()->get('key'),
             ],
+            'recaptcha_site_key' => config('services.recaptcha.site_key'),
         ];
     }
 }

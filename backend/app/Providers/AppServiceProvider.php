@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Statamic\Facades\CP\Nav;
+use Illuminate\Support\Facades\Validator;
+use App\Rules\Recaptcha;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -18,7 +20,23 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        // Bind custom AssetContainerContents to handle GCS dirname issue
+        $this->app->bind(
+            \Statamic\Assets\AssetContainerContents::class,
+            \App\Overrides\AssetContainerContents::class
+        );
+
+        // Replace Statamic import-assets command with GCS-compatible version
+        $this->app->bind(
+            \Statamic\Eloquent\Commands\ImportAssets::class,
+            \App\Console\Commands\ImportAssetsCommand::class
+        );
+
+        // Replace Statamic export-assets command with writeMeta null fix
+        $this->app->bind(
+            \Statamic\Eloquent\Commands\ExportAssets::class,
+            \App\Console\Commands\ExportAssetsCommand::class
+        );
     }
 
     /**
@@ -83,6 +101,18 @@ class AppServiceProvider extends ServiceProvider
                 ->icon('terminal')
                 ->section('Tools')
                 ->url(route('backpack.dashboard'));
+        });
+
+        Validator::extend('recaptcha', function ($attribute, $value, $parameters, $validator) {
+            $rule = new Recaptcha;
+            $passed = true;
+
+            // Call the rule manually
+            $rule->validate($attribute, $value, function ($message) use (&$passed) {
+                $passed = false;
+            });
+
+            return $passed;
         });
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\StudentVerificationCrudController;
 use App\Http\Controllers\Admin\UserCrudController;
 use App\Http\Controllers\Admin\ManageStudentCrudController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\UtilitiesController;
 // --------------------------
 // Custom Backpack Routes
 // --------------------------
@@ -30,6 +31,7 @@ Route::group([
         ->name('admin.exam.add-question');
     Route::crud('role', 'RoleCrudController');
     Route::crud('admission-rejection', 'AdmissionRejectionCrudController');
+    Route::post('app-config/{id}/toggle', 'AppConfigCrudController@toggleValue');
     Route::crud('app-config', 'AppConfigCrudController');
     Route::crud('attendance', 'AttendanceCrudController');
     Route::crud('branch', 'BranchCrudController');
@@ -119,6 +121,11 @@ Route::group([
     Route::crud('course-match', 'CourseMatchCrudController');
     Route::crud('course-match-option', 'CourseMatchOptionCrudController');
     
+
+    // Utilities dashboard (super-admin only)
+    Route::get('utilities', [UtilitiesController::class, 'index'])->name('admin.utilities.index');
+    Route::post('utilities/run', [UtilitiesController::class, 'run'])->name('admin.utilities.run');
+
     // Route::crud('media', 'MediaCrudController');
     Route::crud('course-batch', 'CourseBatchCrudController');
 }); // this should be the absolute last line of this file

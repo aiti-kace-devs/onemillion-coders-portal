@@ -1,0 +1,42 @@
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            field:
+              type: bard
+              inline: break
+              buttons:
+                - h2
+                - h3
+                - bold
+                - italic
+                - unorderedlist
+                - orderedlist
+                - removeformat
+                - quote
+                - anchor
+                - h1
+                - h4
+                - h5
+                - h6
+                - underline
+                - horizontalrule
+                - alignleft
+                - aligncenter
+                - alignright
+                - alignjustify
+              display: Content
+              sortable: false
+              container: google_cloud
+              save_html: true
+              word_count: true
+              reading_time: true
+              target_blank: true
+              link_collections:
+                - pages
+              smart_typography: true
+              remove_empty_nodes: false
+            handle: content

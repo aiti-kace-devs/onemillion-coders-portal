@@ -1,68 +1,69 @@
 title: Icons
 fields:
-  - handle: icon
+  -
     field:
       type: select
       display: Icon
       options:
-        phone: Phone
-        user: User
-        email: Email
-        address-book: Address Book
-        map-marker-alt: Location
-        mobile-alt: Mobile
-        fax: Fax
-        comment-dots: Chat
-        comments: Comments
-        globe: Website
-        at: At Symbol
-        home: Home
-        star: Star
-        cog: Settings
-        heart: Heart
-        search: Search
-        calendar: Calendar
-        camera: Camera
-        facebook: Facebook
-        twitter: Twitter
-        instagram: Instagram
-        linkedin: LinkedIn
-        github: GitHub
-        youtube: YouTube
-        whatsapp: WhatsApp
-        telegram: Telegram
-        tiktok: TikTok
-        arrow-left: Arrow Left
-        arrow-right: Arrow Right
-        arrow-up: Arrow Up
-        arrow-down: Arrow Down
-        bars: Menu
-        times: Close
-        chevron-left: Chevron Left
-        chevron-right: Chevron Right
-        chevron-up: Chevron Up
-        chevron-down: Chevron Down
-        angle-left: Angle Left
-        angle-right: Angle Right
-        angle-up: Angle Up
-        angle-down: Angle Down
-        info: Info
-        warning: Warning
-        check: Success
-        error: Error
-        help: Help
-        download: Download
-        upload: Upload
-        edit: Edit
-        delete: Delete
+        at: 'At Symbol'
         add: Add
-        remove: Remove
-        attachment: Attachment
+        cog: Settings
+        fax: Fax
+        bars: Menu
+        edit: Edit
+        help: Help
+        home: Home
+        info: Info
         link: Link
-        print: Print
-        view: View
         lock: Lock
-        unlock: Unlock
+        star: Star
+        user: User
+        view: View
+        check: Success
+        email: Email
+        error: Error
+        globe: Website
+        heart: Heart
+        phone: Phone
+        print: Print
         share: Share
+        times: Close
+        camera: Camera
+        delete: Delete
+        github: GitHub
+        remove: Remove
+        search: Search
+        tiktok: TikTok
+        unlock: Unlock
+        upload: Upload
+        twitter: Twitter
+        warning: Warning
+        youtube: YouTube
+        angle-up: 'Angle Up'
+        arrow-up: 'Arrow Up'
         bookmark: Bookmark
+        calendar: Calendar
+        comments: Comments
+        download: Download
+        facebook: Facebook
+        linkedin: LinkedIn
+        telegram: Telegram
+        whatsapp: WhatsApp
+        instagram: Instagram
+        angle-down: 'Angle Down'
+        angle-left: 'Angle Left'
+        arrow-down: 'Arrow Down'
+        arrow-left: 'Arrow Left'
+        attachment: Attachment
+        chevron-up: 'Chevron Up'
+        mobile-alt: Mobile
+        angle-right: 'Angle Right'
+        arrow-right: 'Arrow Right'
+        address-book: 'Address Book'
+        chevron-down: 'Chevron Down'
+        chevron-left: 'Chevron Left'
+        comment-dots: Chat
         notification: Notification
+        chevron-right: 'Chevron Right'
+        map-marker-alt: Location
+    handle: icon

@@ -5,33 +5,33 @@ tabs:
       -
         fields:
           -
-            handle: title
             field:
               type: text
               required: true
               validate:
                 - required
+            handle: title
           -
-            handle: answer
             field:
               type: markdown
-              localizable: true
               display: Answer
+              localizable: true
               escape_markup: true
+            handle: answer
           -
-            handle: tag
             field:
               type: taggable
               display: Tag
+            handle: tag
   sidebar:
     display: Sidebar
     sections:
       -
         fields:
           -
-            handle: slug
             field:
               type: slug
-              localizable: true
               validate: 'max:200'
+              localizable: true
+            handle: slug
 title: Faq

@@ -57,7 +57,7 @@ const ProgramsMenu = ({ isOpen, onClose, categories = [] }) => {
             {/* Header */}
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                Training Programs
+                Upcoming Training Programmes
               </h3>
             </div>
 
@@ -94,7 +94,7 @@ const ProgramsMenu = ({ isOpen, onClose, categories = [] }) => {
               ) : (
                 <div className="col-span-2 text-center py-8 text-gray-500">
                   <FiGrid className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm">No programs available</p>
+                  <p className="text-sm">No programmes available</p>
                 </div>
               )}
             </div>
@@ -119,7 +119,7 @@ const ProgramsMenu = ({ isOpen, onClose, categories = [] }) => {
                     onClose();
                   }}
                 >
-                  See all programs
+                  See all programmes
                 </span>
               </div>
             </div>

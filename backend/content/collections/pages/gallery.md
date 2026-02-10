@@ -2,12 +2,12 @@
 id: 678c6e7d-b08e-4e88-9efa-b7112279b5f1
 blueprint: page
 title: Gallery
-updated_by: 11
-updated_at: 1753884721
 sections:
   -
     id: md5bxpv5
     name: Images
+    type: section
+    enabled: true
     section_items:
       - 218082d3-f400-40ed-9ca9-2553e3880648
       - 994362fb-f4ad-4df7-9370-09a281f79061
@@ -36,7 +36,7 @@ sections:
       - fc278da7-832c-4773-89c2-0e7b1f6043e3
       - ccc2678f-de11-45e6-b265-cd42c3a2c4eb
       - ab868145-54aa-4650-9e0e-a1feb6a03f45
-    type: section
-    enabled: true
+updated_by: 11
+updated_at: 2025-08-26T18:50:04+00:00
 ---
 Our digital transformation journey

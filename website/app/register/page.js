@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import {
   FiMapPin,
   FiChevronRight,
@@ -21,6 +22,7 @@ import {
   getCentreProgrammes,
   getRegistrationForm,
   submitRegistration,
+  getConsentData,
 } from "../../services/pages";
 import Button from "../../components/Button";
 import GhanaGradientText from "../../components/GhanaGradients/GhanaGradientText";
@@ -28,8 +30,13 @@ import { getCourseImage } from "../../utils/courseImages";
 
 import parsePhoneNumberFromString from "libphonenumber-js";
 
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
+
+
+
 export default function RegisterPage() {
   const router = useRouter();
+  const { executeRecaptcha } = useGoogleReCaptcha();
 
   // State management
   const [step, setStep] = useState(1); // 1: region, 2: center, 3: course, 4: form, 5: success
@@ -49,11 +56,29 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({});
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [consentContent, setConsentContent] = useState("");
 
   // Fetch all regions on component mount
   useEffect(() => {
     fetchAllRegions();
   }, []);
+
+  // Fetch consent content when user reaches form step
+  useEffect(() => {
+    if (step !== 4) return;
+    let cancelled = false;
+    getConsentData()
+      .then((res) => {
+        if (cancelled) return;
+        const raw = res?.data ?? res;
+        setConsentContent(raw?.content ?? "");
+      })
+      .catch(() => {
+        if (!cancelled) setConsentContent("");
+      });
+    return () => { cancelled = true; };
+  }, [step]);
 
   // Fetch all regions
   const fetchAllRegions = async () => {
@@ -210,8 +235,13 @@ export default function RegisterPage() {
         }
       });
 
+    if (!consentAccepted) {
+      errors.consent = "You must accept the terms and privacy policy to register.";
+    }
+
     return errors;
   };
+    
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -227,6 +257,13 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!executeRecaptcha) {
+      setError("Failed to verify reCaptcha.");
+      return;
+    }
+
+    const token = await executeRecaptcha('register_form'); 
+
     try {
       setSubmitting(true);
 
@@ -238,6 +275,7 @@ export default function RegisterPage() {
         region_id: selectedRegion.id,
         centre_id: selectedCentre.id,
         form_uuid: formSchema.uuid,
+        recaptcha_token: token,
       };
 
       await submitRegistration(submissionData);
@@ -357,6 +395,7 @@ export default function RegisterPage() {
   };
 
   return (
+
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
@@ -856,6 +895,46 @@ export default function RegisterPage() {
                       </div>
                     ))}
 
+                  {/* Consent block */}
+                  <div className="space-y-3 pt-4 border-t border-gray-200">
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      I have read the {" "}
+                      <Link
+                        href="/terms-and-privacy"
+                        className="text-yellow-600 hover:text-yellow-700 font-medium underline underline-offset-2"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Terms & Privacy Policy
+                      </Link>
+                      {consentContent ? " " : ""}
+                      {consentContent ? (
+                        <span dangerouslySetInnerHTML={{ __html: consentContent }} />
+                      ) : null}
+                    </p>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={consentAccepted}
+                        onChange={(e) => setConsentAccepted(e.target.checked)}
+                        className="mt-1 w-4 h-4 rounded border-gray-300 text-yellow-500 focus:ring-yellow-500"
+                      />
+                      <span className="text-sm text-gray-700">
+                        I accept the terms and privacy policy
+                      </span>
+                    </label>
+                    {formErrors.consent && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-red-600 flex items-center"
+                      >
+                        <FiAlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                        {formErrors.consent}
+                      </motion.p>
+                    )}
+                  </div>
+
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-6 sm:pt-8 border-t border-gray-200">
                     <Button
                       onClick={() => setStep(3)}
@@ -943,6 +1022,6 @@ export default function RegisterPage() {
           )}
         </motion.div>
       </div>
-    </div>
+    </div> 
   );
 }

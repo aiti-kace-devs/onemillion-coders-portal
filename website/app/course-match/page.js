@@ -486,18 +486,14 @@ export default function CourseMatchPage() {
                     </p>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
+                    <Link href="/register">
                     <Button
-                      onClick={() =>
-                        window.open(
-                          "https://onemillioncoders.gov.gh/available-courses",
-                          "_blank"
-                        )
-                      }
                       size="large"
                       className="flex-1 sm:flex-none"
-                    >
+                      >
                       Register Now
                     </Button>
+                      </Link>
                     <div className="flex gap-3">
                       <Button onClick={resetQuiz} variant="ghost" size="large">
                         Retake Quiz

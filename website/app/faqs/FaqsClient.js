@@ -45,6 +45,8 @@ export default function FaqsClient({ data }) {
       return { heroData: null, faqsData: [] };
     }
 
+    console.log(data);
+
     // Extract hero section
     const heroSection = data.sections.find((s) => s.name === "Hero");
     const hero = heroSection?.section_items?.[0] || null;

@@ -26,8 +26,8 @@ const props = defineProps({
 
 const classes = computed(() =>
   props.active
-    ? "flex gap-2 p-1.5 items-center cursor-pointer capitalize bg-gray-700 rounded-sm text-white peer"
-    : "flex gap-2 p-1.5 items-center cursor-pointer capitalize text-gray-500 hover:text-gray-700 peer"
+    ? "flex gap-2 p-1.5 items-center cursor-pointer capitalize bg-gray-700 rounded-sm text-white peer w-full"
+    : "flex gap-2 p-1.5 items-center cursor-pointer capitalize text-gray-500 hover:text-gray-700 peer w-full bg-transparent border-none text-left"
 );
 </script>
 

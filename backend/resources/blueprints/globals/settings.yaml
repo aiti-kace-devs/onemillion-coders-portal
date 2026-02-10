@@ -3,39 +3,39 @@ tabs:
     display: 'New Tab'
     sections:
       -
-        display: Details
         fields:
           -
-            handle: social_media
             field:
-              type: replicator
-              display: 'Social Media'
               sets:
                 new_set_group:
-                  display: 'New Set Group'
                   sets:
                     media_item:
-                      display: 'Media Item'
                       icon: user-multiple
                       fields:
                         -
-                          handle: name
                           field:
                             type: text
+                            width: 75
                             display: Name
                             validate:
                               - required
-                            width: 75
+                          handle: name
                         -
-                          handle: icon_field
                           field:
                             type: icon
-                            display: Icon
                             width: 25
+                            display: Icon
+                          handle: icon_field
                         -
-                          handle: url
                           field:
                             type: link
                             display: Url
                             validate:
                               - required
+                          handle: url
+                      display: 'Media Item'
+                  display: 'New Set Group'
+              type: replicator
+              display: 'Social Media'
+            handle: social_media
+        display: Details
