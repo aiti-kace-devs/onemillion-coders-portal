@@ -92,12 +92,7 @@ class CourseMatchAPIController extends Controller
             $optionIds = $data['option_ids'];
             $totalOptions = count($optionIds);
             $today = Carbon::today()->toDateString();
-            
-            Log::info('CourseMatchAPI recommend called', [
-                'option_ids' => $optionIds,
-                'total_options' => $totalOptions,
-                'today' => $today,
-            ]);
+
             
             // Get Programme IDs that have ongoing course batches
             // Note: course_batches.course_id refers to courses.id, we need to join through courses to get programmes.id
@@ -119,20 +114,11 @@ class CourseMatchAPIController extends Controller
                 ->where('admission_batches.status', true)
                 ->get();
             
-            Log::info('Ongoing course batches found', [
-                'count' => $ongoingCourseBatches->count(),
-            ]);
-            
             // Get the actual programme IDs (through courses.programme_id)
             $ongoingProgrammeIds = $ongoingCourseBatches->pluck('programme_id')->unique()->toArray();
             
             // Get unique centre IDs from ongoing course batches
             $centreIds = $ongoingCourseBatches->pluck('centre_id')->unique()->toArray();
-            
-            Log::info('Ongoing programme IDs', [
-                'count' => count($ongoingProgrammeIds),
-                'ids' => $ongoingProgrammeIds,
-            ]);
             
             // Get Programmes with ONLY needed columns + tags relationship
             // Only include programmes that have ongoing course batches
@@ -141,9 +127,6 @@ class CourseMatchAPIController extends Controller
                 ->whereIn('id', $ongoingProgrammeIds)
                 ->get();
             
-            Log::info('Programmes with ongoing batches', [
-                'count' => $programmes->count(),
-            ]);
             
             // Score each programme by matching option IDs
             $scored = $programmes->map(function ($programme) use ($optionIds, $totalOptions) {
@@ -156,20 +139,11 @@ class CourseMatchAPIController extends Controller
                 return $programme;
             });
             
-            Log::info('Scored programmes', [
-                'count' => $scored->count(),
-                'with_matches' => $scored->where('match_count', '>', 0)->count(),
-            ]);
-            
             // Filter and sort top 5 matches
             $top = $scored->filter(fn($p) => $p->match_count > 0)
                           ->sortByDesc('match_percentage')
                           ->take(5)
                           ->values();
-            
-            Log::info('Top matches', [
-                'count' => $top->count(),
-            ]);
             
             // Get centre IDs for top programmes (through their course batches)
             $topProgrammeIds = $top->pluck('id')->toArray();

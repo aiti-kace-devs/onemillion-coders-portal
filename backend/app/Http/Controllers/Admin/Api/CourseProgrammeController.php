@@ -48,32 +48,120 @@ class CourseProgrammeController extends Controller
 
 
 
+    // public function programmeWithBatch(Request $request)
+    //     {
+    //         $query = Batch::with([
+    //                 'courseBatches.course.programme' => function ($q) {
+    //                     $q->with(['category', 'courseCertification', 'courseModules'])
+    //                         ->withCount('courseModules');
+    //                 }
+    //             ])
+    //             ->whereHas('courseBatches');
+
+    //         $today = Carbon::today();
+
+    //         if ($request->has('batch')) {
+    //             $filter = $request->filter;
+
+    //             if ($filter === 'ongoing') {
+    //                 $query->where('start_date', '<=', $today)
+    //                     ->where('end_date', '>=', $today)
+    //                     ->where('completed', false)
+    //                     ->where('status', true);
+    //             }
+
+    //             if ($filter === 'upcoming') {
+    //                 $query->where('start_date', '>', $today)
+    //                     ->where('completed', false)
+    //                     ->where('status', true);
+    //             }
+
+    //             if ($filter === 'passed') {
+    //                 $query->where('end_date', '<', $today)
+    //                     ->orWhere('completed', true);
+    //             }
+    //         }
+
+    //         $batches = $query->get()
+    //             ->map(function ($batch) {
+    //                 $courseBatches = $batch->courseBatches->map(function ($cb) {
+    //                     return [
+    //                         'id' => $cb->id,
+    //                         'course_id' => $cb->course_id,
+    //                         'batch_id' => $cb->batch_id,
+    //                         'duration' => $cb->duration,
+    //                         'start_date' => $cb->start_date,
+    //                         'end_date' => $cb->end_date,
+    //                         'course' => $cb->course ? [
+    //                             'id' => $cb->course->id,
+    //                             'programme_id' => $cb->course->programme_id,
+    //                             'programme' => $cb->course->programme ? [
+    //                                 'id' => $cb->course->programme->id,
+    //                                 'title' => $cb->course->programme->title,
+    //                                 'description' => $cb->course->programme->description,
+    //                                 'course_category_id' => $cb->course->programme->course_category_id,
+    //                                 'cover_image_id' => $cb->course->programme->cover_image_id,
+    //                                 'sub_title' => $cb->course->programme->sub_title,
+    //                                 'level' => $cb->course->programme->level,
+    //                                 'job_responsible' => $cb->course->programme->job_responsible,
+    //                                 'image' => $cb->course->programme->image,
+    //                                 'overview' => $cb->course->programme->overview,
+    //                                 'prerequisites' => $cb->course->programme->prerequisites,
+    //                                 'course_modules_count' => $cb->course->programme->course_modules_count,
+    //                                 'category' => $cb->course->programme->category,
+    //                                 'courseCertification' => $cb->course->programme->courseCertification,
+    //                                 'courseModules' => $cb->course->programme->courseModules,
+    //                                 'courseModules_count' => $cb->course->programme->courseModules_count,
+    //                             ] : null,
+    //                         ] : null,
+    //                     ];
+    //                 });
+
+    //                 return [
+    //                     'id' => $batch->id,
+    //                     'title' => $batch->title,
+    //                     'description' => $batch->description,
+    //                     'start_date' => $batch->start_date,
+    //                     'end_date' => $batch->end_date,
+    //                     'status' => $batch->status,
+    //                     'completed' => $batch->completed,
+    //                     'course_batches' => $courseBatches,
+    //                     'programmes' => $courseBatches
+    //                         ->pluck('course.programme')
+    //                         ->filter()
+    //                         ->unique('id')
+    //                         ->values(),
+    //                 ];
+    //             });
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'data' => $batches
+    //         ]);
+    //     }
+
+
+
+
         public function programmeWithBatch(Request $request)
         {
-            $query = Batch::with([
-                    'courseBatches.course.programme' => function ($q) {
-                        $q->with(['category', 'courseCertification', 'courseModules'])
-                            ->withCount('courseModules');
-                    }
-                ])
-                ->whereHas('courseBatches');
-
             $today = Carbon::today();
 
-            if ($request->has('batch')) {
+            // Base query for ongoing batches with course batches
+            $query = Batch::where('completed', false)
+                ->where('status', true);
+
+            // Apply filters based on batch dates
+            if ($request->has('filter')) {
                 $filter = $request->filter;
 
                 if ($filter === 'ongoing') {
                     $query->where('start_date', '<=', $today)
-                        ->where('end_date', '>=', $today)
-                        ->where('completed', false)
-                        ->where('status', true);
+                        ->where('end_date', '>=', $today);
                 }
 
                 if ($filter === 'upcoming') {
-                    $query->where('start_date', '>', $today)
-                        ->where('completed', false)
-                        ->where('status', true);
+                    $query->where('start_date', '>', $today);
                 }
 
                 if ($filter === 'passed') {
@@ -82,63 +170,60 @@ class CourseProgrammeController extends Controller
                 }
             }
 
-            $batches = $query->get()
-                ->map(function ($batch) {
-                    $courseBatches = $batch->courseBatches->map(function ($cb) {
+            // Get batches and flatten to unique programmes with their course batch info
+            $programmes = $query->with([
+                    'courseBatches.course.programme' => function ($q) {
+                        $q->with(['category', 'courseCertification', 'courseModules'])
+                            ->withCount('courseModules');
+                    }
+                ])
+                ->whereHas('courseBatches')
+                ->get()
+                ->flatMap(function ($batch) {
+                    return $batch->courseBatches->map(function ($cb) {
+                        $programme = $cb->course->programme ?? null;
+
+                        if (!$programme) {
+                            return null;
+                        }
+
                         return [
-                            'id' => $cb->id,
-                            'course_id' => $cb->course_id,
-                            'batch_id' => $cb->batch_id,
+                            'id' => $programme->id,
+                            'title' => $programme->title,
+                            'description' => $programme->description,
+                            'course_category_id' => $programme->course_category_id,
+                            'cover_image_id' => $programme->cover_image_id,
+                            'sub_title' => $programme->sub_title,
+                            'level' => $programme->level,
+                            'job_responsible' => $programme->job_responsible,
+                            'image' => $programme->image,
+                            'overview' => $programme->overview,
+                            'prerequisites' => $programme->prerequisites,
+                            'course_modules_count' => $programme->course_modules_count,
                             'duration' => $cb->duration,
                             'start_date' => $cb->start_date,
                             'end_date' => $cb->end_date,
-                            'course' => $cb->course ? [
-                                'id' => $cb->course->id,
-                                'programme_id' => $cb->course->programme_id,
-                                'programme' => $cb->course->programme ? [
-                                    'id' => $cb->course->programme->id,
-                                    'title' => $cb->course->programme->title,
-                                    'description' => $cb->course->programme->description,
-                                    'course_category_id' => $cb->course->programme->course_category_id,
-                                    'cover_image_id' => $cb->course->programme->cover_image_id,
-                                    'sub_title' => $cb->course->programme->sub_title,
-                                    'level' => $cb->course->programme->level,
-                                    'job_responsible' => $cb->course->programme->job_responsible,
-                                    'image' => $cb->course->programme->image,
-                                    'overview' => $cb->course->programme->overview,
-                                    'prerequisites' => $cb->course->programme->prerequisites,
-                                    'course_modules_count' => $cb->course->programme->course_modules_count,
-                                    'category' => $cb->course->programme->category,
-                                    'courseCertification' => $cb->course->programme->courseCertification,
-                                    'courseModules' => $cb->course->programme->courseModules,
-                                    'courseModules_count' => $cb->course->programme->courseModules_count,
-                                ] : null,
-                            ] : null,
+                            'status' => $cb->status ?? true,
+                            'created_at' => $cb->created_at,
+                            'updated_at' => $cb->updated_at,
+                            'category' => $programme->category,
+                            'course_certification' => $programme->courseCertification,
+                            'course_modules' => $programme->courseModules,
                         ];
                     });
-
-                    return [
-                        'id' => $batch->id,
-                        'title' => $batch->title,
-                        'description' => $batch->description,
-                        'start_date' => $batch->start_date,
-                        'end_date' => $batch->end_date,
-                        'status' => $batch->status,
-                        'completed' => $batch->completed,
-                        'course_batches' => $courseBatches,
-                        'programmes' => $courseBatches
-                            ->pluck('course.programme')
-                            ->filter()
-                            ->unique('id')
-                            ->values(),
-                    ];
-                });
+                })
+                ->filter()
+                ->unique('id')
+                ->values();
 
             return response()->json([
                 'success' => true,
-                'data' => $batches
+                'data' => $programmes
             ]);
         }
+
+
+
 
 
 
