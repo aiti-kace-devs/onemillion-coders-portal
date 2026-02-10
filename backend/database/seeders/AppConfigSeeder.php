@@ -6,8 +6,6 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
-
-
 class AppConfigSeeder extends Seeder
 {
     /**
@@ -15,7 +13,6 @@ class AppConfigSeeder extends Seeder
      */
     public function run(): void
     {
-        //
         try {
             DB::table('app_configs')->insertOrIgnore([
                 [

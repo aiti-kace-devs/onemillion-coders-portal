@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\UserRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-use Backpack\CRUD\app\Library\CrudPanel\Hooks\Facades\LifecycleHook;
 use App\Http\Controllers\Traits\BulkStudentActionsTrait;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\ShortlistActionsTrait;
@@ -18,13 +17,12 @@ use App\Helpers\FilterHelper;
 use Illuminate\Support\Facades\View;
 use App\Http\Controllers\Traits\GetsFilteredQuery;
 use Illuminate\Support\Facades\Log;
-
 /**
  * Class UserCrudController
  * @package App\Http\Controllers\Admin
  * @property-read \Backpack\CRUD\app\Library\CrudPanel\CrudPanel $crud
  */
-class UserCrudController extends CrudController
+class ManageStudentCrudController extends CrudController
 {
     use BulkStudentActionsTrait {
         admitStudent as traitAdmitStudent;
@@ -47,8 +45,8 @@ class UserCrudController extends CrudController
      */
     public function setup()
     {
-        CRUD::setModel(\App\Models\User::class);
-        CRUD::setRoute(config('backpack.base.route_prefix') . '/user');
+        CRUD::setModel(User::class);
+        CRUD::setRoute(config('backpack.base.route_prefix') . '/manage-student');
         CRUD::setEntityNameStrings('student', 'students');
 
         // CRUD::denyAccess('create');
@@ -57,8 +55,12 @@ class UserCrudController extends CrudController
         $this->setSearchableColumns(['name', 'email', 'mobile_no']);
         $this->setSearchResultAttributes(['id', 'name', 'email', 'mobile_no']);
 
+        $this->crud->operation('list', function () {
+            WidgetHelper::userStatisticsWidget();
+        });
+
         // Add permission checks
-        LifecycleHook::hookInto(['list:before_setup', 'show:before_setup'], function () {
+        $this->crud->operation(['list', 'show'], function () {
             $this->crud->addClause('where', function ($query) {
                 if (!backpack_user()->can('student.read.all')) {
                     // Add any specific filtering logic here if needed
@@ -75,16 +77,14 @@ class UserCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        WidgetHelper::userStatisticsWidget();
-
         // Check permissions
         if (!backpack_user()->can('student.read.all')) {
             abort(403, 'Unauthorized action.');
         }
 
         $this->crud->setModel(User::class);
-        $this->crud->setRoute(config('backpack.base.route_prefix') . '/user');
-        $this->crud->setEntityNameStrings('user', 'users');
+        $this->crud->setRoute(config('backpack.base.route_prefix') . '/manage-student');
+        $this->crud->setEntityNameStrings('manage student', 'manage students');
         $this->setupFilter();
 
         // Ensure we load the fields needed for relationships & columns
@@ -101,22 +101,11 @@ class UserCrudController extends CrudController
             'ghcard',
         ]);
         $this->addConfirmedAdmissionColumn();
-        // $this->setupStudentColumns();
-        // FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
-        // $this->addStudentBatchFilter('admission', 'Student Batch');
-        // $this->courseFilter('registered_course');
-        // $this->addConfirmedAdmissionFilter();
-        // FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
-        // FilterHelper::addAgeRangeFilter();
-        // FilterHelper::addGenderFilter();
-        // $this->addAdmissionLocationFilter();
-        // $this->addAdmittedAtFilter();
         View::share('mailable', \App\Helpers\MailerHelper::getMailableClasses());
-        // CRUD::setFromDb(); // set columns from db columns.
         $this->setupStudentColumns();
         // CRUD::disablePersistentTable();
         CRUD::addButtonFromView('top', 'student_views_dropdown', 'student_views_dropdown', 'beginning');
-        CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
+        CRUD::addButtonFromView('top', 'manage_student_bulk_actions_dropdown', 'manage_student_bulk_actions_dropdown', 'beginning');
         CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'beginning');
         // Add userId column to the list view
         CRUD::addColumn([
@@ -125,11 +114,6 @@ class UserCrudController extends CrudController
             'type' => 'text',
         ]);
 
-        // $this->setupStudentColumns();
-        // Disable responsive table
-        // CRUD::disableResponsiveTable();
-        // $this->setupFilter();
-        // Enable bulk operations
         CRUD::enableBulkActions();
 
         // Add export options
@@ -138,7 +122,11 @@ class UserCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        $this->setupShowStudentColumns();
+        $this->setupManageStudentShowColumns();
+        $this->crud->set('show.setFromDb', false);
+
+        // Add action buttons for the preview page
+        CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
     }
     /**
      * Define what happens when the Create operation is loaded.
@@ -237,8 +225,6 @@ class UserCrudController extends CrudController
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
         $this->addStudentBatchFilterFromDashboard('admission');
     }
-
-    
     /**
      * Handle bulk admit operation via AJAX
      */
