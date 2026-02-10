@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use Illuminate\Http\Request;
+
 use App\Http\Requests\OexExamMasterRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
@@ -53,6 +55,7 @@ class OexExamMasterCrudController extends CrudController
         CRUD::column('passmark');
         CRUD::column('exam_date');
         CRUD::column('exam_duration');
+
         FilterHelper::addBooleanColumn('status', 'status');
         CRUD::addColumn([
             'name' => 'question_link',
@@ -67,6 +70,7 @@ class OexExamMasterCrudController extends CrudController
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         $this->crud->addButtonFromView('line', 'custom_action', 'custom_action', 'end');
+
 
         CRUD::enableExportButtons();
     }
@@ -122,7 +126,9 @@ class OexExamMasterCrudController extends CrudController
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
-        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
+
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
 
 
         CRUD::addField([
@@ -143,4 +149,9 @@ class OexExamMasterCrudController extends CrudController
     {
         $this->setupCreateOperation();
     }
+
+
+
+
+
 }

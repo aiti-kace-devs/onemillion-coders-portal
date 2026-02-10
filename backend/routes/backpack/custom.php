@@ -31,6 +31,7 @@ Route::group([
         ->name('admin.exam.add-question');
     Route::crud('role', 'RoleCrudController');
     Route::crud('admission-rejection', 'AdmissionRejectionCrudController');
+    Route::post('app-config/{id}/toggle', 'AppConfigCrudController@toggleValue');
     Route::crud('app-config', 'AppConfigCrudController');
     Route::crud('attendance', 'AttendanceCrudController');
     Route::crud('branch', 'BranchCrudController');
