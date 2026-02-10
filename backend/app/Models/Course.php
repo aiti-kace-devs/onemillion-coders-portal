@@ -19,6 +19,7 @@ class Course extends Model
         'location',
         'duration',
         'start_date',
+        'batch_id',
         'end_date',
         'status',
     ];

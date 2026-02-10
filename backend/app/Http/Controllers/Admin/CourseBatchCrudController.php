@@ -33,7 +33,7 @@ class CourseBatchCrudController extends CrudController
     {
         CRUD::setModel(\App\Models\CourseBatch::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-batch');
-        CRUD::setEntityNameStrings('course batch', 'course batches');
+        CRUD::setEntityNameStrings('Manage Course Batches', 'Manage Course Batches');
     }
 
     /**

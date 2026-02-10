@@ -61,9 +61,9 @@ class ManageStudentCrudController extends CrudController
         $this->setSearchableColumns(['name', 'email', 'mobile_no']);
         $this->setSearchResultAttributes(['id', 'name', 'email', 'mobile_no']);
 
-        $this->crud->operation('list', function () {
-            WidgetHelper::userStatisticsWidget();
-        });
+        $this->crud->denyAccess('create');
+        // $this->crud->denyAccess('update');
+        // $this->crud->denyAccess('delete');
 
         // Add permission checks
         $this->crud->operation(['list', 'show'], function () {
@@ -83,6 +83,8 @@ class ManageStudentCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+
+        WidgetHelper::userStatisticsWidget();
         // Check permissions
         if (!backpack_user()->can('student.read.all')) {
             abort(403, 'Unauthorized action.');
@@ -111,7 +113,7 @@ class ManageStudentCrudController extends CrudController
         $this->setupStudentColumns();
         // CRUD::disablePersistentTable();
         CRUD::addButtonFromView('top', 'student_views_dropdown', 'student_views_dropdown', 'beginning');
-        CRUD::addButtonFromView('top', 'manage_student_bulk_actions_dropdown', 'manage_student_bulk_actions_dropdown', 'beginning');
+        CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
         CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'beginning');
         // Add userId column to the list view
         CRUD::addColumn([
@@ -136,6 +138,14 @@ class ManageStudentCrudController extends CrudController
 
         // Add action buttons for the preview page
         CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
+        
+        // Share courses and sessions with the view for the admit modal
+        $courses = \App\Models\Course::pluck('course_name', 'id');
+        $sessions = \App\Models\CourseSession::all();
+        \Illuminate\Support\Facades\View::share([
+            'courses' => $courses,
+            'sessions' => $sessions,
+        ]);
     }
     /**
      * Define what happens when the Create operation is loaded.
@@ -538,11 +548,12 @@ class ManageStudentCrudController extends CrudController
     public function getCoursesAjax()
     {
         // Get courses from running batches (where batch end_date >= today)
-        $runningBatchCourseIds = CourseBatch::whereHas('batch', function ($query) {
+        // Using the direct batch_id relationship on Course model
+        $runningBatchCourseIds = Course::whereHas('batch', function ($query) {
                 $query->where('end_date', '>=', now()->toDateString())
                       ->orWhereNull('end_date');
             })
-            ->pluck('course_id')
+            ->pluck('id')
             ->unique()
             ->toArray();
         

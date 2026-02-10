@@ -50,6 +50,14 @@ class Batch extends Model
         return $this->hasMany(CourseBatch::class, 'batch_id');
     }
 
+    /**
+     * Get all courses for this batch (direct relationship via batch_id)
+     */
+    public function courses()
+    {
+        return $this->hasMany(Course::class, 'batch_id');
+    }
+
 
     public function batches()
     {

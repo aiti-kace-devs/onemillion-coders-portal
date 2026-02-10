@@ -58,6 +58,11 @@ class UserCrudController extends CrudController
         $this->setSearchableColumns(['name', 'email', 'mobile_no']);
         $this->setSearchResultAttributes(['id', 'name', 'email', 'mobile_no']);
 
+        $this->crud->denyAccess('create');
+        // $this->crud->denyAccess('update');
+        // $this->crud->denyAccess('delete');
+        // $this->crud->denyAccess('show');
+
         // Add permission checks
         LifecycleHook::hookInto(['list:before_setup', 'show:before_setup'], function () {
             $this->crud->addClause('where', function ($query) {
@@ -117,8 +122,8 @@ class UserCrudController extends CrudController
         $this->setupStudentColumns();
         // CRUD::disablePersistentTable();
         CRUD::addButtonFromView('top', 'student_views_dropdown', 'student_views_dropdown', 'beginning');
-        CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
-        CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'beginning');
+        // CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
+        // CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'beginning');
         // Add userId column to the list view
         CRUD::addColumn([
             'name' => 'userId',
@@ -212,11 +217,11 @@ class UserCrudController extends CrudController
             $admissions = UserAdmission::whereIn('user_id', $chunk)->get();
             
             foreach ($admissions as $admission) {
-                // Find the course_batches record that matches the student's course_id
-                $courseBatch = CourseBatch::where('course_id', $admission->course_id)->first();
+                // Get the course directly and use its batch_id
+                $course = \App\Models\Course::find($admission->course_id);
                 
-                if ($courseBatch) {
-                    $admission->course_batch_id = $courseBatch->id;
+                if ($course && $course->batch_id) {
+                    $admission->batch_id = $course->batch_id;
                     $admission->save();
                     $updated++;
                 } else {
@@ -228,7 +233,7 @@ class UserCrudController extends CrudController
         if ($updated === 0) {
             if (!empty($notFound)) {
                 return response()->json([
-                    'message' => 'No admissions updated. No matching course_batches found for the students\' courses.',
+                    'message' => 'No admissions updated. No matching courses with batch_id found for the students.',
                     'not_found' => $notFound
                 ], 400);
             }
@@ -237,7 +242,7 @@ class UserCrudController extends CrudController
 
         $message = 'Batch assignment successful';
         if (!empty($notFound)) {
-            $message .= '. However, ' . count($notFound) . ' students could not be updated because no matching course_batches were found for their courses.';
+            $message .= '. However, ' . count($notFound) . ' students could not be updated because no matching courses with batch_id were found.';
         }
 
         return response()->json(['message' => $message, 'updated' => $updated]);
@@ -251,19 +256,17 @@ class UserCrudController extends CrudController
     public function setupFilter()
     {
         // $this->addStudentBatchFilter('Batch Filter');
-        if (backpack_user()->is_super) {
-            $this->courseFilter('registered_course');
-        }
-        $this->addConfirmedAdmissionFilter();
-        $this->addAdmissionLocationFilter();
-        $this->addAdmittedAtFilter();
-        FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
+        $this->courseFilter('registered_course');
+        // $this->addConfirmedAdmissionFilter();
+        // $this->addAdmissionLocationFilter();
+        // $this->addAdmittedAtFilter();
+        // FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
         FilterHelper::addAgeRangeFilter();
         FilterHelper::addGenderFilter();
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
-        if (backpack_user()->is_super) {
-            $this->addStudentBatchFilterFromDashboard('admission');
-        }
+        // if (backpack_user()->is_super) {
+        //     $this->addStudentBatchFilterFromDashboard('admission');
+        // }
     }
 
     

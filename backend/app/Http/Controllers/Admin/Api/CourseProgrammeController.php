@@ -322,12 +322,12 @@ class CourseProgrammeController extends Controller
     public function programmesByBatch($batchId, Request $request)
     {
         $query = Batch::with([
-                'assignedCourseBatches.programme' => function ($q) {
+                'courses.programme' => function ($q) {
                     $q->with(['category', 'courseCertification', 'courseModules'])
                     ->withCount('courseModules');
                 }
             ])
-            ->whereHas('assignedCourseBatches.programme');
+            ->whereHas('courses.programme');
 
         // Apply optional filters
         if ($request->has('filter')) {
@@ -352,7 +352,7 @@ class CourseProgrammeController extends Controller
             'description' => $batch->description,
             'start_date'  => $batch->start_date,
             'end_date'    => $batch->end_date,
-            'programmes'  => $batch->assignedCourseBatches
+            'programmes'  => $batch->courses
                                 ->pluck('programme')
                                 ->unique('id')
                                 ->values(),

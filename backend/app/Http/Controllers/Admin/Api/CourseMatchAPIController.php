@@ -94,18 +94,15 @@ class CourseMatchAPIController extends Controller
             $today = Carbon::today()->toDateString();
 
             
-            // Get Programme IDs that have ongoing course batches
-            // Note: course_batches.course_id refers to courses.id, we need to join through courses to get programmes.id
-            $ongoingCourseBatches = CourseBatch::join('courses', 'course_batches.course_id', '=', 'courses.id')
-                ->join('admission_batches', 'course_batches.batch_id', '=', 'admission_batches.id')
+            // Get Programme IDs that have ongoing courses with batch_id
+            // Using the direct batch_id relationship on Course model
+            $ongoingCourses = Course::join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
                 ->select(
-                    'course_batches.*',
-                    'courses.programme_id',
-                    'courses.centre_id',
-                    'admission_batches.title as batch_title', 
-                    'admission_batches.start_date as ab_start_date', 
-                    'admission_batches.end_date as ab_end_date', 
-                    'admission_batches.status', 
+                    'courses.*',
+                    'admission_batches.title as batch_title',
+                    'admission_batches.start_date as ab_start_date',
+                    'admission_batches.end_date as ab_end_date',
+                    'admission_batches.status',
                     'admission_batches.completed'
                 )
                 ->where('admission_batches.start_date', '<=', $today)
@@ -115,10 +112,10 @@ class CourseMatchAPIController extends Controller
                 ->get();
             
             // Get the actual programme IDs (through courses.programme_id)
-            $ongoingProgrammeIds = $ongoingCourseBatches->pluck('programme_id')->unique()->toArray();
+            $ongoingProgrammeIds = $ongoingCourses->pluck('programme_id')->unique()->toArray();
             
-            // Get unique centre IDs from ongoing course batches
-            $centreIds = $ongoingCourseBatches->pluck('centre_id')->unique()->toArray();
+            // Get unique centre IDs from ongoing courses
+            $centreIds = $ongoingCourses->pluck('centre_id')->unique()->toArray();
             
             // Get Programmes with ONLY needed columns + tags relationship
             // Only include programmes that have ongoing course batches
@@ -148,11 +145,11 @@ class CourseMatchAPIController extends Controller
             // Get centre IDs for top programmes (through their course batches)
             $topProgrammeIds = $top->pluck('id')->toArray();
             
-            // Get course batches for top programmes to get their centre IDs
-            $topCourseBatches = $ongoingCourseBatches->whereIn('programme_id', $topProgrammeIds);
+            // Get courses for top programmes to get their centre IDs
+            $topCourses = $ongoingCourses->whereIn('programme_id', $topProgrammeIds);
             
             // Get unique centre IDs for top programmes
-            $topCentreIds = $topCourseBatches->pluck('centre_id')->unique()->toArray();
+            $topCentreIds = $topCourses->pluck('centre_id')->unique()->toArray();
             
             // Pre-fetch all centres with their branch info
             $centresMap = Centre::whereIn('id', $topCentreIds)
@@ -161,10 +158,10 @@ class CourseMatchAPIController extends Controller
                 ->keyBy('id');
             
             // Format response with ranking number and each programme's own centre
-            $result = $top->map(function ($programme, $index) use ($topCourseBatches, $centresMap) {
-                // Get the centre ID for this programme from its course batches
-                $programmeCourseBatches = $topCourseBatches->where('programme_id', $programme->id);
-                $centreId = $programmeCourseBatches->first()?->centre_id;
+            $result = $top->map(function ($programme, $index) use ($topCourses, $centresMap) {
+                // Get the centre ID for this programme from its courses
+                $programmeCourses = $topCourses->where('programme_id', $programme->id);
+                $centreId = $programmeCourses->first()?->centre_id;
                 
                 $centre = $centreId && isset($centresMap[$centreId]) ? $centresMap[$centreId] : null;
                 

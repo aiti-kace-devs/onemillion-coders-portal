@@ -96,19 +96,18 @@ class BatchCrudController extends CrudController
             'label' => 'Courses',
             'type' => 'closure',
             'function' => function ($entry) {
-                // Get course IDs (not batch IDs) from the relationship
-                $courseIds = $entry->assignedCourseBatches()
-                    ->with('course') // eager load course relationship if needed
-                    ->pluck('course_id') // explicitly pluck course_id
-                    ->unique() // remove duplicates if any
-                    ->values() // reset array keys
+                // Get course IDs directly from the courses relationship
+                $courseIds = $entry->courses()
+                    ->pluck('id')
+                    ->unique()
+                    ->values()
                     ->toArray();
 
                 $courseCount = count($courseIds);
 
                 if ($courseCount > 0) {
                     $encodedIds = urlencode(json_encode($courseIds));
-                    // Filter by both batch_id and course_ids
+                    // Filter by batch_id and course_ids
                     $url = url("/admin/course-batch?batch_id={$entry->id}&course_id={$encodedIds}");
 
                     return "<a href='{$url}'>{$courseCount}</a>";
@@ -263,9 +262,12 @@ class BatchCrudController extends CrudController
         // Get the created batch
         $batch = $this->crud->entry;
 
-        // Sync the assigned batches
+        // Update courses with this batch_id
         if (request()->has('batches')) {
-            $batch->assignedCourseBatches()->sync(request()->input('batches'));
+            // First, clear batch_id for all courses that had this batch
+            \App\Models\Course::where('batch_id', $batch->id)->update(['batch_id' => null]);
+            // Then set batch_id for the selected courses
+            \App\Models\Course::whereIn('id', request()->input('batches'))->update(['batch_id' => $batch->id]);
         }
 
         return $response;
@@ -286,9 +288,12 @@ class BatchCrudController extends CrudController
         // Get the updated batch
         $batch = $this->crud->entry;
 
-        // Sync the assigned batches
+        // Update courses with this batch_id
         if (request()->has('batches')) {
-            $batch->assignedCourseBatches()->sync(request()->input('batches'));
+            // First, clear batch_id for all courses that had this batch
+            \App\Models\Course::where('batch_id', $batch->id)->update(['batch_id' => null]);
+            // Then set batch_id for the selected courses
+            \App\Models\Course::whereIn('id', request()->input('batches'))->update(['batch_id' => $batch->id]);
         }
 
         return $response;
