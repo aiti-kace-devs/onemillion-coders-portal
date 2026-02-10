@@ -26,6 +26,7 @@ import {
 } from "../../services/pages";
 import Button from "../../components/Button";
 import GhanaGradientText from "../../components/GhanaGradients/GhanaGradientText";
+import OtpVerification from "../../components/OtpVerification";
 import { getCourseImage } from "../../utils/courseImages";
 
 import parsePhoneNumberFromString from "libphonenumber-js";
@@ -59,10 +60,31 @@ export default function RegisterPage() {
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [consentContent, setConsentContent] = useState("");
 
+  // OTP verification state — tracks whether the email (and optionally phone) has been verified
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [emailFieldName, setEmailFieldName] = useState(null);
+  const [phoneFieldName, setPhoneFieldName] = useState(null);
+
   // Fetch all regions on component mount
   useEffect(() => {
     fetchAllRegions();
   }, []);
+
+  // Detect email and phone fields from the form schema (case-insensitive)
+  useEffect(() => {
+    if (formSchema?.schema) {
+      const eField = formSchema.schema.find(
+        (f) => f.type?.toLowerCase() === "email"
+      );
+      const pField = formSchema.schema.find(
+        (f) =>
+          f.type?.toLowerCase() === "phonenumber" ||
+          f.type?.toLowerCase() === "phone"
+      );
+      setEmailFieldName(eField?.field_name || null);
+      setPhoneFieldName(pField?.field_name || null);
+    }
+  }, [formSchema]);
 
   // Fetch consent content when user reaches form step
   useEffect(() => {
@@ -184,6 +206,11 @@ export default function RegisterPage() {
       [fieldName]: value,
     }));
 
+    // Reset OTP verification if the email field value changes after verification
+    if (fieldName === emailFieldName && otpVerified) {
+      setOtpVerified(false);
+    }
+
     // Clear error for this field
     if (formErrors[fieldName]) {
       setFormErrors((prev) => ({
@@ -237,6 +264,11 @@ export default function RegisterPage() {
 
     if (!consentAccepted) {
       errors.consent = "You must accept the terms and privacy policy to register.";
+    }
+
+    // OTP verification check — email must be verified before submission
+    if (emailFieldName && !otpVerified) {
+      errors.otp = "Please verify your email address with the OTP code before submitting.";
     }
 
     return errors;
@@ -892,8 +924,30 @@ export default function RegisterPage() {
                             {field.description}
                           </p>
                         )}
+
+                        {/* OTP Verification — auto-injected after the email field */}
+                        {field.type?.toLowerCase() === "email" && (
+                          <OtpVerification
+                            email={formData[field.field_name] || ""}
+                            phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
+                            formUuid={formSchema.uuid}
+                            onVerified={setOtpVerified}
+                          />
+                        )}
                       </div>
                     ))}
+
+                  {/* OTP verification error */}
+                  {formErrors.otp && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl"
+                    >
+                      <FiAlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                      <p className="text-sm text-amber-700 font-medium">{formErrors.otp}</p>
+                    </motion.div>
+                  )}
 
                   {/* Consent block */}
                   <div className="space-y-3 pt-4 border-t border-gray-200">
@@ -946,11 +1000,15 @@ export default function RegisterPage() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={submitting}
+                      disabled={submitting || (emailFieldName && !otpVerified)}
                       icon={submitting ? FiLoader : FiCheckCircle}
                       className="w-full sm:flex-1 order-1 sm:order-2 min-h-[48px] font-semibold"
                     >
-                      {submitting ? "Submitting..." : "Submit Registration"}
+                      {submitting
+                        ? "Submitting..."
+                        : emailFieldName && !otpVerified
+                        ? "Verify Email to Submit"
+                        : "Submit Registration"}
                     </Button>
                   </div>
                 </form>

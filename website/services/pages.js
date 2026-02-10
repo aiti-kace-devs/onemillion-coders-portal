@@ -284,3 +284,58 @@ export const getCentreProgrammes = async (centreId) => {
     throw error;
   }
 };
+
+// ──────────────────────────────────────────────
+// OTP Verification API
+// ──────────────────────────────────────────────
+
+/**
+ * Send an OTP code to the user's email (and optionally associate a phone number).
+ * @param {{ email: string, phone?: string, form_uuid: string, recaptcha_token?: string }} data
+ * @returns {Promise<Object>} - { success, message, expires_in, has_phone }
+ */
+export const sendOtp = async (data) => {
+  try {
+    const response = await apiRequest("/otp/send", {
+      method: "POST",
+      data,
+    });
+    return response;
+  } catch (error) {
+    console.error("Error sending OTP:", error);
+    throw error;
+  }
+};
+
+/**
+ * Verify the OTP code the user entered.
+ * @param {{ email: string, otp: string }} data
+ * @returns {Promise<Object>} - { success, message, verified, remaining_attempts }
+ */
+export const verifyOtp = async (data) => {
+  try {
+    const response = await apiRequest("/otp/verify", {
+      method: "POST",
+      data,
+    });
+    return response;
+  } catch (error) {
+    console.error("Error verifying OTP:", error);
+    throw error;
+  }
+};
+
+/**
+ * Check if an email has been OTP-verified (polling).
+ * @param {string} email
+ * @returns {Promise<Object>} - { success, verified }
+ */
+export const checkOtpStatus = async (email) => {
+  try {
+    const response = await apiRequest(`/otp/status?email=${encodeURIComponent(email)}`);
+    return response;
+  } catch (error) {
+    console.error("Error checking OTP status:", error);
+    throw error;
+  }
+};

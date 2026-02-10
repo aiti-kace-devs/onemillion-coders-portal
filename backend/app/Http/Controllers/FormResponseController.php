@@ -6,6 +6,7 @@ use App\Events\FormSubmittedEvent;
 use App\Models\Form;
 use App\Models\User;
 use App\Models\FormResponse;
+use App\Services\OtpService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -173,6 +174,29 @@ class FormResponseController extends Controller
         }
 
         $validated = $request->validate($validationRules, $customMessages, $attributes);
+
+        // --- OTP verification enforcement ---
+        // If the form has an email field, require OTP verification before registration.
+        // This ensures the user truly owns the email address they provided.
+        $emailField = collect($schema)->first(function ($field) {
+            return strtolower($field['type']) === 'email';
+        });
+
+        if ($emailField) {
+            $emailValue = $request->input($emailField['field_name']);
+            if ($emailValue) {
+                $otpService = app(OtpService::class);
+                if (!$otpService->isVerified(strtolower(trim($emailValue)))) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Email verification is required before registration.',
+                        'errors'  => [
+                            'otp' => ['Please verify your email address with the OTP code before submitting.'],
+                        ],
+                    ], 422);
+                }
+            }
+        }
 
         foreach ($schema as $field) {
             if ($field['type'] === 'file' && $request->hasFile($field['field_name'])) {
