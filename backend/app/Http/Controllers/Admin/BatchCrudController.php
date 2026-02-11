@@ -143,6 +143,7 @@ class BatchCrudController extends CrudController
 
 
 
+
     /**
      * Add courses management section to the edit page
      */
@@ -179,9 +180,7 @@ class BatchCrudController extends CrudController
         ]);
     }
 
-    /**
-     * Generate HTML for Add Course modal
-     */
+
 
 
     /**
@@ -197,6 +196,7 @@ class BatchCrudController extends CrudController
             abort(403, 'Unauthorized action.');
         }
     }
+
 
 
 

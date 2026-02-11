@@ -22,6 +22,7 @@ trait BatchFieldHelpers
 
 
 
+
     protected function setupCommonBatchListFields()
     {
 
@@ -137,136 +138,17 @@ trait BatchFieldHelpers
 
 
 
-
-
-
-
-
-
     protected function getAddCourseModalHtml($batch)
     {
         $branches = Branch::pluck('title', 'id')->toArray();
         $programmes = Programme::pluck('title', 'id')->toArray();
         
-        $branchOptions = '<option value="">Select Branch</option>';
-        foreach ($branches as $id => $title) {
-            $branchOptions .= '<option value="' . $id . '">' . e($title) . '</option>';
-        }
-        
-        $programmeOptions = '';
-        foreach ($programmes as $id => $title) {
-            $programmeOptions .= '<option value="' . $id . '">' . e($title) . '</option>';
-        }
-        
-        $html = '<button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addCourseModal">
-            <i class="la la-plus"></i> Add Course
-        </button>
-
-        <!-- Modal -->
-        <div class="modal fade" id="addCourseModal" tabindex="-1" role="dialog" aria-labelledby="addCourseModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="addCourseModalLabel">Add Course to Batch</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form action="' . backpack_url('batch/add-courses/' . $batch->id) . '" method="POST" id="addCourseForm">
-                        ' . csrf_field() . '
-                        <div class="modal-body row">
-                            <input type="hidden" name="batch_id" value="' . $batch->id . '">
-                            
-                            <div class="form-group col-md-12">
-                                <label>Branch *</label>
-                                <select name="branch_id" id="modal_branch_id" class="form-control select2" onchange="loadCentres(this.value)" required>
-                                    ' . $branchOptions . '
-                                </select>
-                            </div>
-                            
-                            <div class="form-group col-md-12">
-                                <label>Training Centres *</label>
-                                <select name="centre_ids[]" id="modal_centre_ids" class="form-control select2" multiple required>
-                                    <option value="">Select a branch first</option>
-                                </select>
-                                <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple centres</small>
-                            </div>
-                            
-                            <div class="form-group col-md-12">
-                                <label>Programmes *</label>
-                                <select name="programme_ids[]" id="modal_programme_ids" class="form-control select2" multiple required>
-                                    ' . $programmeOptions . '
-                                </select>
-                                <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple programmes</small>
-                            </div>
-                            
-                            <div class="form-group col-md-6">
-                                <label>Start Date</label>
-                                <input type="date" name="start_date" class="form-control" value="' . ($batch->start_date ?? '') . '">
-                            </div>
-                            
-                            <div class="form-group col-md-6">
-                                <label>End Date</label>
-                                <input type="date" name="end_date" class="form-control" value="' . ($batch->end_date ?? '') . '">
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Add Courses</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <script>
-        $(document).ready(function() {
-            // Initialize Select2 for modal selects when modal is shown
-            $(\'#addCourseModal\').on(\'shown.bs.modal\', function () {
-                $(\'#modal_branch_id\').select2({
-                    dropdownParent: $(\'#addCourseModal\'),
-                    placeholder: "Select Branch",
-                    allowClear: true
-                });
-                
-                $(\'#modal_centre_ids\').select2({
-                    dropdownParent: $(\'#addCourseModal\'),
-                    placeholder: "Select centres",
-                    allowClear: true
-                });
-                
-                $(\'#modal_programme_ids\').select2({
-                    dropdownParent: $(\'#addCourseModal\'),
-                    placeholder: "Select programmes",
-                    allowClear: true
-                });
-            });
-        });
-        
-        function loadCentres(branchId) {
-            var centreSelect = $(\'#modal_centre_ids\');
-            
-            if (branchId) {
-                fetch("' . backpack_url('api/centre-by-branch') . '?branch_id=" + branchId)
-                    .then(response => response.json())
-                    .then(data => {
-                        centreSelect.empty();
-                        centreSelect.append(new Option("Select centres", "", false, true));
-                        if (data.length > 0) {
-                            data.forEach(function(centre) {
-                                var option = new Option(centre.title, centre.id, false, true);
-                                centreSelect.append(option);
-                            });
-                        }
-                        centreSelect.trigger("change");
-                    });
-            } else {
-                centreSelect.empty();
-                centreSelect.append(new Option("Select a branch first", "", false, true));
-                centreSelect.trigger("change");
-            }
-        }
-        </script>';
-
-        return $html;
+        // Use the blade view for the modal
+        return view('admin.batch.add_course_modal', [
+            'batch' => $batch,
+            'branches' => $branches,
+            'programmes' => $programmes,
+        ])->render();
     }
 
     /**
@@ -274,7 +156,11 @@ trait BatchFieldHelpers
      */
     protected function getCoursesActionsHtml($batch)
     {
-        $html = '<table class="table table-bordered table-striped mt-3">
+        $html = '<button type="button" class="btn btn-primary mb-3" onclick="openAddCourseModal()">
+            <i class="la la-plus"></i> Add Course
+        </button>
+
+        <table class="table table-bordered table-striped mt-3">
             <thead>
                 <tr>
                     <th>Course Name</th>
@@ -328,8 +214,6 @@ trait BatchFieldHelpers
 
         return $html;
     }
-
-
 
 
 
@@ -399,9 +283,6 @@ trait BatchFieldHelpers
                 ->with('info', 'No new courses were added. All selected combinations already exist.');
         }
     }
-
-
-
 
 
 
