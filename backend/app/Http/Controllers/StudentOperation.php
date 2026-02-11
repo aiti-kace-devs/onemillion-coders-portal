@@ -185,11 +185,7 @@ class StudentOperation extends Controller
 
         $questionSetsQuery = Oex_question_master::select('exam_set_id')->distinct();
 
-        if ($programme_id) {
-            $questionSetsQuery->where('programme_id', $programme_id);
-        } else {
-            $questionSetsQuery->whereNull('programme_id');
-        }
+        $questionSetsQuery->where('programme_id', $programme_id);
 
         $questionSets = $questionSetsQuery->pluck('exam_set_id');
 
