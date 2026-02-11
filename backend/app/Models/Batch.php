@@ -15,17 +15,24 @@ class Batch extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    protected $fillable = ['title', 'description', 'start_date', 'end_date', 'total_admitted_students', 'year', 'total_completed_students', 'completed', 'status'];
+    protected $fillable = ['title', 'description', 'start_date', 'end_date', 'total_admitted_students', 'year', 'total_completed_students', 'completed', 'status', 'branch_id', 'centre_ids', 'programme_ids'];
     // protected $hidden = [];
 
     protected $casts = [
         'status' => 'boolean',
         'completed' => 'boolean',
     ];
-    // public function course()
-    // {
-    //     return $this->belongsTo(Course::class, 'course_id', 'id');
-    // }
+    public function centres()
+    {
+        return $this->belongsToMany(Centre::class, 'courses', 'batch_id', 'centre_id')
+            ->distinct();
+    }
+
+    public function programmes()
+    {
+        return $this->belongsToMany(Programme::class, 'courses', 'batch_id', 'programme_id')
+            ->distinct();
+    }
 
 
     protected static function booted()

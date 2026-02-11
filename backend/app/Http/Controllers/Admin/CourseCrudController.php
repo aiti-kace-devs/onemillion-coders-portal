@@ -122,6 +122,26 @@ class CourseCrudController extends CrudController
         CRUD::setValidation(CourseRequest::class);
 
         $this->setupCommonFields();
+
+        // Handle batch_id from URL parameter (when adding course from batch edit page)
+        $batchId = request()->input('batch_id');
+        if ($batchId) {
+            $batch = \App\Models\Batch::find($batchId);
+            if ($batch) {
+                // Pre-fill batch_id
+                CRUD::field('batch_id')->value($batchId);
+                
+                // Pre-fill start_date and end_date from batch
+                CRUD::field('start_date')->value($batch->start_date);
+                CRUD::field('end_date')->value($batch->end_date);
+                
+                // Get the branch from the batch's courses if available, or set from first course's centre
+                $firstCourse = $batch->courses->first();
+                if ($firstCourse && $firstCourse->centre) {
+                    CRUD::field('centre_id')->value($firstCourse->centre_id);
+                }
+            }
+        }
     }
 
     /**

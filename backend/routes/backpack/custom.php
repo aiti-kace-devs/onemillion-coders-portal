@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\Api\CentreController;
 use App\Http\Controllers\Admin\OexQuestionMasterCrudController;
 use App\Http\Controllers\Admin\StudentVerificationCrudController;
 use App\Http\Controllers\Admin\UserCrudController;
+use App\Http\Controllers\Admin\BatchCrudController;
 use App\Http\Controllers\Admin\ManageStudentCrudController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UtilitiesController;
@@ -38,6 +39,7 @@ Route::group([
     Route::crud('centre', 'CentreCrudController');
     Route::crud('course', 'CourseCrudController');
     Route::crud('batch', 'BatchCrudController');
+    Route::post('batch/add-courses/{batchId}', [BatchCrudController::class, 'addCourses']);
     Route::crud('course-session', 'CourseSessionCrudController');
     Route::crud('email-template', 'EmailTemplateCrudController');
     Route::crud('form', 'FormCrudController');
