@@ -8,8 +8,12 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 class RuleCrudController extends CrudController
 {
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation {
+        store as traitStore;
+    }
+    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation {
+        update as traitUpdate;
+    }
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
@@ -25,16 +29,16 @@ class RuleCrudController extends CrudController
         CRUD::column('name')->type('text');
         CRUD::column('description')->type('text')->limit(100);
         CRUD::column('rule_class_path')->type('text')->label('Class Path');
-        
+
         CRUD::addColumn([
             'name' => 'is_active',
             'label' => 'Active',
             'type' => 'boolean',
             'options' => [0 => 'Inactive', 1 => 'Active']
         ]);
-        
+
         CRUD::column('created_at');
-        
+
         CRUD::enableExportButtons();
     }
 
@@ -44,7 +48,7 @@ class RuleCrudController extends CrudController
             'name' => 'required|string|max:255',
             'rule_class_path' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'default_parameters' => 'nullable|json',
+            'default_parameters' => 'nullable|array',
         ]);
 
         CRUD::addField([
@@ -73,10 +77,9 @@ class RuleCrudController extends CrudController
 
         CRUD::addField([
             'name' => 'default_parameters',
-            'label' => 'Default Parameters (JSON)',
-            'type' => 'textarea',
-            'hint' => 'Enter JSON e.g., {"pass_mark": 50, "gender": "female"}',
-            'attributes' => ['rows' => 4],
+            'label' => 'Default Parameters',
+            'type' => 'rule_parameters',
+            'hint' => 'Define the default keys and values for this rule.',
         ]);
 
         CRUD::addField([
@@ -103,8 +106,28 @@ class RuleCrudController extends CrudController
         ];
     }
 
+    public function store()
+    {
+        $request = $this->crud->getRequest();
+        if ($request->has('default_parameters') && is_string($request->default_parameters)) {
+            $request->merge(['default_parameters' => json_decode($request->default_parameters, true)]);
+        }
+        $this->crud->setRequest($request);
+        return $this->traitStore();
+    }
+
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    public function update()
+    {
+        $request = $this->crud->getRequest();
+        if ($request->has('default_parameters') && is_string($request->default_parameters)) {
+            $request->merge(['default_parameters' => json_decode($request->default_parameters, true)]);
+        }
+        $this->crud->setRequest($request);
+        return $this->traitUpdate();
     }
 }

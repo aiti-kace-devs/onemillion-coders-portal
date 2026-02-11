@@ -16,19 +16,11 @@ class LoginController extends BackpackLoginController
      */
     protected function authenticated(Request $request, $user)
     {
-        \Log::info("LoginController::authenticated", [
-            'user_id' => $user->id,
-            'email' => $user->email,
-            'has_role_page_builder' => $user->hasRole('page-builder'),
-            'session_id' => $request->session()->getId(),
-        ]);
 
-        if ($user->hasRole('page-builder')) {
-            \Log::info("LoginController: Redirecting to Statamic CP");
+        if ($user->hasRole('page-builder') && $user->roles()->count() == 1) {
             return redirect()->to(config('statamic.cp.route', 'cp') . '/dashboard');
         }
 
-        \Log::info("LoginController: Redirecting to Backpack dashboard");
         return redirect()->intended($this->redirectPath());
     }
 }

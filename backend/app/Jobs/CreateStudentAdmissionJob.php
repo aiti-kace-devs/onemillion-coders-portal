@@ -39,18 +39,19 @@ class CreateStudentAdmissionJob implements ShouldQueue
     public function handle(): void
     {
 
-        $student = $this->student instanceof User ? $this->student : User::find($this->student);
+        $this->student = $this->student instanceof User ? $this->student : User::find($this->student);
 
-        if (!$student) return;
 
-        $course = $this->course instanceof Course ? $this->course : Course::find($student->registered_course);
-        if (!$course) return;
+        if (!$this->student) return;
+
+        $this->course = $this->course instanceof Course ? $this->course : Course::find($this->student->registered_course);
+        if (!$this->course) return;
 
         $changingAdmission = false;
 
 
-        $existingAdmission = UserAdmission::where('user_id', $student->userId)
-            ->where('course_id', $course->id)
+        $existingAdmission = UserAdmission::where('user_id', $this->student->userId)
+            ->where('course_id', $this->course->id)
             ->first();
 
         if ($existingAdmission && !$this->session) {
@@ -63,7 +64,7 @@ class CreateStudentAdmissionJob implements ShouldQueue
 
         $admissionData = [
             'user_id' => $this->student->userId,
-            'course_id' => $course->id,
+            'course_id' => $this->course->id,
             'email_sent' => now(),
             'admission_source' => $this->source,
             'admission_run_id' => $this->admissionRunId,

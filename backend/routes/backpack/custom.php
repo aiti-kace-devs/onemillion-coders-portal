@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdmissionRunCrudController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Api\CentreController;
 use App\Http\Controllers\Admin\OexQuestionMasterCrudController;
@@ -110,15 +111,18 @@ Route::group([
     Route::get('utilities', [UtilitiesController::class, 'index'])->name('admin.utilities.index');
     Route::post('utilities/run', [UtilitiesController::class, 'run'])->name('admin.utilities.run');
 
+    Route::get('admission-run/run', [AdmissionRunCrudController::class, 'runAdmission'])->name('admission.run');
+
     // Admission Engine Routes
     Route::crud('admission-rule', 'RuleCrudController');
     Route::crud('rule-pipeline', 'RulePipelineCrudController');
+    Route::get('rule-pipeline/get-rule-parameters', 'RulePipelineCrudController@getRuleParameters')->name('rule-pipeline.get-rule-parameters');
     Route::crud('admission-run', 'AdmissionRunCrudController');
-    
+
     // Custom admission operations
-    Route::get('admission/run', 'AdmissionRunCrudController@runAdmission')->name('admission.run');
-    Route::post('admission/preview', 'AdmissionRunCrudController@previewAdmission')->name('admission.preview');
-    Route::post('admission/execute', 'AdmissionRunCrudController@executeAdmission')->name('admission.execute');
+    Route::post('admission-run/preview', [AdmissionRunCrudController::class, 'previewAdmission'])->name('admission.preview');
+    Route::post('admission-run/execute', [AdmissionRunCrudController::class, 'executeAdmission'])->name('admission.execute');
+    Route::get('admission-run/get-rules', [AdmissionRunCrudController::class, 'getRules'])->name('admission.get_rules');
 
     // Route::crud('media', 'MediaCrudController');
 }); // this should be the absolute last line of this file

@@ -35,23 +35,6 @@ class StudentOperation extends Controller
     //student dashboard
     public function dashboard()
     {
-        if (!Auth::user()->isAdmitted()) {
-            return redirect(route('student.profile.edit'));
-        }
-
-        // $data['portal_exams'] = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
-        //     ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
-        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
-        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-        //     ->orderBy('user_exams.exam_id', 'desc')
-        //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-        //     ->where('user_exams.user_id', Auth::user()->id)
-        //     ->where('user_exams.std_status', '1')
-        //     ->get()
-        //     ->toArray();
-
-        //     return view('student.dashboard', $data);
-
         $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
             ->join('users', 'users.id', '=', 'user_exams.user_id')
@@ -110,18 +93,6 @@ class StudentOperation extends Controller
     //Exam page
     public function exam()
     {
-        // Admission check removed - students can view/take exams before admission
-
-        // $student_info = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.title', 'oex_exam_masters.exam_date', 'users.created_at as registered'])
-        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
-        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-        //     ->orderBy('user_exams.exam_id', 'desc')
-        //     ->where('user_exams.user_id', Auth::user()->id)
-        //     ->where('user_exams.std_status', '1')
-        //     ->get()
-        //     ->toArray();
-
-        // return view('student.exam', ['student_info' => $student_info]);
 
         $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
@@ -385,8 +356,10 @@ class StudentOperation extends Controller
 
     public function select_session_view(Request $request)
     {
-        $user = Auth::guard('web')->user()->only(['id', 'name', 'userId']);
-        $admission = UserAdmission::where('user_id', $user['userId'])->firstOrFail();
+        // $user = Auth::guard('web')->user()->only(['id', 'name', 'userId']);
+        $userId = Auth::user()->userId;
+        $user = User::where('userId', $userId)->firstOrFail();
+        $admission = UserAdmission::where('user_id', $userId)->firstOrFail();
         $course = Course::find($admission->course_id);
         $sessions = CourseSession::where('course_id', $course->id)->get();
 
@@ -408,7 +381,7 @@ class StudentOperation extends Controller
 
     public function confirm_session(Request $request)
     {
-        $user = $request->guard('web')->user();
+        $user = Auth::user();
 
         $data = $request->validate(
             [

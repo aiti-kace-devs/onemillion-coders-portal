@@ -14,6 +14,7 @@
     {{-- Select2 CSS --}}
     @basset("https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css")
     @basset("https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css")
+    @basset("https://cdn.jsdelivr.net/npm/sweetalert2@11.22.2/dist/sweetalert2.min.css")
 @endsection
 
 @section('header')
@@ -66,6 +67,16 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <label>Active Rules</label>
+                                <div id="rulesContainer" class="d-flex flex-wrap gap-2">
+                                    <span class="text-muted fst-italic">Select a course to view available rules...</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row mt-3">
                             <div class="col-md-12">
                                 <button type="button" id="previewBtn" class="btn btn-primary">
@@ -92,7 +103,7 @@
                     <div id="statsSection" class="mb-3"></div>
                     <div id="rulesSection" class="mb-3"></div>
                     <div class="table-responsive">
-                        <table id="studentsTable" class="table table-striped table-hover">
+                        <table id="studentsTable" class="table table-striped table-hover datatable">
                             <thead>
                                 <tr>
                                     <th>Name</th>
@@ -116,6 +127,8 @@
 @section('after_scripts')
     {{-- Select2 JS --}}
     @basset("https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js")
+    // basset for sweet alert 
+    @basset("https://cdn.jsdelivr.net/npm/sweetalert2@11.22.2/dist/sweetalert2.all.min.js")
     @bassetBlock('/admission-run.js')
         <script>
             $(document).ready(function() {
@@ -135,6 +148,65 @@
 
                 let previewData = null;
 
+                // Fetch rules when course changes
+                $('#course_id').change(function() {
+                    const courseId = $(this).val();
+                    const container = $('#rulesContainer');
+                    
+                    if (!courseId) {
+                        container.html('<span class="text-muted fst-italic">Select a course to view available rules...</span>');
+                        return;
+                    }
+
+                    container.html('<i class="la la-spinner la-spin"></i> Loading rules...');
+
+                    $.ajax({
+                        url: '{{ backpack_url('admission-run/get-rules') }}', // Using the route we created
+                        method: 'GET',
+                        data: { 
+                            course_id: courseId,
+                            _token: '{{ csrf_token() }}'
+                        },
+                        success: function(response) {
+                            if (response.success && response.rules.length > 0) {
+                                let html = '';
+                                response.rules.forEach(rule => {
+                                    let paramsHtml = '';
+                                    for (const [key, value] of Object.entries(rule.params)) {
+                                        paramsHtml += `<small class="text-muted">(${key.replace('_', ' ').toUpperCase()}: ${value})</small> `;
+                                    }
+                                    html += `
+                                        <div class="custom-control custom-switch mr-3 mb-2">
+                                            <input type="checkbox" class="custom-control-input rule-toggle" 
+                                                id="rule_${rule.id}" 
+                                                value="${rule.id}" 
+                                                ${rule.is_active ? 'checked' : ''}>
+                                            <label class="custom-control-label" for="rule_${rule.id}">
+                                                ${rule.name} <small class="text-muted">(Priority: ${rule.priority})</small><br>
+                                                ${paramsHtml}
+                                            </label>
+                                        </div>
+                                    `;
+                                });
+                                container.html(html);
+                            } else {
+                                container.html('<span class="text-warning">No active rules found for this course.</span>');
+                            }
+                        },
+                        error: function() {
+                            container.html('<span class="text-danger">Error fetching rules.</span>');
+                        }
+                    });
+                });
+
+                function getActiveRules() {
+                    const rules = [];
+                    $('.rule-toggle:checked').each(function() {
+                        rules.push($(this).val());
+                    });
+                    return rules;
+                }
+
                 $('#previewBtn').click(function() {
                     const courseId = $('#course_id').val();
                     const batchId = $('#batch_id').val();
@@ -148,17 +220,20 @@
                         return;
                     }
 
+                    const activeRules = getActiveRules();
+
                     const btn = $(this);
                     btn.prop('disabled', true).html('<i class="la la-spinner la-spin"></i> Loading...');
 
                     $.ajax({
-                        url: '{{ backpack_url('admission/preview') }}',
+                        url: '{{ route('admission.preview') }}',
                         method: 'POST',
                         data: {
                             _token: '{{ csrf_token() }}',
                             course_id: courseId,
                             batch_id: batchId,
-                            limit: limit
+                            limit: limit,
+                            active_rules: activeRules || [0]
                         },
                         success: function(response) {
                             if (response.success) {
@@ -187,52 +262,67 @@
                 });
 
                 $('#executeBtn').click(function() {
-                    if (!confirm(
-                            'Are you sure you want to execute this admission? Emails will be sent to selected students.'
-                        )) {
-                        return;
-                    }
 
-                    const courseId = $('#course_id').val();
-                    const batchId = $('#batch_id').val();
-                    const limit = $('#limit').val();
+                    // use sweet alert 
+                    Swal.fire({
+                        title: 'Admit Students?',
+                        text: "Are you sure you want to execute this admission? Emails will be sent to selected students.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Yes, admit students!'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const courseId = $('#course_id').val();
+                            const batchId = $('#batch_id').val();
+                            const limit = $('#limit').val();
+                            const activeRules = getActiveRules();
 
-                    const btn = $(this);
-                    btn.prop('disabled', true).html('<i class="la la-spinner la-spin"></i> Executing...');
-
-                    $.ajax({
-                        url: '{{ backpack_url('admission/execute') }}',
-                        method: 'POST',
-                        data: {
-                            _token: '{{ csrf_token() }}',
-                            course_id: courseId,
-                            batch_id: batchId,
-                            limit: limit
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                new Noty({
-                                    type: 'success',
-                                    text: response.message
-                                }).show();
+                            const btn = $(this);
+                            btn.prop('disabled', true).html('<i class="la la-spinner la-spin"></i> Executing...');
+                            $.ajax({
+                                url: '{{ route('admission.execute') }}',
+                                method: 'POST',
+                                data: {
+                                    _token: '{{ csrf_token() }}',
+                                    course_id: courseId,
+                                    batch_id: batchId,
+                                    limit: limit,
+                                    active_rules: activeRules
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        new Noty({
+                                            type: 'success',
+                                            text: response.message
+                                        }).show();
 
                                 setTimeout(function() {
                                     window.location.href =
                                         '{{ backpack_url('admission-run') }}';
-                                }, 2000);
+                                }, 1000);
+                                }
+                            },
+                                error: function(xhr) {
+                                    new Noty({
+                                        type: 'error',
+                                        text: xhr.responseJSON?.message ||
+                                        'Error executing admission'
+                                    }).show();
+                                    btn.prop('disabled', false).html(
+                                        '<i class="la la-check"></i> Execute Admission');
                             }
-                        },
-                        error: function(xhr) {
-                            new Noty({
-                                type: 'error',
-                                text: xhr.responseJSON?.message ||
-                                    'Error executing admission'
-                            }).show();
-                            btn.prop('disabled', false).html(
-                                '<i class="la la-check"></i> Execute Admission');
-                        }
+                        });
+                        }});
+
+                        });
                     });
-                });
+          
+
+                  
+
+                 
 
                 function displayPreview(data) {
                     // Display statistics
@@ -266,7 +356,7 @@
                     let rulesHtml = '<strong>Applied Rules:</strong> ';
                     data.rules.forEach(function(rule, index) {
                         rulesHtml +=
-                            `<span class="badge bg-secondary">${rule.name} (Priority: ${rule.priority})</span> `;
+                            `<span class="badge bg-secondary text-white">${rule.name} (Priority: ${rule.priority})</span> `;
                     });
                     $('#rulesSection').html(rulesHtml);
 
@@ -287,7 +377,6 @@
             `);
                     });
                 }
-            });
         </script>
     @endBassetBlock
 @endsection

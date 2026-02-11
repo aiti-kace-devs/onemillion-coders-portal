@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Rule;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,11 +18,13 @@ class RuleAssignment extends Model
         'ruleable_id',
         'value',
         'priority',
+        'is_active',
     ];
 
     protected $casts = [
         'value' => 'array',
         'priority' => 'integer',
+        'is_active' => 'boolean',
     ];
 
     /**

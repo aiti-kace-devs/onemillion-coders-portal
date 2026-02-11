@@ -29,7 +29,7 @@ class AdmissionRunCrudController extends CrudController
             'name' => 'course_name',
             'label' => 'Course',
             'type' => 'closure',
-            'function' => function($entry) {
+            'function' => function ($entry) {
                 return $entry->course->course_name ?? 'N/A';
             }
         ]);
@@ -38,7 +38,7 @@ class AdmissionRunCrudController extends CrudController
             'name' => 'batch_title',
             'label' => 'Batch',
             'type' => 'closure',
-            'function' => function($entry) {
+            'function' => function ($entry) {
                 return $entry->batch->title ?? 'N/A';
             }
         ]);
@@ -49,19 +49,19 @@ class AdmissionRunCrudController extends CrudController
             'name' => 'run_by_name',
             'label' => 'Run By',
             'type' => 'closure',
-            'function' => function($entry) {
+            'function' => function ($entry) {
                 return $entry->admin->name ?? 'System';
             }
         ]);
 
         CRUD::column('selected_count')->type('number')->label('Selected');
         CRUD::column('admitted_count')->type('number')->label('Admitted');
-        
+
         CRUD::addColumn([
             'name' => 'source_breakdown',
             'label' => 'Source (Auto/Manual)',
             'type' => 'closure',
-            'function' => function($entry) {
+            'function' => function ($entry) {
                 return "{$entry->automated_count}/{$entry->manual_count}";
             }
         ]);
@@ -74,7 +74,7 @@ class AdmissionRunCrudController extends CrudController
             'name' => 'status',
             'label' => 'Status',
             'type' => 'closure',
-            'function' => function($entry) {
+            'function' => function ($entry) {
                 $badges = [
                     'completed' => '<span class="badge bg-success">Completed</span>',
                     'preview' => '<span class="badge bg-warning">Preview</span>',
@@ -91,12 +91,12 @@ class AdmissionRunCrudController extends CrudController
     protected function setupShowOperation()
     {
         $this->setupListOperation();
-        
+
         CRUD::addColumn([
             'name' => 'rules_applied',
             'label' => 'Rules Applied',
             'type' => 'closure',
-            'function' => function($entry) {
+            'function' => function ($entry) {
                 $rules = $entry->rules_applied ?? [];
                 $html = '<ul>';
                 foreach ($rules as $rule) {
@@ -116,7 +116,7 @@ class AdmissionRunCrudController extends CrudController
     {
         $courses = Course::with('programme')->get();
         $batches = Batch::where('status', true)->get();
-        
+
         return view('admin.admission.run', compact('courses', 'batches'));
     }
 
@@ -129,16 +129,23 @@ class AdmissionRunCrudController extends CrudController
             'course_id' => 'required|exists:courses,id',
             'batch_id' => 'required|exists:admission_batches,id',
             'limit' => 'required|integer|min:1|max:200',
+            'active_rules' => 'nullable|array',
+            'active_rules.*' => 'integer|exists:rules,id',
         ]);
 
         $course = Course::findOrFail($validated['course_id']);
         $batch = Batch::findOrFail($validated['batch_id']);
-        
+
         $admissionService = app(AdmissionService::class);
-        $preview = $admissionService->previewAdmission($course, $validated['limit'], $batch->id);
+        $preview = $admissionService->previewAdmission(
+            $course,
+            $validated['limit'],
+            $batch->id,
+            $validated['active_rules'] ?? null
+        );
 
         // Format students for datatable
-        $students = $preview['students']->map(function($student) {
+        $students = $preview['students']->map(function ($student) {
             return [
                 'name' => $student->name,
                 'email' => $student->email,
@@ -157,7 +164,7 @@ class AdmissionRunCrudController extends CrudController
             'rules' => $preview['rules_applied']->map(fn($r) => [
                 'name' => $r->name,
                 'priority' => $r->pivot->priority
-            ]),
+            ])->values()->toArray(),
         ]);
     }
 
@@ -171,6 +178,8 @@ class AdmissionRunCrudController extends CrudController
             'batch_id' => 'required|exists:admission_batches,id',
             'limit' => 'required|integer|min:1|max:200',
             'session_id' => 'nullable|exists:course_sessions,id',
+            'active_rules' => 'nullable|array',
+            'active_rules.*' => 'integer|exists:rules,id',
         ]);
 
         $course = Course::findOrFail($validated['course_id']);
@@ -179,13 +188,14 @@ class AdmissionRunCrudController extends CrudController
 
         try {
             $admissionService = app(AdmissionService::class);
-            
+
             $admissionRun = $admissionService->executeAdmission(
                 $course,
                 $validated['limit'],
                 $batch->id,
                 $validated['session_id'] ?? null,
-                $admin
+                $admin,
+                $validated['active_rules'] ?? null
             );
 
             return response()->json([
@@ -194,12 +204,34 @@ class AdmissionRunCrudController extends CrudController
                 'admission_run_id' => $admissionRun->id,
                 'admitted_count' => $admissionRun->admitted_count,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage(),
             ], 500);
         }
+    }
+    /**
+     * Get rules for a course (AJAX)
+     */
+    public function getRules(Request $request)
+    {
+        $validated = $request->validate([
+            'course_id' => 'required|exists:courses,id',
+        ]);
+
+        $course = Course::findOrFail($validated['course_id']);
+        $rules = $course->getAllRules();
+
+        return response()->json([
+            'success' => true,
+            'rules' => $rules->map(fn($r) => [
+                'id' => $r->id,
+                'name' => $r->name,
+                'is_active' => $r->is_active,
+                'priority' => $r->pivot->priority,
+                'params' => json_decode($r->pivot->value, true),
+            ]),
+        ]);
     }
 }

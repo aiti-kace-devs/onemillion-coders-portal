@@ -15,10 +15,15 @@ class Authenticate extends Middleware
     protected function redirectTo($request)
     {
         if (! $request->expectsJson()) {
-            return config('app.url') . '/admin/login';
-            // if ($request->is('admin/*')) {
-            // }
-            // return route('login');
+            // Check if the current route is within the admin group
+            if ($request->is('admin*')) {
+                return backpack_url('/admin/login');
+            }
+
+            // Default for everyone else (students)
+            return route('login');
         }
+
+        return null;
     }
 }

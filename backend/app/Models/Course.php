@@ -81,13 +81,24 @@ class Course extends Model
      */
     public function getEffectiveRules()
     {
-        $courseRules = $this->rules()->where('is_active', true)->get();
+        $courseRules = $this->rules()->where('rule_assignments.is_active', true)->get();
 
         if ($courseRules->isNotEmpty()) {
             return $courseRules;
         }
         // Fallback to programme rules
-        return $this->programme->rules()->where('is_active', true)->get();
+        return $this->programme->rules()->where('rule_assignments.is_active', true)->get();
+    }
+
+    public function getAllRules()
+    {
+        $courseRules = $this->rules()->get();
+
+        if ($courseRules->isNotEmpty()) {
+            return $courseRules;
+        }
+        // Fallback to programme rules
+        return $this->programme->rules()->get();
     }
 
     public function scopeMyAssignedCourses($query)
@@ -134,6 +145,7 @@ class Course extends Model
                 '3 months' => 90,
                 '4 Months' => 120,
                 '4 months' => 120,
+
             ];
             $course->no_of_days = $durations[$course->duration] ?? null;
 

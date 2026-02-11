@@ -59,15 +59,7 @@ class Rule extends Model
             throw new \Exception("Rule class {$className} not found");
         }
 
-        $defaultParams = $this->default_parameters;
-
-        if (is_string($defaultParams)) {
-            $defaultParams = json_decode($defaultParams, true);
-        }
-
-        if (!is_array($defaultParams)) {
-            $defaultParams = [];
-        }
+        $defaultParams = $this->default_parameters ?? [];
 
         // Merge with default parameters
         $params = array_merge(

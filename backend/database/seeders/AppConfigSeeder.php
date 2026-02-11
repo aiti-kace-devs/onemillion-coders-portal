@@ -116,7 +116,7 @@ class AppConfigSeeder extends Seeder
                 ],
                 [
                     'key' => MINIMUM_EXAM_PASS_PERCENTAGE,
-                    'value' => 50,
+                    'value' => 30,
                     'type' => 'integer',
                     'is_cached' => true,
                     'created_at' => now(),

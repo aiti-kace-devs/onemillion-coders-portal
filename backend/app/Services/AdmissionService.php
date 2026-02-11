@@ -24,10 +24,21 @@ class AdmissionService
      * @param int|null $batchId
      * @return array
      */
-    public function previewAdmission(Course $course, int $limit, ?int $batchId = null): array
+    public function previewAdmission(Course $course, int $limit, ?int $batchId = null, ?array $activeRulesId = null): array
     {
         // Get effective rules
         $rules = $course->getEffectiveRules();
+
+        // Filter rules if activeRulesId is provided
+        if ($activeRulesId !== null) {
+            $rules = $rules->filter(function ($rule) use ($activeRulesId) {
+                return in_array($rule->id, $activeRulesId);
+            });
+        }
+
+        if ($activeRulesId == null && $rules->count() > 0) {
+            $rules = collect([]);
+        }
 
         // Build base query
         $query = $this->getBaseQuery($course);
@@ -48,7 +59,7 @@ class AdmissionService
         return [
             'students' => $students,
             'stats' => $stats,
-            'rules_applied' => $rules,
+            'rules_applied' =>  $rules,
         ];
     }
 
@@ -67,17 +78,17 @@ class AdmissionService
         int $limit,
         int $batchId,
         ?int $sessionId = null,
-        ?Admin $admin = null
+        ?Admin $admin = null,
+        ?array $activeRulesId = null
     ): AdmissionRun {
         DB::beginTransaction();
 
         try {
             // Get preview data
-            $preview = $this->previewAdmission($course, $limit, $batchId);
+            $preview = $this->previewAdmission($course, $limit, $batchId, $activeRulesId);
             $students = $preview['students'];
             $rules = $preview['rules_applied'];
 
-            dd($preview['stats']);
             // Create admission run record
             $admissionRun = AdmissionRun::create([
                 'course_id' => $course->id,
@@ -104,23 +115,9 @@ class AdmissionService
             $emailedCount = 0;
 
             foreach ($students as $student) {
-                // $admission = UserAdmission::create([
-                //     'user_id' => $student->userId,
-                //     'batch_id' => $batchId,
-                //     'course_id' => $course->id,
-                //     'session' => $sessionId,
-                //     'location' => $course->location,
-                //     'admission_source' => 'automated',
-                //     'email_sent' => null,
-                // ]);
-
-                // Dispatch email job
                 try {
                     CreateStudentAdmissionJob::dispatch($student->id, $course->id, $sessionId, 'automated', $admissionRun->id);
                     $admittedCount++;
-                    // AdmitStudentJob::dispatch($admission);
-                    // $admission->update(['email_sent' => now()]);
-                    // $emailedCount++;
                 } catch (\Exception $e) {
                     Log::error("Failed to dispatch admission email", [
                         'user_id' => $student->userId,
@@ -197,7 +194,7 @@ class AdmissionService
             ->whereHas('examResults', function ($q) use ($course) {
                 // get the pass percentage
 
-                $q->whereRaw('ROUND ((yes_ans / (no_ans + yes_ans)) * 100, 2) >= CAST(? AS DECIMAL)', config(MINIMUM_EXAM_PASS_PERCENTAGE, 50));
+                $q->whereRaw('ROUND ((yes_ans / (no_ans + yes_ans)) * 100, 2) >= CAST(? AS DECIMAL)', config(MINIMUM_EXAM_PASS_PERCENTAGE, 30));
             })
             ->whereDoesntHave('admission') // Exclude already admitted
             ->whereDoesntHave('rejectedAdmissions', function ($q) use ($course) {

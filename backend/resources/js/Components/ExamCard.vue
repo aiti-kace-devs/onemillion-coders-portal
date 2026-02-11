@@ -117,7 +117,7 @@ const getExamDeadline = (examDate, registeredAt) => {
                 class="mt-4 pt-3 border-t border-gray-100">
 
                 <PrimaryButton>
-                    <Link :href="`/view_result/${exam.exam_id}`">
+                    <Link :href="`/student/view_result/${exam.exam_id}`">
                         View Results
                     </Link>
                 </PrimaryButton>

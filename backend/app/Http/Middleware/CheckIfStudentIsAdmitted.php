@@ -16,17 +16,16 @@ class CheckIfStudentIsAdmitted
      */
     public function handle(Request $request, Closure $next, bool $withSession = false): Response
     {
-        $admin = Auth::guard('admin')->user();
-        $user = Auth::guard('web')->user();
+        $student = Auth::guard('web')->user();
 
-        $admitted = $user->hasAdmission();
+        $admitted = $student->hasAdmission();
 
         if ($withSession) {
-            $admitted = $user->admission->confirmed ?? false;
+            $admitted = $student->admission?->confirmed ?? false;
         }
 
-        if (!$admin && !$admitted) {
-            return redirect('/student/dashboard')->with([
+        if (!$admitted) {
+            return redirect(route('student.dashboard'))->with([
                 'flash' => 'You are not admitted.',
                 'key' => 'error'
             ]);

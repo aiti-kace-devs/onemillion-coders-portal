@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Models\Rule;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class RulePipelineCrudController extends CrudController
 {
@@ -74,6 +77,12 @@ class RulePipelineCrudController extends CrudController
         ]);
 
         CRUD::column('priority')->type('number');
+
+        CRUD::addColumn([
+            'name' => 'is_active',
+            'label' => 'Active',
+            'type' => 'boolean',
+        ]);
 
         CRUD::addColumn([
             'name' => 'value',
@@ -161,10 +170,18 @@ class RulePipelineCrudController extends CrudController
         ]);
 
         CRUD::addField([
+            'name' => 'is_active',
+            'label' => 'Is Active',
+            'type' => 'switch',
+            'default' => 1,
+            'wrapper' => ['class' => 'form-group col-md-6'],
+        ]);
+
+        CRUD::addField([
             'name' => 'value',
-            'label' => 'Parameters (JSON)',
-            'type' => 'textarea',
-            'hint' => 'Override default parameters. Leave empty for defaults. Example: {"pass_mark": 70, "gender": "female"}',
+            'label' => 'Rule Parameters',
+            'type' => 'rule_parameters',
+            'hint' => 'Adjust the parameters for this specific assignment.',
         ]);
     }
 
@@ -179,22 +196,24 @@ class RulePipelineCrudController extends CrudController
             $request->merge(['ruleable_id' => $request->course_select]);
         }
 
-        // Convert value to array if it's JSON string
-        if ($request->has('value') && is_string($request->value) && !empty($request->value)) {
-            try {
-                $decoded = json_decode($request->value, true);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    $request->merge(['value' => $decoded]);
-                }
-            } catch (\Exception $e) {
-                // Keep as is if not valid JSON
-            }
-        }
-
         $this->crud->setRequest($request);
-        $this->crud->unsetValidation();
 
-        return $this->traitStore();
+        return DB::transaction(function () use ($request) {
+            // Priority reordering logic
+            $priority = $request->priority;
+            $ruleableType = $request->ruleable_type;
+            $ruleableId = $request->ruleable_id;
+
+            if ($priority !== null) {
+                \App\Models\RuleAssignment::where('ruleable_type', $ruleableType)
+                    ->where('ruleable_id', $ruleableId)
+                    ->where('priority', '>=', $priority)
+                    ->increment('priority');
+            }
+
+            $this->crud->unsetValidation();
+            return $this->traitStore();
+        });
     }
 
     protected function setupUpdateOperation()
@@ -220,21 +239,61 @@ class RulePipelineCrudController extends CrudController
             $request->merge(['ruleable_id' => $request->course_select]);
         }
 
-        // Convert value to array if it's JSON string
-        if ($request->has('value') && is_string($request->value) && !empty($request->value)) {
-            try {
-                $decoded = json_decode($request->value, true);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    $request->merge(['value' => $decoded]);
-                }
-            } catch (\Exception $e) {
-                // Keep as is if not valid JSON
-            }
+        if ($request->has('value') && is_string($request->value)) {
+            $request->merge(['value' => json_decode($request->value, true)]);
         }
 
         $this->crud->setRequest($request);
-        $this->crud->unsetValidation();
 
-        return $this->traitUpdate();
+        return DB::transaction(function () use ($request) {
+            // Priority reordering logic (only if shifted)
+            $entry = $this->crud->getCurrentEntry();
+            if ($entry && $request->priority != $entry->priority) {
+                $priority = $request->priority;
+                $ruleableType = $request->ruleable_type;
+                $ruleableId = $request->ruleable_id;
+
+                \App\Models\RuleAssignment::where('ruleable_type', $ruleableType)
+                    ->where('ruleable_id', $ruleableId)
+                    ->where('id', '!=', $entry->id)
+                    ->where('priority', '>=', $priority)
+                    ->increment('priority');
+            }
+
+            $this->crud->unsetValidation();
+            return $this->traitUpdate();
+        });
+    }
+    /**
+     * Get default parameters for a rule (AJAX)
+     */
+    public function getRuleParameters(Request $request)
+    {
+        $validated = $request->validate([
+            'rule_id' => 'nullable|exists:rules,id',
+            'rule_class_path' => 'nullable|string',
+        ]);
+
+        $parameters = [];
+
+        if ($request->rule_id) {
+            $rule = \App\Models\Rule::find($request->rule_id);
+            $parameters = $rule ? $rule->default_parameters : [];
+        } elseif ($request->rule_class_path) {
+            // Try to find a rule with this class path to get its defaults
+            $rule = \App\Models\Rule::where('rule_class_path', $request->rule_class_path)->first();
+            if ($rule) {
+                $parameters = $rule->default_parameters;
+            } else {
+                // If not in DB, we could try instantiating the class if it exists and has a default_parameters property/method
+                // But for now, returning empty is safe.
+                $parameters = [];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'parameters' => $parameters ?? [],
+        ]);
     }
 }
