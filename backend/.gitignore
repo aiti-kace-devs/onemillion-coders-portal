@@ -21,3 +21,5 @@ storage/app/key.json
 /storage/debugbar
 composerauth.json
 auth.json
+public/vendor/runway/build/manifest.json
+public/vendor/statamic/cp/build/manifest.json

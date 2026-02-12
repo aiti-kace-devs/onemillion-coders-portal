@@ -84,6 +84,87 @@ trait UserFieldHelpers
 
     }
 
+    /**
+     * Setup show columns for Manage Student preview page with full student info and actions.
+     */
+    public function setupManageStudentShowColumns(): void
+    {
+        CRUD::column('name')->label('Name');
+        CRUD::column('email')->label('Email');
+        CRUD::column('age')->label('Age');
+        $this->addCourseField();
+        CRUD::addColumn([
+            'name' => 'admission_location',
+            'label' => 'Location',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $admission = $entry->admission;
+                return $admission?->location ?? '-';
+            },
+        ]);
+        CRUD::column('mobile_no')->label('Mobile Number');
+        CRUD::column('ghcard')->label('Ghana Card Number');
+        CRUD::addColumn([
+            'name' => 'session',
+            'label' => 'Session',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $admission = $entry->admission;
+                if (!$admission?->session) {
+                    return '-';
+                }
+                $courseSession = \App\Models\CourseSession::find($admission->session);
+                return $courseSession?->name ?? $admission->session;
+            },
+        ]);
+        CRUD::column('gender')->label('Gender');
+        CRUD::column('created_at')->label('Date Registered')->type('datetime');
+        $this->addConfirmedAdmissionColumn('Admitted');
+        CRUD::addColumn([
+            'name' => 'shortlist_display',
+            'label' => 'Shortlisted',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                return $entry->shortlist
+                    ? '<span class="badge bg-success">Yes</span>'
+                    : '<span class="badge bg-secondary">No</span>';
+            },
+            'escaped' => false,
+        ]);
+        CRUD::addColumn([
+            'name' => 'score',
+            'label' => 'Score',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $latestResult = $entry->examResults()->latest()->first();
+                if (!$latestResult) {
+                    return '-';
+                }
+                $total = $latestResult->yes_ans + $latestResult->no_ans;
+                $total = $total > 0 ? $total : 30;
+                return round(($latestResult->yes_ans / $total) * 100) . '%';
+            },
+        ]);
+        CRUD::addColumn([
+            'name' => 'exam_status',
+            'label' => 'Status',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $latestResult = $entry->examResults()->latest()->first();
+                if (!$latestResult) {
+                    return '<span class="badge bg-secondary">Not Taken</span>';
+                }
+                $exam = $latestResult->exam;
+                $passmark = $exam ? (int) $exam->passmark : 0;
+                $passed = $latestResult->yes_ans >= $passmark;
+                return $passed
+                    ? '<span class="badge bg-success">Pass</span>'
+                    : '<span class="badge bg-danger">Fail</span>';
+            },
+            'escaped' => false,
+        ]);
+    }
+
     public function setupProfileColumns()
     {
         // show bio, image, address

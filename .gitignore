@@ -36,3 +36,9 @@ yarn-error.log*
 # Lock files (optional - uncomment if needed)
 # package-lock.json
 # yarn.lock
+
+backend/storage/logs/laravel.log
+backend/resources/views/*
+
+backend/public/vendor/runway/build/*
+backend/public/vendor/statamic/pro/build/*

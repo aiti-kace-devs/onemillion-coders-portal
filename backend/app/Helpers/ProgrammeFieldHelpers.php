@@ -244,25 +244,65 @@ trait ProgrammeFieldHelpers
         $this->addOverviewField();
 
         // get the number of course matches
+        // $courseMatches = CourseMatch::all();
+        // $tagFieldNames = [];
+        // foreach ($courseMatches as $courseMatch) {
+        //     $name = 'course_match_' . $courseMatch->id;
+        //     $tagFieldNames[] = $name;
+        //     CRUD::addField([
+        //         'name' => $name,
+        //         'label' => $courseMatch->question,
+        //         'type'      => 'select2_multiple',
+        //         'entity' => 'tags',
+        //         'attribute' => 'answer',
+        //         'model' => CourseMatchOption::class,
+        //         'allows_null' => true,
+        //         'options' => function ($query) use ($courseMatch) {
+        //             return $query->where('course_match_id', $courseMatch->id)->get();
+        //         },
+        //         // 'wrapper' => ['class' => 'form-group col-6'],
+        //     ]);
+        // }
+
         $courseMatches = CourseMatch::all();
         $tagFieldNames = [];
+
+        $programme = $this->crud->getCurrentEntry(); // null on create, model on edit
+
         foreach ($courseMatches as $courseMatch) {
-            $name = 'course_match_' . $courseMatch->id;
-            $tagFieldNames[] = $name;
+
+            $fieldName = 'course_match_' . $courseMatch->id;
+            $tagFieldNames[] = $fieldName;
+
+            // 👇 Preload selected values (IMPORTANT PART)
+            $selectedValues = [];
+
+            if ($programme) {
+                $selectedValues = $programme->tags()
+                    ->where('course_match_id', $courseMatch->id)
+                    ->pluck('course_match_option_id')
+                    ->toArray();
+            }
+
             CRUD::addField([
-                'name' => $name,
-                'label' => $courseMatch->question,
-                'type'      => 'select2_multiple',
-                'entity' => 'tags',
-                'attribute' => 'answer',
-                'model' => CourseMatchOption::class,
+                'name'        => $fieldName,
+                'label'       => $courseMatch->question,
+                'type'        => 'select2_multiple',
+
+                'fake'        => true,   // prevent relationship call
+                'value'       => $selectedValues, // 👈 THIS FIXES DISPLAY
+
+                'model'       => CourseMatchOption::class,
+                'attribute'   => 'answer',
                 'allows_null' => true,
+
                 'options' => function ($query) use ($courseMatch) {
                     return $query->where('course_match_id', $courseMatch->id)->get();
                 },
-                // 'wrapper' => ['class' => 'form-group col-6'],
             ]);
         }
+
+
 
 
         $this->addFieldsToTab('Info', true, ['title', 'sub_title', 'image', 'start_date', 'end_date', 'duration', 'course_category_id', 'status', 'level', 'job_responsible']);

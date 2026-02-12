@@ -19,12 +19,14 @@ class GcsS3ServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        if (!config('app.use_basset_cloud', false)) {
+        if (false === config('app.use_basset_cloud')) {
             return;
         }
 
         // Check for required environment variables to prevent crash in environments where they are missing (like Docker)
-        if (!env('GOOGLE_CLOUD_STORAGE_BUCKET') || !env('GOOGLE_CLOUD_HMAC_ACCESS_ID') || !env('GOOGLE_CLOUD_HMAC_SECRET')) {
+        // convert envs to config calls
+
+        if (!config('services.google.storage_bucket') || !config('services.google.hmac_access_id') || !config('services.google.hmac_secret')) {
             return;
         }
 
@@ -32,13 +34,13 @@ class GcsS3ServiceProvider extends ServiceProvider
         config([
             'filesystems.disks.basset_cloud' => [
                 'driver' => 's3_gcs',
-                'key' => env('GOOGLE_CLOUD_HMAC_ACCESS_ID'),
-                'secret' => env('GOOGLE_CLOUD_HMAC_SECRET'),
+                'key' => config('services.google.hmac_access_id'),
+                'secret' => config('services.google.hmac_secret'),
                 'region' => 'auto',
-                'bucket' => env('GOOGLE_CLOUD_STORAGE_BUCKET'),
+                'bucket' => config('services.google.storage_bucket'),
                 'endpoint' =>  'https://storage.googleapis.com',
                 'use_path_style_endpoint' => true,
-                'url' => env('BASSET_CLOUD_URL', env('GOOGLE_CLOUD_STORAGE_API_URI')),
+                'url' => config('services.google.basset_cloud_url', config('services.google.storage_api_uri')),
             ],
         ]);
 

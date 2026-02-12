@@ -20,26 +20,34 @@ class FormSubmitedListener implements ShouldQueue
         //
     }
 
-    /**
-     * Handle the event.
-     */
+
     public function handle(FormSubmittedEvent $event): void
     {
-
         $mobileNumberField = $event->submissionData['phone_number_field'];
 
-        $student = [];
+        $fullName = trim(
+            ($event->submissionData['first-name'] ?? '') . ' ' .
+            ($event->submissionData['middle-name'] ?? '') . ' ' .
+            ($event->submissionData['last-name'] ?? '')
+        );
+        $fullName = preg_replace('/\s+/', ' ', $fullName); // remove extra spaces
 
-        $student['name'] = $event->submissionData['name'];
-        $student['email'] = $event->submissionData['email'];
-        $student['mobile_no'] = $event->submissionData[$mobileNumberField];
+        $student = [];
+        $student['name'] = $fullName; 
+        $student['first_name'] = $event->submissionData['first-name'] ?? null;
+        $student['middle_name'] = $event->submissionData['middle-name'] ?? null;
+        $student['last_name'] = $event->submissionData['last-name'] ?? null;
+        $student['email'] = $event->submissionData['email'] ?? null;
+        $student['mobile_no'] = $event->submissionData[$mobileNumberField] ?? null;
         $student['userId'] = Str::uuid()->toString();
-        $student['registered_course'] = $event->submissionData['course_id'];
-        $student['age'] = $event->submissionData['age'];
-        $student['gender'] = $event->submissionData['gender'];
+        $student['registered_course'] = $event->submissionData['course'] ?? null;
+        $student['age'] = $event->submissionData['age'] ?? null;
+        $student['gender'] = $event->submissionData['gender'] ?? null;
+        $student['ghcard'] = $event->submissionData['ghana-card-number'] ?? null;
         $student['exam_name'] = 'random';
         $student['form_response_id'] = $event->formResponseId;
 
         AddNewStudentsJob::dispatch([$student]);
     }
+
 }

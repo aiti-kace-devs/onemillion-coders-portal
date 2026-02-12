@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\Api\CentreController;
 use App\Http\Controllers\Admin\OexQuestionMasterCrudController;
 use App\Http\Controllers\Admin\StudentVerificationCrudController;
 use App\Http\Controllers\Admin\UserCrudController;
+use App\Http\Controllers\Admin\ManageStudentCrudController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UtilitiesController;
 // --------------------------
@@ -49,6 +50,7 @@ Route::group([
     Route::crud('programme', 'ProgrammeCrudController');
     Route::crud('sms-template', 'SmsTemplateCrudController');
     Route::crud('user', 'UserCrudController');
+    Route::crud('manage-student', 'ManageStudentCrudController');
 
     // Separate CRUD controllers for different student views
     Route::crud('students-with-admission', 'StudentsWithAdmissionCrudController');
