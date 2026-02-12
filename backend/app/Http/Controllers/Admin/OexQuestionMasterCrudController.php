@@ -84,9 +84,9 @@ class OexQuestionMasterCrudController extends CrudController
             'escaped' => false,
         ]);
         CRUD::addColumn([
-            'name' => 'programme_id',
-            'label' => 'Programme',
-            'entity' => 'programme',
+            'name' => 'programmes',
+            'label' => 'Programmes',
+            'entity' => 'programmes',
             'attribute' => 'title',
             'model' => "App\Models\Programme",
         ]);
@@ -132,12 +132,13 @@ class OexQuestionMasterCrudController extends CrudController
         ]);
 
         CRUD::addField([
-            'name' => 'programme_id',
-            'label' => 'Select Programme',
-            'type' => 'select',
-            'entity' => 'programme',
+            'name' => 'programmes',
+            'label' => 'Select Programmes',
+            'type' => 'select2_multiple',
+            'entity' => 'programmes',
             'attribute' => 'title',
             'model' => "App\Models\Programme",
+            'pivot' => true,
             'wrapper' => ['class' => 'form-group col-12'],
             'allows_null' => true,
         ]);
@@ -299,15 +300,16 @@ class OexQuestionMasterCrudController extends CrudController
             return back()->withInput();
         }
 
-        OexQuestionMaster::create([
+        $question = OexQuestionMaster::create([
             'exam_id' => $exam_id,
             'exam_set_id' => 1,
-            'programme_id' => $request->input('programme_id'),
             'questions' => $request->input('questions', ''),
             'options' => $transformed['options'],
             'ans' => $transformed['actualAns'],
             'status' => $request->input('status', false),
         ]);
+
+        $question->programmes()->sync($request->input('programmes', []));
 
         \Alert::success(trans('backpack::crud.insert_success'))->flash();
         return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);
@@ -326,12 +328,13 @@ class OexQuestionMasterCrudController extends CrudController
         $entry->update([
             'exam_id' => $exam_id,
             'exam_set_id' => 1,
-            'programme_id' => $request->input('programme_id', $entry->programme_id),
             'questions' => $request->input('questions', ''),
             'options' => $transformed['options'],
             'ans' => $transformed['actualAns'],
             'status' => $request->input('status', false),
         ]);
+
+        $entry->programmes()->sync($request->input('programmes', []));
 
         \Alert::success(trans('backpack::crud.update_success'))->flash();
         return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);

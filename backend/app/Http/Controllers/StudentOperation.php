@@ -185,7 +185,9 @@ class StudentOperation extends Controller
 
         $questionSetsQuery = Oex_question_master::select('exam_set_id')->distinct();
 
-        $questionSetsQuery->where('programme_id', $programme_id);
+        $questionSetsQuery->whereHas('programmes', function ($q) use ($programme_id) {
+            $q->where('programmes.id', $programme_id);
+        });
 
         $questionSets = $questionSetsQuery->pluck('exam_set_id');
 
