@@ -47,6 +47,7 @@ return [
         'hmac_secret' => env('GOOGLE_CLOUD_HMAC_SECRET'),
         'basset_cloud_url' => env('BASSET_CLOUD_URL'),
         'storage_api_uri' => env('GOOGLE_CLOUD_STORAGE_API_URI'),
-    ]
-
+        'use_gcs_fuse' => env('USE_GCS_FUSE', false),
+        'gcs_fuse_path' => env('GCS_FUSE_PATH', storage_path('app/public/basset')),
+    ],
 ];
