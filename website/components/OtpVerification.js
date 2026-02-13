@@ -57,6 +57,35 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken, e
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
   }, []);
 
+  // ── Polling for link-based verification ──────────
+  // Declared early so effects below can reference it in dependency arrays.
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }, []);
+
+  const startPolling = useCallback(
+    (emailAddr) => {
+      stopPolling();
+      pollingRef.current = setInterval(async () => {
+        try {
+          const res = await checkOtpStatus(emailAddr);
+          if (res?.verified) {
+            setOtpState("verified");
+            setVerifiedEmail(emailAddr);
+            onVerified(true);
+            stopPolling();
+          }
+        } catch {
+          // Silently continue polling
+        }
+      }, 4000); // Poll every 4 seconds
+    },
+    [onVerified, stopPolling]
+  );
+
   // ── Reset everything when email changes after verification ──
   useEffect(() => {
     if (verifiedEmail && email && email.toLowerCase().trim() !== verifiedEmail.toLowerCase().trim()) {
@@ -206,34 +235,6 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken, e
       }
     };
   }, [expiresIn, otpState]);
-
-  // ── Polling for link-based verification ──────────
-  const startPolling = useCallback(
-    (emailAddr) => {
-      stopPolling();
-      pollingRef.current = setInterval(async () => {
-        try {
-          const res = await checkOtpStatus(emailAddr);
-          if (res?.verified) {
-            setOtpState("verified");
-            setVerifiedEmail(emailAddr);
-            onVerified(true);
-            stopPolling();
-          }
-        } catch {
-          // Silently continue polling
-        }
-      }, 4000); // Poll every 4 seconds
-    },
-    [onVerified]
-  );
-
-  const stopPolling = () => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-  };
 
   // ── Send OTP ─────────────────────────────────────
   const handleSendOtp = async () => {
