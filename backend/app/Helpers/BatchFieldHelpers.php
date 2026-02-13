@@ -237,11 +237,20 @@ trait BatchFieldHelpers
      */
     protected function getCoursesActionsHtml($batch)
     {
+        $isEmpty = $batch->courses->isEmpty();
+
         $html = '<button type="button" class="btn btn-primary mb-3" onclick="openAddCourseModal()">
             <i class="la la-plus"></i> Add Course
-        </button>
+        </button>';
 
-        <table class="table table-bordered table-striped mt-3">
+        if (!$isEmpty) {
+            $html .= '<div class="mb-3">
+                <input type="search" id="batchCoursesSearch" class="form-control" placeholder="Search assigned courses..." autocomplete="off">
+            </div>';
+        }
+
+        $html .= '
+        <table id="batchCoursesTable" class="table table-bordered table-striped mt-3">
             <thead>
                 <tr>
                     <th>Course Name</th>
@@ -255,7 +264,7 @@ trait BatchFieldHelpers
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>';
+            <tbody id="batchCoursesTableBody">';
 
         $admittedCountsByCourseId = collect();
         $courseIds = $batch->courses->pluck('id')->filter()->values();
@@ -298,7 +307,7 @@ trait BatchFieldHelpers
                 <td>' . $statusToggle . '</td>
                 <td>
                     <a href="' . $showUrl . '" class="btn btn-sm btn-link">
-                        <i class="la la-eye"></i> View
+                        <i class="la la-eye"></i> View Metrics
                     </a>
                     <button
                         type="button"
@@ -337,8 +346,11 @@ trait BatchFieldHelpers
         }
 
         $html .= '</tbody></table>';
+
+        if (!$isEmpty) {
+            $html .= '<p id="batchCoursesNoResultsMsg" class="text-muted text-center py-4" style="display:none;">No matching courses found.</p>';
+        }
         
-        $isEmpty = $batch->courses->isEmpty();
         $html .= '<p id="batchCoursesEmptyMsg" class="text-muted text-center py-4" style="display:' . ($isEmpty ? 'block' : 'none') . ';">No courses assigned to this batch yet.</p>';
 
         return $html;

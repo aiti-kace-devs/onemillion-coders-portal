@@ -279,6 +279,48 @@
         clearIfAutoFilled(endInput);
     }
 
+    function applyBatchCoursesSearchFilter() {
+        const tbody = document.getElementById('batchCoursesTableBody');
+        if (!tbody) return;
+
+        const searchInput = document.getElementById('batchCoursesSearch');
+        const query = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
+        const noResultsMsg = document.getElementById('batchCoursesNoResultsMsg');
+
+        let visibleCount = 0;
+        Array.from(tbody.querySelectorAll('tr')).forEach((row) => {
+            const text = String(row.textContent || '').toLowerCase();
+            const match = !query || text.includes(query);
+            row.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
+        });
+
+        if (noResultsMsg) {
+            noResultsMsg.style.display = query && visibleCount === 0 ? 'block' : 'none';
+        }
+    }
+
+    function initBatchCoursesSearch() {
+        const searchInput = document.getElementById('batchCoursesSearch');
+        if (!searchInput) return;
+
+        const onChange = function () {
+            applyBatchCoursesSearchFilter();
+        };
+
+        searchInput.addEventListener('input', onChange);
+        // Fired when clearing a type="search" input in some browsers.
+        searchInput.addEventListener('search', onChange);
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                applyBatchCoursesSearchFilter();
+            }
+        });
+
+        applyBatchCoursesSearchFilter();
+    }
+
     function initSelect2InModal(modalElement, opts) {
         const jq = window.jQuery;
         if (!jq || !jq.fn || !jq.fn.select2) return;
@@ -827,12 +869,13 @@
                                 if (row) row.remove();
 
                                 if (tbody && tbody.querySelectorAll('tr').length === 0) {
-                                    const msg = document.getElementById('batchCoursesEmptyMsg');
-                                    if (msg) msg.style.display = 'block';
-                                }
-
-                                return;
+                                const msg = document.getElementById('batchCoursesEmptyMsg');
+                                if (msg) msg.style.display = 'block';
                             }
+
+                            applyBatchCoursesSearchFilter();
+                            return;
+                        }
 
                             if (window.swal) {
                                 window.swal({
@@ -864,6 +907,7 @@
                         },
                         complete: function () {
                             triggerEl.disabled = false;
+                            applyBatchCoursesSearchFilter();
                         }
                     });
                 };
@@ -907,6 +951,8 @@
                 submitEditCourse(editModalElement);
             });
         }
+
+        initBatchCoursesSearch();
     }
 
     if (document.readyState === 'loading') {
