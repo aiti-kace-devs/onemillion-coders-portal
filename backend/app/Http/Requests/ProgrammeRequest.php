@@ -26,19 +26,19 @@ class ProgrammeRequest extends FormRequest
     {
         return [
             'title' => 'required|string|max:255',
-            'sub_title' => 'sometimes|string|max:255',
-            'duration' => 'sometimes|string|max:255',
-            'start_date' => 'sometimes|date',
-            'end_date' => 'sometimes|date',
-            'description' => 'sometimes|string',
-            'overview' => 'sometimes|array',
-            'prerequisites' => 'sometimes|string',
-            'image' => 'sometimes|string',
-            'level' => 'sometimes|string',
-            'job_responsible' => 'sometimes|string',
-            'cover_image_id' => 'sometimes|string',
-            'course_category_id' => 'sometimes|string',
-            'status' => 'sometimes|boolean',
+            'sub_title' => 'nullable|string|max:255',
+            'duration' => 'nullable|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'description' => 'nullable|string',
+            'overview' => 'nullable|array',
+            'prerequisites' => 'nullable|string',
+            'image' => 'nullable|string',
+            'level' => 'nullable|string',
+            'job_responsible' => 'nullable|string',
+            'cover_image_id' => 'nullable|string',
+            'course_category_id' => 'nullable|string',
+            'status' => 'nullable|boolean',
         ];
     }
 

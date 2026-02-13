@@ -7,6 +7,7 @@ use App\Jobs\SendExamLoginCredentialsJob;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ExamLoginCredentials;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\InteractsWithQueue;
 
 class SendExamLoginCredentials implements ShouldQueue
@@ -30,6 +31,14 @@ class SendExamLoginCredentials implements ShouldQueue
     public function handle(UserRegistered $event)
     {
         // Mail::to($event->user->email)->send(new ExamLoginCredentials($event->user));
-        SendExamLoginCredentialsJob::dispatch($event->std, $event->plainPassword);
+        // SendExamLoginCredentialsJob::dispatch($event->std, $event->plainPassword);
+        // Listener
+        Log::info('SendExamLoginCredentials listener triggered', [
+            'user_id' => $event->std->id ?? null
+        ]);
+
+        // Dispatch job with user ID instead of full model
+        SendExamLoginCredentialsJob::dispatch($event->std->id, $event->plainPassword);
+
     }
 }

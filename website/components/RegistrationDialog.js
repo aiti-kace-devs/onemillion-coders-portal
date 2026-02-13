@@ -23,8 +23,12 @@ import {
 import Button from "./Button";
 import { getCourseImage } from "../utils/courseImages";
 import GhanaGradientText from "./GhanaGradients/GhanaGradientText";
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
+
 
 const RegistrationDialog = ({ isOpen, onClose, programme }) => {
+  const { executeRecaptcha} = useGoogleReCaptcha();
+  
   // State management
   const [step, setStep] = useState(1); // 1: location, 2: form, 3: success
   const [loading, setLoading] = useState(false);
@@ -196,6 +200,13 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
     const errors = validateForm();
     setFormErrors(errors);
 
+    if (!executeRecaptcha) {
+      setError("Failed to verify reCaptcha.");
+      return;
+    }
+
+    const token = await executeRecaptcha('register_form'); 
+
     if (Object.keys(errors).length > 0) {
       return;
     }
@@ -211,6 +222,7 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
         region_id: selectedRegion.id,
         centre_id: selectedCentre.id,
         form_uuid: formSchema.uuid,
+        recaptcha_token: token, 
       };
 
       await submitRegistration(submissionData);

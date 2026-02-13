@@ -36,6 +36,7 @@
         "@highlightjs/cdn-assets": "^11.11.1",
         "@lbgm/phone-number-input": "^1.1.6",
         "easymde": "^2.20.0",
-        "libphonenumber-js": "^1.12.6"
+        "libphonenumber-js": "^1.12.6",
+        "vue-recaptcha-v3": "^2.0.1"
     }
 }

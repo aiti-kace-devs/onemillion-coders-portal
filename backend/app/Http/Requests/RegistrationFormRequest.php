@@ -35,10 +35,10 @@ class RegistrationFormRequest extends FormRequest
             'schema.*.description' => 'nullable|string|max:500',
             'schema.*.rules' => 'nullable|string|max:1000',
             'schema.*.options' => 'nullable|string|max:1000',
-            'schema.*.validators' => 'required|array',
+            'schema.*.validators' => 'nullable|array',
             // 'schema.*.validators.required' => 'required|boolean',
             // 'schema.*.validators.unique' => 'required|boolean',
-            'schema.*.field_name' => 'required|string|max:100|regex:/^[a-z0-9\-_]+$/',
+            'schema.*.field_name' => 'nullable|string|max:100|regex:/^[a-z0-9\-_]+$/',
             'code' => 'required|string',
             // 'message_after_registration' => 'sometimes|string',
             // 'message_when_inactive' => 'sometimes|string',
@@ -95,7 +95,7 @@ class RegistrationFormRequest extends FormRequest
             $this->validateSchemaStructure($validator);
             $this->validateFieldNamesUniqueness($validator);
             $this->validateSelectOptions($validator);
-            $this->validateRulesFormat($validator);
+            // $this->validateRulesFormat($validator);
         });
     }
 
@@ -112,7 +112,7 @@ class RegistrationFormRequest extends FormRequest
         
         foreach ($schema as $index => $field) {
             // Validate select fields have options
-            if (isset($field['type']) && in_array($field['type'], ['select', 'select_course']) && empty($field['options'])) {
+            if (isset($field['type']) && in_array($field['type'], ['select']) && empty($field['options'])) {
                 $validator->errors()->add("schema.{$index}.options", "Select fields must have options defined.");
             }
 
@@ -171,24 +171,24 @@ class RegistrationFormRequest extends FormRequest
     /**
      * Validate rules format
      */
-    private function validateRulesFormat($validator)
-    {
-        if (!$this->has('schema') || !is_array($this->input('schema'))) {
-            return;
-        }
+    // private function validateRulesFormat($validator)
+    // {
+    //     if (!$this->has('schema') || !is_array($this->input('schema'))) {
+    //         return;
+    //     }
 
-        $schema = $this->input('schema');
+    //     $schema = $this->input('schema');
         
-        foreach ($schema as $index => $field) {
-            if (isset($field['rules']) && !empty($field['rules'])) {
-                $rules = explode('|', $field['rules']);
-                foreach ($rules as $rule) {
-                    $rule = trim($rule);
-                    if (!empty($rule) && !preg_match('/^[a-zA-Z0-9:,\s\-_\/\^\\\pL]+$/', $rule)) {
-                        $validator->errors()->add("schema.{$index}.rules", "Invalid rule format: {$rule}");
-                    }
-                }
-            }
-        }
-    }
+    //     foreach ($schema as $index => $field) {
+    //         if (isset($field['rules']) && !empty($field['rules'])) {
+    //             $rules = explode('|', $field['rules']);
+    //             foreach ($rules as $rule) {
+    //                 $rule = trim($rule);
+    //                 if (!empty($rule) && !preg_match('/^[a-zA-Z0-9:,\s\-_\/\^\\\pL]+$/', $rule)) {
+    //                     $validator->errors()->add("schema.{$index}.rules", "Invalid rule format: {$rule}");
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 }

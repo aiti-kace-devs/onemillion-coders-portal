@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Statamic\Facades\CP\Nav;
+use Illuminate\Support\Facades\Validator;
+use App\Rules\Recaptcha;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -99,6 +101,18 @@ class AppServiceProvider extends ServiceProvider
                 ->icon('terminal')
                 ->section('Tools')
                 ->url(route('backpack.dashboard'));
+        });
+
+        Validator::extend('recaptcha', function ($attribute, $value, $parameters, $validator) {
+            $rule = new Recaptcha;
+            $passed = true;
+
+            // Call the rule manually
+            $rule->validate($attribute, $value, function ($message) use (&$passed) {
+                $passed = false;
+            });
+
+            return $passed;
         });
     }
 }

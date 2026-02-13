@@ -13,7 +13,7 @@ trait AttendanceRecordTrait
 {
     public function recordAttendanceLogic($scannedToken)
     {
-        $secret = env('JWT_KEY');
+        $secret = config('app.jwt_token');
         if (!Token::validate($scannedToken, $secret) || !Token::validateExpiration($scannedToken)) {
             return ['status' => false, 'message' => 'Link expired'];
         }
