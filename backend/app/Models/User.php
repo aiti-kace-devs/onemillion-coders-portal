@@ -97,6 +97,14 @@ class User extends Authenticatable
         return $this->belongsTo(Course::class, 'registered_course', 'id');
     }
 
+    /**
+     * Get the user's admissions
+     */
+    public function admissions()
+    {
+        return $this->hasMany(UserAdmission::class, 'user_id', 'userId');
+    }
+
 
     public function isAdmitted()
     {
@@ -139,11 +147,6 @@ class User extends Authenticatable
     public function rejectedAdmissions()
     {
         return $this->hasMany(AdmissionRejection::class, 'user_id', 'userId');
-    }
-
-    public function admissions()
-    {
-        return $this->hasMany(UserAdmission::class, 'user_id', 'userId');
     }
 
     public function userExams()

@@ -188,7 +188,22 @@ class CourseCrudController extends CrudController
      */
     public function ajaxList()
     {
-        $courses = \App\Models\Course::select('id', 'course_name')->get();
+        $courses = \App\Models\Course::query()
+            ->with('centre')
+            ->whereHas('batch', function ($query) {
+                $query->where('completed', false)
+                    ->where('status', true);
+            })
+            ->orderBy('course_name')
+            ->get()
+            ->map(fn (\App\Models\Course $course) => [
+                'id' => $course->id,
+                // Backward compatible key used by existing JS.
+                'course_name' => $course->display_name,
+                'display_name' => $course->display_name,
+            ])
+            ->values();
+
         return response()->json($courses);
     }
 }

@@ -41,6 +41,16 @@ class Batch extends Model
             $batch->year = now()->year;
         });
 
+        static::saving(function ($batch) {
+            if ($batch->completed) {
+                $batch->status = false;
+            }
+        });
+
+        static::deleting(function ($batch) {
+            // Delete related course records (cascade)
+            $batch->courses()->delete();
+        });
     }
 
 

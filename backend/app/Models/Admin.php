@@ -83,7 +83,7 @@ class Admin extends Authenticatable
     public function assignedCourses()
     {
         return $this->belongsToMany(Course::class, 'admin_course', 'admin_id', 'course_id')
-            ->select(['courses.id', 'courses.course_name', 'courses.duration', 'courses.status'])
+            ->select(['courses.id', 'courses.course_name', 'courses.centre_id', 'courses.duration', 'courses.status'])
             ->withTimestamps();
     }
 

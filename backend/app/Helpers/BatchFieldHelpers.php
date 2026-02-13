@@ -36,9 +36,9 @@ trait BatchFieldHelpers
                 WHERE ua.batch_id = admission_batches.id
             ) AS admitted_students_count')
             ->selectRaw('(
-                SELECT COUNT(cb.course_id)
-                FROM course_batches cb
-                WHERE cb.batch_id = admission_batches.id
+                SELECT COUNT(c2.id)
+                FROM courses c2
+                WHERE c2.batch_id = admission_batches.id
             ) AS courses_count');
 
 
@@ -52,18 +52,9 @@ trait BatchFieldHelpers
             'label' => 'Courses',
             'type' => 'closure',
             'function' => function ($entry) {
-                $courseIds = $entry->courses()
-                    ->pluck('id')
-                    ->unique()
-                    ->values()
-                    ->toArray();
-
-                $courseCount = count($courseIds);
-
+                $courseCount = (int) ($entry->courses_count ?? 0);
                 if ($courseCount > 0) {
-                    $encodedIds = urlencode(json_encode($courseIds));
-                    $url = url("/admin/course-batch?batch_id={$entry->id}&course_id={$encodedIds}");
-
+                    $url = backpack_url('batch/' . $entry->id . '/edit');
                     return "<a href='{$url}'>{$courseCount}</a>";
                 }
 
@@ -95,6 +86,8 @@ trait BatchFieldHelpers
 
     protected function setupCommonBatchFields()
     {
+        $currentBatchId = optional($this->crud->getCurrentEntry())->id;
+
         CRUD::addField([
             'name' => 'title',
             'label' => 'Title',
@@ -131,6 +124,91 @@ trait BatchFieldHelpers
         $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status', 'General Info');
         $this->addIsActiveField([true  => 'True', false => 'False'], 'Completed', 'completed', 'General Info');
         $this->addFieldsToTab('General Info', true, ['title', 'description', 'start_date', 'end_date', 'status', 'completed']);
+
+        // Prompt user if they try to activate a batch while another batch is already active.
+        $activeBatches = Batch::query()
+            ->select(['id', 'title', 'start_date', 'end_date'])
+            ->where('status', true)
+            ->when($currentBatchId, fn ($q) => $q->where('id', '!=', $currentBatchId))
+            ->orderBy('start_date')
+            ->get()
+            ->map(fn ($b) => [
+                'id' => $b->id,
+                'title' => $b->title,
+                'start_date' => $b->start_date,
+                'end_date' => $b->end_date,
+            ])
+            ->values();
+
+        if ($activeBatches->isNotEmpty()) {
+            CRUD::addField([
+                'name' => 'active_batch_prompt',
+                'type' => 'custom_html',
+                'value' => '<script>
+(() => {
+  "use strict";
+
+  const activeBatches = ' . json_encode($activeBatches) . ';
+
+  function findConflict() {
+    return Array.isArray(activeBatches) && activeBatches.length ? activeBatches[0] : null;
+  }
+
+  function setStatusInactive(hiddenInput) {
+    if (!hiddenInput) return;
+    const checkbox = hiddenInput.nextElementSibling;
+    hiddenInput.value = 0;
+    if (checkbox && checkbox.type === "checkbox") {
+      checkbox.checked = false;
+    }
+  }
+
+  function showMessage(conflict) {
+    const range = (conflict && conflict.start_date && conflict.end_date) ? ` (${conflict.start_date} to ${conflict.end_date})` : "";
+    const text = `Another batch is already active: "${conflict.title}"${range}.\\n\\nOnly one active ongoing batch is allowed.`;
+    if (window.swal) {
+      window.swal("Active batch conflict", text, "warning");
+    } else {
+      alert(text);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const statusHidden = document.querySelector(\'input[type="hidden"][name="status"]\');
+    if (!statusHidden) return;
+
+    const maybeBlock = () => {
+      if (parseInt(statusHidden.value, 10) !== 1) return;
+      const completedHidden = document.querySelector(\'input[type="hidden"][name="completed"]\');
+      if (completedHidden && parseInt(completedHidden.value, 10) === 1) {
+        setStatusInactive(statusHidden);
+        const text = "A completed batch cannot be active.";
+        if (window.swal) {
+          window.swal("Invalid status", text, "warning");
+        } else {
+          alert(text);
+        }
+        return;
+      }
+      const conflict = findConflict();
+      if (!conflict) return;
+      setStatusInactive(statusHidden);
+      showMessage(conflict);
+    };
+
+    statusHidden.addEventListener("change", maybeBlock);
+
+    const startInput = document.querySelector(\'input[name="start_date"]\');
+    const endInput = document.querySelector(\'input[name="end_date"]\');
+    if (startInput) startInput.addEventListener("change", maybeBlock);
+    if (endInput) endInput.addEventListener("change", maybeBlock);
+  }, { once: true });
+})();
+</script>',
+                'wrapper' => false,
+                'tab' => 'General Info',
+            ]);
+        }
     }
 
 
@@ -141,14 +219,17 @@ trait BatchFieldHelpers
     protected function getAddCourseModalHtml($batch)
     {
         $branches = Branch::pluck('title', 'id')->toArray();
-        $programmes = Programme::pluck('title', 'id')->toArray();
+        $programmes = Programme::query()
+            ->select(['id', 'title', 'start_date', 'end_date'])
+            ->orderBy('title')
+            ->get();
         
         // Use the blade view for the modal
         return view('admin.batch.add_course_modal', [
             'batch' => $batch,
             'branches' => $branches,
             'programmes' => $programmes,
-        ])->render();
+        ]);
     }
 
     /**
@@ -176,9 +257,35 @@ trait BatchFieldHelpers
             </thead>
             <tbody>';
 
+        $admittedCountsByCourseId = collect();
+        $courseIds = $batch->courses->pluck('id')->filter()->values();
+        if ($courseIds->isNotEmpty()) {
+            $admittedCountsByCourseId = UserAdmission::query()
+                ->whereIn('course_id', $courseIds->all())
+                ->whereNotNull('confirmed')
+                ->selectRaw('course_id, COUNT(*) as admitted_count')
+                ->groupBy('course_id')
+                ->pluck('admitted_count', 'course_id');
+        }
+
         foreach ($batch->courses as $course) {
             $editUrl = backpack_url('course/' . $course->id . '/edit');
+            $showUrl = backpack_url('course-batch/' . $course->id . '/show');
             $deleteUrl = backpack_url('course/' . $course->id);
+            $updateUrl = backpack_url('batch/update-course/' . $course->id);
+            $branchId = $course->centre?->branch_id;
+            $admittedCount = (int) ($admittedCountsByCourseId[$course->id] ?? 0);
+
+            $statusToggle = view('admin.status_toggle.status_column', [
+                'entry' => $course,
+                'crud' => $this->crud ?? null,
+                'column' => [
+                    'name' => 'status',
+                    'toggle_url' => 'course-batch/{id}/toggle',
+                    'toggle_success_message' => 'Course status updated successfully.',
+                    'toggle_error_message' => 'Error updating course status.',
+                ],
+            ])->render();
             
             $html .= '<tr>
                 <td>' . e($course->course_name) . '</td>
@@ -188,29 +295,51 @@ trait BatchFieldHelpers
                 <td>' . e($course->duration) . '</td>
                 <td>' . e($course->start_date) . '</td>
                 <td>' . e($course->end_date) . '</td>
-                <td>' . e($course->status ?? '-') . '</td>
+                <td>' . $statusToggle . '</td>
                 <td>
-                    <a href="' . $editUrl . '" class="btn btn-sm btn-link">
+                    <a href="' . $showUrl . '" class="btn btn-sm btn-link">
                         <i class="la la-eye"></i> View
                     </a>
-                    <a href="' . $editUrl . '" class="btn btn-sm btn-link">
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-link"
+                        onclick="openEditCourseModal(this)"
+                        data-update-url="' . e($updateUrl) . '"
+                        data-course-id="' . e($course->id) . '"
+                        data-batch-id="' . e($batch->id) . '"
+                        data-branch-id="' . e($branchId) . '"
+                        data-centre-id="' . e($course->centre_id) . '"
+                        data-centre-title="' . e($course->centre?->title ?? '') . '"
+                        data-programme-id="' . e($course->programme_id) . '"
+                        data-duration="' . e($course->duration ?? '') . '"
+                        data-start-date="' . e($course->start_date ?? '') . '"
+                        data-end-date="' . e($course->end_date ?? '') . '"
+                        data-status="' . e($course->status ? 1 : 0) . '"
+                    >
                         <i class="la la-edit"></i> Edit
-                    </a>
-                    <form action="' . $deleteUrl . '" method="POST" style="display:inline;">
-                        ' . csrf_field() . method_field('DELETE') . '
-                        <button type="submit" class="btn btn-sm btn-link text-danger" onclick="return confirm(\'Are you sure you want to delete this course?\')">
+                    </button>
+                    ' . ($admittedCount > 0
+                        ? '<button type="button" class="btn btn-sm btn-link text-muted" disabled title="Cannot delete: ' . e((string) $admittedCount) . ' admitted student(s) already assigned.">
+                            <i class="la la-lock"></i> Delete
+                        </button>'
+                        : '<button
+                            type="button"
+                            class="btn btn-sm btn-link text-danger"
+                            onclick="confirmDeleteBatchCourse(this)"
+                            data-delete-url="' . e($deleteUrl) . '"
+                            data-course-name="' . e($course->course_name ?? 'this course') . '"
+                        >
                             <i class="la la-trash"></i> Delete
-                        </button>
-                    </form>
+                        </button>'
+                    ) . '
                 </td>
             </tr>';
         }
 
         $html .= '</tbody></table>';
         
-        if ($batch->courses->isEmpty()) {
-            $html .= '<p class="text-muted text-center py-4">No courses assigned to this batch yet.</p>';
-        }
+        $isEmpty = $batch->courses->isEmpty();
+        $html .= '<p id="batchCoursesEmptyMsg" class="text-muted text-center py-4" style="display:' . ($isEmpty ? 'block' : 'none') . ';">No courses assigned to this batch yet.</p>';
 
         return $html;
     }
@@ -235,6 +364,7 @@ trait BatchFieldHelpers
         $branchId = request()->input('branch_id');
         $centreIds = request()->input('centre_ids', []);
         $programmeIds = request()->input('programme_ids', []);
+        $duration = request()->input('duration');
         $startDate = request()->input('start_date');
         $endDate = request()->input('end_date');
 
@@ -246,24 +376,33 @@ trait BatchFieldHelpers
         }
 
         $createdCount = 0;
+        $programmesById = Programme::query()
+            ->whereIn('id', $programmeIds)
+            ->get(['id', 'start_date', 'end_date'])
+            ->keyBy('id');
 
         // Create a course for each combination of programme and centre
         foreach ($programmeIds as $programmeId) {
+            $programme = $programmesById->get($programmeId);
+            $programmeStartDate = $programme?->start_date;
+            $programmeEndDate = $programme?->end_date;
+
             foreach ($centreIds as $centreId) {
                 // Check if this combination already exists
                 $existingCourse = Course::where('centre_id', $centreId)
                     ->where('programme_id', $programmeId)
                     ->where('batch_id', $batch->id)
                     ->first();
-
+                
                 if (!$existingCourse) {
                     $course = Course::create([
                         'centre_id' => $centreId,
                         'programme_id' => $programmeId,
                         'course_name' => null, // Will be auto-generated by the booted observer
                         'location' => null, // Will be auto-generated by the booted observer
-                        'start_date' => $startDate ?: $batch->start_date,
-                        'end_date' => $endDate ?: $batch->end_date,
+                        'duration' => $duration,
+                        'start_date' => $startDate ?: ($programmeStartDate ?: $batch->start_date),
+                        'end_date' => $endDate ?: ($programmeEndDate ?: $batch->end_date),
                         'batch_id' => $batch->id,
                         'status' => true,
                     ]);
@@ -282,6 +421,62 @@ trait BatchFieldHelpers
                 ->back()
                 ->with('info', 'No new courses were added. All selected combinations already exist.');
         }
+    }
+
+    /**
+     * Update an existing course (from the batch edit page modal).
+     */
+    public function updateCourse($courseId)
+    {
+        // Check permissions
+        if (!backpack_user()->can('batch.update.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $data = request()->validate([
+            'batch_id' => 'required|integer|exists:admission_batches,id',
+            'centre_id' => 'required|integer|exists:centres,id',
+            'programme_id' => 'required|integer|exists:programmes,id',
+            'duration' => 'nullable|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'status' => 'nullable|boolean',
+        ]);
+
+        $batch = Batch::findOrFail($data['batch_id']);
+
+        $course = Course::where('id', $courseId)
+            ->where('batch_id', $batch->id)
+            ->firstOrFail();
+
+        // Prevent duplicates in the same batch
+        $duplicateExists = Course::where('batch_id', $batch->id)
+            ->where('centre_id', $data['centre_id'])
+            ->where('programme_id', $data['programme_id'])
+            ->where('id', '!=', $course->id)
+            ->exists();
+
+        if ($duplicateExists) {
+            return redirect()
+                ->back()
+                ->with('error', 'A course with the selected centre and programme already exists in this batch.');
+        }
+
+        $course->centre_id = $data['centre_id'];
+        $course->programme_id = $data['programme_id'];
+        $course->duration = $data['duration'] ?? $course->duration;
+        $course->start_date = $data['start_date'] ?: $course->start_date;
+        $course->end_date = $data['end_date'] ?: $course->end_date;
+
+        if (array_key_exists('status', $data)) {
+            $course->status = (bool) $data['status'];
+        }
+
+        $course->save();
+
+        return redirect()
+            ->back()
+            ->with('success', 'Course updated successfully.');
     }
 
 

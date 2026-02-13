@@ -81,7 +81,7 @@ CRUD::addField([
     'minimum_input_length' => 0,
     'wrapper' => ['class' => 'form-group col-6'],
     'model' => Centre::class,
-    'value' => $this->crud->getCurrentEntry()?->centre_id ?? null,
+    'value' => optional($this->crud->getCurrentEntry())->centre_id ?? null,
 ]);
 
 

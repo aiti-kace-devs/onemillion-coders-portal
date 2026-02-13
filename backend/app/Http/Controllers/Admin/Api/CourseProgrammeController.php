@@ -147,74 +147,49 @@ class CourseProgrammeController extends Controller
         {
             $today = Carbon::today();
 
-            // Base query for ongoing batches with course batches
-            $query = Batch::where('completed', false)
+            $batchQuery = Batch::where('completed', false)
                 ->where('status', true);
 
-            // Apply filters based on batch dates
             if ($request->has('filter')) {
                 $filter = $request->filter;
 
                 if ($filter === 'ongoing') {
-                    $query->where('start_date', '<=', $today)
+                    $batchQuery->where('start_date', '<=', $today)
                         ->where('end_date', '>=', $today);
                 }
 
                 if ($filter === 'upcoming') {
-                    $query->where('start_date', '>', $today);
+                    $batchQuery->where('start_date', '>', $today);
                 }
 
                 if ($filter === 'passed') {
-                    $query->where('end_date', '<', $today)
+                    $batchQuery->where('end_date', '<', $today)
                         ->orWhere('completed', true);
                 }
             }
 
-            // Get batches and flatten to unique programmes with their course batch info
-            $programmes = $query->with([
-                    'courseBatches.course.programme' => function ($q) {
-                        $q->with(['category', 'courseCertification', 'courseModules'])
-                            ->withCount('courseModules');
-                    }
-                ])
-                ->whereHas('courseBatches')
-                ->get()
-                ->flatMap(function ($batch) {
-                    return $batch->courseBatches->map(function ($cb) {
-                        $programme = $cb->course->programme ?? null;
+            $batchIds = $batchQuery->pluck('id');
 
-                        if (!$programme) {
-                            return null;
-                        }
+            $courses = Course::whereIn('batch_id', $batchIds)
+                ->with(['programme.category', 'programme.coverImage', 'programme.courseCertification', 'programme.courseModules'])
+                ->get();
 
-                        return [
-                            'id' => $programme->id,
-                            'title' => $programme->title,
-                            'description' => $programme->description,
-                            'course_category_id' => $programme->course_category_id,
-                            'cover_image_id' => $programme->cover_image_id,
-                            'sub_title' => $programme->sub_title,
-                            'level' => $programme->level,
-                            'job_responsible' => $programme->job_responsible,
-                            'image' => $programme->image,
-                            'overview' => $programme->overview,
-                            'prerequisites' => $programme->prerequisites,
-                            'course_modules_count' => $programme->course_modules_count,
-                            'duration' => $cb->duration,
-                            'start_date' => $cb->start_date,
-                            'end_date' => $cb->end_date,
-                            'status' => $cb->status ?? true,
-                            'created_at' => $cb->created_at,
-                            'updated_at' => $cb->updated_at,
-                            'category' => $programme->category,
-                            'course_certification' => $programme->courseCertification,
-                            'course_modules' => $programme->courseModules,
-                        ];
-                    });
-                })
-                ->filter()
-                ->unique('id')
-                ->values();
+            $programmes = $courses->map(function ($course) {
+                $programme = $course->programme;
+                if ($programme) {
+                    $programmeData = $programme->toArray();
+                    $programmeData['course_id'] = $course->id;
+                    $programmeData['centre_id'] = $course->centre_id;
+                    $programmeData['duration'] = $course->duration;
+                    $programmeData['start_date'] = $course->start_date;
+                    $programmeData['end_date'] = $course->end_date;
+                    $programmeData['status'] = $course->status ?? true;
+                    return $programmeData;
+                }
+                return null;
+            })->filter()->unique(function ($item) {
+                return $item['centre_id'] . '-' . $item['id'];
+            })->values();
 
             return response()->json([
                 'success' => true,
@@ -499,16 +474,35 @@ class CourseProgrammeController extends Controller
 
     public function programmesByCentre(Centre $centre)
     {
-        $programmes = Programme::whereHas('centre', function ($query) use ($centre) {
-            $query->where('centres.id', $centre->id);
-        })->with(['category', 'coverImage'])->get();
+        $today = Carbon::today();
+
+        $ongoingBatchIds = Batch::where('completed', false)
+            ->where('status', true)
+            ->where('start_date', '<=', $today)
+            ->where('end_date', '>=', $today)
+            ->pluck('id');
+
+        $courses = Course::where('centre_id', $centre->id)
+            ->whereIn('batch_id', $ongoingBatchIds)
+            ->with(['programme.category', 'programme.coverImage'])
+            ->get();
+
+        $programmes = $courses->map(function ($course) {
+            $programme = $course->programme;
+            if ($programme) {
+                $programmeData = $programme->toArray();
+                $programmeData['course_id'] = $course->id;
+                return $programmeData;
+            }
+            return null;
+        })->filter()->values();
 
         return response()->json([
+            'centre_id' => $centre->id,
             'centre' => $centre->title,
             'programmes' => $programmes,
         ]);
     }
-
 
 
         public function centresByBranch(Branch $branch)
@@ -523,3 +517,4 @@ class CourseProgrammeController extends Controller
 
 
 }
+

@@ -32,6 +32,15 @@ class Course extends Model
         return $this->belongsTo(Centre::class);
     }
 
+    /**
+     * Get the display name with centre for dropdowns
+     */
+    public function getDisplayNameAttribute()
+    {
+        $centreTitle = $this->centre?->title ?? 'Unknown Centre';
+        return $this->course_name ? "{$this->course_name} - {$centreTitle}" : $centreTitle;
+    }
+
     public function programme()
     {
         return $this->belongsTo(Programme::class);
@@ -84,6 +93,13 @@ class Course extends Model
 
     protected static function booted()
     {
+        static::deleting(function ($course) {
+            // Ensure dependent records are removed first (FK constraints are restrict in the DB).
+            $course->sessions()->delete();
+            $course->assignedAdmins()->detach();
+            $course->batches()->detach();
+        });
+
         static::saving(function ($course) {
             $durations = [
                 '1 Week' => 5,

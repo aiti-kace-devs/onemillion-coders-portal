@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\OexQuestionMasterCrudController;
 use App\Http\Controllers\Admin\StudentVerificationCrudController;
 use App\Http\Controllers\Admin\UserCrudController;
 use App\Http\Controllers\Admin\BatchCrudController;
+use App\Http\Controllers\Admin\CourseBatchCrudController;
 use App\Http\Controllers\Admin\ManageStudentCrudController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UtilitiesController;
@@ -40,6 +41,9 @@ Route::group([
     Route::crud('course', 'CourseCrudController');
     Route::crud('batch', 'BatchCrudController');
     Route::post('batch/add-courses/{batchId}', [BatchCrudController::class, 'addCourses']);
+    Route::post('batch/update-course/{courseId}', [BatchCrudController::class, 'updateCourse']);
+    Route::post('batch/{id}/toggle', [BatchCrudController::class, 'toggleStatus']);
+    Route::post('batch/{id}/toggle-completed', [BatchCrudController::class, 'toggleCompleted']);
     Route::crud('course-session', 'CourseSessionCrudController');
     Route::crud('email-template', 'EmailTemplateCrudController');
     Route::crud('form', 'FormCrudController');
@@ -129,6 +133,9 @@ Route::group([
     Route::post('utilities/run', [UtilitiesController::class, 'run'])->name('admin.utilities.run');
 
     // Route::crud('media', 'MediaCrudController');
+    Route::post('course-batch/{id}/toggle', [CourseBatchCrudController::class, 'toggleStatus']);
+    Route::get('course-batch/{id}/admitted-students-data', [CourseBatchCrudController::class, 'admittedStudentsData'])->name('course-batch.admitted-students-data');
+    Route::get('course-batch/{id}/attendance-history-data', [CourseBatchCrudController::class, 'attendanceHistoryData'])->name('course-batch.attendance-history-data');
     Route::crud('course-batch', 'CourseBatchCrudController');
 }); // this should be the absolute last line of this file
 

@@ -126,6 +126,10 @@ class ManageStudentCrudController extends CrudController
 
         // Add export options
         CRUD::enableExportButtons();
+
+        // List page should only show "Preview" (remove Edit/Delete buttons).
+        CRUD::removeButton('line', 'update');
+        CRUD::removeButton('line', 'delete');
     }
 
     protected function setupShowOperation()
@@ -140,7 +144,18 @@ class ManageStudentCrudController extends CrudController
         CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
         
         // Share courses and sessions with the view for the admit modal
-        $courses = \App\Models\Course::pluck('course_name', 'id');
+        $coursesQuery = \App\Models\Course::query()
+            ->with('centre')
+            ->whereHas('batch', function ($query) {
+                $query->where('completed', false)
+                    ->where('status', true);
+            })
+            ->orderBy('course_name');
+
+        $courses = $coursesQuery
+            ->get()
+            ->mapWithKeys(fn (\App\Models\Course $course) => [$course->id => $course->display_name]);
+
         $sessions = \App\Models\CourseSession::all();
         \Illuminate\Support\Facades\View::share([
             'courses' => $courses,
@@ -543,24 +558,25 @@ class ManageStudentCrudController extends CrudController
     }
 
     /**
-     * Get courses list for dropdown (filtered by running batches)
+     * Get courses list for dropdown (filtered by active batches)
      */
     public function getCoursesAjax()
     {
-        // Get courses from running batches (where batch end_date >= today)
-        // Using the direct batch_id relationship on Course model
-        $runningBatchCourseIds = Course::whereHas('batch', function ($query) {
-                $query->where('end_date', '>=', now()->toDateString())
-                      ->orWhereNull('end_date');
+        $courses = Course::query()
+            ->with('centre')
+            ->whereHas('batch', function ($query) {
+                $query->where('completed', false)
+                    ->where('status', true);
             })
-            ->pluck('id')
-            ->unique()
-            ->toArray();
-        
-        $courses = Course::whereIn('id', $runningBatchCourseIds)
-            ->select('id', 'course_name')
-            ->get();
-            
+            ->orderBy('course_name')
+            ->get()
+            ->map(fn (Course $course) => [
+                'id' => $course->id,
+                'course_name' => $course->course_name,
+                'display_name' => $course->display_name,
+            ])
+            ->values();
+
         return response()->json($courses);
     }
 
