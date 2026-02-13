@@ -250,6 +250,65 @@ services:
     networks:
       - omcp-network
 
+  frappe-web:
+    profiles: ["backend"]
+    build:
+      context: ./frappe-lms
+      dockerfile: Dockerfile
+    container_name: omcp_frappe_web
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      - MARIADB_HOST=db
+      - REDIS_CACHE=redis:6379/1
+      - REDIS_QUEUE=redis:6379/2
+      - REDIS_SOCKETIO=redis:6379/3
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frappe.rule=Host(`learn.${APP_DOMAIN:-omcp.localhost}`)"
+      - "traefik.http.routers.frappe.entrypoints=web"
+      - "traefik.http.services.frappe.loadbalancer.server.port=8000"
+    volumes:
+      - ./frappe-lms/sites:/home/frappe/frappe-bench/sites
+    networks:
+      - omcp-network
+
+  frappe-worker:
+    profiles: ["backend"]
+    build:
+      context: ./frappe-lms
+      dockerfile: Dockerfile
+    container_name: omcp_frappe_worker
+    command: bench worker
+    restart: unless-stopped
+    depends_on:
+      - frappe-web
+    volumes:
+      - ./frappe-lms/sites:/home/frappe/frappe-bench/sites
+    networks:
+      - omcp-network
+
+  frappe-scheduler:
+    profiles: ["backend"]
+    build:
+      context: ./frappe-lms
+      dockerfile: Dockerfile
+    container_name: omcp_frappe_scheduler
+    command: bench schedule
+    restart: unless-stopped
+    depends_on:
+      - frappe-web
+    volumes:
+      - ./frappe-lms/sites:/home/frappe/frappe-bench/sites
+    networks:
+      - omcp-network
+
 networks:
   omcp-network:
     driver: bridge

@@ -1,0 +1,11 @@
+**/node_modules
+**/__pycache__
+*.pyc
+logs
+sites/*
+!sites/apps.txt
+!sites/apps.json
+config
+env
+.git
+.DS_Store

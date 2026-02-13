@@ -1,0 +1,13 @@
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+env/
+sites/assets/*
+sites/lms.localhost
+sites/learning.test
+sites/common_site_config.json
+logs/*
+config/*
+node_modules/
+.DS_Store
