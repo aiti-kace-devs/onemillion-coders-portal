@@ -27,6 +27,13 @@ class AppConfigServiceProvider extends ServiceProvider
         defined('SEND_EMAIL_AFTER_ADMISSION_CONFIRMATION') or define('SEND_EMAIL_AFTER_ADMISSION_CONFIRMATION', 'SEND_EMAIL_AFTER_ADMISSION_CONFIRMATION');
         defined('SEND_SMS_AFTER_ADMISSION_CONFIRMATION') or define('SEND_SMS_AFTER_ADMISSION_CONFIRMATION', 'SEND_SMS_AFTER_ADMISSION_CONFIRMATION');
         defined('SHOW_RESULTS_TO_STUDENTS') or define('SHOW_RESULTS_TO_STUDENTS', 'SHOW_RESULTS_TO_STUDENTS');
+
+        // OTP verification settings (admin-configurable)
+        defined('OTP_TTL') or define('OTP_TTL', 'OTP_TTL');
+        defined('OTP_VERIFIED_TTL') or define('OTP_VERIFIED_TTL', 'OTP_VERIFIED_TTL');
+        defined('OTP_MAX_REQUESTS') or define('OTP_MAX_REQUESTS', 'OTP_MAX_REQUESTS');
+        defined('OTP_REQUEST_WINDOW') or define('OTP_REQUEST_WINDOW', 'OTP_REQUEST_WINDOW');
+        defined('OTP_MAX_ATTEMPTS') or define('OTP_MAX_ATTEMPTS', 'OTP_MAX_ATTEMPTS');
     }
 
     /**

@@ -259,7 +259,7 @@ export const getRegistrationForm = async () => {
  */
 export const submitRegistration = async (formData) => {
   try {
-    const response = await apiRequest("/register", {
+    const response = await apiRequest("/add-student", {
       method: 'POST',
       data: formData
     });
@@ -288,6 +288,24 @@ export const getCentreProgrammes = async (centreId) => {
 // ──────────────────────────────────────────────
 // OTP Verification API
 // ──────────────────────────────────────────────
+
+/**
+ * Real-time email availability check.
+ * Call this (debounced) as the user types their email to provide instant feedback.
+ *
+ * @param {string} email
+ * @returns {Promise<Object>} - { success, available, reason?, message }
+ *   reason is one of: "registered" | "otp_active" | null (when available)
+ */
+export const checkEmailAvailability = async (email) => {
+  try {
+    const response = await apiRequest(`/otp/check-email?email=${encodeURIComponent(email)}`);
+    return response;
+  } catch (error) {
+    console.error("Error checking email availability:", error);
+    throw error;
+  }
+};
 
 /**
  * Send an OTP code to the user's email (and optionally associate a phone number).
