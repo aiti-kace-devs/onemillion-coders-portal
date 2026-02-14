@@ -90,7 +90,6 @@
                 ->filter()
                 ->unique();
 
-            // Treat any attendance record as a "present day" since missing days imply absence in your workflow.
             $totalSessions = $attendanceDates->count();
             if ($totalCourseDays > 0) {
                 $totalSessions = min($totalSessions, $totalCourseDays);
@@ -977,7 +976,6 @@
                         });
                     });
 
-                    // Cleanup stuck backdrop on modal hide (Bootstrap 4)
                     const jq = window.jQuery;
                     if (jq && jq.fn && jq.fn.modal) {
                         jq('#admitModal, #chooseSessionModal').on('hidden.bs.modal', cleanupModalBackdrops);

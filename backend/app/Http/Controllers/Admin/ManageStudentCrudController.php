@@ -10,8 +10,8 @@ use App\Http\Requests\ChooseSessionRequest;
 use App\Models\Course;
 use App\Models\User;
 use App\Models\CourseSession;
-use App\Models\CourseBatch;
-use App\Models\Batch;
+use App\Models\OexExamMaster;
+use App\Models\UserAdmission;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
@@ -85,7 +85,6 @@ class ManageStudentCrudController extends CrudController
     {
 
         WidgetHelper::userStatisticsWidget();
-        // Check permissions
         if (!backpack_user()->can('student.read.all')) {
             abort(403, 'Unauthorized action.');
         }
@@ -95,7 +94,6 @@ class ManageStudentCrudController extends CrudController
         $this->crud->setEntityNameStrings('manage student', 'manage students');
         $this->setupFilter();
 
-        // Ensure we load the fields needed for relationships & columns
         $this->crud->query->select([
             'id',
             'userId',
@@ -124,27 +122,21 @@ class ManageStudentCrudController extends CrudController
 
         CRUD::enableBulkActions();
 
-        // Add export options
         CRUD::enableExportButtons();
 
-        // List page should only show "Preview" (remove Edit/Delete buttons).
-        CRUD::removeButton('line', 'update');
-        CRUD::removeButton('line', 'delete');
+        CRUD::removeButton('update', 'line');
+        CRUD::removeButton('delete', 'line');
     }
 
     protected function setupShowOperation()
     {
-        // Don't call setupManageStudentShowColumns() - we use custom view instead
         $this->crud->set('show.setFromDb', false);
         
-        // Set custom show view
         $this->crud->setShowView('vendor.backpack.crud.manage_student_show');
 
-        // Add action buttons for the preview page
         CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
         
-        // Share courses and sessions with the view for the admit modal
-        $coursesQuery = \App\Models\Course::query()
+        $coursesQuery = Course::query()
             ->with('centre')
             ->whereHas('batch', function ($query) {
                 $query->where('completed', false)
@@ -154,9 +146,9 @@ class ManageStudentCrudController extends CrudController
 
         $courses = $coursesQuery
             ->get()
-            ->mapWithKeys(fn (\App\Models\Course $course) => [$course->id => $course->display_name]);
+            ->mapWithKeys(fn (Course $course) => [$course->id => $course->display_name]);
 
-        $sessions = \App\Models\CourseSession::all();
+        $sessions = CourseSession::all();
         \Illuminate\Support\Facades\View::share([
             'courses' => $courses,
             'sessions' => $sessions,
@@ -343,114 +335,18 @@ class ManageStudentCrudController extends CrudController
         $this->traitAdmitStudent($request);
     }
 
-    /**
-     * Admit shortlisted students (bulk or single) via AJAX for Backpack Shortlist Actions.
-     */
-    // public function admitShortlistedStudents(AdmitShortlistedStudentsRequest $request)
-    // {
-    //     $validated = $request->validated();
 
-    //     // If admit_all is set, admit all shortlisted students
-    //     if ($request->input('admit_all')) {
-    //         $course = Course::find($validated['course_id']);
-    //         $session = CourseSession::find($validated['session_id'] ?? '');
-    //         if ($session && $session->course_id != $course->id) {
-    //             return response()->json(
-    //                 [
-    //                     'success' => false,
-    //                     'message' => 'Session not valid for selected course',
-    //                 ],
-    //                 422,
-    //             );
-    //         }
-    //         $message = 'All shortlisted students admitted successfully';
-    //         $admittedCount = 0;
-    //         try {
-    //             $users = User::where('shortlist', 1)->get();
-    //             foreach ($users as $user) {
-    //                 CreateStudentAdmissionJob::dispatch($user, $course, $session);
-    //                 $admittedCount++;
-    //             }
-    //             return response()->json([
-    //                 'success' => true,
-    //                 'message' => $message,
-    //                 'admitted_count' => $admittedCount,
-    //             ]);
-    //         } catch (\Exception $e) {
-    //             return response()->json(
-    //                 [
-    //                     'success' => false,
-    //                     'message' => 'Failed to admit students: ' . $e->getMessage(),
-    //                 ],
-    //                 500,
-    //             );
-    //         }
-    //     }
-
-    //     $course = Course::find($validated['course_id']);
-    //     $session = CourseSession::find($validated['session_id'] ?? '');
-    //     $change = ($validated['change'] ?? false) == 'true';
-
-    //     if ($session && $session->course_id != $course->id) {
-    //         return response()->json(
-    //             [
-    //                 'success' => false,
-    //                 'message' => 'Session not valid for selected course',
-    //             ],
-    //             422,
-    //         );
-    //     }
-    //     $message = 'Student(s) admitted successfully';
-    //     $admittedCount = 0;
-    //     try {
-    //         if ($validated['user_id'] ?? false) {
-    //             $user_id = $validated['user_id'];
-    //             $user = User::where('userId', $user_id)->first();
-    //             if ($user) {
-    //                 CreateStudentAdmissionJob::dispatch($user, $course, $session);
-    //                 $oldAdmission = UserAdmission::where('user_id', $user_id)->first();
-    //                 if ($oldAdmission && $change) {
-    //                     $message = 'Student admission changed successfully';
-    //                 }
-    //                 $admittedCount = 1;
-    //             }
-    //         } elseif (count($validated['user_ids'] ?? []) > 0) {
-    //             $user_ids = $validated['user_ids'];
-    //             foreach ($user_ids as $user_id) {
-    //                 $user = User::where('userId', $user_id)->first();
-    //                 if ($user) {
-    //                     CreateStudentAdmissionJob::dispatch($user, $course, $session);
-    //                     $admittedCount++;
-    //                 }
-    //             }
-    //         }
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => $message,
-    //             'admitted_count' => $admittedCount,
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         return response()->json(
-    //             [
-    //                 'success' => false,
-    //                 'message' => 'Failed to admit students: ' . $e->getMessage(),
-    //             ],
-    //             500,
-    //         );
-    //     }
-    // }
 
     /**
      * Show the exam result for a student (Backpack admin panel)
      */
     public function viewResult($id)
     {
-        $student = \App\Models\User::find($id);
+        $student = User::find($id);
         if (!$student) {
             return back()->with(['flash' => 'Student not found.', 'key' => 'error']);
         }
 
-        // Get the latest exam result for the student
         $latestResult = $student->examResults()->latest()->first();
         if (!$latestResult) {
             return back()->with(['flash' => 'No exam results found for this student.', 'key' => 'error']);
@@ -475,11 +371,11 @@ class ManageStudentCrudController extends CrudController
      */
     public function resetResult($exam_id, $user_id)
     {
-        $user = \App\Models\User::findOrFail($user_id);
+        $user = User::findOrFail($user_id);
         if (!$user) {
             return back()->with(['flash' => 'Student not found.', 'key' => 'error']);
         }
-        $exam = \App\Models\OexExamMaster::find($exam_id);
+        $exam = OexExamMaster::find($exam_id);
         if (!$exam) {
             return back()->with(['flash' => 'Exam not found.', 'key' => 'error']);
         }
