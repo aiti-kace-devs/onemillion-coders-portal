@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Helpers\MailerHelper;
 use App\Http\Controllers\Controller;
-use App\Jobs\SendSmsJob;
 use App\Mail\OtpVerificationMail;
 use App\Models\EmailTemplate;
 use App\Models\User;
@@ -12,10 +11,8 @@ use App\Rules\Recaptcha;
 use App\Services\OtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 
 class OtpController extends Controller
@@ -71,11 +68,8 @@ class OtpController extends Controller
     /**
      * Send an OTP code to the user's email address.
      *
-     * The email always contains the OTP code directly (so the user can enter it
-     * manually, e.g. if their phone is dead).
-     *
-     * If a phone number is also provided, clicking the verification link in the
-     * email will additionally trigger an SMS with the SAME OTP code to that phone.
+     * The email contains the OTP code which the user enters in the
+     * registration form to prove ownership of the email address.
      *
      * Security checks before sending:
      *  1. Email not already registered (users table)
@@ -108,7 +102,6 @@ class OtpController extends Controller
         }
 
         $email = strtolower(trim($request->input('email')));
-        $phone = $request->input('phone') ? trim($request->input('phone')) : null;
 
         // --- Check 1: Email already registered ---
         if (User::where('email', $email)->exists()) {
@@ -151,44 +144,30 @@ class OtpController extends Controller
         // --- Generate and store OTP (hashed, scoped to this email) ---
         // This also creates/updates the persistent lifecycle row in otp_verified_emails
         $otpCode = $this->otpService->generate();
-        $this->otpService->store($email, $otpCode, $phone);
+        $this->otpService->store($email, $otpCode);
 
         $otpMinutes = $this->otpService->otpTtlMinutes();
-
-        // --- Build a signed verification URL (tamper-proof, expires with OTP) ---
-        $verificationUrl = URL::temporarySignedRoute(
-            'otp.verify.link',
-            now()->addMinutes($otpMinutes),
-            [
-                'email' => $email,
-                'token' => Crypt::encryptString($otpCode),
-            ]
-        );
-
-        $hasPhone = !empty($phone);
         $appName = config('app.name', 'One Million Coders');
 
         // --- Send the email ---
+        // Extend execution time for the SMTP send. Gmail SMTP can be slow
+        // (30-60 s) under load, and the default max_execution_time (30 s)
+        // causes a fatal PHP error that crashes artisan serve.
+        $previousTimeLimit = ini_get('max_execution_time');
+        set_time_limit(120);
+
         // Prefer admin-configured template (OTP_VERIFICATION_EMAIL) if exists; else use OtpVerificationMail.
         try {
             $template = EmailTemplate::where('name', OTP_VERIFICATION_EMAIL)->first();
             if ($template) {
-                $instructionText = $hasPhone
-                    ? 'Click the button below to verify your email and receive this same code via SMS on your phone. If your phone is unavailable, enter the code above in the registration form.'
-                    : 'Enter this code in the registration form, or click the button below to verify instantly.';
-                $buttonText = $hasPhone ? 'Verify Email & Send SMS' : 'Verify My Email';
-
                 $sent = MailerHelper::sendTemplateEmail(
                     OTP_VERIFICATION_EMAIL,
                     $email,
                     [
                         'otpCode'          => $otpCode,
-                        'verificationUrl'  => $verificationUrl,
                         'recipientEmail'   => $email,
                         'expiresInMinutes' => $otpMinutes,
                         'appName'          => $appName,
-                        'instructionText'  => $instructionText,
-                        'buttonText'       => $buttonText,
                     ],
                     "Your Verification Code — {$appName}",
                     false
@@ -198,10 +177,12 @@ class OtpController extends Controller
                 }
             } else {
                 Mail::to($email)->send(
-                    new OtpVerificationMail($otpCode, $verificationUrl, $email, $otpMinutes, $hasPhone)
+                    new OtpVerificationMail($otpCode, $email, $otpMinutes)
                 );
             }
         } catch (\Throwable $e) {
+            set_time_limit((int) $previousTimeLimit ?: 30);
+
             Log::error('OTP email sending failed', [
                 'email' => $email,
                 'error' => $e->getMessage(),
@@ -213,13 +194,14 @@ class OtpController extends Controller
             ], 500);
         }
 
+        set_time_limit((int) $previousTimeLimit ?: 30);
+
         $remainingTtl = $this->otpService->getRemainingTtl($email);
 
         return response()->json([
             'success'    => true,
             'message'    => 'Verification code sent to your email address.',
             'expires_in' => $remainingTtl,
-            'has_phone'  => $hasPhone,
         ]);
     }
 
@@ -263,73 +245,7 @@ class OtpController extends Controller
     }
 
     /**
-     * Verify via email link click (signed URL).
-     *
-     * When the user clicks the link in their email:
-     *  1. The email address is marked as verified in the persistent database
-     *     (otp_verified_emails table).
-     *  2. If a phone number was associated, the SAME OTP code (decrypted from
-     *     the URL token) is sent to that phone via SMS.
-     *
-     * GET /api/otp/verify-via-link (signed)
-     */
-    public function verifyViaLink(Request $request)
-    {
-        // Validate the signed URL — prevents tampering
-        if (!$request->hasValidSignature()) {
-            abort(403, 'This verification link is invalid or has expired.');
-        }
-
-        $email = strtolower(trim($request->query('email', '')));
-        $encryptedToken = $request->query('token', '');
-
-        if (empty($email)) {
-            abort(400, 'Missing email parameter.');
-        }
-
-        // Mark as verified in persistent database (otp_verified_emails table).
-        // If no lifecycle row exists (OTP was never sent), abort — the link is invalid.
-        if (!$this->otpService->markVerified($email)) {
-            abort(400, 'Verification failed. No active OTP session was found for this email.');
-        }
-
-        // Check if there's an associated phone number — if so, send the SAME OTP via SMS
-        $smsSent = false;
-        $phone = $this->otpService->getAssociatedPhone($email);
-
-        if ($phone && $encryptedToken) {
-            try {
-                // Decrypt the SAME OTP that was in the email — no new code generated
-                $otpCode = Crypt::decryptString($encryptedToken);
-
-                $otpMinutes = $this->otpService->otpTtlMinutes();
-                $smsMessage = 'Your ' . config('app.name', 'One Million Coders')
-                    . ' verification code is: ' . $otpCode
-                    . '. This code expires in ' . $otpMinutes . ' minutes. Do not share it with anyone.';
-
-                SendSmsJob::dispatch([$phone], $smsMessage);
-                $smsSent = true;
-            } catch (\Throwable $e) {
-                Log::warning('OTP SMS dispatch failed after email link verification', [
-                    'email' => $email,
-                    'phone' => $phone,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        // Clean up the OTP code data (verified status remains)
-        $this->otpService->invalidate($email);
-
-        // Return a nice HTML page
-        return response()->view('emails.otp-verified-success', [
-            'email'   => $email,
-            'smsSent' => $smsSent,
-        ]);
-    }
-
-    /**
-     * Check if an email has been OTP-verified (polling endpoint for frontend).
+     * Check if an email has been OTP-verified.
      *
      * GET /api/otp/status?email=...
      */

@@ -18,8 +18,6 @@ class OtpService
     private const HASH_SUFFIX = ':hash';
     private const ATTEMPTS_SUFFIX = ':attempts';
     private const REQUEST_COUNT_SUFFIX = ':requests';
-    private const PHONE_SUFFIX = ':phone';
-
     /** Defaults used when AppConfig is not set */
     private const DEFAULT_OTP_TTL = 600;
     private const DEFAULT_VERIFIED_TTL = 1800;
@@ -76,7 +74,7 @@ class OtpService
      * Store a new OTP for the given identifier (email).
      *
      * Writes to TWO stores:
-     *  1. Cache (transient) — hashed OTP, attempt counter, phone, rate-limit counter
+     *  1. Cache (transient) — hashed OTP, attempt counter, rate-limit counter
      *  2. otp_verified_emails (persistent) — lifecycle row created at send-time
      *     with otp_code_hash, expires_at, verified_at=null, used_at=null
      *
@@ -85,7 +83,7 @@ class OtpService
      *  - An audit trail (otp_code_hash proves the row came from a legitimate send)
      *  - A verification state tracker independent of cache eviction
      */
-    public function store(string $identifier, string $otp, ?string $phone = null): void
+    public function store(string $identifier, string $otp): void
     {
         $email = $this->normalizeEmail($identifier);
         $key = $this->key($identifier);
@@ -100,12 +98,6 @@ class OtpService
 
         // Reset attempt counter
         Cache::put($key . self::ATTEMPTS_SUFFIX, 0, $ttl);
-
-        if ($phone) {
-            Cache::put($key . self::PHONE_SUFFIX, $phone, $ttl);
-        } else {
-            Cache::forget($key . self::PHONE_SUFFIX);
-        }
 
         // Rate-limit: increment request count (sliding window)
         $requestKey = $key . self::REQUEST_COUNT_SUFFIX;
@@ -340,18 +332,25 @@ class OtpService
     /**
      * Opportunistic purge of expired OTP records.
      *
-     * Deletes rows where:
-     *  - `used_at IS NULL` AND `expires_at < NOW()` (expired, never consumed)
+     * Deletes rows where BOTH conditions hold:
+     *  - `used_at IS NULL` (not consumed by registration)
+     *  - `expires_at < NOW()` (OTP code has expired)
+     *  - `verified_at IS NULL` (never verified — abandoned OTP flow)
+     *
+     * IMPORTANT: Records where verified_at IS NOT NULL are EXCLUDED even if
+     * expires_at has passed. These represent successfully verified emails
+     * whose users are still filling out the registration form. They remain
+     * valid for the configured VERIFIED_TTL window measured from verified_at,
+     * and are cleaned up by the scheduled `otp:clean` command instead.
      *
      * This lightweight cleanup runs inline during email availability checks
      * to keep the table lean without relying solely on the scheduled command.
-     * Only targets unused expired records — consumed records are handled by
-     * the scheduled `otp:clean` command with a grace period.
      */
     public function purgeExpiredRecords(): void
     {
         try {
             $deleted = OtpVerifiedEmail::whereNull('used_at')
+                ->whereNull('verified_at')
                 ->whereNotNull('expires_at')
                 ->where('expires_at', '<', now())
                 ->delete();
@@ -373,7 +372,6 @@ class OtpService
         $key = $this->key($identifier);
         Cache::forget($key . self::HASH_SUFFIX);
         Cache::forget($key . self::ATTEMPTS_SUFFIX);
-        Cache::forget($key . self::PHONE_SUFFIX);
     }
 
     /**
@@ -400,13 +398,6 @@ class OtpService
         }
 
         return ['allowed' => true, 'message' => 'OK'];
-    }
-
-    public function getAssociatedPhone(string $identifier): ?string
-    {
-        $key = $this->key($identifier);
-        $phone = Cache::get($key . self::PHONE_SUFFIX);
-        return is_string($phone) ? $phone : null;
     }
 
     /**

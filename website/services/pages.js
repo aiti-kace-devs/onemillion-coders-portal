@@ -310,13 +310,17 @@ export const checkEmailAvailability = async (email) => {
 /**
  * Send an OTP code to the user's email (and optionally associate a phone number).
  * @param {{ email: string, phone?: string, form_uuid: string, recaptcha_token?: string }} data
- * @returns {Promise<Object>} - { success, message, expires_in, has_phone }
+ * @returns {Promise<Object>} - { success, message, expires_in }
  */
 export const sendOtp = async (data) => {
   try {
     const response = await apiRequest("/otp/send", {
       method: "POST",
       data,
+      // OTP email sending can take 30-90 seconds when the SMTP server is slow
+      // (the backend allows up to 120s). The default 15s global timeout would
+      // cause a false "timeout" error while the backend is still sending.
+      timeout: 90000,
     });
     return response;
   } catch (error) {
@@ -343,17 +347,3 @@ export const verifyOtp = async (data) => {
   }
 };
 
-/**
- * Check if an email has been OTP-verified (polling).
- * @param {string} email
- * @returns {Promise<Object>} - { success, verified }
- */
-export const checkOtpStatus = async (email) => {
-  try {
-    const response = await apiRequest(`/otp/status?email=${encodeURIComponent(email)}`);
-    return response;
-  } catch (error) {
-    console.error("Error checking OTP status:", error);
-    throw error;
-  }
-};

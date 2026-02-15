@@ -9,12 +9,18 @@ use Illuminate\Support\Facades\Log;
 /**
  * Purge stale rows from the otp_verified_emails table.
  *
- * Two categories are deleted:
- *  1. **Expired & unused** — `used_at IS NULL` AND `expires_at < NOW()`.
- *     These are abandoned OTP flows (user never completed registration).
- *     Deleted immediately once the OTP expires.
+ * Three categories are deleted:
  *
- *  2. **Consumed & stale** — `used_at IS NOT NULL` AND `used_at` is older
+ *  1. **Expired & never verified** — `verified_at IS NULL` AND `used_at IS NULL`
+ *     AND `expires_at < NOW()`. Abandoned OTP flows where the user never
+ *     entered the code. Deleted immediately once the OTP expires.
+ *
+ *  2. **Verified but never consumed & stale** — `verified_at IS NOT NULL` AND
+ *     `used_at IS NULL` AND `verified_at` is older than the VERIFIED_TTL
+ *     window (default 30 minutes). The user verified their email but never
+ *     submitted the registration form within the allowed window.
+ *
+ *  3. **Consumed & stale** — `used_at IS NOT NULL` AND `used_at` is older
  *     than a configurable grace period (default 24 hours).
  *     Once the registration is complete, the `users` table is the
  *     authoritative source for "email taken" — the otp_verified_emails
@@ -32,24 +38,38 @@ class CleanExpiredOtpRecords extends Command
     {
         $graceHours = (int) $this->option('grace');
 
-        // ── 1. Expired & unused ─────────────────────────────────────
-        $expiredUnused = OtpVerifiedEmail::whereNull('used_at')
+        // Default verified TTL from config (seconds), fallback 1800s = 30 min
+        $verifiedTtlSeconds = (int) (config('OTP_VERIFIED_TTL') ?? 1800);
+
+        // ── 1. Expired, never verified, never consumed ──────────────
+        // Abandoned OTP flows where the user never entered the code.
+        $expiredUnverified = OtpVerifiedEmail::whereNull('used_at')
+            ->whereNull('verified_at')
             ->whereNotNull('expires_at')
             ->where('expires_at', '<', now())
             ->delete();
 
-        // ── 2. Consumed & stale (past grace period) ─────────────────
+        // ── 2. Verified but never consumed & verification window expired ─
+        // The user verified their email but never completed registration
+        // within the VERIFIED_TTL window. Safe to purge.
+        $verifiedStale = OtpVerifiedEmail::whereNull('used_at')
+            ->whereNotNull('verified_at')
+            ->where('verified_at', '<', now()->subSeconds($verifiedTtlSeconds))
+            ->delete();
+
+        // ── 3. Consumed & stale (past grace period) ─────────────────
         $consumedStale = OtpVerifiedEmail::whereNotNull('used_at')
             ->where('used_at', '<', now()->subHours($graceHours))
             ->delete();
 
-        $total = $expiredUnused + $consumedStale;
+        $total = $expiredUnverified + $verifiedStale + $consumedStale;
 
         if ($total > 0) {
-            $this->info("Purged {$total} OTP record(s): {$expiredUnused} expired-unused, {$consumedStale} consumed-stale.");
+            $this->info("Purged {$total} OTP record(s): {$expiredUnverified} expired-unverified, {$verifiedStale} verified-stale, {$consumedStale} consumed-stale.");
             Log::info('OTP cleanup: purged records', [
-                'expired_unused' => $expiredUnused,
-                'consumed_stale' => $consumedStale,
+                'expired_unverified' => $expiredUnverified,
+                'verified_stale'     => $verifiedStale,
+                'consumed_stale'     => $consumedStale,
             ]);
         } else {
             $this->info('No stale OTP records to purge.');
