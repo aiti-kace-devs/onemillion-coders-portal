@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\StudentAdmitted;
+use App\Models\OexExamMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use App\Models\Oex_student;
@@ -202,29 +203,56 @@ class StudentOperation extends Controller
             $randomExamId = $programmeSetIds->random();
         }
 
-        if (!$randomExamId) {
-            return response()->json([
-                'status' => 'false',
-                'message' => 'No questions found for this exam.',
-            ]);
+        $questions = collect();
+
+        if ($randomExamId) {
+            $questions = OexQuestionMaster::select(
+                [
+                    "id",
+                    "exam_set_id",
+                    "questions",
+                    "options",
+                ]
+            )
+                ->where('exam_id', $id)
+                ->where('exam_set_id', $randomExamId)
+                ->inRandomOrder()
+                ->get();
         }
 
-        $questions = OexQuestionMaster::select(
-            [
-                "id",
-                "exam_set_id",
-                "questions",
-                "options",
-            ]
-        )
-            ->where('exam_id', $id) // Ensure we stick to the current exam
-            ->where('exam_set_id', $randomExamId)
-            ->inRandomOrder()
-            ->get();
+        $examMaster = OexExamMaster::find($id);
+        $questionsNeeded = $examMaster->number_of_questions;
+
+        if ($questionsNeeded) {
+            if ($questions->count() > $questionsNeeded) {
+                $questions = $questions->random($questionsNeeded);
+            } elseif ($questions->count() < $questionsNeeded) {
+                $needed = $questionsNeeded - $questions->count();
+
+                $generalQuestions = OexQuestionMaster::select(
+                    [
+                        "id",
+                        "exam_set_id",
+                        "questions",
+                        "options",
+                    ]
+                )
+                    ->where('exam_id', $id)
+                    ->doesntHave('programmes')
+                    ->inRandomOrder()
+                    ->limit($needed)
+                    ->get();
+
+                $questions = $questions->merge($generalQuestions);
+
+                $questions = $questions->shuffle();
+            }
+        }
+
         if ($questions->isEmpty()) {
             return response()->json([
                 'status' => 'false',
-                'message' => 'No questions found for this exam set.',
+                'message' => 'No questions found for this exam.',
             ]);
         }
 
