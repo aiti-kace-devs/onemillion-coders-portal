@@ -37,6 +37,13 @@ const getExamDeadline = (examDate, registeredAt) => {
     return { deadline, hoursLeft };
 }
 
+const formatTimeLeft = (hours) => {
+    if (hours > 50) {
+        return Math.round(hours / 24) + ' days';
+    }
+    return hours + ' hour(s)';
+}
+
 </script>
 
 <template>
@@ -104,9 +111,8 @@ const getExamDeadline = (examDate, registeredAt) => {
                                         getExamDeadline(exam.exam_date, user.created_at).hoursLeft > 0
                                     " class="text-gray-500">
                                         in
-                                        {{ getExamDeadline(exam.exam_date,
-                                            user.created_at).hoursLeft }}
-                                        hour(s)</span>
+                                        {{ formatTimeLeft(getExamDeadline(exam.exam_date,
+                                            user.created_at).hoursLeft) }}</span>
                         </p>
                     </div>
                 </div>
