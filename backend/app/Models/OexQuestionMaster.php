@@ -18,11 +18,16 @@ class OexQuestionMaster extends Model
     // protected $fillable = [];
     // protected $hidden = [];
 
-    protected $fillable=['exam_set_id','questions','ans', 'options','status','exam_id'];
+    protected $fillable = ['exam_set_id', 'questions', 'ans', 'options', 'status', 'exam_id'];
     protected $casts = [
         'status' => 'boolean',
         'options' => 'array',
     ];
+
+    public function programmes()
+    {
+        return $this->belongsToMany(Programme::class, 'oex_question_master_programme');
+    }
 
     public function exam()
     {

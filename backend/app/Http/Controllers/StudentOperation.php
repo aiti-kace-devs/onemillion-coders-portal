@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Mail\StudentAdmitted;
+use App\Models\OexExamMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use App\Models\Oex_student;
 use App\Models\Oex_exam_master;
-use App\Models\Oex_question_master;
+use App\Models\OexQuestionMaster;
 use App\Models\Oex_result;
 use App\Models\User;
 use App\Models\CourseSession;
@@ -167,34 +168,98 @@ class StudentOperation extends Controller
         $id = $request->exam_id;
         $user = Auth::guard('web')->user();
         $eligibilityStatus = $user->examEligibilityStatus($id);
-        // dd($question->pluck("id"));
+
         if (!$eligibilityStatus['status']) {
-            return redirect(route('student.exam.index'))->with([
-                'flash' => $eligibilityStatus['message'],
-                'key' => 'error',
+            return response()->json([
+                'status' => 'false',
+                'message' => $eligibilityStatus['message'],
             ]);
         }
 
         $user_exam = user_exam::where('exam_id', $id)
-            ->where('user_id', Auth::guard('web')->user()->id)
-            ->get()
+            ->where('user_id', $user->id)
             ->first();
 
+        // Get user's programme ID
+        $programmeId = null;
+        if ($user->course) {
+            $programmeId = $user->course->programme_id;
+        }
 
-        $questionSets = Oex_question_master::select('exam_set_id')->distinct()->pluck('exam_set_id');
-        $randomExamId = $questionSets->random();
-        $questions = Oex_question_master::select(
-            [
-                "id",
-                "exam_set_id",
-                "questions",
-                "options",
-            ]
-        )->where('exam_set_id', $randomExamId)->inRandomOrder()->get();
+        // Try to find questions for the user's programme
+        $programmeSetIds = collect();
+        if ($programmeId) {
+            $programmeSetIds = OexQuestionMaster::where('exam_id', $id)
+                ->whereHas('programmes', function ($q) use ($programmeId) {
+                    $q->where('programme_id', $programmeId);
+                })
+                ->distinct()
+                ->pluck('exam_set_id');
+        }
+
+        $randomExamId = null;
+
+        if ($programmeSetIds->isNotEmpty()) {
+            $randomExamId = $programmeSetIds->random();
+        }
+
+        $questions = collect();
+
+        if ($randomExamId) {
+            $questions = OexQuestionMaster::select(
+                [
+                    "id",
+                    "exam_set_id",
+                    "questions",
+                    "options",
+                ]
+            )
+                ->where('exam_id', $id)
+                ->where('exam_set_id', $randomExamId)
+                ->inRandomOrder()
+                ->get();
+        }
+
+        $examMaster = OexExamMaster::find($id);
+        $questionsNeeded = $examMaster->number_of_questions;
+
+        if ($questionsNeeded) {
+            if ($questions->count() > $questionsNeeded) {
+                $questions = $questions->random($questionsNeeded);
+            } elseif ($questions->count() < $questionsNeeded) {
+                $needed = $questionsNeeded - $questions->count();
+
+                $generalQuestions = OexQuestionMaster::select(
+                    [
+                        "id",
+                        "exam_set_id",
+                        "questions",
+                        "options",
+                    ]
+                )
+                    ->where('exam_id', $id)
+                    ->doesntHave('programmes')
+                    ->inRandomOrder()
+                    ->limit($needed)
+                    ->get();
+
+                $questions = $questions->merge($generalQuestions);
+
+                $questions = $questions->shuffle();
+            }
+        }
+
+        if ($questions->isEmpty()) {
+            return response()->json([
+                'status' => 'false',
+                'message' => 'No questions found for this exam.',
+            ]);
+        }
 
         if ($user_exam && !$user_exam->started) {
             $user_exam->update(['started' => Carbon::now()->toDateTimeString()]);
         }
+
         $data = ['status' => 'true', 'message' => 'started successfully'];
         $data['questions'] = $questions;
 
@@ -238,7 +303,7 @@ class StudentOperation extends Controller
             // set exam_set on first iteration
 
             if (isset($data['question' . $i])) {
-                $q = Oex_question_master::where('id', $data['question' . $i])
+                $q = OexQuestionMaster::where('id', $data['question' . $i])
                     ->get()
                     ->first();
                 if ($i == 1) {
@@ -269,19 +334,11 @@ class StudentOperation extends Controller
         $res->result_json = json_encode($result);
         $total = $yes_ans + $no_ans;
         $res->exam_set = $exam_set_id;
-        // $percentage = $total > 0 ? round(($yes_ans / $total) * 100) : 0;
         $res->save();
-        // $storedResult = Oex_result::where('user_id', $user->id)
-        //     ->where('exam_id', $request->exam_id)
-        //     ->first();
-        // GoogleSheets::updateGoogleSheets($userId, ['result' => $storedResult->yes_ans]);
+
         TestSubmittedJob::dispatch($user, $res);
 
-        return redirect(route('student.exam.index'))->with([
-            // 'flash' => "Test submitted successfully. Result: {$percentage}%  {$yes_ans}/{$total}",
-            'flash' => 'Test submitted successfully.',
-            'key' => 'success',
-        ]);
+        return redirect(route('student.exam.index'));
     }
 
     //Applying for exam
@@ -335,6 +392,7 @@ class StudentOperation extends Controller
 
         $result = Oex_result::where('exam_id', $id)
             ->where('user_id', $user->id)
+            ->latest()
             ->first();
 
         if (!$result) {
