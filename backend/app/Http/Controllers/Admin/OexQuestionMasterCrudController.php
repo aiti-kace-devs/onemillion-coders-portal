@@ -72,8 +72,8 @@ class OexQuestionMasterCrudController extends CrudController
 
         if ($examId) {
             CRUD::addField([
-                'name'  => 'exam_id',
-                'type'  => 'hidden',
+                'name' => 'exam_id',
+                'type' => 'hidden',
                 'value' => $examId,
             ]);
         }
@@ -82,6 +82,13 @@ class OexQuestionMasterCrudController extends CrudController
             'label' => 'questions',
             'type' => 'textarea',
             'escaped' => false,
+        ]);
+        CRUD::addColumn([
+            'name' => 'programmes',
+            'label' => 'Programmes',
+            'entity' => 'programmes',
+            'attribute' => 'title',
+            'model' => "App\Models\Programme",
         ]);
         CRUD::column('ans')->type('textarea');
         FilterHelper::addBooleanColumn('status', 'status');
@@ -122,6 +129,18 @@ class OexQuestionMasterCrudController extends CrudController
             'name' => 'exam_set_id',
             'type' => 'hidden',
             'value' => 1,
+        ]);
+
+        CRUD::addField([
+            'name' => 'programmes',
+            'label' => 'Select Programmes',
+            'type' => 'select2_multiple',
+            'entity' => 'programmes',
+            'attribute' => 'title',
+            'model' => "App\Models\Programme",
+            'pivot' => true,
+            'wrapper' => ['class' => 'form-group col-12'],
+            'allows_null' => true,
         ]);
 
         CRUD::addField([
@@ -281,7 +300,7 @@ class OexQuestionMasterCrudController extends CrudController
             return back()->withInput();
         }
 
-        OexQuestionMaster::create([
+        $question = OexQuestionMaster::create([
             'exam_id' => $exam_id,
             'exam_set_id' => 1,
             'questions' => $request->input('questions', ''),
@@ -289,6 +308,8 @@ class OexQuestionMasterCrudController extends CrudController
             'ans' => $transformed['actualAns'],
             'status' => $request->input('status', false),
         ]);
+
+        $question->programmes()->sync($request->input('programmes', []));
 
         \Alert::success(trans('backpack::crud.insert_success'))->flash();
         return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);
@@ -312,6 +333,8 @@ class OexQuestionMasterCrudController extends CrudController
             'ans' => $transformed['actualAns'],
             'status' => $request->input('status', false),
         ]);
+
+        $entry->programmes()->sync($request->input('programmes', []));
 
         \Alert::success(trans('backpack::crud.update_success'))->flash();
         return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);
