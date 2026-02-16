@@ -42,6 +42,8 @@ Route::group([
     Route::crud('batch', 'BatchCrudController');
     Route::post('batch/add-courses/{batchId}', [BatchCrudController::class, 'addCourses']);
     Route::post('batch/update-course/{courseId}', [BatchCrudController::class, 'updateCourse']);
+    Route::get('batch/course/{courseId}/sessions', [BatchCrudController::class, 'getCourseSessions']);
+    Route::post('batch/course/{courseId}/sessions', [BatchCrudController::class, 'saveCourseSessions']);
     Route::post('batch/{id}/toggle', [BatchCrudController::class, 'toggleStatus']);
     Route::post('batch/{id}/toggle-completed', [BatchCrudController::class, 'toggleCompleted']);
     Route::crud('course-session', 'CourseSessionCrudController');

@@ -12,6 +12,8 @@ use App\Models\Batch;
 use App\Models\Course;
 use App\Models\UserAdmission;
 use App\Models\CourseMatch;
+use App\Models\CourseSession;
+use Illuminate\Support\Facades\DB;
 
 trait BatchFieldHelpers
 {
@@ -278,10 +280,10 @@ trait BatchFieldHelpers
         }
 
         foreach ($batch->courses as $course) {
-            $editUrl = backpack_url('course/' . $course->id . '/edit');
             $showUrl = backpack_url('course-batch/' . $course->id . '/show');
             $deleteUrl = backpack_url('course/' . $course->id);
             $updateUrl = backpack_url('batch/update-course/' . $course->id);
+            $sessionUrl = backpack_url('batch/course/' . $course->id . '/sessions');
             $branchId = $course->centre?->branch_id;
             $admittedCount = (int) ($admittedCountsByCourseId[$course->id] ?? 0);
 
@@ -309,6 +311,17 @@ trait BatchFieldHelpers
                     <a href="' . $showUrl . '" class="btn btn-sm btn-link">
                         <i class="la la-eye"></i> View Metrics
                     </a>
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-link"
+                        onclick="openAddSessionModal(this)"
+                        data-course-id="' . e($course->id) . '"
+                        data-course-name="' . e($course->course_name ?? '') . '"
+                        data-fetch-url="' . e($sessionUrl) . '"
+                        data-save-url="' . e($sessionUrl) . '"
+                    >
+                        <i class="la la-clock-o"></i> Add Session
+                    </button>
                     <button
                         type="button"
                         class="btn btn-sm btn-link"
@@ -489,6 +502,154 @@ trait BatchFieldHelpers
         return redirect()
             ->back()
             ->with('success', 'Course updated successfully.');
+    }
+
+    /**
+     * Return existing sessions for a course in JSON.
+     */
+    public function getCourseSessions($courseId)
+    {
+        if (!backpack_user()->can('batch.update.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $course = Course::findOrFail($courseId);
+
+        $sessions = $course->sessions()
+            ->select(['id', 'session', 'limit', 'course_time', 'link', 'status'])
+            ->orderBy('id')
+            ->get()
+            ->map(function ($session) {
+                return [
+                    'id' => $session->id,
+                    'session' => $session->session,
+                    'limit' => $session->limit,
+                    'course_time' => $session->course_time,
+                    'link' => $session->link,
+                    'status' => $session->status === null ? true : (bool) $session->status,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'course_id' => $course->id,
+            'sessions' => $sessions,
+        ]);
+    }
+
+    /**
+     * Create/update course sessions from repeatable modal rows.
+     */
+    public function saveCourseSessions($courseId)
+    {
+        if (!backpack_user()->can('batch.update.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $course = Course::findOrFail($courseId);
+
+        $data = request()->validate([
+            'sessions' => 'required|array|min:1',
+            'sessions.*.id' => 'nullable|integer',
+            'sessions.*.session' => 'required|string|in:Morning,Afternoon,Evening,Fullday',
+            'sessions.*.limit' => 'required|integer|min:1|max:100000',
+            'sessions.*.course_time' => 'required|string|max:255',
+            'sessions.*.link' => 'nullable|string|max:255',
+            'sessions.*.status' => 'nullable|boolean',
+        ]);
+
+        $rows = collect($data['sessions'])
+            ->map(function ($row) {
+                return [
+                    'id' => isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null,
+                    'session' => trim((string) ($row['session'] ?? '')),
+                    'limit' => (int) ($row['limit'] ?? 0),
+                    'course_time' => trim((string) ($row['course_time'] ?? '')),
+                    'link' => isset($row['link']) ? trim((string) $row['link']) : null,
+                    'status' => isset($row['status']) ? (bool) $row['status'] : true,
+                ];
+            })
+            ->filter(function ($row) {
+                return $row['session'] !== '' && $row['course_time'] !== '';
+            })
+            ->values();
+
+        if ($rows->isEmpty()) {
+            return redirect()
+                ->back()
+                ->with('error', 'Add at least one valid session row before saving.');
+        }
+
+        try {
+            DB::transaction(function () use ($course, $rows) {
+                $existingSessions = CourseSession::query()
+                    ->where('course_id', $course->id)
+                    ->get()
+                    ->keyBy('id');
+
+                $submittedIds = [];
+
+                foreach ($rows as $row) {
+                    $payload = [
+                        'course_id' => $course->id,
+                        'session' => $row['session'],
+                        'limit' => $row['limit'],
+                        'course_time' => $row['course_time'],
+                        'link' => $row['link'] !== '' ? $row['link'] : null,
+                        'status' => $row['status'] ? '1' : '0',
+                    ];
+
+                    if ($row['id']) {
+                        if (!$existingSessions->has($row['id'])) {
+                            throw new \RuntimeException('One or more sessions could not be matched to this course. Reload and try again.');
+                        }
+
+                        $session = $existingSessions->get($row['id']);
+                        $session->fill($payload);
+                        $session->save();
+                        $submittedIds[] = $session->id;
+                        continue;
+                    }
+
+                    $created = CourseSession::create($payload);
+                    $submittedIds[] = $created->id;
+                }
+
+                $submittedIds = collect($submittedIds);
+                $idsToDelete = $existingSessions->keys()->diff($submittedIds)->values();
+
+                if ($idsToDelete->isEmpty()) {
+                    return;
+                }
+
+                $admissionsLinked = UserAdmission::query()
+                    ->whereIn('session', $idsToDelete->all())
+                    ->count();
+
+                if ($admissionsLinked > 0) {
+                    throw new \RuntimeException('One or more removed sessions already have student admissions. Remove those admissions first.');
+                }
+
+                CourseSession::query()
+                    ->where('course_id', $course->id)
+                    ->whereIn('id', $idsToDelete->all())
+                    ->delete();
+            });
+        } catch (\RuntimeException $e) {
+            return redirect()
+                ->back()
+                ->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()
+                ->back()
+                ->with('error', 'Unable to save course sessions right now. Please try again.');
+        }
+
+        return redirect()
+            ->back()
+            ->with('success', 'Course sessions saved successfully.');
     }
 
 

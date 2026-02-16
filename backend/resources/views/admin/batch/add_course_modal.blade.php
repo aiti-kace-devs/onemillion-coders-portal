@@ -161,6 +161,8 @@
     </div>
 </div>
 
+@include('admin.batch.add_session_modal')
+
 @once
     @push('crud_fields_styles')
         <link rel="stylesheet" href="{{ asset('assets/plugins/select2/css/select2.min.css') }}">
