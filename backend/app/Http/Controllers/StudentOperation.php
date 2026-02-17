@@ -29,6 +29,7 @@ use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\Models\Activity;
 
 
 class StudentOperation extends Controller
@@ -36,22 +37,9 @@ class StudentOperation extends Controller
     //student dashboard
     public function dashboard()
     {
-        if (!Auth::user()->isAdmitted()) {
-            return redirect(route('student.profile.edit'));
-        }
-
-        // $data['portal_exams'] = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
-        //     ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
-        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
-        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-        //     ->orderBy('user_exams.exam_id', 'desc')
-        //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-        //     ->where('user_exams.user_id', Auth::user()->id)
-        //     ->where('user_exams.std_status', '1')
-        //     ->get()
-        //     ->toArray();
-
-        //     return view('student.dashboard', $data);
+        // if (!Auth::user()->isAdmitted()) {
+        //     return redirect(route('student.profile.edit'));
+        // }
 
         $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
@@ -72,10 +60,6 @@ class StudentOperation extends Controller
             return $questionnaire;
         });
         return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires'));
-
-        // $data['portal_exams'] = Oex_exam_master::select(['oex_exam_masters.*', 'oex_categories.name as cat_name'])
-        //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-        //     ->orderBy('id', 'desc')->where('oex_exam_masters.status', '1')->get()->toArray();
 
     }
     public function profile()

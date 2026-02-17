@@ -44,7 +44,8 @@ class User extends Authenticatable
         'gender',
         'network_type',
         'registered_course',
-        'shortlist'
+        'shortlist',
+        'last_login'
     ];
 
     /**
@@ -254,7 +255,7 @@ class User extends Authenticatable
 
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logFillable()->logOnlyDirty();
+        return LogOptions::defaults()->logFillable()->logOnlyDirty()->setDescriptionForEvent(fn(string $event) => "User {$event}");
     }
 }
 
