@@ -81,7 +81,7 @@ class BasePolicy extends Basic
             ])
             ->addNonceForDirective(Directive::SCRIPT)
             ->addNonceForDirective(Directive::STYLE);
-        if (str(request()->path())->startsWith(config('horizon.path', 'horizon')) || str(request()->path())->startsWith('admin/app-logs') || env('IGNORE_POLICY', false)) {
+        if (str(request()->path())->startsWith(config('horizon.path', 'horizon')) || str(request()->path())->startsWith('admin/app-logs') || config('app.ignore_csp_policies')) {
             $this->reportOnly();
         }
 

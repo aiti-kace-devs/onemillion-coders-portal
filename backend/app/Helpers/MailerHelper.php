@@ -46,15 +46,16 @@ class MailerHelper
         return $mailables;
     }
 
-    public static function getEmailTemplate(string $templateName, array $data)
+    private static function getEmailTemplate(string $name, array $data): ?string
     {
-        $template = EmailTemplate::where('name', $templateName)->select('content')->first();
-        if (!$template) {
-            return;
+        $template = EmailTemplate::where('name', $name)->value('content');
+        if (!$template) return null;
+
+        foreach ($data as $key => $value) {
+            $template = str_replace("{{$key}}", $value, $template);
         }
 
-        // replace variables
-        return  static::replaceVariables($template->content, $data);
+        return $template;
     }
 
     public static function replaceVariables($content, $data)
@@ -93,14 +94,42 @@ class MailerHelper
     }
 
 
-    public static function sendTemplateEmail(string $templateName, string|array $emails, array $data, $subject = null, $bulk = false)
-    {
-        $content = static::getEmailTemplate($templateName, $data);
-        if (!$content) {
-            return;
-        }
+    public static function sendTemplateEmail(
+        string $templateName,
+        string|array $emails,
+        array $data,
+        string $subject,
+        bool $bulk = false
+    ): bool {
+        try {
+            $content = self::getEmailTemplate($templateName, $data);
 
-        static::sendGenericTemplateEmail($emails, $content, $subject, $bulk, $data);
+            if (!$content) {
+                Log::warning("Email template not found: {$templateName}");
+                return false;
+            }
+
+            $mailable = new GenericEmail($content, $subject);
+
+            if ($bulk) {
+                Mail::to(config('mail.from.address'))
+                    ->bcc((array) $emails)
+                    ->send($mailable);
+            } else {
+                Mail::to($emails)->send($mailable);
+            }
+
+            return true;
+
+        } catch (\Throwable $e) {
+            Log::error('MailerHelper failed', [
+                'emails' => $emails,
+                'subject' => $subject,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     public static function createView($content, $filename = null)

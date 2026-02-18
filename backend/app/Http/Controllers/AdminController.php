@@ -1301,6 +1301,62 @@ class AdminController extends Controller
         ]);
     }
 
+
+
+
+    public function saveAdmittedStudents(Request $request)
+    {
+        $request->validate(
+            [
+                'emails' => 'sometimes|array',
+                'emails.*' => 'email',
+                'student_ids' => 'sometimes|array',
+                'student_ids.*' => 'numeric',
+                'phone_numbers' => 'sometimes|array',
+                // 'phone_numbers.*' => 'phone'
+            ],
+            [],
+            [
+                'emails.*' => 'email address',
+                'student_ids.*' => 'student',
+            ],
+        );
+        if (empty($request->input('emails')) && empty($request->input('student_ids')) && empty($request->input('phone_numbers'))) {
+            return response()->json(
+                [
+                    'message' => 'Email(s), Student ID(s), or PhoneNumber(s) are required.',
+                ],
+                400,
+            );
+        }
+
+        $data = $request->input('emails') ?? ($request->input('student_ids') ?? $request->input('phone_numbers'));
+        $columnName = $request->has('emails') ? 'email' : ($request->has('phone_numbers') ? 'mobile_no' : 'id');
+
+        $usersToUpdate = User::whereIn($columnName, (array) $data)
+            ->where(function ($query) {
+                $query->whereNull('shortlist')->orWhere('shortlist', '!=', 1);
+            })
+            ->get();
+
+        if ($usersToUpdate->isEmpty()) {
+            return response()->json(
+                [
+                    'message' => 'No users found to update or all are already shortlisted.',
+                ],
+                404,
+            );
+        }
+
+        $updatedCount = User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
+
+        return response()->json([
+            'message' => "$updatedCount user(s) successfully shortlisted.",
+        ]);
+    }
+
+
+
     public function getSettingsPage()
     {
         return view('admin.appsettings.index');

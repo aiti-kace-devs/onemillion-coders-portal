@@ -13,13 +13,14 @@ class Oex_exam_master extends Model
 
     protected $primaryKey = "id";
 
-    protected $fillable = ['title', 'category', 'passmark', 'exam_date', 'status', 'exam_duration'];
+    protected $fillable = ['title', 'category', 'passmark', 'exam_date', 'status', 'exam_duration', 'number_of_questions'];
 
     protected $casts = [
         'status' => 'boolean',
         'exam_date' => 'datetime',
         'passmark' => 'integer',
         'exam_duration' => 'integer',
+        'number_of_questions' => 'integer',
     ];
 
     public function category()

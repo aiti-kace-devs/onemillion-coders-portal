@@ -55,11 +55,12 @@ class OexExamMasterCrudController extends CrudController
         CRUD::column('passmark');
         CRUD::column('exam_date');
         CRUD::column('exam_duration');
+        CRUD::column('number_of_questions');
 
         FilterHelper::addBooleanColumn('status', 'status');
         CRUD::addColumn([
             'name' => 'question_link',
-            'label' => 'Number of Questions',
+            'label' => 'Question Pool Size',
             'type' => 'view',
             'view' => 'vendor.backpack.crud.columns.count_link',
             'count_field' => 'questions_count',
@@ -116,6 +117,14 @@ class OexExamMasterCrudController extends CrudController
             'type'      => 'number',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. 30'
+        ]);
+
+        CRUD::addField([
+            'name' => 'number_of_questions',
+            'label' => 'Questions Per Student',
+            'type' => 'number',
+            'wrapper' => ['class' => 'form-group col-6'],
+            'hint' => 'How many questions will be presented to the student?'
         ]);
 
 

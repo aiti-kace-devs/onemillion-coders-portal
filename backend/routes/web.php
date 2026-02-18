@@ -48,6 +48,7 @@ use Illuminate\Support\Str;
 
 
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
+Route::post('/api/add-student', [FormResponseController::class, 'store']);      
 
 // Redirect Statamic login to Backpack login
 Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {

@@ -1,6 +1,6 @@
 import axios from 'axios';
  
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://onemillioncoders.gikace.org/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://app.omcp.gikace.org/api";
 
 // Create axios instance with base configuration
 const apiClient = axios.create({
