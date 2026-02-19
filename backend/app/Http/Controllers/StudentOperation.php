@@ -12,6 +12,8 @@ use App\Models\Oex_result;
 use App\Models\User;
 use App\Models\CourseSession;
 use App\Models\Course;
+use App\Models\Branch;
+use App\Models\Centre;
 use App\Models\UserAdmission;
 use App\Models\user_exam;
 use Illuminate\Support\Carbon;
@@ -28,6 +30,7 @@ use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use App\Events\CourseChanged;
 
 
 class StudentOperation extends Controller
@@ -511,33 +514,58 @@ class StudentOperation extends Controller
     {
         $user = Auth::guard('web')->user();
 
-        // if ($user->admission) {
-        //     return redirect()
-        //         ->back()
-        //         ->with([
-        //             'flash' => 'Student already admitted. Unable to change course.',
-        //             'key' => 'error',
-        //         ]);
-        // }
+        $branches = Branch::where('status', 1)->get();
 
-        $currentCourseId = $user->registered_course;
+        return Inertia::render('Student/Course/Index', compact('user', 'branches'));
+        // return view('student.change-course', compact('user', 'courses', 'currentCourse'));
+    }
 
-        $courses = Course::where('status', 1)->where('id', '!=', $currentCourseId)->get();
+    // Select training center
+    public function select_center($branch_id)
+    {
+        $user = Auth::guard('web')->user();
 
-        $currentCourse = null;
-        if (!empty($currentCourseId)) {
-            $currentCourse = Course::find($currentCourseId);
+        $branch = Branch::find($branch_id);
+        if (!$branch) {
+            return redirect()->back()->with('error', 'Branch not found');
         }
 
-        return Inertia::render('Student/ChangeCourse', compact('user', 'courses', 'currentCourse'));
-        return view('student.change-course', compact('user', 'courses', 'currentCourse'));
+        $centres = Centre::where('branch_id', $branch_id)->where('status', 1)->get();
+
+        return Inertia::render('Student/Course/TrainingCenter', compact('user', 'branch', 'centres'));
+    }
+
+    // Select course
+    public function select_course(Request $request)
+    {
+        $user = Auth::guard('web')->user();
+
+        $branchId = $request->query('branch_id');
+        $centreId = $request->query('centre_id');
+
+        $branch = Branch::find($branchId);
+        $centre = Centre::find($centreId);
+
+        if (!$branch || !$centre) {
+            return redirect()->back()->with('error', 'Invalid selection');
+        }
+
+        // Fetch courses available at this centre through batches
+        $courses = Course::whereHas('batches', function ($query) use ($centreId) {
+            $query->where('centre_id', $centreId)
+                ->where('status', 1)
+                ->where('completed', 0);
+        })
+            ->where('status', 1)
+            ->get();
+
+        return Inertia::render('Student/Course/SelectCourse', compact('user', 'branch', 'centre', 'courses'));
     }
 
     // Update course selection
-
     public function update_course(Request $request)
     {
-        if (!config(ALLOW_COURSE_CHANGE, false)) {
+        if (!config('ALLOW_COURSE_CHANGE', false)) {
             return redirect()
                 ->back()
                 ->with([
@@ -548,35 +576,36 @@ class StudentOperation extends Controller
 
         $user = Auth::guard('web')->user();
 
-        if ($user->admission) {
-            return redirect()
-                ->back()
-                ->with([
-                    'flash' => 'Unable to change course.',
-                    'key' => 'error',
-                ]);
-        }
+        // if ($user->admission) {
+        //     return redirect()
+        //         ->back()
+        //         ->with([
+        //             'flash' => 'Unable to change course.',
+        //             'key' => 'error',
+        //         ]);
+        // }
 
         $request->validate(
             [
                 'course_id' => 'required|exists:courses,id',
+                'branch_id' => 'required|exists:branches,id',
+                'centre_id' => 'required|exists:centres,id',
             ],
             [],
             ['course_id' => 'course']
         );
 
-        // Get course information
-        // $course = Course::find($request->course_id);
-
-        // if (!$course) {
-        //     return redirect()->back()->with('error', 'Selected course not found.');
-        // }
-
         // Update user record with course and session information
-        $user->registered_course = $request->course_id; // Store course_id in exam field
+        $user->registered_course = $request->course_id;
         $user->save();
 
-        return redirect()->route('student.profile.edit');
+        //Event to create new exam record for the student based on the new course selection
+        CourseChanged::dispatch($user);
+
+        return redirect()->route('student.exam.index')->with([
+            'key' => 'success',
+            'flash' => 'Course changed successfully!',
+        ]);
     }
 
     // API function not used

@@ -48,7 +48,7 @@ use Illuminate\Support\Str;
 
 
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
-Route::post('/api/add-student', [FormResponseController::class, 'store']);      
+Route::post('/api/add-student', [FormResponseController::class, 'store']);
 
 // Redirect Statamic login to Backpack login
 Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
@@ -569,7 +569,9 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::get('/results', [StudentOperation::class, 'results'])->name('results');
 
         // Change course route
-        Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course');
+        Route::get('/course', [StudentOperation::class, 'change_course'])->name('course.index');
+        Route::get('/course/select-center/{branch_id}', [StudentOperation::class, 'select_center'])->name('course.select-center');
+        Route::get('/course/select-course', [StudentOperation::class, 'select_course'])->name('course.select-course');
         Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course');
 
         // Course assessment route
