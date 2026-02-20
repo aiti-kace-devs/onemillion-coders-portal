@@ -11,6 +11,7 @@ use App\Helpers\CourseFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\Course;
+use App\Models\Admin;
 
 /**
  * Class CourseCrudController
@@ -44,13 +45,7 @@ class CourseCrudController extends CrudController
 
         // Add permission checks
         LifecycleHook::hookInto(['list:before_setup', 'show:before_setup'], function () {
-            $this->crud->addClause('where', function ($query) {
-                if (!backpack_user()->can('course.read.all')) {
-                    // Add any specific filtering logic here if needed
-                    // For now, we'll use the scope from the model
-                    $query->myAssignedCourses();
-                }
-            });
+            $this->applyCurrentAdminCourseScope();
         });
     }
 
@@ -63,6 +58,8 @@ class CourseCrudController extends CrudController
     protected function setupListOperation()
     {
         WidgetHelper::courseStatisticsWidget();
+        $this->applyCurrentAdminCourseScope();
+        $currentAdmin = backpack_user();
 
         // Check permissions
         if (!backpack_user()->can('course.read.all')) {
@@ -73,21 +70,38 @@ class CourseCrudController extends CrudController
         // CRUD::column('batch_id')->label('Batch')->linkTo('batch.show');
         CRUD::column('duration');
         // CRUD::column('no_of_days');
-        CRUD::column('centre_id')->label('Centre')->linkTo('centre.show');
+        if ($currentAdmin instanceof Admin && $currentAdmin->isSuper()) {
+            CRUD::column('centre_id')->label('Centre')->linkTo('centre.show');
+        }
+        CRUD::column('location');
+        CRUD::column('start_date');
+        CRUD::column('end_date');
         FilterHelper::addBooleanColumn('status', 'status');
         // CRUD::column('programme_id')->label('Programme')->linkTo('programme.show');
         // $this->addBatchFilter('batch_id');
-        $this->courseFilter('id');
-        FilterHelper::addDateRangeFilter('start_date', 'Start Date');
+        $this->addCurrentAdminCourseFilter('id');
+        
+        if ($currentAdmin instanceof Admin && $currentAdmin->isSuper()) {
+            FilterHelper::addDateRangeFilter('start_date', 'Start Date');
+            FilterHelper::addDateRangeFilter('end_date', 'End Date');
+        }
         $this->addOngoingCoursesFilter('Ongoing Courses');
         FilterHelper::addBooleanFilter('status', 'Status');
-        FilterHelper::addDateRangeFilter('end_date', 'End Date');
+        
         // FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
+
+        // List-page actions: hide edit/delete and redirect preview to course-batch show page.
+        CRUD::removeButton('update', 'line');
+        CRUD::removeButton('delete', 'line');
+        CRUD::removeButton('show', 'line');
+        CRUD::addButtonFromView('line', 'course_preview_to_batch', 'course_preview_to_batch', 'beginning');
     }
 
     protected function setupShowOperation()
     {
+        $this->applyCurrentAdminCourseScope();
+
         // Check permissions
         if (!backpack_user()->can('course.read.all')) {
             abort(403, 'Unauthorized action.');
@@ -205,5 +219,83 @@ class CourseCrudController extends CrudController
             ->values();
 
         return response()->json($courses);
+    }
+
+    /**
+     * Return course IDs visible to the current admin.
+     * `null` means unrestricted visibility (super admin or non-admin contexts).
+     */
+    protected function currentAdminVisibleCourseIds(): ?array
+    {
+        $admin = backpack_user();
+
+        if (! $admin instanceof Admin) {
+            return null;
+        }
+
+        if (method_exists($admin, 'visibleCourseIds')) {
+            return $admin->visibleCourseIds();
+        }
+
+        if (method_exists($admin, 'isSuper') && $admin->isSuper()) {
+            return null;
+        }
+
+        return $admin->assignedCourses()
+            ->pluck('courses.id')
+            ->map(fn ($courseId) => (int) $courseId)
+            ->all();
+    }
+
+    /**
+     * Restrict course records by current admin's assigned courses.
+     */
+    protected function applyCurrentAdminCourseScope(): void
+    {
+        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+
+        if ($visibleCourseIds === null) {
+            return;
+        }
+
+        if (empty($visibleCourseIds)) {
+            CRUD::addClause('whereRaw', '1 = 0');
+            return;
+        }
+
+        CRUD::addClause('whereIn', 'id', $visibleCourseIds);
+    }
+
+    /**
+     * Add course filter options limited to the current admin's visible courses.
+     */
+    protected function addCurrentAdminCourseFilter(string $columnName = 'id', string $label = 'Course'): void
+    {
+        $coursesQuery = Course::query()->orderBy('course_name');
+        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+
+        if (is_array($visibleCourseIds)) {
+            if (empty($visibleCourseIds)) {
+                $courseOptions = [];
+            } else {
+                $courseOptions = $coursesQuery
+                    ->whereIn('id', $visibleCourseIds)
+                    ->pluck('course_name', 'id')
+                    ->toArray();
+            }
+        } else {
+            $courseOptions = $coursesQuery->pluck('course_name', 'id')->toArray();
+        }
+
+        FilterHelper::addSelectFilter(
+            columnName: $columnName,
+            label: $label,
+            options: $courseOptions,
+            type: 'select2_multiple',
+            callback: function ($value) use ($columnName) {
+                $values = is_array($value) ? $value : explode(',', $value);
+                CRUD::addClause('whereIn', $columnName, $values);
+            },
+        );
     }
 }

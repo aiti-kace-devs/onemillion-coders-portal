@@ -20,6 +20,7 @@
     $admins = $course->assignedAdmins ?? collect();
     $sessions = $course->sessions ?? collect();
 
+    $backToCourseUrl = backpack_url('course/');
     $backUrl = $course->batch_id
         ? backpack_url('batch/' . $course->batch_id . '/edit')
         : backpack_url('batch');
@@ -231,7 +232,7 @@
 
     <div class="mb-3 d-flex align-items-start justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-start gap-2">
-            <a href="{{ $backUrl }}" class="btn btn-sm btn-outline-secondary" title="Back to Batch Edit">
+            <a href="{{ $backToCourseUrl }}" class="btn btn-sm btn-outline-secondary" title="Back to Batch Edit">
                 <i class="la la-arrow-left"></i>
             </a>
             <div>
@@ -629,6 +630,22 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="examResultModal" tabindex="-1" aria-labelledby="examResultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header d-flex align-items-center">
+                    <h5 class="modal-title" id="examResultModalLabel">Exam Result</h5>
+                    <button type="button" class="close ms-auto ml-auto" style="margin-left:auto" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-0">
+                    <iframe id="examResultFrame" src="about:blank" style="width:100%;height:75vh;border:0;" loading="lazy"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('after_styles')
@@ -670,6 +687,32 @@
         (function () {
             "use strict";
 
+            function showModal(modalId) {
+                const el = document.getElementById(modalId);
+                if (!el) return;
+
+                if (el.parentElement !== document.body) {
+                    document.body.appendChild(el);
+                }
+
+                if (window.bootstrap && window.bootstrap.Modal) {
+                    window.bootstrap.Modal.getOrCreateInstance(el, { backdrop: true, keyboard: true }).show();
+                    return;
+                }
+
+                const jq = window.jQuery;
+                if (jq && jq.fn && jq.fn.modal) {
+                    jq(el).modal('show');
+                }
+            }
+
+            function openExamResultModal(url) {
+                if (!url) return;
+                const frame = document.getElementById('examResultFrame');
+                if (frame) frame.setAttribute('src', url);
+                showModal('examResultModal');
+            }
+
             function safeInitDataTable(selector, options) {
                 const $ = window.jQuery;
                 if (!$ || !$.fn || !$.fn.DataTable) return;
@@ -688,6 +731,34 @@
             }
 
             document.addEventListener('DOMContentLoaded', function () {
+                // Open exam result in modal (works for server-side DataTable rows).
+                document.addEventListener('click', function (e) {
+                    const trigger = e.target.closest('.js-view-result-modal');
+                    if (!trigger) return;
+                    e.preventDefault();
+                    const url = trigger.getAttribute('data-url') || trigger.getAttribute('href');
+                    openExamResultModal(url);
+                });
+
+                const examModal = document.getElementById('examResultModal');
+                if (examModal) {
+                    const resetFrame = function () {
+                        const frame = document.getElementById('examResultFrame');
+                        if (frame) frame.setAttribute('src', 'about:blank');
+                    };
+
+                    try {
+                        examModal.addEventListener('hidden.bs.modal', resetFrame);
+                    } catch (e) {
+                        // ignore
+                    }
+
+                    const jq = window.jQuery;
+                    if (jq && jq.fn && jq.fn.modal) {
+                        jq(examModal).on('hidden.bs.modal', resetFrame);
+                    }
+                }
+
                 safeInitDataTable('#dtAdmittedStudents', {
                     processing: true,
                     serverSide: true,

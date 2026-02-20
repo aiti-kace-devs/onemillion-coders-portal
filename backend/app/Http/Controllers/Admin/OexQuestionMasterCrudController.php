@@ -84,7 +84,12 @@ class OexQuestionMasterCrudController extends CrudController
             'escaped' => false,
         ]);
         CRUD::column('ans')->type('textarea');
-        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
 
         if ($examId) {
             $this->crud->addClause('where', 'exam_id', $examId);
@@ -315,6 +320,25 @@ class OexQuestionMasterCrudController extends CrudController
 
         \Alert::success(trans('backpack::crud.update_success'))->flash();
         return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);
+    }
+
+    public function toggleStatus(\Illuminate\Http\Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $question = OexQuestionMaster::findOrFail($id);
+        $question->status = (bool) $data['value'];
+        $question->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Question status updated successfully.',
+            'value' => $question->status ? 1 : 0,
+        ]);
     }
 
 

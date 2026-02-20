@@ -4,6 +4,7 @@ namespace App\Helpers;
 
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\FilterHelper;
+use App\Models\Admin;
 use App\Models\Course;
 use App\Helpers\CourseFieldHelpers;
 trait UserFieldHelpers
@@ -66,6 +67,84 @@ trait UserFieldHelpers
         $this->addConfirmedAdmissionColumn();
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
         $this->addPhoneColumn();
+    }
+
+    /**
+     * Return course IDs visible to the current admin.
+     * `null` means unrestricted visibility (super admin or non-admin contexts).
+     */
+    protected function currentAdminVisibleCourseIds(): ?array
+    {
+        $admin = backpack_user();
+
+        if (! $admin instanceof Admin) {
+            return null;
+        }
+
+        if (method_exists($admin, 'visibleCourseIds')) {
+            return $admin->visibleCourseIds();
+        }
+
+        if ($admin->isSuper()) {
+            return null;
+        }
+
+        return $admin->assignedCourses()
+            ->pluck('courses.id')
+            ->map(fn ($courseId) => (int) $courseId)
+            ->all();
+    }
+
+    /**
+     * Restrict user list queries by the current admin's assigned courses.
+     */
+    public function applyCurrentAdminUserCourseScope(): void
+    {
+        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+
+        if ($visibleCourseIds === null) {
+            return;
+        }
+
+        if (empty($visibleCourseIds)) {
+            CRUD::addClause('whereRaw', '1 = 0');
+            return;
+        }
+
+        CRUD::addClause('whereIn', 'registered_course', $visibleCourseIds);
+    }
+
+    /**
+     * Add course filter with options limited to the current admin's visible courses.
+     */
+    public function addCurrentAdminCourseFilter(string $columnName = 'registered_course', string $label = 'Course'): void
+    {
+        $coursesQuery = Course::query()->orderBy('course_name');
+        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+
+        if (is_array($visibleCourseIds)) {
+            if (empty($visibleCourseIds)) {
+                $courseOptions = [];
+            } else {
+                $courseOptions = $coursesQuery
+                    ->whereIn('id', $visibleCourseIds)
+                    ->pluck('course_name', 'id')
+                    ->toArray();
+            }
+        } else {
+            $courseOptions = $coursesQuery->pluck('course_name', 'id')->toArray();
+        }
+
+        FilterHelper::addSelectFilter(
+            columnName: $columnName,
+            label: $label,
+            options: $courseOptions,
+            type: 'select2_multiple',
+            callback: function ($value) use ($columnName) {
+                $values = is_array($value) ? $value : explode(',', $value);
+                CRUD::addClause('whereIn', $columnName, $values);
+            },
+        );
     }
 
 

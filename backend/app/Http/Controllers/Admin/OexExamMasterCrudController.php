@@ -56,7 +56,12 @@ class OexExamMasterCrudController extends CrudController
         CRUD::column('exam_date');
         CRUD::column('exam_duration');
 
-        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
         CRUD::addColumn([
             'name' => 'question_link',
             'label' => 'Number of Questions',
@@ -148,6 +153,25 @@ class OexExamMasterCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    public function toggleStatus(Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $exam = \App\Models\OexExamMaster::findOrFail($id);
+        $exam->status = (bool) $data['value'];
+        $exam->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Exam status updated successfully.',
+            'value' => $exam->status ? 1 : 0,
+        ]);
     }
 
 

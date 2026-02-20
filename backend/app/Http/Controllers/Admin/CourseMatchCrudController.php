@@ -54,7 +54,12 @@ class CourseMatchCrudController extends CrudController
         CRUD::column('question');
         CRUD::column('description');
         CRUD::column('description');
-        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created Date');
     }
@@ -146,5 +151,24 @@ class CourseMatchCrudController extends CrudController
                 }
             }
         }
+    }
+
+    public function toggleStatus(\Illuminate\Http\Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $courseMatch = \App\Models\CourseMatch::findOrFail($id);
+        $courseMatch->status = (bool) $data['value'];
+        $courseMatch->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Course match status updated successfully.',
+            'value' => $courseMatch->status ? 1 : 0,
+        ]);
     }
 }

@@ -62,7 +62,12 @@ class FormCrudController extends CrudController
         }
 
         CRUD::column('title')->type('textarea');
-        FilterHelper::addBooleanColumn('active', 'status');
+        CRUD::addColumn([
+            'name' => 'active',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
         CRUD::column('created_at');
         CRUD::enableExportButtons();
     }
@@ -120,5 +125,26 @@ class FormCrudController extends CrudController
         if (!backpack_user()->can('form.delete.all')) {
             abort(403, 'Unauthorized action.');
         }
+    }
+
+    public function toggleStatus(\Illuminate\Http\Request $request, $id)
+    {
+        if (!backpack_user()->can('form.update.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $form = \App\Models\Form::findOrFail($id);
+        $form->active = (bool) $data['value'];
+        $form->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Form status updated successfully.',
+            'value' => $form->active ? 1 : 0,
+        ]);
     }
 }

@@ -48,7 +48,7 @@ class UserCrudController extends CrudController
      */
     public function setup()
     {
-        CRUD::setModel(\App\Models\User::class);
+        CRUD::setModel(User::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/user');
         CRUD::setEntityNameStrings('student', 'students');
 
@@ -90,8 +90,9 @@ class UserCrudController extends CrudController
 
         $this->crud->setModel(User::class);
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/user');
-        $this->crud->setEntityNameStrings('user', 'users');
+        $this->crud->setEntityNameStrings('student', 'students');
         $this->setupFilter();
+        $this->applyCurrentAdminUserCourseScope();
 
         // Ensure we load the fields needed for relationships & columns
         $this->crud->query->select([
@@ -125,11 +126,11 @@ class UserCrudController extends CrudController
         // CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
         // CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'beginning');
         // Add userId column to the list view
-        CRUD::addColumn([
-            'name' => 'userId',
-            'label' => 'User ID',
-            'type' => 'text',
-        ]);
+        // CRUD::addColumn([
+        //     'name' => 'userId',
+        //     'label' => 'User ID',
+        //     'type' => 'text',
+        // ]);
 
         // $this->setupStudentColumns();
         // Disable responsive table
@@ -140,11 +141,22 @@ class UserCrudController extends CrudController
 
         // Add export options
         CRUD::enableExportButtons();
+
+        CRUD::removeButton('update', 'line');
+        CRUD::removeButton('delete', 'line');
+        CRUD::removeButton('show', 'line');
+        CRUD::addButtonFromView('line', 'user_preview_manage_student', 'user_preview_manage_student', 'beginning');
     }
 
     protected function setupShowOperation()
     {
-        $this->setupShowStudentColumns();
+        // $this->setupShowStudentColumns();
+        $this->crud->set('show.setFromDb', false);
+        
+        $this->crud->setShowView('vendor.backpack.crud.manage_student_show');
+
+        CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
+
     }
     /**
      * Define what happens when the Create operation is loaded.
@@ -256,8 +268,8 @@ class UserCrudController extends CrudController
     public function setupFilter()
     {
         // $this->addStudentBatchFilter('Batch Filter');
-        $this->courseFilter('registered_course');
-        // $this->addConfirmedAdmissionFilter();
+        $this->addCurrentAdminCourseFilter('registered_course');
+        $this->addConfirmedAdmissionFilter();
         // $this->addAdmissionLocationFilter();
         // $this->addAdmittedAtFilter();
         // FilterHelper::addBooleanFilter('shortlist', 'Shortlist');

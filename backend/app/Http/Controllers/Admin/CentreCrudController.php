@@ -50,8 +50,19 @@ class CentreCrudController extends CrudController
 
         CRUD::column('title')->type('textarea');
         CRUD::column('branch_id')->label('Branch')->linkTo('branch.show');
-        FilterHelper::addBooleanColumn('is_pwd_friendly', 'is_pwd_friendly');
-        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'is_pwd_friendly',
+            'label' => 'Is PWD Friendly',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+            'toggle_url' => 'centre/{id}/toggle-is-pwd-friendly',
+        ]);
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
         CRUD::column('created_at');
         FilterHelper::addBooleanFilter('status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
@@ -136,6 +147,44 @@ class CentreCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    public function toggleStatus(Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $centre = Centre::findOrFail($id);
+        $centre->status = (bool) $data['value'];
+        $centre->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Centre status updated successfully.',
+            'value' => $centre->status ? 1 : 0,
+        ]);
+    }
+
+    public function toggleIsPwdFriendly(Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $centre = Centre::findOrFail($id);
+        $centre->is_pwd_friendly = (bool) $data['value'];
+        $centre->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Centre PWD accessibility updated successfully.',
+            'value' => $centre->is_pwd_friendly ? 1 : 0,
+        ]);
     }
 
 

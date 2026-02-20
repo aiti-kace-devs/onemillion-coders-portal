@@ -37,7 +37,10 @@ Route::group([
     Route::crud('app-config', 'AppConfigCrudController');
     Route::crud('attendance', 'AttendanceCrudController');
     Route::crud('branch', 'BranchCrudController');
+    Route::post('branch/{id}/toggle', 'BranchCrudController@toggleStatus');
     Route::crud('centre', 'CentreCrudController');
+    Route::post('centre/{id}/toggle', 'CentreCrudController@toggleStatus');
+    Route::post('centre/{id}/toggle-is-pwd-friendly', 'CentreCrudController@toggleIsPwdFriendly');
     Route::crud('course', 'CourseCrudController');
     Route::crud('batch', 'BatchCrudController');
     Route::post('batch/add-courses/{batchId}', [BatchCrudController::class, 'addCourses']);
@@ -49,13 +52,18 @@ Route::group([
     Route::crud('course-session', 'CourseSessionCrudController');
     Route::crud('email-template', 'EmailTemplateCrudController');
     Route::crud('form', 'FormCrudController');
+    Route::post('form/{id}/toggle', 'FormCrudController@toggleStatus');
     Route::crud('form-response', 'FormResponseCrudController');
     Route::crud('category', 'OexCategoryCrudController');
+    Route::post('category/{id}/toggle', 'OexCategoryCrudController@toggleStatus');
     Route::crud('manage-exam', 'OexExamMasterCrudController');
+    Route::post('manage-exam/{id}/toggle', 'OexExamMasterCrudController@toggleStatus');
     Route::crud('question-master', 'OexQuestionMasterCrudController');
+    Route::post('question-master/{id}/toggle', 'OexQuestionMasterCrudController@toggleStatus');
     Route::crud('oex-result', 'OexResultCrudController');
     Route::crud('period', 'PeriodCrudController');
     Route::crud('programme', 'ProgrammeCrudController');
+    Route::post('programme/{id}/toggle', 'ProgrammeCrudController@toggleStatus');
     Route::crud('sms-template', 'SmsTemplateCrudController');
     Route::crud('user', 'UserCrudController');
     Route::crud('manage-student', 'ManageStudentCrudController');
@@ -127,7 +135,9 @@ Route::group([
     Route::crud('student-verification', 'StudentVerificationCrudController');
     Route::crud('course-certification', 'CourseCertificationCrudController');
     Route::crud('course-match', 'CourseMatchCrudController');
+    Route::post('course-match/{id}/toggle', 'CourseMatchCrudController@toggleStatus');
     Route::crud('course-match-option', 'CourseMatchOptionCrudController');
+    Route::post('course-match-option/{id}/toggle', 'CourseMatchOptionCrudController@toggleStatus');
     
 
     // Utilities dashboard (super-admin only)

@@ -38,11 +38,12 @@
     <x-backpack::menu-item title="Manage Programmes" icon="la la-graduation-cap" :link="backpack_url('programme')" />
 @endcan
 
-@can('course.read.all')
+<!-- @can('course.read.all') -->
     <x-backpack::menu-dropdown title="Course Moderation" icon="la la-book-reader">
-        @can('course.read.all')
+<!-- @endcan -->
+        <!-- @can('course.read.all') -->
             <x-backpack::menu-dropdown-item title="Courses" icon="la la-book" :link="backpack_url('course')" />
-        @endcan
+        <!-- @endcan -->
         <!-- @can('course.read.all')
             <x-backpack::menu-dropdown-item title="Manage Course batches" icon="la la-question" :link="backpack_url('course-batch')" />
         @endcan -->
@@ -65,18 +66,18 @@
             <x-backpack::menu-dropdown-item title="Course Match options" icon="la la-list-ul" :link="backpack_url('course-match-option')" />
         @endcan
     </x-backpack::menu-dropdown>
-@endcan
 
 
+<!-- 
 @can('attendance.read.all')
     <x-backpack::menu-item title="View Attendances" icon="la la-calendar-check" :link="backpack_url('attendance')" />
-@endcan
+@endcan -->
 
 @can('form.read.all')
     <x-backpack::menu-item title="Registration Form" icon="la la-wpforms" :link="backpack_url('form')" />
 @endcan
 
-@can('student.read.all')
+@can('student.update.all')
     <x-backpack::menu-item title="Manage Students" icon="la la-user-graduate" :link="backpack_url('manage-student')" />
 @endcan
 
