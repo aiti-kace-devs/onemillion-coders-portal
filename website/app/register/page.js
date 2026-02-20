@@ -23,6 +23,7 @@ import {
   getRegistrationForm,
   submitRegistration,
   getConsentData,
+  checkEmailAvailability,
 } from "../../services/pages";
 import Button from "../../components/Button";
 import GhanaGradientText from "../../components/GhanaGradients/GhanaGradientText";
@@ -64,6 +65,11 @@ export default function RegisterPage() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [emailFieldName, setEmailFieldName] = useState(null);
   const [phoneFieldName, setPhoneFieldName] = useState(null);
+
+  // Real-time email availability state
+  // status: null | "checking" | "available" | "registered" | "used" | "otp_active" | "error"
+  const [emailAvailability, setEmailAvailability] = useState({ status: null, message: "" });
+  const emailCheckTimerRef = React.useRef(null);
 
   // Fetch all regions on component mount
   useEffect(() => {
@@ -199,6 +205,70 @@ export default function RegisterPage() {
     setStep(4);
   };
 
+  // Debounced real-time email availability check
+  const checkEmailAvailabilityDebounced = useCallback(
+    (emailValue) => {
+      // Clear any pending check
+      if (emailCheckTimerRef.current) {
+        clearTimeout(emailCheckTimerRef.current);
+        emailCheckTimerRef.current = null;
+      }
+
+      // Basic email format check before hitting the API
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailValue || !emailRegex.test(emailValue.trim())) {
+        setEmailAvailability({ status: null, message: "" });
+        return;
+      }
+
+      setEmailAvailability({ status: "checking", message: "Checking email availability..." });
+
+      // Debounce: wait 600ms after last keystroke before calling API
+      emailCheckTimerRef.current = setTimeout(async () => {
+        try {
+          const result = await checkEmailAvailability(emailValue.trim());
+          if (result?.available) {
+            setEmailAvailability({ status: "available", message: "Email is available." });
+          } else if (result?.reason === "registered") {
+            setEmailAvailability({
+              status: "registered",
+              message: result?.message || "This email is already registered.",
+            });
+          } else if (result?.reason === "used") {
+            // Email was consumed by a previous registration (used_at is set)
+            setEmailAvailability({
+              status: "used",
+              message: result?.message || "This email has already been used for registration.",
+            });
+          } else if (result?.reason === "otp_active") {
+            setEmailAvailability({
+              status: "otp_active",
+              message: "A verification code was already sent to this email.",
+            });
+          } else {
+            setEmailAvailability({
+              status: "error",
+              message: result?.message || "Email is not available.",
+            });
+          }
+        } catch (err) {
+          // Network error or server down — don't block the user
+          setEmailAvailability({ status: null, message: "" });
+        }
+      }, 600);
+    },
+    []
+  );
+
+  // Cleanup email check timer on unmount
+  React.useEffect(() => {
+    return () => {
+      if (emailCheckTimerRef.current) {
+        clearTimeout(emailCheckTimerRef.current);
+      }
+    };
+  }, []);
+
   // Handle form field change
   const handleFieldChange = (fieldName, value) => {
     setFormData((prev) => ({
@@ -209,6 +279,12 @@ export default function RegisterPage() {
     // Reset OTP verification if the email field value changes after verification
     if (fieldName === emailFieldName && otpVerified) {
       setOtpVerified(false);
+    }
+
+    // Real-time email availability check when the email field changes
+    if (fieldName === emailFieldName) {
+      setEmailAvailability({ status: null, message: "" });
+      checkEmailAvailabilityDebounced(value);
     }
 
     // Clear error for this field
@@ -246,6 +322,10 @@ export default function RegisterPage() {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(value)) {
             errors[field.field_name] = "Please enter a valid email address";
+          } else if (emailAvailability.status === "registered") {
+            errors[field.field_name] = "This email is already registered. Please use a different email.";
+          } else if (emailAvailability.status === "used") {
+            errors[field.field_name] = "This email has already been used for registration. Please use a different email.";
           }
         }
 
@@ -289,12 +369,12 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!executeRecaptcha) {
-      setError("Failed to verify reCaptcha.");
-      return;
-    }
+    // if (!executeRecaptcha) {
+    //   setError("Failed to verify reCaptcha.");
+    //   return;
+    // }
 
-    const token = await executeRecaptcha('register_form'); 
+    // const token = await executeRecaptcha('register_form'); 
 
     try {
       setSubmitting(true);
@@ -302,12 +382,12 @@ export default function RegisterPage() {
       // Prepare submission data - include course info since it's required
       const submissionData = {
         ...formData,
-        course: selectedCourse.title, // Add course title since it's required by API
+        course: 27, //selectedCourse.id,  //selectedCourse.title, // Add course title since it's required by API
         programme_id: selectedCourse.id,
         region_id: selectedRegion.id,
         centre_id: selectedCentre.id,
         form_uuid: formSchema.uuid,
-        recaptcha_token: token,
+        // recaptcha_token: token,
       };
 
       await submitRegistration(submissionData);
@@ -925,13 +1005,52 @@ export default function RegisterPage() {
                           </p>
                         )}
 
-                        {/* OTP Verification — auto-injected after the email field */}
-                        {field.type?.toLowerCase() === "email" && (
+                        {/* Real-time email availability indicator */}
+                        {field.type?.toLowerCase() === "email" && emailAvailability.status && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={`flex items-center gap-2 text-sm mt-1 ${
+                              emailAvailability.status === "checking"
+                                ? "text-gray-500"
+                                : emailAvailability.status === "available"
+                                ? "text-green-600"
+                                : emailAvailability.status === "otp_active"
+                                ? "text-amber-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {emailAvailability.status === "checking" && (
+                              <FiLoader className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                            )}
+                            {emailAvailability.status === "available" && (
+                              <FiCheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                            )}
+                            {emailAvailability.status === "otp_active" && (
+                              <FiClock className="w-3.5 h-3.5 flex-shrink-0" />
+                            )}
+                            {(emailAvailability.status === "registered" ||
+                              emailAvailability.status === "used" ||
+                              emailAvailability.status === "error") && (
+                              <FiAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                            )}
+                            <span>{emailAvailability.message}</span>
+                          </motion.div>
+                        )}
+
+                        {/* OTP Verification — auto-injected after the email field.
+                            Hidden when email is already registered OR already used (no point verifying).
+                            Shown but DISABLED for "otp_active" — the email is locked by
+                            another verification flow, so the Get OTP button is greyed out. */}
+                        {field.type?.toLowerCase() === "email" &&
+                          emailAvailability.status !== "registered" &&
+                          emailAvailability.status !== "used" && (
                           <OtpVerification
                             email={formData[field.field_name] || ""}
                             phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
                             formUuid={formSchema.uuid}
                             onVerified={setOtpVerified}
+                            emailStatus={emailAvailability.status}
                           />
                         )}
                       </div>

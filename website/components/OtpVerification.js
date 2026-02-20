@@ -10,7 +10,7 @@ import {
   FiAlertCircle,
   FiRefreshCw,
 } from "react-icons/fi";
-import { sendOtp, verifyOtp, checkOtpStatus } from "../services/pages";
+import { sendOtp, verifyOtp } from "../services/pages";
 
 /**
  * OTP Verification component for registration forms.
@@ -26,8 +26,10 @@ import { sendOtp, verifyOtp, checkOtpStatus } from "../services/pages";
  * @param {string}  props.formUuid    - The form UUID for the registration form
  * @param {(verified: boolean) => void} props.onVerified - Callback when verification state changes
  * @param {string}  [props.recaptchaToken] - Optional reCAPTCHA token
+ * @param {string}  [props.emailStatus]    - Real-time email availability status from parent
+ *                                           ("otp_active" or "used" disables the Get OTP button)
  */
-const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken }) => {
+const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken, emailStatus }) => {
   // ── State ────────────────────────────────────────
   const [otpState, setOtpState] = useState("idle");
   // idle | sending | sent | verifying | verified | error | expired
@@ -40,10 +42,13 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken })
   // Track the email that was verified so we can reset on change
   const [verifiedEmail, setVerifiedEmail] = useState("");
 
+  // Track the email the current OTP was sent to — OTP inputs only
+  // appear when the email field matches this value exactly.
+  const [sentToEmail, setSentToEmail] = useState("");
+
   const inputRefs = useRef([]);
   const countdownRef = useRef(null);
   const expiryRef = useRef(null);
-  const pollingRef = useRef(null);
 
   // ── Email validation helper ──────────────────────
   const isEmailValid = useCallback((val) => {
@@ -62,43 +67,115 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken })
       setCountdown(0);
       setExpiresIn(0);
       setVerifiedEmail("");
+      setSentToEmail("");
       onVerified(false);
-      stopPolling();
     }
   }, [email, verifiedEmail, onVerified]);
+
+  // ── Derived: does the current email field match the email the OTP was sent to? ──
+  // Used as a visual gate: OTP inputs only render when this is true.
+  // The underlying OTP state + expiry timer keep running in the background,
+  // so if the user types the sent-to email back, the inputs reappear instantly
+  // with the remaining countdown — no need to re-send.
+  const emailMatchesSent =
+    !!sentToEmail && email?.toLowerCase().trim() === sentToEmail.toLowerCase().trim();
+
+  // ── Auto-focus OTP inputs when email matches sent-to email ──
+  useEffect(() => {
+    const isActive =
+      otpState === "sent" || otpState === "verifying" || otpState === "expired";
+
+    if (sentToEmail && isActive && emailMatchesSent) {
+      // Auto-focus the first empty OTP input when inputs reappear
+      if (otpState === "sent") {
+        const firstEmpty = otpDigits.findIndex((d) => d === "");
+        if (firstEmpty >= 0) {
+          setTimeout(() => inputRefs.current[firstEmpty]?.focus(), 150);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emailMatchesSent]);
+
+  // ── Auto-show OTP inputs when backend reports active OTP for this email ──
+  // Handles the case where the user previously requested an OTP, switched to a
+  // different email, and then typed the original email back. The backend's
+  // "otp_active" status means an unexpired, unverified OTP exists for this
+  // email, so we auto-display the code-entry inputs and disable the
+  // "Get OTP" button — the user already has a code they can enter.
+  useEffect(() => {
+    if (emailStatus !== "otp_active" || !isEmailValid(email)) return;
+
+    // Check if OTP inputs are already visible for this email
+    const isEntryState = otpState === "sent" || otpState === "verifying" || otpState === "expired";
+    const matchesSent = !!sentToEmail && email?.toLowerCase().trim() === sentToEmail.toLowerCase().trim();
+    const alreadyShowingInputs = isEntryState && matchesSent;
+
+    // Don't interfere if inputs are already showing, email is already verified,
+    // or a send request is currently in-flight (avoid race condition with handleSendOtp)
+    if (alreadyShowingInputs || otpState === "verified" || otpState === "sending") return;
+
+    // Auto-transition to showing OTP inputs
+    setSentToEmail(email.trim());
+    setOtpState("sent");
+    setOtpDigits(["", "", "", "", "", ""]);
+    setErrorMessage("");
+    setRemainingAttempts(null);
+    // Reset timers — we don't know the exact remaining TTL for this OTP,
+    // and stale timers from a previous email's OTP flow must not carry over.
+    setCountdown(0);
+    setExpiresIn(0);
+    setTimeout(() => inputRefs.current[0]?.focus(), 150);
+  }, [emailStatus, email, otpState, sentToEmail, isEmailValid]);
 
   // ── Cleanup on unmount ───────────────────────────
   useEffect(() => {
     return () => {
       clearInterval(countdownRef.current);
       clearInterval(expiryRef.current);
-      stopPolling();
     };
   }, []);
 
   // ── Resend cooldown timer ────────────────────────
   useEffect(() => {
+    // Clear any existing interval before creating a new one to prevent leaks
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
     if (countdown > 0) {
       countdownRef.current = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(countdownRef.current);
+            countdownRef.current = null;
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
     }
-    return () => clearInterval(countdownRef.current);
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+      }
+    };
   }, [countdown]);
 
   // ── OTP expiry timer ─────────────────────────────
   useEffect(() => {
+    // Clear any existing interval before creating a new one to prevent leaks
+    if (expiryRef.current) {
+      clearInterval(expiryRef.current);
+      expiryRef.current = null;
+    }
     if (expiresIn > 0) {
       expiryRef.current = setInterval(() => {
         setExpiresIn((prev) => {
           if (prev <= 1) {
             clearInterval(expiryRef.current);
+            expiryRef.current = null;
             if (otpState === "sent") {
               setOtpState("expired");
               setErrorMessage("OTP has expired. Please request a new one.");
@@ -109,36 +186,13 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken })
         });
       }, 1000);
     }
-    return () => clearInterval(expiryRef.current);
+    return () => {
+      if (expiryRef.current) {
+        clearInterval(expiryRef.current);
+        expiryRef.current = null;
+      }
+    };
   }, [expiresIn, otpState]);
-
-  // ── Polling for link-based verification ──────────
-  const startPolling = useCallback(
-    (emailAddr) => {
-      stopPolling();
-      pollingRef.current = setInterval(async () => {
-        try {
-          const res = await checkOtpStatus(emailAddr);
-          if (res?.verified) {
-            setOtpState("verified");
-            setVerifiedEmail(emailAddr);
-            onVerified(true);
-            stopPolling();
-          }
-        } catch {
-          // Silently continue polling
-        }
-      }, 4000); // Poll every 4 seconds
-    },
-    [onVerified]
-  );
-
-  const stopPolling = () => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-  };
 
   // ── Send OTP ─────────────────────────────────────
   const handleSendOtp = async () => {
@@ -164,21 +218,33 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken })
       const res = await sendOtp(payload);
 
       if (res?.success) {
-        setOtpState("sent");
-        setCountdown(60); // 60-second resend cooldown
-        setExpiresIn(res.expires_in || 600);
-        // Start polling in case user verifies via email link
-        startPolling(email.trim());
-        // Auto-focus first OTP input
-        setTimeout(() => inputRefs.current[0]?.focus(), 150);
+        // If the backend says this email is already verified (e.g. user refreshed
+        // the page mid-flow), skip to "verified" state — no new OTP needed.
+        if (res.already_verified) {
+          setOtpState("verified");
+          setVerifiedEmail(email.trim());
+          setSentToEmail(email.trim());
+          onVerified(true);
+        } else {
+          setSentToEmail(email.trim());
+          setOtpState("sent");
+          setCountdown(60); // 60-second resend cooldown
+          setExpiresIn(res.expires_in || 600);
+          // Auto-focus first OTP input
+          setTimeout(() => inputRefs.current[0]?.focus(), 150);
+        }
       } else {
         setOtpState("error");
         setErrorMessage(res?.message || "Failed to send OTP. Please try again.");
       }
     } catch (err) {
       setOtpState("error");
-      const serverMsg =
-        err?.response?.data?.message || "Failed to send verification code. Please try again.";
+      let serverMsg;
+      if (err?.code === "ECONNABORTED" || err?.message?.includes("timeout")) {
+        serverMsg = "The request timed out. The server may still be sending your email — please wait a moment and check your inbox before retrying.";
+      } else {
+        serverMsg = err?.response?.data?.message || "Failed to send verification code. Please try again.";
+      }
       const retryAfter = err?.response?.data?.retry_after;
       setErrorMessage(serverMsg);
       if (retryAfter) setCountdown(retryAfter);
@@ -201,7 +267,6 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken })
           setOtpState("verified");
           setVerifiedEmail(email.trim());
           onVerified(true);
-          stopPolling();
         } else {
           setOtpState("sent"); // Go back to "sent" so user can retry
           setErrorMessage(res?.message || "Invalid code. Please try again.");
@@ -295,6 +360,17 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken })
   // Don't render anything if email is empty
   const emailIsValid = isEmailValid(email);
 
+  // OTP-entry states where the code input panel would normally show
+  const isOtpEntryState =
+    otpState === "sent" || otpState === "verifying" || otpState === "expired";
+
+  // Show idle button when: actually idle, OR OTP is in-flight but for a
+  // different email (the user changed the field — hide inputs, show button).
+  const showIdleButton = otpState === "idle" || (isOtpEntryState && !emailMatchesSent);
+
+  // Show OTP inputs only when the email field matches the sent-to email
+  const showOtpEntry = isOtpEntryState && emailMatchesSent;
+
   return (
     <AnimatePresence mode="wait">
       {/* ═══ VERIFIED STATE ═══ */}
@@ -316,8 +392,10 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken })
         </motion.div>
       )}
 
-      {/* ═══ IDLE / GET OTP BUTTON ═══ */}
-      {otpState === "idle" && (
+      {/* ═══ IDLE / GET OTP BUTTON ═══
+           Also shown when OTP is in-flight for a different email —
+           the inputs are hidden but the button appears for the current email. */}
+      {showIdleButton && (
         <motion.div
           key="idle"
           initial={{ opacity: 0, height: 0 }}
@@ -329,12 +407,12 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken })
           <button
             type="button"
             onClick={handleSendOtp}
-            disabled={!emailIsValid}
+            disabled={!emailIsValid || emailStatus === "otp_active" || emailStatus === "used"}
             className={`
               inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
               transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1
               ${
-                emailIsValid
+                emailIsValid && emailStatus !== "otp_active" && emailStatus !== "used"
                   ? "bg-yellow-400 text-gray-900 hover:bg-yellow-500 focus:ring-yellow-400 shadow-sm hover:shadow-md cursor-pointer"
                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }
@@ -346,6 +424,16 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken })
           {!emailIsValid && email && email.length > 0 && (
             <p className="text-xs text-gray-400 mt-1.5">
               Enter a valid email address to request a verification code
+            </p>
+          )}
+          {emailIsValid && emailStatus === "otp_active" && (
+            <p className="text-xs text-amber-600 mt-1.5">
+              A verification code was already sent to this email. Enter it below.
+            </p>
+          )}
+          {emailIsValid && emailStatus === "used" && (
+            <p className="text-xs text-red-600 mt-1.5">
+              This email has already been used for registration. Please use a different email.
             </p>
           )}
         </motion.div>
@@ -370,8 +458,11 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken })
         </motion.div>
       )}
 
-      {/* ═══ SENT / OTP ENTRY ═══ */}
-      {(otpState === "sent" || otpState === "verifying" || otpState === "expired") && (
+      {/* ═══ SENT / OTP ENTRY ═══
+           Only visible when the email field matches the email the OTP was sent to.
+           If the user types a different email, these inputs disappear; typing the
+           original email back brings them back instantly with the remaining countdown. */}
+      {showOtpEntry && (
         <motion.div
           key="otp-entry"
           initial={{ opacity: 0, height: 0 }}
@@ -392,8 +483,8 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken })
                 </h4>
                 <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
                   We sent a 6-digit code to{" "}
-                  <span className="font-medium text-gray-700">{email}</span>.
-                  Check your inbox{phone ? " (or SMS)" : ""}.
+                  <span className="font-medium text-gray-700">{sentToEmail || email}</span>.
+                  Check your inbox.
                 </p>
               </div>
             </div>

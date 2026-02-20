@@ -259,7 +259,7 @@ export const getRegistrationForm = async () => {
  */
 export const submitRegistration = async (formData) => {
   try {
-    const response = await apiRequest("/register", {
+    const response = await apiRequest("/add-student", {
       method: 'POST',
       data: formData
     });
@@ -290,15 +290,37 @@ export const getCentreProgrammes = async (centreId) => {
 // ──────────────────────────────────────────────
 
 /**
+ * Real-time email availability check.
+ * Call this (debounced) as the user types their email to provide instant feedback.
+ *
+ * @param {string} email
+ * @returns {Promise<Object>} - { success, available, reason?, message }
+ *   reason is one of: "registered" | "otp_active" | null (when available)
+ */
+export const checkEmailAvailability = async (email) => {
+  try {
+    const response = await apiRequest(`/otp/check-email?email=${encodeURIComponent(email)}`);
+    return response;
+  } catch (error) {
+    console.error("Error checking email availability:", error);
+    throw error;
+  }
+};
+
+/**
  * Send an OTP code to the user's email (and optionally associate a phone number).
  * @param {{ email: string, phone?: string, form_uuid: string, recaptcha_token?: string }} data
- * @returns {Promise<Object>} - { success, message, expires_in, has_phone }
+ * @returns {Promise<Object>} - { success, message, expires_in }
  */
 export const sendOtp = async (data) => {
   try {
     const response = await apiRequest("/otp/send", {
       method: "POST",
       data,
+      // OTP email sending can take 30-90 seconds when the SMTP server is slow
+      // (the backend allows up to 120s). The default 15s global timeout would
+      // cause a false "timeout" error while the backend is still sending.
+      timeout: 90000,
     });
     return response;
   } catch (error) {
@@ -325,17 +347,3 @@ export const verifyOtp = async (data) => {
   }
 };
 
-/**
- * Check if an email has been OTP-verified (polling).
- * @param {string} email
- * @returns {Promise<Object>} - { success, verified }
- */
-export const checkOtpStatus = async (email) => {
-  try {
-    const response = await apiRequest(`/otp/status?email=${encodeURIComponent(email)}`);
-    return response;
-  } catch (error) {
-    console.error("Error checking OTP status:", error);
-    throw error;
-  }
-};

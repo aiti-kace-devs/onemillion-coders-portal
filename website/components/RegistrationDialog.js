@@ -19,6 +19,7 @@ import {
   getRegistrationForm,
   submitRegistration,
   getConsentData,
+  checkEmailAvailability,
 } from "../services/pages";
 import Button from "./Button";
 import OtpVerification from "./OtpVerification";
@@ -52,6 +53,11 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
   const [otpVerified, setOtpVerified] = useState(false);
   const [emailFieldName, setEmailFieldName] = useState(null);
   const [phoneFieldName, setPhoneFieldName] = useState(null);
+
+  // Real-time email availability state
+  // status: null | "checking" | "available" | "registered" | "used" | "otp_active" | "error"
+  const [emailAvailability, setEmailAvailability] = useState({ status: null, message: "" });
+  const emailCheckTimerRef = React.useRef(null);
 
   // Detect email and phone fields from form schema (case-insensitive)
   useEffect(() => {
@@ -98,6 +104,7 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
       setConsentAccepted(false);
       setConsentContent("");
       setOtpVerified(false);
+      setEmailAvailability({ status: null, message: "" });
       fetchLocations();
     }
   }, [isOpen, programme?.id, fetchLocations]);
@@ -117,6 +124,65 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
       });
     return () => { cancelled = true; };
   }, [step, isOpen]);
+
+  // Debounced real-time email availability check
+  const checkEmailAvailabilityDebounced = useCallback(
+    (emailValue) => {
+      if (emailCheckTimerRef.current) {
+        clearTimeout(emailCheckTimerRef.current);
+        emailCheckTimerRef.current = null;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailValue || !emailRegex.test(emailValue.trim())) {
+        setEmailAvailability({ status: null, message: "" });
+        return;
+      }
+
+      setEmailAvailability({ status: "checking", message: "Checking email availability..." });
+
+      emailCheckTimerRef.current = setTimeout(async () => {
+        try {
+          const result = await checkEmailAvailability(emailValue.trim());
+          if (result?.available) {
+            setEmailAvailability({ status: "available", message: "Email is available." });
+          } else if (result?.reason === "registered") {
+            setEmailAvailability({
+              status: "registered",
+              message: result?.message || "This email is already registered.",
+            });
+          } else if (result?.reason === "used") {
+            setEmailAvailability({
+              status: "used",
+              message: result?.message || "This email has already been used for registration.",
+            });
+          } else if (result?.reason === "otp_active") {
+            setEmailAvailability({
+              status: "otp_active",
+              message: "A verification code was already sent to this email.",
+            });
+          } else {
+            setEmailAvailability({
+              status: "error",
+              message: result?.message || "Email is not available.",
+            });
+          }
+        } catch {
+          setEmailAvailability({ status: null, message: "" });
+        }
+      }, 600);
+    },
+    []
+  );
+
+  // Cleanup email check timer on unmount
+  useEffect(() => {
+    return () => {
+      if (emailCheckTimerRef.current) {
+        clearTimeout(emailCheckTimerRef.current);
+      }
+    };
+  }, []);
 
   // Fetch form schema when moving to form step
   const fetchFormSchema = async () => {
@@ -164,6 +230,12 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
       setOtpVerified(false);
     }
 
+    // Real-time email availability check when the email field changes
+    if (fieldName === emailFieldName) {
+      setEmailAvailability({ status: null, message: "" });
+      checkEmailAvailabilityDebounced(value);
+    }
+
     // Clear error for this field
     if (formErrors[fieldName]) {
       setFormErrors((prev) => ({
@@ -199,6 +271,10 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(value)) {
             errors[field.field_name] = "Please enter a valid email address";
+          } else if (emailAvailability.status === "registered") {
+            errors[field.field_name] = "This email is already registered. Please use a different email.";
+          } else if (emailAvailability.status === "used") {
+            errors[field.field_name] = "This email has already been used for registration. Please use a different email.";
           }
         }
 
@@ -720,13 +796,51 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
                                   </p>
                                 )}
 
-                              {/* OTP Verification — auto-injected after the email field */}
-                              {field.type?.toLowerCase() === "email" && (
+                              {/* Real-time email availability indicator */}
+                              {field.type?.toLowerCase() === "email" && emailAvailability.status && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: -5 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className={`flex items-center gap-2 text-sm mt-1 ${
+                                    emailAvailability.status === "checking"
+                                      ? "text-gray-500"
+                                      : emailAvailability.status === "available"
+                                      ? "text-green-600"
+                                      : emailAvailability.status === "otp_active"
+                                      ? "text-amber-600"
+                                      : "text-red-600"
+                                  }`}
+                                >
+                                  {emailAvailability.status === "checking" && (
+                                    <FiLoader className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                                  )}
+                                  {emailAvailability.status === "available" && (
+                                    <FiCheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                                  )}
+                                  {emailAvailability.status === "otp_active" && (
+                                    <FiClock className="w-3.5 h-3.5 flex-shrink-0" />
+                                  )}
+                                  {(emailAvailability.status === "registered" ||
+                                    emailAvailability.status === "used" ||
+                                    emailAvailability.status === "error") && (
+                                    <FiAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                                  )}
+                                  <span>{emailAvailability.message}</span>
+                                </motion.div>
+                              )}
+
+                              {/* OTP Verification — auto-injected after the email field.
+                                  Hidden when email is already registered or used.
+                                  Shown but DISABLED for "otp_active". */}
+                              {field.type?.toLowerCase() === "email" &&
+                                emailAvailability.status !== "registered" &&
+                                emailAvailability.status !== "used" && (
                                 <OtpVerification
                                   email={formData[field.field_name] || ""}
                                   phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
                                   formUuid={formSchema.uuid}
                                   onVerified={setOtpVerified}
+                                  emailStatus={emailAvailability.status}
                                 />
                               )}
                             </div>

@@ -14,32 +14,24 @@ class OtpVerificationMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public string $otpCode;
-    public string $verificationUrl;
     public string $recipientEmail;
     public int $expiresInMinutes;
-    public bool $hasPhone;
 
     /**
      * Create a new message instance.
      *
      * @param string $otpCode          The 6-digit OTP code (shown directly in the email)
-     * @param string $verificationUrl  The signed verification link
      * @param string $recipientEmail   The user's email address
      * @param int    $expiresInMinutes How many minutes until the OTP expires
-     * @param bool   $hasPhone         Whether a phone number is associated (changes messaging)
      */
     public function __construct(
         string $otpCode,
-        string $verificationUrl,
         string $recipientEmail,
         int $expiresInMinutes = 10,
-        bool $hasPhone = false
     ) {
         $this->otpCode = $otpCode;
-        $this->verificationUrl = $verificationUrl;
         $this->recipientEmail = $recipientEmail;
         $this->expiresInMinutes = $expiresInMinutes;
-        $this->hasPhone = $hasPhone;
     }
 
     /**
@@ -54,18 +46,19 @@ class OtpVerificationMail extends Mailable implements ShouldQueue
 
     /**
      * Get the message content definition.
+     *
+     * Uses Laravel markdown mail components (x-mail::message) to ensure
+     * consistent header, footer, branding and typography across ALL
+     * emails the platform sends.
      */
     public function content(): Content
     {
         return new Content(
-            view: 'emails.otp-verification',
+            markdown: 'mail.otp-verification',
             with: [
                 'otpCode'          => $this->otpCode,
-                'verificationUrl'  => $this->verificationUrl,
                 'recipientEmail'   => $this->recipientEmail,
                 'expiresInMinutes' => $this->expiresInMinutes,
-                'hasPhone'         => $this->hasPhone,
-                'appName'          => config('app.name', 'One Million Coders'),
             ],
         );
     }
