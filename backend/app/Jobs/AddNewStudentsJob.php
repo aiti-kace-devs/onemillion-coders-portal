@@ -57,7 +57,7 @@ class AddNewStudentsJob implements ShouldQueue
             if ($validator->fails()) {
                 $errors[] = "Error creating student with email " . $student['email'];
                 $errors[] = $validator->errors()->all();
-                break;
+                continue;
             }
 
             $plainPassword = $student['password'] ?? str()->random(8);
@@ -71,15 +71,14 @@ class AddNewStudentsJob implements ShouldQueue
                     $exam = Oex_exam_master::where('title', $student['exam_name'])->first();
                 }
                 if ($exam == null) {
-                    abort(422, 'Exam not found');
+                    $errors[] = "Error creating student with email " . $student['email'] . ": Exam not found";
+                    continue;
                 }
                 $student['exam'] = $exam->id;
             }
 
             // Check for existing user
             $existingUser = User::where('email', $student['email'])->first();
-            $std = $existingUser;
-
             if ($existingUser == null) {
                 // Create a new student
                 $std = new User();
@@ -93,7 +92,7 @@ class AddNewStudentsJob implements ShouldQueue
                 $std->userId = $student['userId'];
                 $std->password = $plainPassword;
                 $std->registered_course = $student['registered_course'];
-                $std->age  = $student['age'];
+                $std->age = $student['age'];
                 $std->gender = $student['gender'];
                 $std->status = 1;
                 $std->ghcard = $student['ghcard'] ?? null;

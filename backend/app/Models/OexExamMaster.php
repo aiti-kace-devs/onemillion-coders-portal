@@ -10,14 +10,16 @@ class OexExamMaster extends Model
 {
     use CrudTrait;
     use HasFactory;
-    protected $table="oex_exam_masters";
+    protected $table = "oex_exam_masters";
 
-    protected $primaryKey="id";
+    protected $primaryKey = "id";
 
-    protected $fillable=['title','category','passmark', 'exam_date','status','exam_duration'];
+    protected $fillable = ['title', 'category', 'passmark', 'exam_date', 'status', 'exam_duration'];
     protected $casts = [
         'status' => 'boolean',
-
+        'exam_date' => 'datetime',
+        'passmark' => 'integer',
+        'exam_duration' => 'integer'
     ];
 
     public function categoryRelation()
@@ -25,7 +27,8 @@ class OexExamMaster extends Model
         return $this->belongsTo(OexCategory::class, 'category', 'id');
     }
 
-    public function questions(){
+    public function questions()
+    {
         return $this->hasMany(OexQuestionMaster::class, 'exam_id');
     }
 

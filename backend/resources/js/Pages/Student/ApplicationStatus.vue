@@ -144,7 +144,7 @@ function closeRevokeModal() {
                 <span
                   :class="[
                     'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white text-white',
-                    props.user_admission ? 'bg-green-500' : 'bg-gray-300',
+                    props.user?.shortlist ? 'bg-green-500' : 'bg-gray-300',
                   ]"
                   >3</span
                 >
@@ -152,7 +152,7 @@ function closeRevokeModal() {
                   <h3
                     :class="[
                       'font-semibold text-lg',
-                      props.user_admission ? 'text-green-700' : 'text-gray-400',
+                      props.user?.shortlist ? 'text-green-700' : 'text-gray-400',
                     ]"
                   >
                     Shortlisted
@@ -175,7 +175,7 @@ function closeRevokeModal() {
                   </svg>
                 </div>
                 <div v-if="collapse[2]" class="mt-2 text-sm text-gray-700 pl-2">
-                  <template v-if="props.user_admission">
+                  <template v-if="props.user?.shortlist">
                     Your application has been reviewed and you have been selected for
                     admission. Kindly confirm your session.
                   </template>
@@ -243,7 +243,7 @@ function closeRevokeModal() {
                       Further instructions will be provided upon selection.
                     </p>
 
-                    <div class="mt-5">
+                    <div v-if="props.user?.shortlist" class="mt-5">
                       <LinkButton :href="route('student.session.index')">
                         Choose a session
                       </LinkButton>

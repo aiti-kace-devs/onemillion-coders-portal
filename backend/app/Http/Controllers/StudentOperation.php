@@ -338,6 +338,7 @@ class StudentOperation extends Controller
 
         $result = Oex_result::where('exam_id', $id)
             ->where('user_id', $user->id)
+            ->latest()
             ->first();
 
         if (!$result) {
@@ -411,7 +412,7 @@ class StudentOperation extends Controller
 
     public function confirm_session(Request $request)
     {
-        $user = $request->guard('web')->user();
+        $user = Auth::guard('web')->user();
 
         $data = $request->validate(
             [
