@@ -53,6 +53,7 @@ class CourseChangedListener
                     'session' => null,
                     'confirmed' => null,
                     'location' => null,
+                    'email_sent' => null
                 ]
             );
         }
