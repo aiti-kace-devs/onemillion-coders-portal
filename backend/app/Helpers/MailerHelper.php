@@ -47,7 +47,8 @@ class MailerHelper
     private static function getEmailTemplate(string $name, array $data): ?string
     {
         $template = EmailTemplate::where('name', $name)->value('content');
-        if (!$template) return null;
+        if (!$template)
+            return null;
 
         foreach ($data as $key => $value) {
             $template = str_replace("{{$key}}", $value, $template);
@@ -76,7 +77,10 @@ class MailerHelper
             Log::error('Unable to send bulk image, view not created');
             return;
         }
-        $mailable =  new GenericEmail($replaceContent, $subject, "mail.temp.$filename", $data);
+        $mailable = new GenericEmail($replaceContent, $subject, "mail.temp.$filename", $data);
+
+        $recipientCount = is_array($emails) ? count($emails) : 1;
+        $recipientLog = $bulk ? "{$recipientCount} recipients (BCC)" : (is_array($emails) ? implode(', ', $emails) : $emails);
 
         if ($bulk) {
             Mail::to(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
@@ -87,6 +91,8 @@ class MailerHelper
                 ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                 ->send($mailable);
         }
+
+        activity()->log("Sent email: '{$subject}' to {$recipientLog}");
     }
 
 
@@ -107,6 +113,9 @@ class MailerHelper
 
             $mailable = new GenericEmail($content, $subject);
 
+            $recipientCount = is_array($emails) ? count($emails) : 1;
+            $recipientLog = $bulk ? "{$recipientCount} recipients (BCC)" : (is_array($emails) ? implode(', ', $emails) : $emails);
+
             if ($bulk) {
                 Mail::to(config('mail.from.address'))
                     ->bcc((array) $emails)
@@ -114,6 +123,8 @@ class MailerHelper
             } else {
                 Mail::to($emails)->send($mailable);
             }
+
+            activity()->log("Sent template email ({$templateName}): '{$subject}' to {$recipientLog}");
 
             return true;
 

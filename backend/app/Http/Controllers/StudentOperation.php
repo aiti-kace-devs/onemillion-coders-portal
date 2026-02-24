@@ -248,11 +248,11 @@ class StudentOperation extends Controller
         $data = ['status' => 'true', 'message' => 'started successfully'];
         $data['questions'] = $questions;
 
-        activity('Start Exams')
-            ->by($user)
-            ->withProperties(['exam_id' => $id])
-            ->event('Exam started')
-            ->log("$user->name started the exam at $user_exam->started");
+        // activity('Start Exams')
+        //     ->causedBy($user)
+        //     ->withProperties(['exam_id' => $id])
+        //     ->event('Exam started')
+        //     ->log("$user->name started the exam at $user_exam->started");
 
         return response()->json($data);
     }
@@ -330,7 +330,7 @@ class StudentOperation extends Controller
         TestSubmittedJob::dispatch($user, $res);
 
         activity('Submit Exams')
-            ->by($user)
+            ->causedBy($user)
             ->withProperties(['exam_id' => $request->exam_id])
             ->event('Exam submitted')
             ->log("$user->name submitted the exam at $std_info->submitted and got a score of $res->yes_ans out of $total");
@@ -507,15 +507,15 @@ class StudentOperation extends Controller
 
             $admission->confirmed = now();
             $admission->session = $session->id;
-            // $admission->email_sent = now();
+            $admission->email_sent = now();
             $admission->location = $courseDetails->location;
             $admission->save();
 
             if (!$changingSession) {
                 AdmitStudentJob::dispatch($admission);
                 activity('Confirmed Session')
-                    ->by($user)
-                    ->on($admission)
+                    ->causedBy($user)
+                    ->performedOn($admission)
                     ->withProperties([
                         'session' => $session->name,
                         'course' => $courseDetails->course_name,
@@ -524,8 +524,8 @@ class StudentOperation extends Controller
                     ->log("$user->name confirmed their session: {$session->name}");
             } else {
                 activity('Changed Session')
-                    ->by($user)
-                    ->on($admission)
+                    ->causedBy($user)
+                    ->performedOn($admission)
                     ->withProperties([
                         'session' => $session->name,
                         'course' => $courseDetails->course_name,
@@ -618,7 +618,7 @@ class StudentOperation extends Controller
         $user->registered_course = $request->course_id; // Store course_id in exam field
         $user->save();
         activity('Course changed')
-            ->by($user)
+            ->causedBy($user)
             ->event('Course Changed')
             ->log("$user->name changed their course to: $request->course_id");
 
@@ -643,7 +643,7 @@ class StudentOperation extends Controller
                 $count++;
             }
             activity('Admission created')
-                ->by($user)
+                ->causedBy($user)
                 ->event('Admission Created')
                 ->log("Admitted {$count} students successfully!");
 
@@ -677,9 +677,9 @@ class StudentOperation extends Controller
 
             $user->update(['shortlist' => 0]);
             activity('Admission deleted')
-                ->by($user)
+                ->causedBy($user)
                 ->event('Admission Deleted')
-                ->log("Admission deleted successfully!");
+                ->log("$user->name deleted admission successfully!");
 
             return Redirect::route('student.application-status');
         } else {
@@ -788,7 +788,7 @@ class StudentOperation extends Controller
         $user->details_updated_at = now();
         $user->save();
         activity('Details updated')
-            ->by($user)
+            ->causedBy($user)
             ->event('Details Updated')
             ->log("{$user->name}'s details updated successfully!");
 

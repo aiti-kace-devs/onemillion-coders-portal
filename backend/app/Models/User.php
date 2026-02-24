@@ -73,6 +73,24 @@ class User extends Authenticatable
 
 
 
+    protected static function booted()
+    {
+        static::updated(function ($user) {
+            if ($user->wasChanged('shortlist') && $user->shortlist) {
+                \App\Models\UserAdmission::updateOrCreate(
+                    ['user_id' => $user->userId],
+                    [
+                        'course_id' => $user->registered_course,
+                        'session' => null,
+                        'confirmed' => null,
+                        'location' => null,
+                        'email_sent' => null
+                    ]
+                );
+            }
+        });
+    }
+
     /**
      * Set the password attribute with a double-hashing guard.
      */
@@ -255,7 +273,11 @@ class User extends Authenticatable
 
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logFillable()->logOnlyDirty()->setDescriptionForEvent(fn(string $event) => "User {$event}");
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->setDescriptionForEvent(fn(string $event) => "User {$event}")
+            ->dontLogIfAttributesChangedOnly(['last_login']);
     }
 }
 

@@ -48,7 +48,7 @@ use Illuminate\Support\Str;
 
 
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
-Route::post('/api/add-student', [FormResponseController::class, 'store']);      
+Route::post('/api/add-student', [FormResponseController::class, 'store']);
 
 // Redirect Statamic login to Backpack login
 Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
@@ -167,7 +167,7 @@ Route::prefix('admins')
         Route::middleware(['auth:admin'])->group(function () {
             // Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
             // Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
-
+    
             Route::middleware('permission:category.read')
                 ->name('category.')
                 ->group(function () {
@@ -274,7 +274,7 @@ Route::prefix('admins')
                     ->name('remove-attendance')
                     ->middleware('permission:attendance.delete');
                 Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page'])->middleware('permission:attendance.create');
-                Route::post('/generate_qrcode', [AttendanceQRCodeTrait::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
+                // Route::post('/generate_qrcode', [AttendanceQRCodeTrait::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
                 // Route::post('/confirm_attendance', [AttendanceController::class, 'confirmAttendance'])->middleware('permission:attendance.create');
                 Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])->name('viewAttendanceByDate');
                 // Route::get('/remove-attendance/{id}', [AttendanceController::class, 'removeAttendance'])
@@ -370,7 +370,7 @@ Route::prefix('admins')
                     ->middleware('permission:branch.status');
             });
             // end of manage branch routes
-
+    
             // manage centre routes
             Route::prefix('manage-centre')
                 ->middleware('permission:centre.read')
@@ -392,7 +392,7 @@ Route::prefix('admins')
                     ->middleware('permission:centre.delete');
             });
             // end of manage centre routes
-
+    
             // manage programme routes
             Route::prefix('manage-programme')
                 ->middleware('permission:programme.read')
@@ -416,7 +416,7 @@ Route::prefix('admins')
                     ->middleware('permission:programme.delete');
             });
             // end of manage programme routes
-
+    
             // manage course routes
             Route::prefix('manage-course')
                 ->middleware('permission:course.read')
@@ -438,7 +438,7 @@ Route::prefix('admins')
                 Route::get('/fetch/centre', [CourseController::class, 'fetchCentre'])->name('fetch.centre');
             });
             // end of manage course routes
-
+    
             // manage session routes
             Route::prefix('sessions')
                 ->middleware('permission:session.read')
@@ -463,7 +463,7 @@ Route::prefix('admins')
                     ->middleware('permission:session.delete');
             });
             // end of manage period routes
-
+    
             // manage class schedule routes
             Route::prefix('manage-class-schedule')
                 ->name('class.schedule.')
@@ -475,7 +475,7 @@ Route::prefix('admins')
                 Route::get('/{course}/delete', [ClassScheduleController::class, 'destroy'])->name('destroy');
             });
             // end of manage class schedule routes
-
+    
             // manage sms_template routes
             Route::prefix('manage-sms-template')
                 ->middleware('permission:sms-template.read')
@@ -502,7 +502,7 @@ Route::prefix('admins')
                     ->middleware('permission:student.bulk-sms');
             });
             // end of manage sms_template routes
-
+    
             // manage email_template routes
             Route::prefix('manage-email-template')
                 ->middleware('permission:email-template.read')

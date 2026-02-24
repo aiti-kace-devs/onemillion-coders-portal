@@ -42,11 +42,11 @@
                     </tr>
                     <tr>
                         <td>Total marks: </td>
-                        <td>{{ $result_info->yes_ans}}/30</td>
+                        <td>{{ $result_info->yes_ans}}/{{ $result_info->yes_ans + $result_info->no_ans }}</td>
                     </tr>
                     <tr>
                         <td>Percentage score :</td>
-                        <td>{{ round(($result_info->yes_ans / 30) * 100) }}%</td>
+                        <td>{{ round(($result_info->yes_ans / $result_info->yes_ans + $result_info->no_ans ) * 100) }}%</td>
                     </tr>
                 </table>
             </div>
