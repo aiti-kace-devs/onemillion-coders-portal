@@ -37,7 +37,7 @@
                     <form id="admissionForm">
                         @csrf
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="course_id">Course <span class="text-danger">*</span></label>
                                     <select name="course_id" id="course_id" class="form-control select2" required>
@@ -48,7 +48,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            {{-- <div class="col-md-4">
                                 <div class="form-group">
                                     <label for="batch_id">Batch <span class="text-danger">*</span></label>
                                     <select name="batch_id" id="batch_id" class="form-control select2" required>
@@ -58,7 +58,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                            </div>
+                            </div> --}}
                             <div class="col-md-4">
                                 <div class="form-group">
                                     <label for="limit">Number of Students <span class="text-danger">*</span></label>
@@ -103,7 +103,7 @@
                     <div id="statsSection" class="mb-3"></div>
                     <div id="rulesSection" class="mb-3"></div>
                     <div class="table-responsive">
-                        <table id="studentsTable" class="table table-striped table-hover datatable">
+                        <table id="studentsTable" class="table table-striped table-hover datatable bp-datatable">
                             <thead>
                                 <tr>
                                     <th>Name</th>
@@ -148,7 +148,6 @@
 
                 let previewData = null;
 
-                // Fetch rules when course changes
                 $('#course_id').change(function() {
                     const courseId = $(this).val();
                     const container = $('#rulesContainer');
@@ -161,7 +160,7 @@
                     container.html('<i class="la la-spinner la-spin"></i> Loading rules...');
 
                     $.ajax({
-                        url: '{{ backpack_url('admission-run/get-rules') }}', // Using the route we created
+                        url: '{{ backpack_url('admission-run/get-rules') }}',
                         method: 'GET',
                         data: { 
                             course_id: courseId,
@@ -209,10 +208,9 @@
 
                 $('#previewBtn').click(function() {
                     const courseId = $('#course_id').val();
-                    const batchId = $('#batch_id').val();
                     const limit = $('#limit').val();
 
-                    if (!courseId || !batchId || !limit) {
+                    if (!courseId || !limit) {
                         new Noty({
                             type: 'error',
                             text: 'Please fill in all required fields.'
@@ -231,7 +229,7 @@
                         data: {
                             _token: '{{ csrf_token() }}',
                             course_id: courseId,
-                            batch_id: batchId,
+                            // batch_id: batchId,
                             limit: limit,
                             active_rules: activeRules || [0]
                         },
@@ -263,7 +261,6 @@
 
                 $('#executeBtn').click(function() {
 
-                    // use sweet alert 
                     Swal.fire({
                         title: 'Admit Students?',
                         text: "Are you sure you want to execute this admission? Emails will be sent to selected students.",

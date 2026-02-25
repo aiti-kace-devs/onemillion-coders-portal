@@ -69,6 +69,10 @@ class User extends Authenticatable
         'status' => 'boolean',
     ];
 
+    protected $with = [
+        'course',
+    ];
+
 
 
     /**
@@ -101,20 +105,22 @@ class User extends Authenticatable
 
     public function isAdmitted()
     {
-        return UserAdmission::where('user_id', $this->userId)
-            ->whereNotNull('confirmed')->count() == 1;
+        return $this->admissions()->whereNotNull('confirmed')->exists();
     }
 
     public function hasAdmission()
     {
-        return UserAdmission::where('user_id', $this->userId)
-            ->count() == 1;
+        return $this->admissions()->exists();
     }
 
     public function admissionEmailSent()
     {
-        return UserAdmission::where('user_id', $this->userId)
-            ->whereNotNull('email_sent')->count() == 1;
+        return $this->admissions()->whereNotNull('email_sent')->exists();
+    }
+
+    public function getAdmissions()
+    {
+        return $this->admissions()->get();
     }
 
     public function detailsUpdated()

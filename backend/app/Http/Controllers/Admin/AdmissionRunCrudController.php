@@ -127,20 +127,19 @@ class AdmissionRunCrudController extends CrudController
     {
         $validated = $request->validate([
             'course_id' => 'required|exists:courses,id',
-            'batch_id' => 'required|exists:admission_batches,id',
+            // 'batch_id' => 'required|exists:admission_batches,id',
             'limit' => 'required|integer|min:1|max:200',
             'active_rules' => 'nullable|array',
             'active_rules.*' => 'integer|exists:rules,id',
         ]);
 
         $course = Course::findOrFail($validated['course_id']);
-        $batch = Batch::findOrFail($validated['batch_id']);
 
         $admissionService = app(AdmissionService::class);
         $preview = $admissionService->previewAdmission(
             $course,
             $validated['limit'],
-            $batch->id,
+            $course->batch->id,
             $validated['active_rules'] ?? null
         );
 
@@ -175,7 +174,7 @@ class AdmissionRunCrudController extends CrudController
     {
         $validated = $request->validate([
             'course_id' => 'required|exists:courses,id',
-            'batch_id' => 'required|exists:admission_batches,id',
+            // 'batch_id' => 'required|exists:admission_batches,id',
             'limit' => 'required|integer|min:1|max:200',
             'session_id' => 'nullable|exists:course_sessions,id',
             'active_rules' => 'nullable|array',
@@ -183,7 +182,6 @@ class AdmissionRunCrudController extends CrudController
         ]);
 
         $course = Course::findOrFail($validated['course_id']);
-        $batch = Batch::findOrFail($validated['batch_id']);
         $admin = backpack_user();
 
         try {
@@ -192,7 +190,7 @@ class AdmissionRunCrudController extends CrudController
             $admissionRun = $admissionService->executeAdmission(
                 $course,
                 $validated['limit'],
-                $batch->id,
+                $course->batch->id,
                 $validated['session_id'] ?? null,
                 $admin,
                 $validated['active_rules'] ?? null

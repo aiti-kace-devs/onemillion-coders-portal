@@ -33,6 +33,8 @@ class Course extends Model
         'last_auto_admit_at' => 'datetime',
     ];
 
+    protected $with = ['batch'];
+
     public function centre()
     {
         return $this->belongsTo(Centre::class);
@@ -92,6 +94,7 @@ class Course extends Model
 
     public function getAllRules()
     {
+        // always add pass mark rule 
         $courseRules = $this->rules()->get();
 
         if ($courseRules->isNotEmpty()) {

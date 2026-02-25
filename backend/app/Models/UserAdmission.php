@@ -15,6 +15,13 @@ class UserAdmission extends Model
 
     protected $fillable = ['user_id', 'batch_id', 'course_id', 'email_sent', 'session', 'location', 'confirmed', 'admission_source'];
 
+    // protected $with = [
+    //     'course',
+    //     'courseSession',
+    //     'user',
+    //     'admissionRun'
+    // ];
+
     protected $casts = [
         'email_sent' => 'boolean',
         'confirmed' => 'datetime',
@@ -38,5 +45,10 @@ class UserAdmission extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'userId');
+    }
+
+    public function admissionRun()
+    {
+        return $this->belongsTo(AdmissionRun::class, 'admission_run_id');
     }
 }

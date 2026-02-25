@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\CourseSession;
 use App\Helpers\MailerHelper;
 use App\Helpers\SmsHelper;
+use App\Models\AdmissionRun;
 use App\Models\Course;
 
 
@@ -48,6 +49,13 @@ class AdmitStudentJob implements ShouldQueue
             return;
         }
 
+        // update admission run status
+        $admissionRun = AdmissionRun::find($this->admission->admission_run_id);
+
+        if ($admissionRun) {
+            $admissionRun->increment('admitted_count');
+            $admissionRun->updateStats();
+        }
         $this->sendConfirmationEmail();
     }
 

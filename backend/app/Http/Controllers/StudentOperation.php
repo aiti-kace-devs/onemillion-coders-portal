@@ -357,18 +357,23 @@ class StudentOperation extends Controller
     public function select_session_view(Request $request)
     {
         // $user = Auth::guard('web')->user()->only(['id', 'name', 'userId']);
-        $userId = Auth::user()->userId;
-        $user = User::where('userId', $userId)->firstOrFail();
-        $admission = UserAdmission::where('user_id', $userId)->firstOrFail();
-        $course = Course::find($admission->course_id);
-        $sessions = CourseSession::where('course_id', $course->id)->get();
+        $user = Auth::user();
+        // dd($user->admissions());
+        // $admission = UserAdmission::where('user_id', $user->userId)->firstOrFail();
+        $admission = $user->admissions()->with([
+            'course',
+            'course.sessions',
+        ])->firstOrFail();
+
+        $course = $admission->course;
+        $sessions = $course->sessions;
 
         $sessions = $sessions->map(function ($session) {
             $session->slotLeft = $session->slotLeft();
             return $session;
         });
 
-        $session = CourseSession::where('id', $admission->session)->first();
+        $session = $admission->courseSession;
 
         return Inertia::render('Student/Session', compact(
             'user',
@@ -410,8 +415,8 @@ class StudentOperation extends Controller
                 // ]);
             }
 
-            $courseDetails = Course::find($admission->course_id);
-            $session = CourseSession::where('course_id', $courseDetails->id)->where('id', $data['session_id'])->first();
+            $courseDetails = $admission->course;
+            $session = $admission->courseSession;
 
             if (!$session) {
                 // return redirect(url('student/select-session/' . $user->userId))->with([
@@ -446,6 +451,7 @@ class StudentOperation extends Controller
             $admission->save();
 
             if (!$changingSession) {
+
                 AdmitStudentJob::dispatch($admission);
             }
             // return redirect(url('student/select-session/' . $user->userId))->with([

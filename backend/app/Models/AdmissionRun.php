@@ -63,21 +63,35 @@ class AdmissionRun extends Model
      */
     public function updateStats()
     {
-        $admissions = UserAdmission::where('course_id', $this->course_id)
-            ->where('batch_id', $this->batch_id)
-            ->get();
-
-        $this->update([
-            'admitted_count' => $admissions->count(),
-            'accepted_count' => $admissions->whereNotNull('confirmed')->count(),
-            'rejected_count' => $admissions->whereNull('confirmed')->count(),
-            'manual_count' => $admissions->where('admission_source', 'manual')->count(),
-            'automated_count' => $admissions->where('admission_source', 'automated')->count(),
-            'emailed_count' => $admissions->where('email_sent', true)->count(),
-        ]);
-
         // Invalidate cache
         $this->invalidateCache();
+
+        // Calculate stats with a single optimized query
+        $stats = UserAdmission::where('admission_run_id', $this->id)
+            ->selectRaw('
+            COUNT(*) as admitted_count,
+            COUNT(confirmed) as accepted_count,
+            COUNT(*) - COUNT(confirmed) as rejected_count,
+            SUM(CASE WHEN admission_source = "manual" THEN 1 ELSE 0 END) as manual_count,
+            SUM(CASE WHEN admission_source = "automated" THEN 1 ELSE 0 END) as automated_count,
+            SUM(CASE WHEN email_sent = 1 THEN 1 ELSE 0 END) as emailed_count
+        ')
+            ->first();
+
+        // Cache the results for 10 minutes
+        $cacheKey = "admission_stats:{$this->course_id}:{$this->batch_id}";
+        Cache::put($cacheKey, $stats, 600);
+
+        // Bulk update all admissions in a single query
+        UserAdmission::where('admission_run_id', $this->id)
+            ->update([
+                'admitted_count' => $stats->admitted_count,
+                'accepted_count' => $stats->accepted_count,
+                'rejected_count' => $stats->rejected_count,
+                'manual_count' => $stats->manual_count,
+                'automated_count' => $stats->automated_count,
+                'emailed_count' => $stats->emailed_count,
+            ]);
     }
 
     /**

@@ -29,7 +29,7 @@ class LoginRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
-            'recaptcha_token' => ['required', 'recaptcha:student_login']
+            // 'recaptcha_token' => ['required', 'recaptcha:student_login']
         ];
     }
 
