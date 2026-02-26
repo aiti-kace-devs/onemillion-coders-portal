@@ -17,7 +17,7 @@ use App\Http\Controllers\Admin\UtilitiesController;
 Route::group([
     'prefix' => config('backpack.base.route_prefix', 'admin'),
     'middleware' =>
-    config('backpack.base.middleware_key', 'admin'),
+        config('backpack.base.middleware_key', 'admin'),
     'namespace' => 'App\Http\Controllers\Admin',
 ], function () { // custom admin routes
     Route::crud('admin', 'AdminCrudController');
@@ -111,6 +111,8 @@ Route::group([
     // Utilities dashboard (super-admin only)
     Route::get('utilities', [UtilitiesController::class, 'index'])->name('admin.utilities.index');
     Route::post('utilities/run', [UtilitiesController::class, 'run'])->name('admin.utilities.run');
+
+    Route::get('user/activities/{user_id}', 'UserCrudController@getActivities')->name('user.activities');
 
     // Route::crud('media', 'MediaCrudController');
 }); // this should be the absolute last line of this file

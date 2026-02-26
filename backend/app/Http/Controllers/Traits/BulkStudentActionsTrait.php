@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Jobs\SendBulkEmailJob;
 use App\Jobs\SendBulkSMSJob;
+use Spatie\Activitylog\Models\Activity;
 
 trait BulkStudentActionsTrait
 {
@@ -120,7 +121,7 @@ trait BulkStudentActionsTrait
     public function saveShortlistedStudents(SaveShortlistedStudentsRequest $request)
     {
         if ($request->has('select_all_in_query')) {
-            $query = $this->getFilteredQuery();
+            $query = $this->getFilteredQuery($request);
             $usersToUpdate = $query
                 ->where(function ($query) {
                     $query->whereNull('shortlist')->orWhere('shortlist', '!=', 1);
@@ -150,6 +151,11 @@ trait BulkStudentActionsTrait
                     ]
                 );
             }
+
+
+            activity('Shortlist')
+                ->event('Bulk Shortlist')
+                ->log("Shortlisted $updatedCount user(s) successfully using bulk action.");
 
             return response()->json([
                 'message' => "$updatedCount user(s) successfully shortlisted.",
@@ -199,6 +205,11 @@ trait BulkStudentActionsTrait
             );
         }
 
+
+        activity('Shortlist')
+            ->event('Targeted Shortlist')
+            ->log("Shortlisted $updatedCount user(s) successfully using targeted action.");
+
         return response()->json([
             'message' => "$updatedCount user(s) successfully shortlisted.",
         ]);
@@ -207,7 +218,7 @@ trait BulkStudentActionsTrait
     public function admitStudent(Request $request)
     {
         if ($request->has('select_all_in_query')) {
-            $query = $this->getFilteredQuery();
+            $query = $this->getFilteredQuery($request);
             $request->merge(['user_ids' => $query->pluck('userId')->toArray()]);
         }
         $validated = $request->validate([
@@ -278,6 +289,10 @@ trait BulkStudentActionsTrait
         }
 
         // Return JSON for AJAX requests, redirect for regular requests
+        activity('Admission')
+            ->event('Student Admit')
+            ->log("Admitted $admittedCount student(s) into course ID {$course->id}.");
+
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,

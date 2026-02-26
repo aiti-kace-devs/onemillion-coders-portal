@@ -8,6 +8,7 @@ node_modules
 /.vscode
 /.vite
 vendor
+!backend/resources/views/vendor/
 .env.docker
 .vscode/
 .idea/
@@ -38,7 +39,7 @@ yarn-error.log*
 # yarn.lock
 
 backend/storage/logs/laravel.log
-backend/resources/views/*
+# backend/resources/views/*
 
 backend/public/vendor/runway/build/*
 backend/public/vendor/statamic/pro/build/*

@@ -247,13 +247,6 @@ class StudentOperation extends Controller
 
         $data = ['status' => 'true', 'message' => 'started successfully'];
         $data['questions'] = $questions;
-
-        // activity('Start Exams')
-        //     ->causedBy($user)
-        //     ->withProperties(['exam_id' => $id])
-        //     ->event('Exam started')
-        //     ->log("$user->name started the exam at $user_exam->started");
-
         return response()->json($data);
     }
 
