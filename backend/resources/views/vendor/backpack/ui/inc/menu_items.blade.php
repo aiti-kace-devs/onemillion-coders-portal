@@ -38,6 +38,8 @@
     <x-backpack::menu-item title="Manage Programmes" icon="la la-graduation-cap" :link="backpack_url('programme')" />
 @endcan
 
+<x-backpack::menu-item title="Manage Tags" icon="la la-tags" :link="backpack_url('tag')" />
+
 @can('course.read.all')
     <x-backpack::menu-dropdown title="Course Moderation" icon="la la-book-reader">
         @can('course.read.all')
@@ -75,14 +77,15 @@
 
 @can('student.read.all')
     <x-backpack::menu-item title="Manage Students" icon="la la-user-graduate" :link="backpack_url('manage-student')" />
-@endcan
+    @endcan
 
-@can('category.read.all')
+    @can('category.read.all')
     <x-backpack::menu-item title="Manage Exam Categories" icon="la la-layer-group" :link="backpack_url('category')" />
-@endcan
+    @endcan
 
-@can('manage-exam.read.all')
+    @can('manage-exam.read.all')
     <x-backpack::menu-item title="Manage Exams" icon="la la-file-signature" :link="backpack_url('manage-exam')" />
+    <x-backpack::menu-item title="Question Masters" icon="la la-question-circle" :link="backpack_url('question-master')" />
 @endcan
 
 @can('qr-scanner.read.all')

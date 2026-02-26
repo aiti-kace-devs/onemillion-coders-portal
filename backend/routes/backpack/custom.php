@@ -17,7 +17,7 @@ use App\Http\Controllers\Admin\UtilitiesController;
 Route::group([
     'prefix' => config('backpack.base.route_prefix', 'admin'),
     'middleware' =>
-    config('backpack.base.middleware_key', 'admin'),
+        config('backpack.base.middleware_key', 'admin'),
     'namespace' => 'App\Http\Controllers\Admin',
 ], function () { // custom admin routes
     Route::crud('admin', 'AdminCrudController');
@@ -38,6 +38,7 @@ Route::group([
     Route::crud('centre', 'CentreCrudController');
     Route::crud('course', 'CourseCrudController');
     Route::crud('batch', 'BatchCrudController');
+    Route::crud('tag', 'TagCrudController');
     Route::crud('course-session', 'CourseSessionCrudController');
     Route::crud('email-template', 'EmailTemplateCrudController');
     Route::crud('form', 'FormCrudController');

@@ -83,13 +83,6 @@ class OexQuestionMasterCrudController extends CrudController
             'type' => 'textarea',
             'escaped' => false,
         ]);
-        CRUD::addColumn([
-            'name' => 'programmes',
-            'label' => 'Programmes',
-            'entity' => 'programmes',
-            'attribute' => 'title',
-            'model' => "App\Models\Programme",
-        ]);
         CRUD::column('ans')->type('textarea');
         FilterHelper::addBooleanColumn('status', 'status');
 
@@ -132,12 +125,18 @@ class OexQuestionMasterCrudController extends CrudController
         ]);
 
         CRUD::addField([
-            'name' => 'programmes',
-            'label' => 'Select Programmes',
+            'name' => 'exam_set_id',
+            'type' => 'hidden',
+            'value' => 1,
+        ]);
+
+        CRUD::addField([
+            'name' => 'tags',
+            'label' => 'Select Tags',
             'type' => 'select2_multiple',
-            'entity' => 'programmes',
-            'attribute' => 'title',
-            'model' => "App\Models\Programme",
+            'entity' => 'tags',
+            'attribute' => 'name',
+            'model' => "App\Models\Tag",
             'pivot' => true,
             'wrapper' => ['class' => 'form-group col-12'],
             'allows_null' => true,
@@ -309,7 +308,8 @@ class OexQuestionMasterCrudController extends CrudController
             'status' => $request->input('status', false),
         ]);
 
-        $question->programmes()->sync($request->input('programmes', []));
+        $question->tags()->sync($request->input('tags', []));
+        $question->tags()->sync($request->input('tags', []));
 
         \Alert::success(trans('backpack::crud.insert_success'))->flash();
         return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);
@@ -334,7 +334,8 @@ class OexQuestionMasterCrudController extends CrudController
             'status' => $request->input('status', false),
         ]);
 
-        $entry->programmes()->sync($request->input('programmes', []));
+        $entry->tags()->sync($request->input('tags', []));
+        $entry->tags()->sync($request->input('tags', []));
 
         \Alert::success(trans('backpack::crud.update_success'))->flash();
         return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);

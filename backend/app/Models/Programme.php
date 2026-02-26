@@ -71,10 +71,7 @@ class Programme extends Model
         return $this->belongsToMany(CourseMatchOption::class, 'programme_course_match_options', 'programme_id', 'course_match_option_id');
     }
 
-    public function questions()
-    {
-        return $this->belongsToMany(OexQuestionMaster::class, 'oex_question_master_programme');
-    }
+
 
 
 

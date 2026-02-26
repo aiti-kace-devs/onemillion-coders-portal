@@ -158,8 +158,6 @@ class StudentOperation extends Controller
         $usedTime = $eligibilityStatus['usedTime'] ?? 0;
 
         return Inertia::render('Student/Exam/JoinExam', compact('questions', 'exam', 'usedTime'));
-
-        // return view('student.join_exam', ['question' => $questions, 'exam' => $exam, 'usedTime' => $usedTime]);
     }
 
     // start exam
@@ -180,18 +178,16 @@ class StudentOperation extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        // Get user's programme ID
-        $programmeId = null;
+        $courseTags = collect();
         if ($user->course) {
-            $programmeId = $user->course->programme_id;
+            $courseTags = $user->course->tags->pluck('id');
         }
 
-        // Try to find questions for the user's programme
-        $programmeSetIds = collect();
-        if ($programmeId) {
-            $programmeSetIds = OexQuestionMaster::where('exam_id', $id)
-                ->whereHas('programmes', function ($q) use ($programmeId) {
-                    $q->where('programme_id', $programmeId);
+        $tagSetIds = collect();
+        if ($courseTags->isNotEmpty()) {
+            $tagSetIds = OexQuestionMaster::where('exam_id', $id)
+                ->whereHas('tags', function ($q) use ($courseTags) {
+                    $q->whereIn('tags.id', $courseTags);
                 })
                 ->distinct()
                 ->pluck('exam_set_id');
@@ -199,8 +195,8 @@ class StudentOperation extends Controller
 
         $randomExamId = null;
 
-        if ($programmeSetIds->isNotEmpty()) {
-            $randomExamId = $programmeSetIds->random();
+        if ($tagSetIds->isNotEmpty()) {
+            $randomExamId = $tagSetIds->random();
         }
 
         $questions = collect();
@@ -238,7 +234,7 @@ class StudentOperation extends Controller
                     ]
                 )
                     ->where('exam_id', $id)
-                    ->doesntHave('programmes')
+                    ->doesntHave('tags')
                     ->inRandomOrder()
                     ->limit($needed)
                     ->get();
