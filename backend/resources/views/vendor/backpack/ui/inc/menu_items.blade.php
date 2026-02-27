@@ -29,9 +29,9 @@
 @endcan
 
 
-
 @can('centre.read.all')
-    <x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
+<x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
+<x-backpack::menu-item title="Manage Districts" icon="la la-question" :link="backpack_url('district')" />
 @endcan
 
 @can('programme.read.all')
@@ -151,4 +151,3 @@
 
 
 {{-- <x-backpack::menu-item :title="trans('backpack::crud.file_manager')" icon="la la-files-o" /> --}}
-

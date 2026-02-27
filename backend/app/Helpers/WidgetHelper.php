@@ -9,6 +9,7 @@ use App\Models\Attendance;
 use App\Models\Programme;
 use App\Models\Course;
 use App\Models\Branch;
+use App\Models\District;
 use App\Models\Centre;
 use App\Models\User;
 use App\Models\CourseSession;
@@ -306,6 +307,80 @@ class WidgetHelper
         ]);
     }
 
+
+
+
+
+
+    public static function districtStatisticsWidget(array $statistics = [])
+    {
+        $totalDistricts = (int) ($statistics['total'] ?? District::count());
+        $activeDistricts = (int) ($statistics['active'] ?? District::where('status', 1)->count());
+        $inactiveDistricts = (int) ($statistics['inactive'] ?? District::where('status', 0)->count());
+        $recentDistricts = (int) ($statistics['recent'] ?? District::whereDate('created_at', '>=', now()->subDays(30))->count());
+
+        $getPercent = function ($count) use ($totalDistricts) {
+            return $totalDistricts > 0 ? round(($count / $totalDistricts) * 100) : 0;
+        };
+
+        $totalPercent = (int) ($statistics['total_percent'] ?? $getPercent($totalDistricts));
+        $activePercent = (int) ($statistics['active_percent'] ?? $getPercent($activeDistricts));
+        $inactivePercent = (int) ($statistics['inactive_percent'] ?? $getPercent($inactiveDistricts));
+        $recentPercent = (int) ($statistics['recent_percent'] ?? $getPercent($recentDistricts));
+
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $totalPercent,
+                    'description' => 'Total Districts',
+                    'value' => number_format($totalDistricts),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                        'class' => 'col-sm-6 col-lg-3 js-district-widget-total',
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'All registered districts.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $activePercent,
+                    'description' => 'Active Districts',
+                    'value' => number_format($activeDistricts),
+                    'progressClass' => 'progress-bar bg-success',
+                    'wrapper' => [
+                        'class' => 'col-sm-6 col-lg-3 js-district-widget-active',
+                    ],
+                    'hint' => 'Districts currently active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $inactivePercent,
+                    'description' => 'Inactive Districts',
+                    'value' => number_format($inactiveDistricts),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'wrapper' => [
+                        'class' => 'col-sm-6 col-lg-3 js-district-widget-inactive',
+                    ],
+                    'hint' => 'Districts currently inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $recentPercent,
+                    'description' => 'New Districts (30 Days)',
+                    'value' => number_format($recentDistricts),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                        'class' => 'col-sm-6 col-lg-3 js-district-widget-recent',
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'Districts added in the last 30 days.',
+                ],
+            ],
+        ]);
+    }
 
 
 

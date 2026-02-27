@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\StudentVerificationCrudController;
 use App\Http\Controllers\Admin\UserCrudController;
 use App\Http\Controllers\Admin\BatchCrudController;
 use App\Http\Controllers\Admin\CourseBatchCrudController;
+use App\Http\Controllers\Admin\DistrictCrudController;
 use App\Http\Controllers\Admin\ManageStudentCrudController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UtilitiesController;
@@ -139,6 +140,10 @@ Route::group([
     Route::get('course-batch/{id}/admitted-students-data', [CourseBatchCrudController::class, 'admittedStudentsData'])->name('course-batch.admitted-students-data');
     Route::get('course-batch/{id}/attendance-history-data', [CourseBatchCrudController::class, 'attendanceHistoryData'])->name('course-batch.attendance-history-data');
     Route::crud('course-batch', 'CourseBatchCrudController');
+    Route::post('district/{id}/toggle', [DistrictCrudController::class, 'toggleStatus']);
+    Route::post('district/{districtId}/add-centres', [DistrictCrudController::class, 'addCentres'])->name('district.add-centres');
+    Route::delete('district/{districtId}/remove-centre/{centreId}', [DistrictCrudController::class, 'removeCentre'])->name('district.remove-centre');
+    Route::crud('district', 'DistrictCrudController');
 }); // this should be the absolute last line of this file
 
 /**

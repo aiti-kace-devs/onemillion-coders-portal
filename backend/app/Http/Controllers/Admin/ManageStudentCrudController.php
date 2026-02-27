@@ -7,9 +7,11 @@ use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Http\Requests\ChangeAdmissionRequest;
 use App\Http\Requests\ChooseSessionRequest;
+use App\Models\Branch;
 use App\Models\Course;
 use App\Models\User;
 use App\Models\CourseSession;
+use App\Models\District;
 use App\Models\OexExamMaster;
 use App\Models\UserAdmission;
 use App\Helpers\UserFieldHelpers;
@@ -319,13 +321,55 @@ class ManageStudentCrudController extends CrudController
         // $this->addStudentBatchFilter('Batch Filter');
         $this->courseFilter('registered_course');
         $this->addConfirmedAdmissionFilter();
-        $this->addAdmissionLocationFilter();
+        $this->addRegionFilter();
+        // $this->addDistrictFilter();
+        $this->centreFilter();
         $this->addAdmittedAtFilter();
         FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
         FilterHelper::addAgeRangeFilter();
         FilterHelper::addGenderFilter();
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
         $this->addStudentBatchFilterFromDashboard('admission');
+    }
+
+    private function addRegionFilter(): void
+    {
+        $regions = Branch::query()
+            ->orderBy('title')
+            ->pluck('title', 'id')
+            ->toArray();
+
+        FilterHelper::addSelectFilter(
+            columnName: 'region_filter',
+            label: 'Region',
+            options: $regions,
+            type: 'select2',
+            callback: function ($branchId) {
+                CRUD::addClause('whereHas', 'admissions.course.centre', function ($query) use ($branchId) {
+                    $query->where('branch_id', $branchId);
+                });
+            }
+        );
+    }
+
+    private function addDistrictFilter(): void
+    {
+        $districts = District::query()
+            ->orderBy('title')
+            ->pluck('title', 'id')
+            ->toArray();
+
+        FilterHelper::addSelectFilter(
+            columnName: 'district_filter',
+            label: 'District',
+            options: $districts,
+            type: 'select2',
+            callback: function ($districtId) {
+                CRUD::addClause('whereHas', 'admissions.course.centre.districts', function ($query) use ($districtId) {
+                    $query->where('districts.id', $districtId);
+                });
+            }
+        );
     }
     /**
      * Handle bulk admit operation via AJAX

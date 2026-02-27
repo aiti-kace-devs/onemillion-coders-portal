@@ -246,7 +246,7 @@
                         @if($hasAnyAdmission)
                         <tr>
                             <td class="text-muted">Pass/Fail</td>
-                            <td><span class="badge {{ $passFailClass }}">{{ $passFailStatus }}</span></td>
+                            <td><span class="badge bg-warning {{ $passFailClass }}">{{ $passFailStatus }}</span></td>
                         </tr>
                         <tr>
                             <td class="text-muted">Course</td>
