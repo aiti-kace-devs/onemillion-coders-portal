@@ -326,7 +326,7 @@ class StudentOperation extends Controller
             ->causedBy($user)
             ->withProperties(['exam_id' => $request->exam_id])
             ->event('Exam submitted')
-            ->log("$user->name submitted the exam at $std_info->submitted and got a score of $res->yes_ans out of $total");
+            ->log("$user->name submitted the exam at $std_info->submitted with score $res->yes_ans/$total");
 
         return redirect(route('student.exam.index'));
     }

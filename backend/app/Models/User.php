@@ -277,7 +277,8 @@ class User extends Authenticatable
         return LogOptions::defaults()
             ->logFillable()
             ->logOnlyDirty()
-            ->setDescriptionForEvent(fn(string $event) => "User {$event}")
+            ->useLogName('student')
+            ->setDescriptionForEvent(fn(string $event) => "Student {$event}")
             ->dontLogIfAttributesChangedOnly(['last_login']);
     }
 }

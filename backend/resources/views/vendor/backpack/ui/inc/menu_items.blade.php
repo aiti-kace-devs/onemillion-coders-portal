@@ -114,6 +114,11 @@
 @can('app-config.update')
     <x-backpack::menu-item title="App Maintainence" icon="la la-tools" :link="backpack_url('utilities')" />
 @endcan
+
+@can('admin.read.all')
+    <x-backpack::menu-item title="Activity Logs" icon="la la-history" :link="backpack_url('activity')" />
+@endcan
+
 {{-- Only show dropdown if user has at least one permission for the dropdown items --}}
 @if (auth()->user()->can('form-response.read.all') ||
         auth()->user()->can('oex-result.read.all') ||
