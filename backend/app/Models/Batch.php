@@ -5,11 +5,22 @@ namespace App\Models;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Batch extends Model
 {
     use CrudTrait;
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->useLogName('batch')
+            ->setDescriptionForEvent(fn(string $event) => "Admission Batch {$event}");
+    }
 
     protected $table = 'admission_batches';
     // protected $primaryKey = 'id';
@@ -67,7 +78,7 @@ class Batch extends Model
         if ($this->relationLoaded('admittedStudents')) {
             return $this->admittedStudents->count();
         }
-        
+
         return $this->admittedStudents()->count();
     }
 

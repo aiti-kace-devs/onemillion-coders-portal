@@ -107,7 +107,7 @@ class SendBulkEmailJob implements ShouldQueue
         });
 
         $count = $recipients->count();
-        activity('Bulk Email')
+        activity('email')
             ->event('Bulk Email Sent to List')
             ->log("Sent bulk email '{$this->subject}' to list '{$this->list}' containing {$count} recipients.");
     }
@@ -138,7 +138,7 @@ class SendBulkEmailJob implements ShouldQueue
         }
 
         $count = is_array($ids) ? count($ids) : $ids->count();
-        activity('Bulk Email')
+        activity('email')
             ->event('Bulk Email Sent to Students')
             ->log("Processed bulk email '{$this->subject}' for a chunk of {$count} students.");
     }

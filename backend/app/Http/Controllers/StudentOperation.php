@@ -322,7 +322,7 @@ class StudentOperation extends Controller
 
         TestSubmittedJob::dispatch($user, $res);
 
-        activity('Submit Exams')
+        activity('exam')
             ->causedBy($user)
             ->withProperties(['exam_id' => $request->exam_id])
             ->event('Exam submitted')
@@ -506,7 +506,7 @@ class StudentOperation extends Controller
 
             if (!$changingSession) {
                 AdmitStudentJob::dispatch($admission);
-                activity('Confirmed Session')
+                activity('user_admission')
                     ->causedBy($user)
                     ->performedOn($admission)
                     ->withProperties([
@@ -516,7 +516,7 @@ class StudentOperation extends Controller
                     ->event('Session Confirmed')
                     ->log("$user->name confirmed their session: {$session->name}");
             } else {
-                activity('Changed Session')
+                activity('user_admission')
                     ->causedBy($user)
                     ->performedOn($admission)
                     ->withProperties([
@@ -610,7 +610,7 @@ class StudentOperation extends Controller
         // Update user record with course and session information
         $user->registered_course = $request->course_id; // Store course_id in exam field
         $user->save();
-        activity('Course changed')
+        activity('user_admission')
             ->causedBy($user)
             ->event('Course Changed')
             ->log("$user->name changed their course to: $request->course_id");
@@ -635,7 +635,7 @@ class StudentOperation extends Controller
                 CreateStudentAdmissionJob::dispatch($user, $course, null);
                 $count++;
             }
-            activity('Admission created')
+            activity('user_admission')
                 ->causedBy($user)
                 ->event('Admission Created')
                 ->log("Admitted {$count} students successfully!");
@@ -669,7 +669,7 @@ class StudentOperation extends Controller
             ]);
 
             $user->update(['shortlist' => 0]);
-            activity('Admission deleted')
+            activity('user_admission')
                 ->causedBy($user)
                 ->event('Admission Deleted')
                 ->log("$user->name deleted admission successfully!");
@@ -780,7 +780,7 @@ class StudentOperation extends Controller
 
         $user->details_updated_at = now();
         $user->save();
-        activity('Details updated')
+        activity('student')
             ->causedBy($user)
             ->event('Details Updated')
             ->log("{$user->name}'s details updated successfully!");

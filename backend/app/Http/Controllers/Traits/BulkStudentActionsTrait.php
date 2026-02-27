@@ -153,7 +153,7 @@ trait BulkStudentActionsTrait
             }
 
 
-            activity('Shortlist')
+            activity('user_admission')
                 ->event('Bulk Shortlist')
                 ->log("Shortlisted $updatedCount user(s) successfully using bulk action.");
 
@@ -206,7 +206,7 @@ trait BulkStudentActionsTrait
         }
 
 
-        activity('Shortlist')
+        activity('user_admission')
             ->event('Targeted Shortlist')
             ->log("Shortlisted $updatedCount user(s) successfully using targeted action.");
 
@@ -289,7 +289,7 @@ trait BulkStudentActionsTrait
         }
 
         // Return JSON for AJAX requests, redirect for regular requests
-        activity('Admission')
+        activity('user_admission')
             ->event('Student Admit')
             ->log("Admitted $admittedCount student(s) into course ID {$course->id}.");
 

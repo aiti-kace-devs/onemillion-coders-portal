@@ -44,7 +44,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
         $student = Auth::guard('web')->user();
-        activity('Student Login')->event('login')->by($student)->log("$student->name logged in at $student->last_login");
+        activity('student')->event('login')->by($student)->log("$student->name logged in at $student->last_login");
         return redirect()->intended(RouteServiceProvider::HOME);
     }
 

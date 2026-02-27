@@ -94,7 +94,9 @@ class MailerHelper
                 ->send($mailable);
         }
 
-        activity()->log("Sent email: '{$subject}' to {$recipientLog}");
+        activity('email')
+            ->event('Sent email')
+            ->log("Sent email: '{$subject}' to {$recipientLog}");
     }
 
 
@@ -115,7 +117,9 @@ class MailerHelper
 
             self::sendGenericTemplateEmail($emails, $content, $subject, $bulk, $data);
 
-            activity()->log("Sent template email ({$templateName}): '{$subject}' to {$emails}");
+            activity('email')
+                ->event('Sent email template')
+                ->log("Sent template email ({$templateName}): '{$subject}' to {$emails}");
 
             return true;
         } catch (\Throwable $e) {
