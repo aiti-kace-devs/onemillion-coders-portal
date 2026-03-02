@@ -509,22 +509,26 @@ CRUD::addField([
 
 
 
-    public static function addAdmissionLocationFilter(string $label = 'Admission Location')
+    public static function centreFilter(string $label = 'Centre')
     {
-        CRUD::addFilter([
-            'name'  => 'admission_location',
-            'type'  => 'dropdown',
-            'label' => $label,
-        ],
-        self::getAdmissionLocations(),
-        function ($value) {
-            CRUD::addClause('whereExists', function ($query) use ($value) {
-                $query->select(\DB::raw(1))
-                    ->from('user_admission')
-                    ->whereColumn('user_admission.user_id', 'users.userId')
-                    ->where('user_admission.location', $value);
-            });
-        });
+        FilterHelper::addSelectFilter(
+            columnName: 'admission_location',
+            label: $label,
+            options: self::getAdmissionLocations(),
+            type: 'select2_multiple',
+            callback: function (array $values) {
+                if (empty($values)) {
+                    return;
+                }
+
+                CRUD::addClause('whereExists', function ($query) use ($values) {
+                    $query->select(\DB::raw(1))
+                        ->from('user_admission')
+                        ->whereColumn('user_admission.user_id', 'users.userId')
+                        ->whereIn('user_admission.location', $values);
+                });
+            }
+        );
     }
 
 

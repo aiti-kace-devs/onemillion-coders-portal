@@ -32,7 +32,7 @@ class BranchCrudController extends CrudController
     {
         CRUD::setModel(\App\Models\Branch::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/branch');
-        CRUD::setEntityNameStrings('branch', 'branches');
+        CRUD::setEntityNameStrings('Region', 'Regions');
     }
 
     /**

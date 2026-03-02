@@ -23,4 +23,9 @@ class Branch extends Model
     public function centre(){
         return $this->hasMany(Centre::class);
     }
+
+    public function districts()
+    {
+        return $this->hasMany(District::class, 'branch_id', 'id');
+    }
 }

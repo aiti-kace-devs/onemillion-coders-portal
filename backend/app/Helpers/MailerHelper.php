@@ -53,6 +53,8 @@ class MailerHelper
             $template = str_replace("{{$key}}", $value, $template);
         }
 
+        $template = static::parseMarkdown($template);
+
         return $template;
     }
 
@@ -105,18 +107,9 @@ class MailerHelper
                 return false;
             }
 
-            $mailable = new GenericEmail($content, $subject);
-
-            if ($bulk) {
-                Mail::to(config('mail.from.address'))
-                    ->bcc((array) $emails)
-                    ->send($mailable);
-            } else {
-                Mail::to($emails)->send($mailable);
-            }
+            self::sendGenericTemplateEmail($emails, $content, $subject, $bulk, $data);
 
             return true;
-
         } catch (\Throwable $e) {
             Log::error('MailerHelper failed', [
                 'emails' => $emails,
