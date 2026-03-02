@@ -46,7 +46,12 @@ class OexCategoryCrudController extends CrudController
         WidgetHelper::categorytatisticsWidget();
 
         CRUD::column('name')->type('text');
-        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
         CRUD::column('created_at');
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
@@ -86,5 +91,24 @@ class OexCategoryCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    public function toggleStatus(\Illuminate\Http\Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $category = \App\Models\OexCategory::findOrFail($id);
+        $category->status = (bool) $data['value'];
+        $category->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Category status updated successfully.',
+            'value' => $category->status ? 1 : 0,
+        ]);
     }
 }

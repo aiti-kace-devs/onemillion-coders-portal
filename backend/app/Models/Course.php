@@ -12,13 +12,13 @@ class Course extends Model
     use HasFactory;
 
     protected $fillable = [
-        'branch_id',
         'centre_id',
         'programme_id',
         'course_name',
         'location',
         'duration',
         'start_date',
+        'batch_id',
         'end_date',
         'status',
     ];
@@ -30,6 +30,15 @@ class Course extends Model
     public function centre()
     {
         return $this->belongsTo(Centre::class);
+    }
+
+    /**
+     * Get the display name with centre for dropdowns
+     */
+    public function getDisplayNameAttribute()
+    {
+        $centreTitle = $this->centre?->title ?? 'Unknown Centre';
+        return $this->course_name ? "{$this->course_name} - {$centreTitle}" : $centreTitle;
     }
 
     public function programme()
@@ -84,6 +93,13 @@ class Course extends Model
 
     protected static function booted()
     {
+        static::deleting(function ($course) {
+            // Ensure dependent records are removed first (FK constraints are restrict in the DB).
+            $course->sessions()->delete();
+            $course->assignedAdmins()->detach();
+            $course->batches()->detach();
+        });
+
         static::saving(function ($course) {
             $durations = [
                 '1 Week' => 5,

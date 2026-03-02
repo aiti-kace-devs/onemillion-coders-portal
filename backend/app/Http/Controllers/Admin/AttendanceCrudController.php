@@ -82,33 +82,26 @@ class AttendanceCrudController extends CrudController
 
         CRUD::column('date');
 
-        if (backpack_user()->is_super) {
-            $this->addStudentBatchFilter('userAdmission', 'Student Batch');
-        }
+        $this->addStudentBatchFilter('userAdmission', 'Student Batch');
 
-        if (backpack_user()->is_super) {
-            $this->courseFilter('course_id');
-        }
+        $this->courseFilter('course_id');
 
+        $sessions = \App\Models\CourseSession::select('session')
+            ->distinct()
+            ->pluck('session', 'session')
+            ->toArray();
 
-        if (backpack_user()->is_super) {
-            $sessions = \App\Models\CourseSession::select('session')
-                ->distinct()
-                ->pluck('session', 'session')
-                ->toArray();
-
-            FilterHelper::addSelectFilter(
-                'session',
-                'Filter Session',
-                $sessions,
-                'select2',
-                function ($value) {
-                    CRUD::addClause('whereHas', 'courseSession', function ($query) use ($value) {
-                        $query->where('course_sessions.session', $value);
-                    });
-                }
-            );
-        }
+        FilterHelper::addSelectFilter(
+            'session',
+            'Filter Session',
+            $sessions,
+            'select2',
+            function ($value) {
+                CRUD::addClause('whereHas', 'courseSession', function ($query) use ($value) {
+                    $query->where('course_sessions.session', $value);
+                });
+            }
+        );
 
         FilterHelper::addDateRangeFilter('date', 'Filter BY Date');
         
