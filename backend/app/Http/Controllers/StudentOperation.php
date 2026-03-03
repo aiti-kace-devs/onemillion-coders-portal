@@ -181,7 +181,12 @@ class StudentOperation extends Controller
         $courseTags = collect();
         if ($user->course) {
             $courseTags = $user->course->tags->pluck('id');
+            if ($courseTags->isEmpty() && $user->course->programme) {
+                $courseTags = $user->course->programme->programmeTags->pluck('id');
+            }
         }
+
+        $courseTags = $courseTags->unique();
 
         $tagSetIds = collect();
         if ($courseTags->isNotEmpty()) {

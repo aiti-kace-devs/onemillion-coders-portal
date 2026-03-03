@@ -110,17 +110,7 @@ trait CourseFieldHelpers
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
-        CRUD::addField([
-            'name' => 'tags',
-            'label' => 'Select Tags',
-            'type' => 'select2_multiple',
-            'entity' => 'tags',
-            'attribute' => 'name',
-            'model' => "App\Models\Tag",
-            'pivot' => true,
-            'wrapper' => ['class' => 'form-group col-12'],
-            'allows_null' => true,
-        ]);
+        $this->addTagsField(Course::class);
 
 
         CRUD::addField([

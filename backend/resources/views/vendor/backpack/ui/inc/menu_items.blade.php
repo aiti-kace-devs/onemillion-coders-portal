@@ -37,9 +37,10 @@
 @can('programme.read.all')
     <x-backpack::menu-item title="Manage Programmes" icon="la la-graduation-cap" :link="backpack_url('programme')" />
 @endcan
-
-<x-backpack::menu-item title="Manage Tags" icon="la la-tags" :link="backpack_url('tag')" />
-
+<x-backpack::menu-dropdown title="Manage Tags" icon="la la-tags">
+    <x-backpack::menu-dropdown-item title="Tags" icon="la la-tag" :link="backpack_url('tag')" />
+    <x-backpack::menu-dropdown-item title="Tag Types" icon="la la-bookmark" :link="backpack_url('tag-type')" />
+</x-backpack::menu-dropdown>
 @can('course.read.all')
     <x-backpack::menu-dropdown title="Course Moderation" icon="la la-book-reader">
         @can('course.read.all')

@@ -130,17 +130,7 @@ class OexQuestionMasterCrudController extends CrudController
             'value' => 1,
         ]);
 
-        CRUD::addField([
-            'name' => 'tags',
-            'label' => 'Select Tags',
-            'type' => 'select2_multiple',
-            'entity' => 'tags',
-            'attribute' => 'name',
-            'model' => "App\Models\Tag",
-            'pivot' => true,
-            'wrapper' => ['class' => 'form-group col-12'],
-            'allows_null' => true,
-        ]);
+        $this->addTagsField(OexQuestionMaster::class);
 
         CRUD::addField([
             'name' => 'questions',

@@ -24,21 +24,32 @@ class TagCrudController extends CrudController
     protected function setupListOperation()
     {
         CRUD::column('name');
+        CRUD::column('tag_type_id')->type('select')->entity('tagType')->attribute('name')->model('App\Models\TagType')->label('Tag Type');
     }
 
     protected function setupCreateOperation()
     {
         CRUD::setValidation([
             'name' => 'required|min:2|max:255|unique:tags,name',
+            'tag_type_id' => 'required|exists:tag_types,id',
         ]);
 
         CRUD::field('name');
+        CRUD::addField([
+            'name' => 'tag_type_id',
+            'label' => 'Tag Type',
+            'type' => 'relationship',
+            'entity' => 'tagType',
+            'attribute' => 'name',
+            'model' => 'App\Models\TagType'
+        ]);
     }
 
     protected function setupUpdateOperation()
     {
         CRUD::setValidation([
             'name' => 'required|min:2|max:255|unique:tags,name,' . $this->crud->getCurrentEntryId(),
+            'tag_type_id' => 'required|exists:tag_types,id',
         ]);
 
         $this->setupCreateOperation();

@@ -10,7 +10,12 @@ class Tag extends Model
 {
     use CrudTrait;
 
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'tag_type_id'];
+
+    public function tagType()
+    {
+        return $this->belongsTo(TagType::class);
+    }
 
     public function courses()
     {
@@ -20,5 +25,10 @@ class Tag extends Model
     public function questions()
     {
         return $this->morphedByMany(OexQuestionMaster::class, 'taggable');
+    }
+
+    public function programmes()
+    {
+        return $this->morphedByMany(Programme::class, 'taggable');
     }
 }

@@ -71,6 +71,11 @@ class Programme extends Model
         return $this->belongsToMany(CourseMatchOption::class, 'programme_course_match_options', 'programme_id', 'course_match_option_id');
     }
 
+    public function programmeTags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+
 
 
 
