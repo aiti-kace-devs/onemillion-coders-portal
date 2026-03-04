@@ -18,24 +18,22 @@
                 <strong>User Activities</strong>
             </div>
             <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table id="crudTable" class="bg-white table table-striped table-hover nowrap rounded shadow-xs border-xs mt-2" cellspacing="0" width="100%">
-                            <thead>
-                                <tr>
-                                    <th data-orderable="true">Date</th>
-                                    <th data-orderable="false">Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($activities as $activity)
-                                    <tr>
-                                        <td>{{ $activity->created_at->format('Y-m-d H:i:s') }}</td>
-                                        <td>{{ $activity->description }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                <table id="crudTable" class="bg-white table table-striped table-hover rounded shadow-xs border-xs mt-2" cellspacing="0" width="100%">
+                    <thead>
+                        <tr>
+                            <th data-orderable="true">Date</th>
+                            <th data-orderable="false">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($activities as $activity)
+                            <tr>
+                                <td>{{ $activity->created_at->format('Y-m-d H:i:s') }}</td>
+                                <td>{{ $activity->description }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

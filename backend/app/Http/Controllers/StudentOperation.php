@@ -565,7 +565,6 @@ class StudentOperation extends Controller
         }
 
         return Inertia::render('Student/ChangeCourse', compact('user', 'courses', 'currentCourse'));
-        return view('student.change-course', compact('user', 'courses', 'currentCourse'));
     }
 
     // Update course selection
@@ -601,19 +600,30 @@ class StudentOperation extends Controller
         );
 
         // Get course information
-        // $course = Course::find($request->course_id);
+        $oldCourse = Course::find($user->registered_course);
+        $newCourse = Course::find($request->course_id);
 
-        // if (!$course) {
-        //     return redirect()->back()->with('error', 'Selected course not found.');
-        // }
+        if (!$newCourse) {
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'Selected course not found.',
+                    'key' => 'error',
+                ]);
+        }
 
         // Update user record with course and session information
-        $user->registered_course = $request->course_id; // Store course_id in exam field
+        $user->registered_course = $request->course_id;
         $user->save();
-        activity('user_admission')
+
+        activity('student')
             ->causedBy($user)
             ->event('Course Changed')
-            ->log("$user->name changed their course to: $request->course_id");
+            ->withProperties([
+                'old_course' => $oldCourse?->course_name,
+                'new_course' => $newCourse->course_name,
+            ])
+            ->log("{$user->name} changed their course from {$oldCourse?->course_name} to {$newCourse->course_name}");
 
         return redirect()->route('student.profile.edit');
     }
