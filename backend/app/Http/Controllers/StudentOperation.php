@@ -27,6 +27,8 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
+use App\Http\Controllers\NotificationController;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -337,7 +339,16 @@ class StudentOperation extends Controller
         $total = $yes_ans + $no_ans;
         $res->exam_set = $exam_set_id;
         $res->save();
-
+        // $storedResult = Oex_result::where('user_id', $user->id)
+        //     ->where('exam_id', $request->exam_id)
+        //     ->first();
+        // GoogleSheets::updateGoogleSheets($userId, ['result' => $storedResult->yes_ans]);
+        NotificationController::notify(
+            $user->id,
+            'AFTER_EXAM_SUBMISSION_EMAIL',
+            'Exams submitted successfully',
+            'Hi, <br>We acknowledge your assessment test submission.<br>Please note that shortlisted applicants will be contacted as soon as possible.'
+        );
         TestSubmittedJob::dispatch($user, $res);
 
         return redirect(route('student.exam.index'));
@@ -1028,6 +1039,33 @@ class StudentOperation extends Controller
                 'instructor_button_text' => ($sectionIndex >= $totalSections - 1 && count($yetToComplete) === 1) ? 'Submit' : 'Save & Next',
             ],
         ]);
+    }
+
+    // Notifications
+    public function notifications()
+    {
+        $notifications = Notification::where('user_id', Auth::id())
+            ->orderByDesc('created_at')
+            ->paginate(20);
+
+        return Inertia::render('Student/Notifications/Index', compact('notifications'));
+    }
+
+    public function markNotificationAsRead($id)
+    {
+        $notification = Notification::where('user_id', Auth::id())->findOrFail($id);
+        $notification->update(['read_at' => now()]);
+
+        return redirect()->back();
+    }
+
+    public function markAllNotificationsAsRead()
+    {
+        Notification::where('user_id', Auth::id())
+            ->unread()
+            ->update(['read_at' => now()]);
+
+        return redirect()->back();
     }
 
     // Student results page

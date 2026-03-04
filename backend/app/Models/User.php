@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use App\Models\Notification;
 
 class User extends Authenticatable
 {
@@ -170,7 +171,12 @@ class User extends Authenticatable
         return $this->hasMany(QuestionnaireResponse::class);
     }
 
-        public function attendances()
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function hasAttendance()
     {
         return $this->hasMany(Attendance::class, 'user_id', 'userId');
     }
