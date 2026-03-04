@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\StudentAdmitted;
+use App\Models\Oex_question_master;
 use App\Models\OexExamMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
@@ -31,6 +32,7 @@ use App\Http\Controllers\NotificationController;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\Models\Activity;
 
 
 class StudentOperation extends Controller
@@ -38,22 +40,9 @@ class StudentOperation extends Controller
     //student dashboard
     public function dashboard()
     {
-        if (!Auth::user()->isAdmitted()) {
-            return redirect(route('student.profile.edit'));
-        }
-
-        // $data['portal_exams'] = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
-        //     ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
-        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
-        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-        //     ->orderBy('user_exams.exam_id', 'desc')
-        //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-        //     ->where('user_exams.user_id', Auth::user()->id)
-        //     ->where('user_exams.std_status', '1')
-        //     ->get()
-        //     ->toArray();
-
-        //     return view('student.dashboard', $data);
+        // if (!Auth::user()->isAdmitted()) {
+        //     return redirect(route('student.profile.edit'));
+        // }
 
         $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
@@ -74,10 +63,6 @@ class StudentOperation extends Controller
             return $questionnaire;
         });
         return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires'));
-
-        // $data['portal_exams'] = Oex_exam_master::select(['oex_exam_masters.*', 'oex_categories.name as cat_name'])
-        //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-        //     ->orderBy('id', 'desc')->where('oex_exam_masters.status', '1')->get()->toArray();
 
     }
     public function profile()
@@ -266,7 +251,6 @@ class StudentOperation extends Controller
 
         $data = ['status' => 'true', 'message' => 'started successfully'];
         $data['questions'] = $questions;
-
         return response()->json($data);
     }
 
@@ -350,6 +334,12 @@ class StudentOperation extends Controller
             'Hi, <br>We acknowledge your assessment test submission.<br>Please note that shortlisted applicants will be contacted as soon as possible.'
         );
         TestSubmittedJob::dispatch($user, $res);
+
+        activity('exam')
+            ->causedBy($user)
+            ->withProperties(['exam_id' => $request->exam_id])
+            ->event('Exam submitted')
+            ->log("$user->name submitted the exam at $std_info->submitted with score $res->yes_ans/$total");
 
         return redirect(route('student.exam.index'));
     }
@@ -479,7 +469,7 @@ class StudentOperation extends Controller
 
     public function confirm_session(Request $request)
     {
-        $user = $request->guard('web')->user();
+        $user = Auth::guard('web')->user();
 
         $data = $request->validate(
             [
@@ -501,22 +491,11 @@ class StudentOperation extends Controller
                     'flash' => 'Unable to change session at this time. Contact administrator',
                     'key' => 'error',
                 ]);
-
-                // return redirect(url('student/select-session/' . $user->userId))->with([
-                //     'flash' => 'Unable to change session at this time. Contact administrator',
-                //     'key' => 'error',
-                // ]);
             }
-
             $courseDetails = Course::find($admission->course_id);
             $session = CourseSession::where('course_id', $courseDetails->id)->where('id', $data['session_id'])->first();
 
             if (!$session) {
-                // return redirect(url('student/select-session/' . $user->userId))->with([
-                //     'flash' => 'Unable to confirm session. Try again later',
-                //     'key' => 'error',
-                // ]);
-
                 return redirect()->back()->with([
                     'flash' => 'Unable to confirm session. Try again later',
                     'key' => 'error',
@@ -526,11 +505,6 @@ class StudentOperation extends Controller
             $slotLeft = $session->slotLeft();
 
             if ($slotLeft < 1) {
-                // return redirect(url('student/select-session/' . $user->userId))->with([
-                //     'flash' => 'Unable to confirm session. No slots available',
-                //     'key' => 'error',
-                // ]);
-
                 return redirect()->back()->with([
                     'flash' => 'Unable to confirm session. No slots available',
                     'key' => 'error',
@@ -539,17 +513,32 @@ class StudentOperation extends Controller
 
             $admission->confirmed = now();
             $admission->session = $session->id;
-            // $admission->email_sent = now();
+            $admission->email_sent = now();
             $admission->location = $courseDetails->location;
             $admission->save();
 
             if (!$changingSession) {
                 AdmitStudentJob::dispatch($admission);
+                activity('user_admission')
+                    ->causedBy($user)
+                    ->performedOn($admission)
+                    ->withProperties([
+                        'session' => $session->name,
+                        'course' => $courseDetails->course_name,
+                    ])
+                    ->event('Session Confirmed')
+                    ->log("$user->name confirmed their session: {$session->name}");
+            } else {
+                activity('user_admission')
+                    ->causedBy($user)
+                    ->performedOn($admission)
+                    ->withProperties([
+                        'session' => $session->name,
+                        'course' => $courseDetails->course_name,
+                    ])
+                    ->event('Session Changed')
+                    ->log("$user->name changed their session to: {$session->name}");
             }
-            // return redirect(url('student/select-session/' . $user->userId))->with([
-            //     'flash' => $changingSession ? 'Session changed successfully' : 'Confirmation successful',
-            //     'key' => 'success',
-            // ]);
 
             return redirect()->back()->with([
                 'flash' => $changingSession ? 'Session changed successfully' : 'Confirmation successful',
@@ -557,22 +546,10 @@ class StudentOperation extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error($e);
-            // return redirect(url('student/select-session/' . $user->userId))->with([
-            //     'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
-            //     'key' => 'error',
-            // ]);
-
             return redirect()->back()->with([
                 'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
                 'key' => 'error',
             ]);
-
-            // return response()->json([
-            //     'status' => [
-            //         'key' => 'error',
-            //         'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later'
-            //     ]
-            // ]);
         }
     }
 
@@ -601,7 +578,6 @@ class StudentOperation extends Controller
         }
 
         return Inertia::render('Student/ChangeCourse', compact('user', 'courses', 'currentCourse'));
-        return view('student.change-course', compact('user', 'courses', 'currentCourse'));
     }
 
     // Update course selection
@@ -637,15 +613,30 @@ class StudentOperation extends Controller
         );
 
         // Get course information
-        // $course = Course::find($request->course_id);
+        $oldCourse = Course::find($user->registered_course);
+        $newCourse = Course::find($request->course_id);
 
-        // if (!$course) {
-        //     return redirect()->back()->with('error', 'Selected course not found.');
-        // }
+        if (!$newCourse) {
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'Selected course not found.',
+                    'key' => 'error',
+                ]);
+        }
 
         // Update user record with course and session information
-        $user->registered_course = $request->course_id; // Store course_id in exam field
+        $user->registered_course = $request->course_id;
         $user->save();
+
+        activity('student')
+            ->causedBy($user)
+            ->event('Course Changed')
+            ->withProperties([
+                'old_course' => $oldCourse?->course_name,
+                'new_course' => $newCourse->course_name,
+            ])
+            ->log("{$user->name} changed their course from {$oldCourse?->course_name} to {$newCourse->course_name}");
 
         return redirect()->route('student.profile.edit');
     }
@@ -667,6 +658,10 @@ class StudentOperation extends Controller
                 CreateStudentAdmissionJob::dispatch($user, $course, null);
                 $count++;
             }
+            activity('user_admission')
+                ->causedBy($user)
+                ->event('Admission Created')
+                ->log("Admitted {$count} students successfully!");
 
             return response()->json([
                 'success' => true,
@@ -697,6 +692,10 @@ class StudentOperation extends Controller
             ]);
 
             $user->update(['shortlist' => 0]);
+            activity('user_admission')
+                ->causedBy($user)
+                ->event('Admission Deleted')
+                ->log("$user->name deleted admission successfully!");
 
             return Redirect::route('student.application-status');
         } else {
@@ -804,6 +803,10 @@ class StudentOperation extends Controller
 
         $user->details_updated_at = now();
         $user->save();
+        activity('student')
+            ->causedBy($user)
+            ->event('Details Updated')
+            ->log("{$user->name}'s details updated successfully!");
 
         return redirect()
             ->back()

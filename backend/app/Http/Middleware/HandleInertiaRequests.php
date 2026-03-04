@@ -46,13 +46,13 @@ class HandleInertiaRequests extends Middleware
 
         $user = Auth::guard('web')->user();
 
-        $configs = AppConfig::whereIn('key', [
-            SHOW_RESULTS_TO_STUDENTS,
-            ALLOW_COURSE_CHANGE,
-            ALLOW_SESSION_CHANGE,
-            EXAM_DEADLINE_AFTER_REGISTRATION
-        ])
-            ->pluck('value', 'key')->all();
+        // $configs = AppConfig::whereIn('key', [
+        //     SHOW_RESULTS_TO_STUDENTS,
+        //     ALLOW_COURSE_CHANGE,
+        //     ALLOW_SESSION_CHANGE,
+        //     EXAM_DEADLINE_AFTER_REGISTRATION
+        // ])
+        //     ->pluck('value', 'key')->all();
 
         return [
             ...parent::share($request),
@@ -69,7 +69,12 @@ class HandleInertiaRequests extends Middleware
                     : null,
                 'unreadNotifications' => $user ? $user->notifications()->unread()->count() : 0,
             ],
-            'config' => $configs,
+            'config' => [
+                SHOW_RESULTS_TO_STUDENTS => config(SHOW_RESULTS_TO_STUDENTS),
+                ALLOW_COURSE_CHANGE => config(ALLOW_COURSE_CHANGE),
+                ALLOW_SESSION_CHANGE => config(ALLOW_SESSION_CHANGE),
+                EXAM_DEADLINE_AFTER_REGISTRATION => config(EXAM_DEADLINE_AFTER_REGISTRATION),
+            ],
             'flash' => [
                 'message' => fn() => $request->session()->get('flash'),
                 'key' => fn() => $request->session()->get('key'),

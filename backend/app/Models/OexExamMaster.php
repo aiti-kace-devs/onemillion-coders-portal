@@ -5,11 +5,23 @@ namespace App\Models;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class OexExamMaster extends Model
 {
     use CrudTrait;
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->useLogName('exam')
+            ->setDescriptionForEvent(fn(string $event) => "Exam {$event}");
+    }
+
     protected $table = "oex_exam_masters";
 
     protected $primaryKey = "id";
