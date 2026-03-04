@@ -117,13 +117,16 @@
     </x-backpack::menu-dropdown>
 @endif
 
-@if (auth()->user()->can('app-config.read.all') || auth()->user()->can('app-config.update'))
+@if (auth()->user()->can('app-config.read.all') || auth()->user()->can('app-config.update') || auth()->user()->can('admin.read.all'))
     <x-backpack::menu-dropdown title="System Settings" icon="la la-cogs">
         @can('app-config.read.all')
             <x-backpack::menu-dropdown-item title="App Configs" icon="la la-cog" :link="backpack_url('app-config')" />
         @endcan
         @can('app-config.update')
             <x-backpack::menu-dropdown-item title="App Maintenance" icon="la la-tools" :link="backpack_url('utilities')" />
+        @endcan
+        @can('admin.read.all')
+            <x-backpack::menu-dropdown-item title="Activity Logs" icon="la la-history" :link="backpack_url('activity')" />
         @endcan
     </x-backpack::menu-dropdown>
 @endif
