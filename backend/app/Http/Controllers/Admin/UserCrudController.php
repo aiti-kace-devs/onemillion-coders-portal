@@ -51,10 +51,6 @@ class UserCrudController extends CrudController
         CRUD::setModel(User::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/user');
         CRUD::setEntityNameStrings('student', 'students');
-
-        // CRUD::denyAccess('create');
-        // CRUD::denyAccess('update');
-        // $this->setupFilter();
         $this->setSearchableColumns(['name', 'email', 'mobile_no']);
         $this->setSearchResultAttributes(['id', 'name', 'email', 'mobile_no']);
 
@@ -192,8 +188,6 @@ class UserCrudController extends CrudController
         }
     }
 
-
-
     public function assignBatch(Request $request)
     {
         $request->validate([
@@ -242,11 +236,6 @@ class UserCrudController extends CrudController
         return response()->json(['message' => $message, 'updated' => $updated]);
     }
 
-
-
-
-
-
     public function setupFilter()
     {
         // $this->addStudentBatchFilter('Batch Filter');
@@ -282,13 +271,10 @@ class UserCrudController extends CrudController
             return back()->with(['flash' => 'Student not found.', 'key' => 'error']);
         }
 
-        // Get the latest exam result for the student
         $latestResult = $student->examResults()->latest()->first();
         if (!$latestResult) {
             return back()->with(['flash' => 'No exam results found for this student.', 'key' => 'error']);
         }
-
-        // Get the related exam info
         $exam = $latestResult->exam ?? null;
         if (!$exam) {
             return back()->with(['flash' => 'Exam information not found.', 'key' => 'error']);

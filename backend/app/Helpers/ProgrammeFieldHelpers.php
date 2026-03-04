@@ -75,7 +75,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'title',
             'label' => 'Title',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. Data Analyst (Microsoft Option)'
         ]);
@@ -83,7 +83,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'sub_title',
             'label' => 'Sub Title',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. Data Analyst Associate'
         ]);
@@ -110,7 +110,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'image',
             'label' => 'Cover Image URL',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'Copy and paste image URL eg. https://cdn.msme.gikace.org/media/image/partners/undp-logo.png'
         ]);
@@ -118,14 +118,14 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'start_date',
             'label' => 'Start Date',
-            'type'      => 'date',
+            'type' => 'date',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
         CRUD::addField([
             'name' => 'end_date',
             'label' => 'End Date',
-            'type'      => 'date',
+            'type' => 'date',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
@@ -134,7 +134,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'duration',
             'label' => 'Duration',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg 3  Week or 120 hrs'
         ]);
@@ -143,7 +143,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'level',
             'label' => 'Course Level',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. Professional'
         ]);
@@ -151,7 +151,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'job_responsible',
             'label' => 'Job Responsible',
-            'type'      => 'textarea',
+            'type' => 'textarea',
             // 'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. Provide technical support with a focus on networking. Assist in network device management.'
         ]);
@@ -234,14 +234,16 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'prerequisites',
             'label' => 'Entry Requirements',
-            'type'      => 'textarea',
+            'type' => 'textarea',
             // 'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. 1. Minimum of a Masters degree in law, IT, data management, cybersecurity, business administration, or related fields.'
         ]);
 
-        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
 
         $this->addOverviewField();
+
+        $this->addTagsField(Programme::class, 'programmeTags', 'Tags');
 
         // get the number of course matches
         // $courseMatches = CourseMatch::all();
@@ -285,15 +287,15 @@ trait ProgrammeFieldHelpers
             }
 
             CRUD::addField([
-                'name'        => $fieldName,
-                'label'       => $courseMatch->question,
-                'type'        => 'select2_multiple',
+                'name' => $fieldName,
+                'label' => $courseMatch->question,
+                'type' => 'select2_multiple',
 
-                'fake'        => true,   // prevent relationship call
-                'value'       => $selectedValues, // 👈 THIS FIXES DISPLAY
+                'fake' => true,   // prevent relationship call
+                'value' => $selectedValues, // 👈 THIS FIXES DISPLAY
 
-                'model'       => CourseMatchOption::class,
-                'attribute'   => 'answer',
+                'model' => CourseMatchOption::class,
+                'attribute' => 'answer',
                 'allows_null' => true,
 
                 'options' => function ($query) use ($courseMatch) {

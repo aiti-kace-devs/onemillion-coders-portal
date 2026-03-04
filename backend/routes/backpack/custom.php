@@ -50,6 +50,8 @@ Route::group([
     Route::post('batch/course/{courseId}/sessions', [BatchCrudController::class, 'saveCourseSessions']);
     Route::post('batch/{id}/toggle', [BatchCrudController::class, 'toggleStatus']);
     Route::post('batch/{id}/toggle-completed', [BatchCrudController::class, 'toggleCompleted']);
+    Route::crud('tag', 'TagCrudController');
+    Route::crud('tag-type', 'TagTypeCrudController');
     Route::crud('course-session', 'CourseSessionCrudController');
     Route::crud('email-template', 'EmailTemplateCrudController');
     Route::crud('form', 'FormCrudController');
@@ -73,12 +75,12 @@ Route::group([
     Route::post('manage-student/{user}/change-admission', 'ManageStudentCrudController@changeAdmission')->name('manage-student.change-admission');
     Route::post('manage-student/{user}/choose-session', 'ManageStudentCrudController@chooseSession')->name('manage-student.choose-session');
     Route::delete('manage-student/delete-admission/{user_id}', 'ManageStudentCrudController@deleteAdmission')->name('manage-student.delete-admission');
-    
+
     // AJAX routes for student metrics and dropdowns
     Route::get('manage-student/{user}/metrics', 'ManageStudentCrudController@getStudentMetrics')->name('manage-student.metrics');
     Route::get('manage-student/courses-ajax', 'ManageStudentCrudController@getCoursesAjax')->name('manage-student.courses-ajax');
     Route::get('manage-student/sessions-ajax', 'ManageStudentCrudController@getSessionsAjax')->name('manage-student.sessions-ajax');
-    
+
     // Use UserCrudController's bulkAdmit for single student admission
     Route::post('manage-student/bulk-admit', 'UserCrudController@bulkAdmit')->name('manage-student.bulk-admit');
 
@@ -139,7 +141,7 @@ Route::group([
     Route::post('course-match/{id}/toggle', 'CourseMatchCrudController@toggleStatus');
     Route::crud('course-match-option', 'CourseMatchOptionCrudController');
     Route::post('course-match-option/{id}/toggle', 'CourseMatchOptionCrudController@toggleStatus');
-    
+
 
     // Utilities dashboard (super-admin only)
     Route::get('utilities', [UtilitiesController::class, 'index'])->name('admin.utilities.index');
