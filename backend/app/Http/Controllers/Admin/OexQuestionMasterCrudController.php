@@ -11,6 +11,7 @@ use App\Models\OexCategory;
 use App\Helpers\CourseFieldHelpers;
 use App\Helpers\UserFieldHelpers;
 use App\Models\OexQuestionMaster;
+use Prologue\Alerts\Facades\Alert;
 
 /**
  * Class OexQuestionMasterCrudController
@@ -83,6 +84,15 @@ class OexQuestionMasterCrudController extends CrudController
             'type' => 'textarea',
             'escaped' => false,
         ]);
+
+        CRUD::addColumn([
+            'name' => 'tags',
+            'label' => 'Tags',
+            'type' => 'relationship',
+            'entity' => 'tags',
+            'attribute' => 'name',
+            'model' => \App\Models\Tag::class,
+        ]);
         CRUD::column('ans')->type('textarea');
         FilterHelper::addBooleanColumn('status', 'status');
 
@@ -92,6 +102,7 @@ class OexQuestionMasterCrudController extends CrudController
 
         FilterHelper::addNullableColumnFilter('filter_ans', 'ans', 'Filter Answers');
         FilterHelper::addBooleanFilter('status', 'Status');
+        FilterHelper::addTagsFilter('tags', 'Tags');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
     }
