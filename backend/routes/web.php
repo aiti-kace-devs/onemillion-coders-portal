@@ -31,6 +31,7 @@ use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\SmsTemplateController;
 use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\QuestionnaireController;
+use App\Http\Controllers\Api\OtpController;
 use Illuminate\Support\Str;
 
 
@@ -48,7 +49,13 @@ use Illuminate\Support\Str;
 
 
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
-Route::post('/api/add-student', [FormResponseController::class, 'store']);      
+Route::post('/api/add-student', [FormResponseController::class, 'store']);
+
+// OTP verification routes for registration
+Route::get('/api/otp/check-email', [OtpController::class, 'checkEmail'])->middleware('throttle:30,1');
+Route::post('/api/otp/send', [OtpController::class, 'send'])->middleware('throttle:10,1');
+Route::post('/api/otp/verify', [OtpController::class, 'verify'])->middleware('throttle:20,1');
+Route::get('/api/otp/status', [OtpController::class, 'status'])->middleware('throttle:30,1');
 
 // Redirect Statamic login to Backpack login
 Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {

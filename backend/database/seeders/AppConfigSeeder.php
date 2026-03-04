@@ -111,6 +111,12 @@ class AppConfigSeeder extends Seeder
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
+                // OTP verification parameters (admin-configurable)
+                ['key' => 'OTP_TTL', 'value' => 600, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => 'OTP_VERIFIED_TTL', 'value' => 1800, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => 'OTP_MAX_REQUESTS', 'value' => 3, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => 'OTP_REQUEST_WINDOW', 'value' => 600, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => 'OTP_MAX_ATTEMPTS', 'value' => 5, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
             ]);
         } catch (\Exception $e) {
             echo $e->getMessage();
