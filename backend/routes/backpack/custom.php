@@ -2,12 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Api\CentreController;
+use App\Http\Controllers\Admin\Api\ConstituencyController as ConstituencyApiController;
 use App\Http\Controllers\Admin\OexQuestionMasterCrudController;
 use App\Http\Controllers\Admin\StudentVerificationCrudController;
 use App\Http\Controllers\Admin\UserCrudController;
 use App\Http\Controllers\Admin\BatchCrudController;
 use App\Http\Controllers\Admin\CourseBatchCrudController;
 use App\Http\Controllers\Admin\DistrictCrudController;
+use App\Http\Controllers\Admin\ConstituencyCrudController;
 use App\Http\Controllers\Admin\ManageStudentCrudController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UtilitiesController;
@@ -30,6 +32,7 @@ Route::group([
     Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('backpack.dashboard');
     Route::post('/user/assign-batch', [UserCrudController::class, 'assignBatch']);
     Route::get('api/centre-by-branch', [CentreController::class, 'filterByBranch']);
+    Route::get('api/constituency-by-branch', [ConstituencyApiController::class, 'filterByBranch']);
     Route::get('admin/exam/{exam_id}/add-question', [OexQuestionMasterCrudController::class, 'addQuestion'])
         ->name('admin.exam.add-question');
     Route::crud('role', 'RoleCrudController');
@@ -151,9 +154,11 @@ Route::group([
     Route::get('course-batch/{id}/attendance-history-data', [CourseBatchCrudController::class, 'attendanceHistoryData'])->name('course-batch.attendance-history-data');
     Route::crud('course-batch', 'CourseBatchCrudController');
     Route::post('district/{id}/toggle', [DistrictCrudController::class, 'toggleStatus']);
+    Route::post('constituency/{id}/toggle', [ConstituencyCrudController::class, 'toggleStatus']);
     Route::post('district/{districtId}/add-centres', [DistrictCrudController::class, 'addCentres'])->name('district.add-centres');
     Route::delete('district/{districtId}/remove-centre/{centreId}', [DistrictCrudController::class, 'removeCentre'])->name('district.remove-centre');
     Route::crud('district', 'DistrictCrudController');
+    Route::crud('constituency', 'ConstituencyCrudController');
 }); // this should be the absolute last line of this file
 
 /**

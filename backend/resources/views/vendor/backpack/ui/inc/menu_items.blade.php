@@ -32,6 +32,7 @@
 @can('centre.read.all')
 <x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
 <x-backpack::menu-item title="Manage Districts" icon="la la-question" :link="backpack_url('district')" />
+<x-backpack::menu-item title="Constituencies" icon="la la-question" :link="backpack_url('constituency')" />
 @endcan
 
 @can('programme.read.all')

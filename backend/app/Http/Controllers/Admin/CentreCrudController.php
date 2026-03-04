@@ -7,6 +7,7 @@ use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Models\Branch;
 use App\Models\Centre;
+use App\Models\Constituency;
 use App\Helpers\GeneralFieldsAndColumns;
 use Illuminate\Http\Request;
 use App\Helpers\FilterHelper;
@@ -49,7 +50,13 @@ class CentreCrudController extends CrudController
         WidgetHelper::centreStatisticsWidget();
 
         CRUD::column('title')->type('textarea');
-        CRUD::column('branch_id')->label('Branch')->linkTo('branch.show');
+        CRUD::column('branch_id')->label('Region')->linkTo('branch.show');
+        CRUD::addColumn([
+            'name' => 'constituency',
+            'label' => 'Constituency',
+            'type' => 'relationship',
+            'attribute' => 'title',
+        ]);
         CRUD::addColumn([
             'name' => 'is_pwd_friendly',
             'label' => 'Is PWD Friendly',
@@ -92,7 +99,7 @@ class CentreCrudController extends CrudController
 
         CRUD::addField([
             'name'        => 'branch_id',
-            'label'       => 'Branch',
+            'label'       => 'Select Region',
             'type'        => 'select',
             'entity'      => 'branch',
             'model'       => Branch::class,
@@ -100,6 +107,33 @@ class CentreCrudController extends CrudController
             'allows_null' => true,
             'default'     => null,
             'wrapper'     => ['class' => 'form-group col-6'],
+        ]);
+
+        CRUD::addField([
+            'name' => 'constituency_id',
+            'label' => 'Select Constituency',
+            'type' => 'select2_from_ajax',
+            'entity' => 'constituency',
+            'model' => Constituency::class,
+            'attribute' => 'title',
+            'data_source' => backpack_url('api/constituency-by-branch'),
+            'dependencies' => ['branch_id'],
+            'include_all_form_fields' => true,
+            'minimum_input_length' => 0,
+            'method' => 'GET',
+            'wrapper' => ['class' => 'form-group col-6'],
+            'attributes' => [
+                'id' => 'constituency_id',
+                'disabled' => 'disabled',
+            ],
+            'hint' => 'Select a region first to load constituencies.',
+        ]);
+
+        CRUD::addField([
+            'name' => 'constituency_dependency_script',
+            'type' => 'custom_html',
+            'value' => view('admin.centre.fields.constituency_dependency_script'),
+            'wrapper' => ['class' => 'd-none'],
         ]);
 
 
