@@ -135,13 +135,13 @@ const user = auth?.user || {};
                     </SidebarNavLink>
 
                     <SidebarNavLink
-                        v-if="!user.isAdmitted"
-                        :href="route('student.change-course')"
-                        :active="route().current('student.change-course')"
+                        v-if="user.hasAdmission"
+                        :href="route('student.course.index')"
+                        :active="route().current('student.course.*')"
                         :label="'Change Course'"
                     >
                         <span class="material-symbols-outlined">
-                            swap_horiz
+                            change_circle
                         </span>
                     </SidebarNavLink>
 
