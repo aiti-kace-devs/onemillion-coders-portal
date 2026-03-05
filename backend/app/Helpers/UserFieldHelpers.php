@@ -73,7 +73,7 @@ trait UserFieldHelpers
      * Return course IDs visible to the current admin.
      * `null` means unrestricted visibility (super admin or non-admin contexts).
      */
-    protected function currentAdminVisibleCourseIds(): ?array
+    public static function currentAdminVisibleCourseIds(): ?array
     {
         $admin = backpack_user();
 
