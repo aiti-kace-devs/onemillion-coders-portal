@@ -40,7 +40,6 @@ const { component } = usePage().props;
                     <button
                         class="block cursor-pointer rounded-md p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-100 focus:outline-none"
                         @click="toggleSidebar" aria-label="Toggle Sidebar" aria-expanded="isSidebarCollapsed">
-                        <svg v-if="isSidebarCollapsed" class="h-6 w-6" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 6h16M4 12h16M4 18h16"></path>

@@ -9,6 +9,7 @@ use App\Models\Attendance;
 use App\Models\Programme;
 use App\Models\Course;
 use App\Models\Branch;
+use App\Models\District;
 use App\Models\Centre;
 use App\Models\User;
 use App\Models\CourseSession;
@@ -311,6 +312,80 @@ class WidgetHelper
 
 
 
+    public static function districtStatisticsWidget(array $statistics = [])
+    {
+        $totalDistricts = (int) ($statistics['total'] ?? District::count());
+        $activeDistricts = (int) ($statistics['active'] ?? District::where('status', 1)->count());
+        $inactiveDistricts = (int) ($statistics['inactive'] ?? District::where('status', 0)->count());
+        $recentDistricts = (int) ($statistics['recent'] ?? District::whereDate('created_at', '>=', now()->subDays(30))->count());
+
+        $getPercent = function ($count) use ($totalDistricts) {
+            return $totalDistricts > 0 ? round(($count / $totalDistricts) * 100) : 0;
+        };
+
+        $totalPercent = (int) ($statistics['total_percent'] ?? $getPercent($totalDistricts));
+        $activePercent = (int) ($statistics['active_percent'] ?? $getPercent($activeDistricts));
+        $inactivePercent = (int) ($statistics['inactive_percent'] ?? $getPercent($inactiveDistricts));
+        $recentPercent = (int) ($statistics['recent_percent'] ?? $getPercent($recentDistricts));
+
+        Widget::add([
+            'type' => 'div',
+            'class' => 'row mb-4',
+            'content' => [
+                [
+                    'type' => 'progress_white',
+                    'progress' => $totalPercent,
+                    'description' => 'Total Districts',
+                    'value' => number_format($totalDistricts),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                        'class' => 'col-sm-6 col-lg-3 js-district-widget-total',
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'All registered districts.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $activePercent,
+                    'description' => 'Active Districts',
+                    'value' => number_format($activeDistricts),
+                    'progressClass' => 'progress-bar bg-success',
+                    'wrapper' => [
+                        'class' => 'col-sm-6 col-lg-3 js-district-widget-active',
+                    ],
+                    'hint' => 'Districts currently active.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $inactivePercent,
+                    'description' => 'Inactive Districts',
+                    'value' => number_format($inactiveDistricts),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'wrapper' => [
+                        'class' => 'col-sm-6 col-lg-3 js-district-widget-inactive',
+                    ],
+                    'hint' => 'Districts currently inactive.',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'progress' => $recentPercent,
+                    'description' => 'New Districts (30 Days)',
+                    'value' => number_format($recentDistricts),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                        'class' => 'col-sm-6 col-lg-3 js-district-widget-recent',
+                        'style' => 'background-color:rgb(40, 127, 167);',
+                    ],
+                    'hint' => 'Districts added in the last 30 days.',
+                ],
+            ],
+        ]);
+    }
+
+
+
+
+
     public static function centreStatisticsWidget()
     {
         $totalCenters = Centre::count();
@@ -374,10 +449,29 @@ class WidgetHelper
 
     public static function courseStatisticsWidget()
     {
-        $totalCourses = Course::count();
-        $activeCourses = Course::where('status', 1)->count();
-        $inactiveCourses = Course::where('status', 0)->count();
-        $ongoingCourses = Course::whereDate('start_date', '<=', now())
+        $admin = backpack_user();
+        $visibleCourseIds = null;
+
+        if ($admin instanceof Admin) {
+            $visibleCourseIds = method_exists($admin, 'visibleCourseIds')
+                ? $admin->visibleCourseIds()
+                : ($admin->isSuper() ? null : $admin->assignedCourseIds());
+        }
+
+        $baseQuery = Course::query();
+
+        if (is_array($visibleCourseIds)) {
+            if (empty($visibleCourseIds)) {
+                $baseQuery->whereRaw('1 = 0');
+            } else {
+                $baseQuery->whereIn('id', $visibleCourseIds);
+            }
+        }
+
+        $totalCourses = (clone $baseQuery)->count();
+        $activeCourses = (clone $baseQuery)->where('status', 1)->count();
+        $inactiveCourses = (clone $baseQuery)->where('status', 0)->count();
+        $ongoingCourses = (clone $baseQuery)->whereDate('start_date', '<=', now())
             ->whereDate('end_date', '>=', now())
             ->count();
 
@@ -829,19 +923,38 @@ class WidgetHelper
 
     public static function userStatisticsWidget()
     {
-        $totalUsers = User::count();
+        $admin = backpack_user();
+        $visibleCourseIds = null;
 
-        $admittedUsers = User::whereExists(function ($query) {
-            $query->select(\DB::raw(1))
+        if ($admin instanceof Admin) {
+            $visibleCourseIds = method_exists($admin, 'visibleCourseIds')
+                ? $admin->visibleCourseIds()
+                : ($admin->isSuper() ? null : $admin->assignedCourseIds());
+        }
+
+        $baseQuery = User::query();
+
+        if (is_array($visibleCourseIds)) {
+            if (empty($visibleCourseIds)) {
+                $baseQuery->whereRaw('1 = 0');
+            } else {
+                $baseQuery->whereIn('registered_course', $visibleCourseIds);
+            }
+        }
+
+        $totalUsers = (clone $baseQuery)->count();
+
+        $admittedUsers = (clone $baseQuery)->whereExists(function ($query) {
+            $query->select(DB::raw(1))
                 ->from('user_admission')
                 ->whereColumn('user_admission.user_id', 'users.userId')
                 ->whereNotNull('user_admission.confirmed');
         })->count();
 
-        $shortlistedUsers = User::where('shortlist', 1)->count();
+        $shortlistedUsers = (clone $baseQuery)->where('shortlist', 1)->count();
 
-        $todaysAdmittedUsers = User::whereExists(function ($query) {
-            $query->select(\DB::raw(1))
+        $todaysAdmittedUsers = (clone $baseQuery)->whereExists(function ($query) {
+            $query->select(DB::raw(1))
                 ->from('user_admission')
                 ->whereColumn('user_admission.user_id', 'users.userId')
                 ->whereDate('user_admission.confirmed', today());
@@ -910,10 +1023,29 @@ class WidgetHelper
 
     public static function verificationStatisticsWidget()
     {
-        $totalStudents = StudentVerification::count();
-        $totalVerified = StudentVerification::whereNotNull('verification_date')->count();
-        $unverified = StudentVerification::whereNull('verification_date')->count();
-        $recentlyUpdated = StudentVerification::whereDate('details_updated_at', '>=', now()->subDays(30))->count();
+        $admin = backpack_user();
+        $visibleCourseIds = null;
+
+        if ($admin instanceof Admin) {
+            $visibleCourseIds = method_exists($admin, 'visibleCourseIds')
+                ? $admin->visibleCourseIds()
+                : ($admin->isSuper() ? null : $admin->assignedCourseIds());
+        }
+
+        $baseQuery = StudentVerification::query();
+
+        if (is_array($visibleCourseIds)) {
+            if (empty($visibleCourseIds)) {
+                $baseQuery->whereRaw('1 = 0');
+            } else {
+                $baseQuery->whereIn('registered_course', $visibleCourseIds);
+            }
+        }
+
+        $totalStudents = (clone $baseQuery)->count();
+        $totalVerified = (clone $baseQuery)->whereNotNull('verification_date')->count();
+        $unverified = (clone $baseQuery)->whereNull('verification_date')->count();
+        $recentlyUpdated = (clone $baseQuery)->whereDate('details_updated_at', '>=', now()->subDays(30))->count();
 
         $getPercent = function ($count) use ($totalStudents) {
             return $totalStudents > 0 ? round(($count / $totalStudents) * 100) : 0;

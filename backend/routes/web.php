@@ -31,6 +31,7 @@ use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\SmsTemplateController;
 use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\QuestionnaireController;
+use App\Http\Controllers\Api\OtpController;
 use Illuminate\Support\Str;
 
 
@@ -50,6 +51,12 @@ use Illuminate\Support\Str;
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
 Route::post('/api/add-student', [FormResponseController::class, 'store']);
 
+// OTP verification routes for registration
+Route::get('/api/otp/check-email', [OtpController::class, 'checkEmail'])->middleware('throttle:30,1');
+Route::post('/api/otp/send', [OtpController::class, 'send'])->middleware('throttle:10,1');
+Route::post('/api/otp/verify', [OtpController::class, 'verify'])->middleware('throttle:20,1');
+Route::get('/api/otp/status', [OtpController::class, 'status'])->middleware('throttle:30,1');
+
 // Redirect Statamic login to Backpack login
 Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
     return redirect()->to(backpack_url('login'));
@@ -57,8 +64,9 @@ Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
 
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
 // Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
-Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
+Route::get('/api/programmes-with-course-match', action: [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
 Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+Route::get('/api/programmes-with-batches', [CourseProgrammeController::class, 'programmeWithBatch']);
 Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
 Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
 
@@ -69,6 +77,8 @@ Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
 Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
 Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
 Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
+Route::get('/api/districts-by-branch', [CourseProgrammeController::class, 'districtsByBranch']);
+Route::get('/api/centres-by-district', [CourseProgrammeController::class, 'centresByDistrict']);
 
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
@@ -274,7 +284,7 @@ Route::prefix('admins')
                     ->name('remove-attendance')
                     ->middleware('permission:attendance.delete');
                 Route::get('/generate_qrcode', [AdminController::class, 'generate_qrcode_page'])->middleware('permission:attendance.create');
-                Route::post('/generate_qrcode', [AttendanceQRCodeTrait::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
+                // Route::post('/generate_qrcode', [AttendanceQRCodeTrait::class, 'generateQRCodeData'])->middleware('permission:attendance.create');
                 // Route::post('/confirm_attendance', [AttendanceController::class, 'confirmAttendance'])->middleware('permission:attendance.create');
                 Route::get('/view_attendance', [AdminController::class, 'viewAttendanceByDate'])->name('viewAttendanceByDate');
                 // Route::get('/remove-attendance/{id}', [AttendanceController::class, 'removeAttendance'])
@@ -573,6 +583,13 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::get('/course/select-center/{branch_id}', [StudentOperation::class, 'select_center'])->name('course.select-center');
         Route::get('/course/select-course', [StudentOperation::class, 'select_course'])->name('course.select-course');
         Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course');
+
+        // Notifications
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [StudentOperation::class, 'notifications'])->name('index');
+            Route::patch('/{id}/read', [StudentOperation::class, 'markNotificationAsRead'])->name('mark-read');
+            Route::post('/mark-all-read', [StudentOperation::class, 'markAllNotificationsAsRead'])->name('mark-all-read');
+        });
 
         // Course assessment route
         Route::prefix('assessment')->name('assessment.')->group(function () {

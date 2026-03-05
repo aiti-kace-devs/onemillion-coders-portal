@@ -11,6 +11,7 @@ use App\Models\OexCategory;
 use App\Helpers\CourseFieldHelpers;
 use App\Helpers\UserFieldHelpers;
 use App\Models\OexQuestionMaster;
+use Prologue\Alerts\Facades\Alert;
 
 /**
  * Class OexQuestionMasterCrudController
@@ -83,15 +84,22 @@ class OexQuestionMasterCrudController extends CrudController
             'type' => 'textarea',
             'escaped' => false,
         ]);
+
         CRUD::addColumn([
-            'name' => 'programmes',
-            'label' => 'Programmes',
-            'entity' => 'programmes',
-            'attribute' => 'title',
-            'model' => "App\Models\Programme",
+            'name' => 'tags',
+            'label' => 'Tags',
+            'type' => 'relationship',
+            'entity' => 'tags',
+            'attribute' => 'name',
+            'model' => \App\Models\Tag::class,
         ]);
         CRUD::column('ans')->type('textarea');
-        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
 
         if ($examId) {
             $this->crud->addClause('where', 'exam_id', $examId);
@@ -99,6 +107,7 @@ class OexQuestionMasterCrudController extends CrudController
 
         FilterHelper::addNullableColumnFilter('filter_ans', 'ans', 'Filter Answers');
         FilterHelper::addBooleanFilter('status', 'Status');
+        FilterHelper::addTagsFilter('tags', 'Tags');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
     }
@@ -132,16 +141,12 @@ class OexQuestionMasterCrudController extends CrudController
         ]);
 
         CRUD::addField([
-            'name' => 'programmes',
-            'label' => 'Select Programmes',
-            'type' => 'select2_multiple',
-            'entity' => 'programmes',
-            'attribute' => 'title',
-            'model' => "App\Models\Programme",
-            'pivot' => true,
-            'wrapper' => ['class' => 'form-group col-12'],
-            'allows_null' => true,
+            'name' => 'exam_set_id',
+            'type' => 'hidden',
+            'value' => 1,
         ]);
+
+        $this->addTagsField(OexQuestionMaster::class);
 
         CRUD::addField([
             'name' => 'questions',
@@ -309,7 +314,8 @@ class OexQuestionMasterCrudController extends CrudController
             'status' => $request->input('status', false),
         ]);
 
-        $question->programmes()->sync($request->input('programmes', []));
+        $question->tags()->sync($request->input('tags', []));
+        $question->tags()->sync($request->input('tags', []));
 
         \Alert::success(trans('backpack::crud.insert_success'))->flash();
         return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);
@@ -334,10 +340,30 @@ class OexQuestionMasterCrudController extends CrudController
             'status' => $request->input('status', false),
         ]);
 
-        $entry->programmes()->sync($request->input('programmes', []));
+        $entry->tags()->sync($request->input('tags', []));
+        $entry->tags()->sync($request->input('tags', []));
 
         \Alert::success(trans('backpack::crud.update_success'))->flash();
         return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);
+    }
+
+    public function toggleStatus(\Illuminate\Http\Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $question = OexQuestionMaster::findOrFail($id);
+        $question->status = (bool) $data['value'];
+        $question->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Question status updated successfully.',
+            'value' => $question->status ? 1 : 0,
+        ]);
     }
 
 

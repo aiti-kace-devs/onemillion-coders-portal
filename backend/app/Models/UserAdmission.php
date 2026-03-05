@@ -5,15 +5,31 @@ namespace App\Models;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class UserAdmission extends Model
 {
     use CrudTrait;
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->useLogName('user_admission')
+            ->setDescriptionForEvent(fn(string $event) => "User Admission {$event}");
+    }
 
     protected $table = 'user_admission';
 
-    protected $fillable = ['user_id', 'batch_id', 'course_id', 'email_sent', 'session', 'location', 'confirmed'];
+    protected $fillable = ['user_id', 'course_batch_id', 'batch_id', 'course_id', 'email_sent', 'session', 'location', 'confirmed'];
+
+    protected $casts = [
+        'confirmed' => 'datetime',
+        'email_sent' => 'datetime',
+    ];
 
     public function course()
     {

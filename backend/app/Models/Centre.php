@@ -5,12 +5,22 @@ namespace App\Models;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Centre extends Model
 {
     use CrudTrait;
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->useLogName('centre')
+            ->setDescriptionForEvent(fn(string $event) => "Centre {$event}");
+    }
 
     protected $fillable = [
         'title',
@@ -55,5 +65,11 @@ class Centre extends Model
     public function programme()
     {
         return $this->belongsToMany(Programme::class, 'courses');
+    }
+
+    public function districts()
+    {
+        return $this->belongsToMany(District::class, 'district_centre', 'centre_id', 'district_id')
+            ->withTimestamps();
     }
 }

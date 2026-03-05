@@ -13,8 +13,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Permission\Traits\HasRoles;
-
+use Spatie\Activitylog\Traits\LogsActivity;
 class Admin extends Authenticatable
 {
     /**
@@ -27,7 +28,7 @@ class Admin extends Authenticatable
         return (new \Statamic\Auth\Eloquent\User)->model($this);
     }
     use CrudTrait;
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, CustomTimestamps, HasUuids;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, CustomTimestamps, HasUuids, LogsActivity;
     protected $guard = 'admin';
 
     protected $guard_name = 'admin';
@@ -54,6 +55,7 @@ class Admin extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'preferences' => 'json',
+        'is_super' => 'boolean',
     ];
 
 
@@ -80,10 +82,35 @@ class Admin extends Authenticatable
     {
         return $this->is_super;
     }
+
+    /**
+     * Return course IDs explicitly assigned to this admin.
+     */
+    public function assignedCourseIds(): array
+    {
+        return $this->assignedCourses()
+            ->pluck('courses.id')
+            ->map(fn ($courseId) => (int) $courseId)
+            ->all();
+    }
+
+    /**
+     * Return visible course IDs for this admin.
+     * `null` means unrestricted visibility (super admin).
+     */
+    public function visibleCourseIds(): ?array
+    {
+        if ($this->isSuper()) {
+            return null;
+        }
+
+        return $this->assignedCourseIds();
+    }
+
     public function assignedCourses()
     {
         return $this->belongsToMany(Course::class, 'admin_course', 'admin_id', 'course_id')
-            ->select(['courses.id', 'courses.course_name', 'courses.duration', 'courses.status'])
+            ->select(['courses.id', 'courses.course_name', 'courses.centre_id', 'courses.duration', 'courses.status'])
             ->withTimestamps();
     }
 
@@ -97,9 +124,18 @@ class Admin extends Authenticatable
         $this->notify(new ResetPasswordNotification($token));
     }
 
-
     public function getNameWithEmail()
     {
         return $this->name . ' (' . $this->email . ')';
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->useLogName('admin')
+            ->setDescriptionForEvent(fn(string $event) => "Admin {$event}")
+            ->dontLogIfAttributesChangedOnly(['last_login']);
     }
 }

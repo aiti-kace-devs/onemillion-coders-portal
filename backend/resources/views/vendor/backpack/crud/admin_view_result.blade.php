@@ -1,7 +1,12 @@
 @extends(backpack_view('blank'))
 @section('header')
     <section class="content-header">
-        <h1 class="text-center">Result</h1>
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="text-center">Result</h1>
+            <a href="{{ url('admin/manage-student/' . $student_info->id . '/show') }}" class="btn btn-secondary">
+                <i class="la la-arrow-left"></i> Back to Preview
+            </a>
+        </div>
     </section>
 @endsection
 
@@ -42,11 +47,11 @@
                     </tr>
                     <tr>
                         <td>Total marks: </td>
-                        <td>{{ $result_info->yes_ans}}/30</td>
+                        <td>{{ $result_info->yes_ans}}/{{ $result_info->yes_ans + $result_info->no_ans }}</td>
                     </tr>
                     <tr>
                         <td>Percentage score :</td>
-                        <td>{{ round(($result_info->yes_ans / 30) * 100) }}%</td>
+                        <td>{{ round(($result_info->yes_ans / $result_info->yes_ans + $result_info->no_ans ) * 100) }}%</td>
                     </tr>
                 </table>
             </div>

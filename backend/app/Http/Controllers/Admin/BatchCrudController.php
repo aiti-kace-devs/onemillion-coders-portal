@@ -10,6 +10,10 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\Batch;
 use App\Helpers\CourseFieldHelpers;
+use App\Helpers\BatchFieldHelpers;
+use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Class BatchCrudController
@@ -19,6 +23,7 @@ use App\Helpers\CourseFieldHelpers;
 class BatchCrudController extends CrudController
 {
     use CourseFieldHelpers;
+    use BatchFieldHelpers;
     use \App\SearchableCRUD;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation {
@@ -69,76 +74,25 @@ class BatchCrudController extends CrudController
             abort(403, 'Unauthorized action.');
         }
 
-        $this->crud->query
-            ->select('admission_batches.*')
-            ->addSelect('admission_batches.id') // explicitly qualifying id
-            ->selectRaw('(
-                SELECT COUNT(ua.id)
-                FROM courses c
-                LEFT JOIN user_admission ua ON ua.course_id = c.id AND ua.confirmed IS NOT NULL
-                WHERE ua.batch_id = admission_batches.id
-            ) AS admitted_students_count')
-            ->selectRaw('(
-                SELECT COUNT(cb.course_id)
-                FROM course_batches cb
-                WHERE cb.batch_id = admission_batches.id
-            ) AS courses_count');
-
-
-        CRUD::column('title')->type('text');
-        // FilterHelper::addGenericRelationshipColumn('course', 'Course', 'course', 'course_name');
-        CRUD::column('year');
-        CRUD::column('start_date');
-        CRUD::column('end_date');
-
-        CRUD::addColumn([
-            'name' => 'courses_count',
-            'label' => 'Courses',
-            'type' => 'closure',
-            'function' => function ($entry) {
-                // Get course IDs (not batch IDs) from the relationship
-                $courseIds = $entry->assignedCourseBatches()
-                    ->with('course') // eager load course relationship if needed
-                    ->pluck('course_id') // explicitly pluck course_id
-                    ->unique() // remove duplicates if any
-                    ->values() // reset array keys
-                    ->toArray();
-
-                $courseCount = count($courseIds);
-
-                if ($courseCount > 0) {
-                    $encodedIds = urlencode(json_encode($courseIds));
-                    $url = url("/admin/course?id={$encodedIds}");
-
-                    return "<a href='{$url}'>{$courseCount}</a>";
-                }
-
-                return '';
-            },
-            'escaped' => false,
-        ]);
-
-        CRUD::addColumn([
-            'name' => 'admitted_students_count',
-            'label' => 'Admitted Students',
-            'type' => 'closure',
-            'function' => function ($entry) {
-                $batchId = $entry->id;
-                $admittedCount = $entry->admitted_students_count;
-
-                if ($admittedCount > 0) {
-                    $url = url("/admin/user?batch_id={$batchId}&confirmed_admission=1");
-                    return "<a href='{$url}'>{$admittedCount}</a>";
-                }
-
-                return '';
-            },
-            'escaped' => false,
-        ]);
-
-
+        $this->setupCommonBatchListFields();
 
         // CRUD::column('total_completed_students')->label('Total Completed');
+        // FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column', 
+        ]);
+
+        CRUD::addColumn([
+            'name' => 'completed',
+            'label' => 'Completed',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+            'toggle_url' => 'batch/{id}/toggle-completed',
+        ]);
+
         FilterHelper::addBooleanColumn('completed', 'completed');
         // $this->courseFilter('course_id');
         $this->addOngoingCoursesFilter('Ongoing Batches');
@@ -161,65 +115,18 @@ class BatchCrudController extends CrudController
         }
 
         CRUD::setValidation(BatchRequest::class);
-        CRUD::addField([
-            'name' => 'title',
-            'label' => 'Title',
-            'type'      => 'text',
-            'wrapper' => ['class' => 'form-group col-6'],
-            'hint' => 'eg. Quarter 1, Batch 1',
-            'tab' => 'General Info',
-        ]);
 
-        CRUD::addField([
-            'name' => 'description',
-            'label' => 'Description',
-            'type'      => 'text',
-            'wrapper' => ['class' => 'form-group col-6'],
-            'tab' => 'General Info',
-            // 'hint' => 'eg. 8am - 1pm'
-        ]);
+        $this->setupCommonBatchFields();
 
-        CRUD::addField([
-            'name' => 'start_date',
-            'label' => 'Start Date',
-            'type'      => 'date',
-            'wrapper' => ['class' => 'form-group col-6'],
-            'tab' => 'General Info',
-            // 'hint' => 'eg. 8am - 1pm'
-        ]);
+        CRUD::removeButton('save_and_new');
+        CRUD::removeButton('save_and_preview');
+        CRUD::removeButton('preview');
 
-        CRUD::addField([
-            'name' => 'end_date',
-            'label' => 'End Date',
-            'type'      => 'date',
-            'wrapper' => ['class' => 'form-group col-6'],
-            'tab' => 'General Info',
-            // 'hint' => 'eg. 8am - 1pm'
-        ]);
-
-
-        CRUD::addField([
-            'name' => 'batches',
-            'type' => 'select2_multiple',
-            'label' => 'Assign Course',
-            'entity' => 'assignedCourseBatches',
-            'model' => 'App\\Models\\Course',
-            'attribute' => 'course_name',
-            'pivot' => true,
-            'tab' => 'Assign Courses',
-            // 'wrapper' => ['class' => 'form-group col-6'],
-        ]);
-
-        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status', 'General Info');
-
-        $this->addIsActiveField([true  => 'True', false => 'False'], 'Completed', 'completed', 'General Info');
+        $this->addCoursesManagementSection();
     }
 
     /**
      * Define what happens when the Update operation is loaded.
-     *
-     * @see https://backpackforlaravel.com/docs/crud-operation-update
-     * @return void
      */
     protected function setupUpdateOperation()
     {
@@ -228,8 +135,72 @@ class BatchCrudController extends CrudController
             abort(403, 'Unauthorized action.');
         }
 
-        $this->setupCreateOperation();
+        CRUD::setValidation(BatchRequest::class);
+
+        // Hide extra save buttons - only show "Save and edit this item"
+        CRUD::removeButton('save_and_new');
+        CRUD::removeButton('save_and_preview');
+        CRUD::removeButton('preview');
+
+        $this->addCoursesManagementSection();
+
+        $this->setupCommonBatchFields();
     }
+
+
+
+
+    protected function setupShowOperation()
+    {
+        // Don't call setupManageStudentShowColumns() - we use custom view instead
+        $this->crud->set('show.setFromDb', false);
+        
+        // Set custom show view
+        $this->crud->setShowView('vendor.backpack.crud.manage_student_show');
+
+    }
+
+
+
+
+    /**
+     * Add courses management section to the edit page
+     */
+    protected function addCoursesManagementSection()
+    {
+        $batch = $this->crud->getCurrentEntry();
+        
+        if (!$batch) {
+            // On create, show a message that courses can be added after saving
+            CRUD::addField([
+                'name' => 'courses_notice',
+                'type' => 'custom_html',
+                'value' => '<div class="alert alert-info">
+                    <i class="la la-info-circle"></i> 
+                    <strong>Assign Courses:</strong> Save this batch first, then you can assign courses on the edit page.
+                </div>',
+                'tab' => 'Assign Courses',
+            ]);
+            return;
+        }
+
+        CRUD::addField([
+            'name' => 'add_course_modal',
+            'type' => 'custom_html',
+            'value' => $this->getAddCourseModalHtml($batch),
+            'tab' => 'Assign Courses',
+        ]);
+
+        CRUD::addField([
+            'name' => 'course_actions',
+            'type' => 'custom_html',
+            'value' => $this->getCoursesActionsHtml($batch),
+            'tab' => 'Assign Courses',
+        ]);
+    }
+
+
+
 
     /**
      * Define what happens when the Delete operation is loaded.
@@ -248,8 +219,6 @@ class BatchCrudController extends CrudController
 
 
 
-
-
     public function store()
     {
         // Check permissions
@@ -257,21 +226,8 @@ class BatchCrudController extends CrudController
             abort(403, 'Unauthorized action.');
         }
 
-        $response = $this->traitStore();
-
-        // Get the created batch
-        $batch = $this->crud->entry;
-
-        // Sync the assigned batches
-        if (request()->has('batches')) {
-            $batch->assignedCourseBatches()->sync(request()->input('batches'));
-        }
-
-        return $response;
+        return $this->traitStore();
     }
-
-
-
 
     public function update()
     {
@@ -282,14 +238,218 @@ class BatchCrudController extends CrudController
 
         $response = $this->traitUpdate();
 
-        // Get the updated batch
-        $batch = $this->crud->entry;
-
-        // Sync the assigned batches
-        if (request()->has('batches')) {
-            $batch->assignedCourseBatches()->sync(request()->input('batches'));
-        }
-
         return $response;
     }
+
+    /**
+     * Prevent deleting batches that have courses assigned.
+     */
+    public function destroy($id)
+    {
+        $this->crud->hasAccessOrFail('delete');
+
+        if (!backpack_user()->can('batch.delete.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $id = $this->crud->getCurrentEntryId() ?: $id;
+
+        // Use raw counts (no model scopes/events). If courses exist, we block deletion.
+        $coursesCount = (int) DB::table('courses')
+            ->where('batch_id', $id)
+            ->count();
+
+        if ($coursesCount > 0) {
+            $count = $coursesCount;
+            return response()->json([
+                'error' => [sprintf(
+                    "%d %s already assigned to this batch, so you can't delete it.",
+                    $count,
+                    \Illuminate\Support\Str::plural('course', $count)
+                )],
+            ]);
+        }
+
+        // If there are any legacy records in other tables, unlink them first.
+        // According to our schema, these are nullable and should be null-on-delete; we enforce that here.
+        DB::beginTransaction();
+
+        try {
+            DB::table('course_batches')->where('batch_id', $id)->update(['batch_id' => null]);
+            DB::table('user_admission')->where('batch_id', $id)->update(['batch_id' => null]);
+
+            $result = $this->crud->delete($id);
+            DB::commit();
+
+            return $result;
+        } catch (QueryException $e) {
+            DB::rollBack();
+
+            // Handle FK constraint errors gracefully (e.g., hidden/legacy linked records).
+            if ((string) $e->getCode() === '23000') {
+                $message = $e->getMessage();
+
+                // Try to parse the MySQL FK error to show a specific table/column to check.
+                $fkDetails = null;
+                if (preg_match('/foreign key constraint fails \\(`[^`]+`\\.`(?P<table>[^`]+)`, CONSTRAINT `(?P<constraint>[^`]+)` FOREIGN KEY \\(`(?P<column>[^`]+)`\\)/i', $message, $m)) {
+                    $fkDetails = [
+                        'table' => $m['table'] ?? null,
+                        'constraint' => $m['constraint'] ?? null,
+                        'column' => $m['column'] ?? null,
+                    ];
+                }
+
+                if ($fkDetails && $fkDetails['table'] && $fkDetails['column']) {
+                    try {
+                        $count = (int) DB::table($fkDetails['table'])
+                            ->where($fkDetails['column'], $id)
+                            ->count();
+
+                        if ($count > 0) {
+                            // Special-case courses: we always block if courses exist.
+                            if ($fkDetails['table'] === 'courses' && $fkDetails['column'] === 'batch_id') {
+                                return response()->json([
+                                    'error' => [sprintf(
+                                        "%d %s already assigned to this batch, so you can't delete it.",
+                                        $count,
+                                        \Illuminate\Support\Str::plural('course', $count)
+                                    )],
+                                ]);
+                            }
+
+                            return response()->json([
+                                'error' => [sprintf(
+                                    "Cannot delete this batch: %d record(s) in %s still reference it (%s).",
+                                    $count,
+                                    $fkDetails['table'],
+                                    $fkDetails['column']
+                                )],
+                            ]);
+                        }
+
+                        return response()->json([
+                            'error' => [sprintf(
+                                "Cannot delete this batch due to a foreign key constraint (%s on %s.%s).",
+                                $fkDetails['constraint'] ?: 'unknown',
+                                $fkDetails['table'],
+                                $fkDetails['column']
+                            )],
+                        ]);
+                    } catch (\Throwable $ignored) {
+                        // If counting fails, fall back to a generic message.
+                    }
+                }
+
+                $debugHint = config('app.debug') ? (' ' . $message) : '';
+
+                return response()->json([
+                    'error' => ['Unable to delete this batch because it is still referenced by other records.' . $debugHint],
+                ]);
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Toggle batch status from the List view.
+     */
+    public function toggleStatus(Request $request, $id)
+    {
+        if (!backpack_user()->can('batch.update.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $batch = Batch::findOrFail($id);
+        $newValue = (bool) $data['value'];
+
+        if ($newValue) {
+            if ($batch->completed) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Cannot activate batch: this batch is marked as completed.',
+                ], 422);
+            }
+
+            if (!$batch->start_date || !$batch->end_date) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Cannot activate batch: start and end dates are required.',
+                ], 422);
+            }
+
+            $conflictingBatch = Batch::query()
+                ->where('status', true)
+                ->where('id', '!=', $batch->id)
+                ->orderBy('start_date')
+                ->first();
+
+            if ($conflictingBatch) {
+                $conflictRange = trim(($conflictingBatch->start_date ?? '') . ' to ' . ($conflictingBatch->end_date ?? ''));
+
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Cannot activate batch: another batch is already active ({$conflictingBatch->title}) scheduled for {$conflictRange}.",
+                ], 422);
+            }
+        }
+
+        $batch->status = $newValue;
+        $batch->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Batch status updated successfully.',
+            'value' => $batch->status ? 1 : 0,
+        ]);
+    }
+
+    /**
+     * Toggle batch completion from the List view.
+     */
+    public function toggleCompleted(Request $request, $id)
+    {
+        if (!backpack_user()->can('batch.update.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $batch = Batch::findOrFail($id);
+        $newValue = (bool) $data['value'];
+
+        $batch->completed = $newValue;
+
+        // A completed batch should never be active.
+        if ($newValue) {
+            $batch->status = false;
+        }
+
+        $batch->save();
+
+        $updates = [
+            'completed' => $batch->completed ? 1 : 0,
+        ];
+
+        if ($newValue) {
+            $updates['status'] = 0;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Batch completion updated successfully.',
+            'value' => $batch->completed ? 1 : 0,
+            'updates' => $updates,
+        ]);
+    }
+
+
+
+
 }

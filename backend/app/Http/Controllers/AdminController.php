@@ -1048,7 +1048,7 @@ class AdminController extends Controller
             $selectName = $request->get('report_type') == 'course_summary' ? 'v1.course_name as name' : 'v1.session_name as name';
 
 
-            $attendanceData =   DB::table($viewName, 'v1');
+            $attendanceData = DB::table($viewName, 'v1');
             if ($dailyQuery) {
                 $attendanceData = $attendanceData->whereRaw('DATE(attendance_date) BETWEEN ? AND ?', [$startDate, $endDate]);
             }
@@ -1295,6 +1295,19 @@ class AdminController extends Controller
         }
 
         $updatedCount = User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
+
+        foreach ($usersToUpdate as $user) {
+            \App\Models\UserAdmission::updateOrCreate(
+                ['user_id' => $user->userId],
+                [
+                    'course_id' => $user->registered_course,
+                    'session' => null,
+                    'confirmed' => null,
+                    'location' => null,
+                    'email_sent' => null
+                ]
+            );
+        }
 
         return response()->json([
             'message' => "$updatedCount user(s) successfully shortlisted.",

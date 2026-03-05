@@ -9,12 +9,16 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Permission\Traits\HasRoles;
+use App\Models\Notification;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class User extends Authenticatable
 {
     use CrudTrait;
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, LogsActivity, CausesActivity;
 
     protected $guard_name = 'web';
 
@@ -42,7 +46,8 @@ class User extends Authenticatable
         'gender',
         'network_type',
         'registered_course',
-        'shortlist'
+        'shortlist',
+        'last_login'
     ];
 
     /**
@@ -70,6 +75,24 @@ class User extends Authenticatable
 
 
 
+    protected static function booted()
+    {
+        static::updated(function ($user) {
+            if ($user->wasChanged('shortlist') && $user->shortlist) {
+                \App\Models\UserAdmission::updateOrCreate(
+                    ['user_id' => $user->userId],
+                    [
+                        'course_id' => $user->registered_course,
+                        'session' => null,
+                        'confirmed' => null,
+                        'location' => null,
+                        'email_sent' => null
+                    ]
+                );
+            }
+        });
+    }
+
     /**
      * Set the password attribute with a double-hashing guard.
      */
@@ -95,6 +118,14 @@ class User extends Authenticatable
         // Link the user to a course using the registered_course column as FK
         // users.registered_course -> courses.id
         return $this->belongsTo(Course::class, 'registered_course', 'id');
+    }
+
+    /**
+     * Get the user's admissions
+     */
+    public function admissions()
+    {
+        return $this->hasMany(UserAdmission::class, 'user_id', 'userId');
     }
 
 
@@ -141,11 +172,6 @@ class User extends Authenticatable
         return $this->hasMany(AdmissionRejection::class, 'user_id', 'userId');
     }
 
-    public function admissions()
-    {
-        return $this->hasMany(UserAdmission::class, 'user_id', 'userId');
-    }
-
     public function userExams()
     {
         return $this->hasMany(\App\Models\user_exam::class, 'user_id', 'id');
@@ -167,9 +193,14 @@ class User extends Authenticatable
         return $this->hasMany(QuestionnaireResponse::class);
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
     public function hasAttendance()
     {
-        return Attendance::where('user_id', $this->userId)->count() > 0;
+        return $this->hasMany(Attendance::class, 'user_id', 'userId');
     }
 
     public function getNameWithEmail()
@@ -212,7 +243,7 @@ class User extends Authenticatable
         if (now()->isAfter($exam->exam_date)) {
             return [
                 'status' => false,
-                'message' =>  "Unable to take exam. Exam deadline was  {$exam->exam_date->format(config('app.fulldate_format'))}",
+                'message' => "Unable to take exam. Exam deadline was  {$exam->exam_date->format(config('app.fulldate_format'))}",
             ];
         }
 
@@ -248,6 +279,16 @@ class User extends Authenticatable
             'status' => true,
             'message' => 'true',
         ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->useLogName('student')
+            ->setDescriptionForEvent(fn(string $event) => "Student {$event}")
+            ->dontLogIfAttributesChangedOnly(['last_login']);
     }
 }
 

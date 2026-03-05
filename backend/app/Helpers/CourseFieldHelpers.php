@@ -22,48 +22,48 @@ trait CourseFieldHelpers
 
 
     public static function addOngoingCoursesFilter(string $label): void
-{
-    CRUD::filter('ongoing')
-        ->type('simple')
-        ->label($label)
-        ->whenActive(function () {
-            CRUD::addClause('whereDate', 'start_date', '<=', now()->toDateString());
-            CRUD::addClause('whereDate', 'end_date', '>=', now()->toDateString());
-        });
-}
+    {
+        CRUD::filter('ongoing')
+            ->type('simple')
+            ->label($label)
+            ->whenActive(function () {
+                CRUD::addClause('whereDate', 'start_date', '<=', now()->toDateString());
+                CRUD::addClause('whereDate', 'end_date', '>=', now()->toDateString());
+            });
+    }
 
 
 
-public static function upcomingCourseSessionsFilter(): void
-{
-    CRUD::filter('upcoming_sessions')
-        ->type('simple')
-        ->label('Upcoming Sessions')
-        ->whenActive(function () {
-            CRUD::addClause('where', 'course_time', '>', now());
-        });
-}
+    public static function upcomingCourseSessionsFilter(): void
+    {
+        CRUD::filter('upcoming_sessions')
+            ->type('simple')
+            ->label('Upcoming Sessions')
+            ->whenActive(function () {
+                CRUD::addClause('where', 'course_time', '>', now());
+            });
+    }
 
 
 
 
     protected function setupCommonFields()
-{
+    {
 
-    $entry = $this->crud->getCurrentEntry();
-    $derivedBranchId = $entry?->centre?->branch_id ?? null;
+        $entry = $this->crud->getCurrentEntry();
+        $derivedBranchId = $entry?->centre?->branch_id ?? null;
 
-CRUD::addField([
-    'name' => 'branch_id',
-    'label' => 'Branch',
-    'type' => 'select',
-    'model' => Branch::class,
-    'attribute' => 'title',
-    'allows_null' => true,
-    'wrapper' => ['class' => 'form-group col-6'],
-    'value' => $derivedBranchId,
-    'fake' => true,
-]);
+        CRUD::addField([
+            'name' => 'branch_id',
+            'label' => 'Branch',
+            'type' => 'select',
+            'model' => Branch::class,
+            'attribute' => 'title',
+            'allows_null' => true,
+            'wrapper' => ['class' => 'form-group col-6'],
+            'value' => $derivedBranchId,
+            'fake' => true,
+        ]);
 
 
 
@@ -81,12 +81,12 @@ CRUD::addField([
     'minimum_input_length' => 0,
     'wrapper' => ['class' => 'form-group col-6'],
     'model' => Centre::class,
-    'value' => $this->crud->getCurrentEntry()?->centre_id ?? null,
+    'value' => optional($this->crud->getCurrentEntry())->centre_id ?? null,
 ]);
 
 
 
-// CRUD::addField([
+        // CRUD::addField([
 //     'name' => 'batch_id',
 //     'label' => 'Select Batch',
 //     'type' => 'select2',
@@ -99,26 +99,28 @@ CRUD::addField([
 
 
 
-CRUD::addField([
-    'name' => 'programme_id',
-    'label' => 'Programme',
-    'type' => 'select2',
-    'entity' => 'programme',
-    'attribute' => 'title',
-    'model' => Programme::class,
-    'allows_null' => false,
-    'wrapper' => ['class' => 'form-group col-6'],
-]);
+        CRUD::addField([
+            'name' => 'programme_id',
+            'label' => 'Programme',
+            'type' => 'select2',
+            'entity' => 'programme',
+            'attribute' => 'title',
+            'model' => Programme::class,
+            'allows_null' => false,
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+        $this->addTagsField(Course::class);
 
 
         CRUD::addField([
             'name' => 'duration',
             'label' => 'Duration',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg 3  Week or 120 hrs'
         ]);
-// CRUD::addField([
+        // CRUD::addField([
 //     'name' => 'duration',
 //     'label' => 'Duration',
 //     'type' => 'select_from_array',
@@ -138,22 +140,22 @@ CRUD::addField([
         CRUD::addField([
             'name' => 'start_date',
             'label' => 'Start Date',
-            'type'      => 'date',
+            'type' => 'date',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
         CRUD::addField([
             'name' => 'end_date',
             'label' => 'End Date',
-            'type'      => 'date',
+            'type' => 'date',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
 
         $this->addFieldsToTab('Course Info', true, ['branch_id', 'centre_id', 'programme_id', 'status']);
         $this->addFieldsToTab('Course Duration', true, ['duration', 'start_date', 'end_date']);
-}
+    }
 
 
 
@@ -161,69 +163,69 @@ CRUD::addField([
 
 
     protected function courseSessionFields()
-{
+    {
 
-    CRUD::addField([
-    'name' => 'name',
-    'type' => 'hidden',
-]);
+        CRUD::addField([
+            'name' => 'name',
+            'type' => 'hidden',
+        ]);
 
 
-CRUD::addField([
-    'name' => 'course_id',
-    'label' => 'Course',
-    'type' => 'select2',
-    'entity' => 'course',
-    'attribute' => 'course_name',
-    'model' => Course::class,
-    'allows_null' => false,
-    'wrapper' => ['class' => 'form-group col-6'],
-]);
+        CRUD::addField([
+            'name' => 'course_id',
+            'label' => 'Course',
+            'type' => 'select2',
+            'entity' => 'course',
+            'attribute' => 'course_name',
+            'model' => Course::class,
+            'allows_null' => false,
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
 
 
         CRUD::addField([
             'name' => 'limit',
             'label' => 'Limit',
-            'type'      => 'number',
+            'type' => 'number',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
 
-CRUD::addField([
-    'name' => 'session',
-    'label' => 'Session',
-    'type' => 'select_from_array',
-    'options' => [
-        '' => '',
-        'Morning' => 'Morning',
-        'Afternoon' => 'Afternoon',
-        'Evening' => 'Evening',
-        'Fullday' => 'Fullday',
-    ],
-    'wrapper' => ['class' => 'form-group col-6'],
-]);
+        CRUD::addField([
+            'name' => 'session',
+            'label' => 'Session',
+            'type' => 'select_from_array',
+            'options' => [
+                '' => '',
+                'Morning' => 'Morning',
+                'Afternoon' => 'Afternoon',
+                'Evening' => 'Evening',
+                'Fullday' => 'Fullday',
+            ],
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
 
         CRUD::addField([
             'name' => 'course_time',
             'label' => 'Duration',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. 8am - 1pm'
         ]);
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
 
 
         CRUD::addField([
             'name' => 'link',
             'label' => 'Link',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. https://chat.whatsapp.com/BekTu3PWEqc8UtydifN8Mt'
         ]);
 
 
-}
+    }
 
 
 
@@ -236,15 +238,15 @@ CRUD::addField([
         CRUD::addField([
             'name' => 'answer',
             'label' => 'Answer',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-5'],
         ]);
 
         CRUD::field([
-            'name'  => 'value',
-            'target'  => 'answer',
+            'name' => 'value',
+            'target' => 'answer',
             'label' => "Option Tag",
-            'type'  => 'slug',
+            'type' => 'slug',
             'locale' => 'pt',
             'separator' => '',
             'trim' => true,
@@ -256,9 +258,9 @@ CRUD::addField([
 
 
         CRUD::addField([
-            'name'    => 'icon',
-            'type'    => 'icon_picker',
-            'label'   => 'Icon',
+            'name' => 'icon',
+            'type' => 'icon_picker',
+            'label' => 'Icon',
             'iconset' => 'fontawesome',
             'wrapper' => ['class' => 'form-group col-2'],
         ]);
@@ -276,13 +278,13 @@ CRUD::addField([
 
 
         CRUD::addField([
-                'name' => 'description',
-                'label' => 'Description',
-                'type'      => 'textarea',
-                'wrapper' => ['class' => 'form-group col-6'],
-            ]);
+            'name' => 'description',
+            'label' => 'Description',
+            'type' => 'textarea',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
 
 
     }
@@ -296,7 +298,7 @@ CRUD::addField([
             'name' => 'course',
             'label' => 'Course',
             'type' => 'closure',
-            'function' => function($entry) {
+            'function' => function ($entry) {
                 if ($entry->course) {
                     $url = backpack_url('course/' . $entry->course->id . '/show');
                     return '<a href="' . $url . '">' . e($entry->course->course_name) . '</a>';
@@ -334,13 +336,13 @@ CRUD::addField([
     {
         $coursesArray = Programme::orderBy('title')->pluck('title', 'id')->toArray();
         FilterHelper::addSelectFilter(
-                columnName: $columnName,
-                label: $label,
-                options: $coursesArray,
-                callback: function ($value) use ($columnName) {
-                    CRUD::addClause('where', $columnName, $value);
-                }
-            );
+            columnName: $columnName,
+            label: $label,
+            options: $coursesArray,
+            callback: function ($value) use ($columnName) {
+                CRUD::addClause('where', $columnName, $value);
+            }
+        );
     }
 
 
@@ -350,13 +352,13 @@ CRUD::addField([
     {
         $BatchsArray = Batch::orderBy('title')->pluck('title', 'id')->toArray();
         FilterHelper::addSelectFilter(
-                columnName: $columnName,
-                label: $label,
-                options: $BatchsArray,
-                callback: function ($value) use ($columnName) {
-                    CRUD::addClause('where', $columnName, $value);
-                }
-            );
+            columnName: $columnName,
+            label: $label,
+            options: $BatchsArray,
+            callback: function ($value) use ($columnName) {
+                CRUD::addClause('where', $columnName, $value);
+            }
+        );
     }
 
 
@@ -379,7 +381,7 @@ CRUD::addField([
     // }
 
 
-        public static function addStudentBatchFilter(string $label = 'Batch')
+    public static function addStudentBatchFilter(string $label = 'Batch')
     {
         $batches = Batch::orderBy('title')->pluck('title', 'id')->toArray();
 
@@ -396,7 +398,7 @@ CRUD::addField([
 
     protected static function addBatchWhereClause($batchId)
     {
-        CRUD::addClause('whereHas', 'course.batches', function($query) use ($batchId) {
+        CRUD::addClause('whereHas', 'course.batches', function ($query) use ($batchId) {
             $query->where('course_batches.id', $batchId);
         });
     }
@@ -426,7 +428,7 @@ CRUD::addField([
 
     protected static function addBatchWhereClauseFromDashboard($batchId, $relationPath)
     {
-        CRUD::addClause('whereHas', $relationPath, function($query) use ($batchId) {
+        CRUD::addClause('whereHas', $relationPath, function ($query) use ($batchId) {
             $query->where('batch_id', $batchId);
         });
     }
@@ -436,34 +438,36 @@ CRUD::addField([
 
     public static function addConfirmedAdmissionFilter(string $label = 'Admission')
     {
-        CRUD::addFilter([
-            'name'  => 'confirmed_admission',
-            'type'  => 'dropdown',
-            'label' => $label,
-        ],
-        [
-            1 => 'Admitted',
-            0 => 'Not Admitted',
-        ],
-        function ($value) {
-            if ($value == 1) {
-                CRUD::addClause('whereExists', function ($query) {
-                    $query->select(\DB::raw(1))
-                        ->from('user_admission')
-                        ->whereColumn('user_admission.user_id', 'users.userId')
-                        ->whereNotNull('user_admission.confirmed')
-                        ->groupBy('user_admission.user_id')
-                        ->havingRaw('COUNT(*) = 1');
-                });
-            } elseif ($value == 0) {
-                CRUD::addClause('whereNotExists', function ($query) {
-                    $query->select(\DB::raw(1))
-                        ->from('user_admission')
-                        ->whereColumn('user_admission.user_id', 'users.userId')
-                        ->whereNotNull('user_admission.confirmed');
-                });
+        CRUD::addFilter(
+            [
+                'name' => 'confirmed_admission',
+                'type' => 'dropdown',
+                'label' => $label,
+            ],
+            [
+                1 => 'Admitted',
+                0 => 'Not Admitted',
+            ],
+            function ($value) {
+                if ($value == 1) {
+                    CRUD::addClause('whereExists', function ($query) {
+                        $query->select(\DB::raw(1))
+                            ->from('user_admission')
+                            ->whereColumn('user_admission.user_id', 'users.userId')
+                            ->whereNotNull('user_admission.confirmed')
+                            ->groupBy('user_admission.user_id')
+                            ->havingRaw('COUNT(*) = 1');
+                    });
+                } elseif ($value == 0) {
+                    CRUD::addClause('whereNotExists', function ($query) {
+                        $query->select(\DB::raw(1))
+                            ->from('user_admission')
+                            ->whereColumn('user_admission.user_id', 'users.userId')
+                            ->whereNotNull('user_admission.confirmed');
+                    });
+                }
             }
-        });
+        );
     }
 
 
@@ -471,30 +475,32 @@ CRUD::addField([
 
     public static function addAdmittedAtFilter(string $label = 'Admitted At')
     {
-        CRUD::addFilter([
-            'name' => 'admitted_at',
-            'type' => 'date_range',
-            'label' => $label,
-            'date_range_options' => [
-                'format' => 'YYYY-MM-DD',
-                'showDropdowns' => true,
-            ]
-        ],
-        false,
-        function ($value) {
-            $dates = json_decode($value);
+        CRUD::addFilter(
+            [
+                'name' => 'admitted_at',
+                'type' => 'date_range',
+                'label' => $label,
+                'date_range_options' => [
+                    'format' => 'YYYY-MM-DD',
+                    'showDropdowns' => true,
+                ]
+            ],
+            false,
+            function ($value) {
+                $dates = json_decode($value);
 
-            CRUD::addClause('whereExists', function ($query) use ($dates) {
-                $query->select(\DB::raw(1))
-                    ->from('user_admission')
-                    ->whereColumn('user_admission.user_id', 'users.userId')
-                    ->whereNotNull('user_admission.confirmed')
-                    ->whereBetween('user_admission.confirmed', [
-                        $dates->from,
-                        $dates->to,
-                    ]);
-            });
-        });
+                CRUD::addClause('whereExists', function ($query) use ($dates) {
+                    $query->select(\DB::raw(1))
+                        ->from('user_admission')
+                        ->whereColumn('user_admission.user_id', 'users.userId')
+                        ->whereNotNull('user_admission.confirmed')
+                        ->whereBetween('user_admission.confirmed', [
+                            $dates->from,
+                            $dates->to,
+                        ]);
+                });
+            }
+        );
     }
 
 
@@ -509,22 +515,26 @@ CRUD::addField([
 
 
 
-    public static function addAdmissionLocationFilter(string $label = 'Admission Location')
+    public static function centreFilter(string $label = 'Centre')
     {
-        CRUD::addFilter([
-            'name'  => 'admission_location',
-            'type'  => 'dropdown',
-            'label' => $label,
-        ],
-        self::getAdmissionLocations(),
-        function ($value) {
-            CRUD::addClause('whereExists', function ($query) use ($value) {
-                $query->select(\DB::raw(1))
-                    ->from('user_admission')
-                    ->whereColumn('user_admission.user_id', 'users.userId')
-                    ->where('user_admission.location', $value);
-            });
-        });
+        FilterHelper::addSelectFilter(
+            columnName: 'admission_location',
+            label: $label,
+            options: self::getAdmissionLocations(),
+            type: 'select2_multiple',
+            callback: function (array $values) {
+                if (empty($values)) {
+                    return;
+                }
+
+                CRUD::addClause('whereExists', function ($query) use ($values) {
+                    $query->select(\DB::raw(1))
+                        ->from('user_admission')
+                        ->whereColumn('user_admission.user_id', 'users.userId')
+                        ->whereIn('user_admission.location', $values);
+                });
+            }
+        );
     }
 
 
@@ -561,14 +571,14 @@ CRUD::addField([
         CRUD::addField([
             'name' => 'tag',
             'label' => 'Tag',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
         CRUD::addField([
             'name' => 'question',
             'label' => 'Question',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
@@ -576,7 +586,7 @@ CRUD::addField([
         CRUD::addField([
             'name' => 'description',
             'label' => 'Description',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-7'],
         ]);
 
@@ -593,11 +603,11 @@ CRUD::addField([
         CRUD::addField([
             'name' => 'order',
             'label' => 'Order',
-            'type'      => 'number',
+            'type' => 'number',
             'wrapper' => ['class' => 'form-group col-5'],
         ]);
 
-        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
 
         CRUD::addField([
             'name' => 'course_match_options',

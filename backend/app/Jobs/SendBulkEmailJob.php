@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Helpers\MailerHelper;
+use App\Http\Controllers\NotificationController;
 use App\Mail\GenericEmail;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\Models\Activity;
 
 class SendBulkEmailJob implements ShouldQueue
 {
@@ -89,7 +91,7 @@ class SendBulkEmailJob implements ShouldQueue
 
                 if ($messageContainsVariables) {
                     foreach ($chunk as $recipient) {
-                        $message = MailerHelper::replaceVariables($this->message, (array)$recipient);
+                        $message = MailerHelper::replaceVariables($this->message, (array) $recipient);
                         MailerHelper::sendGenericTemplateEmail($recipient->email, $message, $this->subject);
                     }
                 } else {
@@ -101,9 +103,18 @@ class SendBulkEmailJob implements ShouldQueue
                     Mail::to($recipient->email)
                         ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                         ->send(new $this->template($recipient));
+                    $userId = $recipient->id ?? User::where('email', $recipient->email)->value('id');
+                    if ($userId) {
+                        NotificationController::notify($userId, 'email', $this->subject, $this->subject);
+                    }
                 }
             }
         });
+
+        $count = $recipients->count();
+        activity('email')
+            ->event('Bulk Email Sent to List')
+            ->log("Sent bulk email '{$this->subject}' to list '{$this->list}' containing {$count} recipients.");
     }
 
     /**
@@ -128,8 +139,14 @@ class SendBulkEmailJob implements ShouldQueue
                 Mail::to($user->email)
                     ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                     ->send(new $this->template($user));
+                NotificationController::notify($user->id, 'email', $this->subject, $this->subject);
             }
         }
+
+        $count = is_array($ids) ? count($ids) : $ids->count();
+        activity('email')
+            ->event('Bulk Email Sent to Students')
+            ->log("Processed bulk email '{$this->subject}' for a chunk of {$count} students.");
     }
 
     private function getGenericTemplateEmail(string $content, $subject = null)
@@ -147,7 +164,7 @@ class SendBulkEmailJob implements ShouldQueue
             Log::error('Unable to send bulk image, view not created');
             return;
         }
-        $mailable =  new GenericEmail($replaceContent, $subject, "mail.temp.$filename");
+        $mailable = new GenericEmail($replaceContent, $subject, "mail.temp.$filename");
 
         if ($bulk) {
             Mail::to(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))

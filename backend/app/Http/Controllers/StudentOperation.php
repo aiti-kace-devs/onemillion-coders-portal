@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\StudentAdmitted;
+use App\Models\Oex_question_master;
 use App\Models\OexExamMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
@@ -29,9 +30,12 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
+use App\Http\Controllers\NotificationController;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Events\CourseChanged;
+use Spatie\Activitylog\Models\Activity;
 
 
 class StudentOperation extends Controller
@@ -39,22 +43,9 @@ class StudentOperation extends Controller
     //student dashboard
     public function dashboard()
     {
-        if (!Auth::user()->isAdmitted()) {
-            return redirect(route('student.profile.edit'));
-        }
-
-        // $data['portal_exams'] = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
-        //     ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
-        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
-        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-        //     ->orderBy('user_exams.exam_id', 'desc')
-        //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-        //     ->where('user_exams.user_id', Auth::user()->id)
-        //     ->where('user_exams.std_status', '1')
-        //     ->get()
-        //     ->toArray();
-
-        //     return view('student.dashboard', $data);
+        // if (!Auth::user()->isAdmitted()) {
+        //     return redirect(route('student.profile.edit'));
+        // }
 
         $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
@@ -75,10 +66,6 @@ class StudentOperation extends Controller
             return $questionnaire;
         });
         return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires'));
-
-        // $data['portal_exams'] = Oex_exam_master::select(['oex_exam_masters.*', 'oex_categories.name as cat_name'])
-        //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-        //     ->orderBy('id', 'desc')->where('oex_exam_masters.status', '1')->get()->toArray();
 
     }
     public function profile()
@@ -161,8 +148,6 @@ class StudentOperation extends Controller
         $usedTime = $eligibilityStatus['usedTime'] ?? 0;
 
         return Inertia::render('Student/Exam/JoinExam', compact('questions', 'exam', 'usedTime'));
-
-        // return view('student.join_exam', ['question' => $questions, 'exam' => $exam, 'usedTime' => $usedTime]);
     }
 
     // start exam
@@ -183,18 +168,21 @@ class StudentOperation extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        // Get user's programme ID
-        $programmeId = null;
+        $courseTags = collect();
         if ($user->course) {
-            $programmeId = $user->course->programme_id;
+            $courseTags = $user->course->tags->pluck('id');
+            if ($courseTags->isEmpty() && $user->course->programme) {
+                $courseTags = $user->course->programme->programmeTags->pluck('id');
+            }
         }
 
-        // Try to find questions for the user's programme
-        $programmeSetIds = collect();
-        if ($programmeId) {
-            $programmeSetIds = OexQuestionMaster::where('exam_id', $id)
-                ->whereHas('programmes', function ($q) use ($programmeId) {
-                    $q->where('programme_id', $programmeId);
+        $courseTags = $courseTags->unique();
+
+        $tagSetIds = collect();
+        if ($courseTags->isNotEmpty()) {
+            $tagSetIds = OexQuestionMaster::where('exam_id', $id)
+                ->whereHas('tags', function ($q) use ($courseTags) {
+                    $q->whereIn('tags.id', $courseTags);
                 })
                 ->distinct()
                 ->pluck('exam_set_id');
@@ -202,8 +190,8 @@ class StudentOperation extends Controller
 
         $randomExamId = null;
 
-        if ($programmeSetIds->isNotEmpty()) {
-            $randomExamId = $programmeSetIds->random();
+        if ($tagSetIds->isNotEmpty()) {
+            $randomExamId = $tagSetIds->random();
         }
 
         $questions = collect();
@@ -241,7 +229,7 @@ class StudentOperation extends Controller
                     ]
                 )
                     ->where('exam_id', $id)
-                    ->doesntHave('programmes')
+                    ->doesntHave('tags')
                     ->inRandomOrder()
                     ->limit($needed)
                     ->get();
@@ -262,10 +250,11 @@ class StudentOperation extends Controller
         if ($user_exam && !$user_exam->started) {
             $user_exam->update(['started' => Carbon::now()->toDateTimeString()]);
         }
-
         $data = ['status' => 'true', 'message' => 'started successfully'];
         $data['questions'] = $questions;
 
+        $data = ['status' => 'true', 'message' => 'started successfully'];
+        $data['questions'] = $questions;
         return response()->json($data);
     }
 
@@ -338,8 +327,23 @@ class StudentOperation extends Controller
         $total = $yes_ans + $no_ans;
         $res->exam_set = $exam_set_id;
         $res->save();
-
+        // $storedResult = Oex_result::where('user_id', $user->id)
+        //     ->where('exam_id', $request->exam_id)
+        //     ->first();
+        // GoogleSheets::updateGoogleSheets($userId, ['result' => $storedResult->yes_ans]);
+        NotificationController::notify(
+            $user->id,
+            'AFTER_EXAM_SUBMISSION_EMAIL',
+            'Exams submitted successfully',
+            'Hi, <br>We acknowledge your assessment test submission.<br>Please note that shortlisted applicants will be contacted as soon as possible.'
+        );
         TestSubmittedJob::dispatch($user, $res);
+
+        activity('exam')
+            ->causedBy($user)
+            ->withProperties(['exam_id' => $request->exam_id])
+            ->event('Exam submitted')
+            ->log("$user->name submitted the exam at $std_info->submitted with score $res->yes_ans/$total");
 
         return redirect(route('student.exam.index'));
     }
@@ -491,22 +495,11 @@ class StudentOperation extends Controller
                     'flash' => 'Unable to change session at this time. Contact administrator',
                     'key' => 'error',
                 ]);
-
-                // return redirect(url('student/select-session/' . $user->userId))->with([
-                //     'flash' => 'Unable to change session at this time. Contact administrator',
-                //     'key' => 'error',
-                // ]);
             }
-
             $courseDetails = Course::find($admission->course_id);
             $session = CourseSession::where('course_id', $courseDetails->id)->where('id', $data['session_id'])->first();
 
             if (!$session) {
-                // return redirect(url('student/select-session/' . $user->userId))->with([
-                //     'flash' => 'Unable to confirm session. Try again later',
-                //     'key' => 'error',
-                // ]);
-
                 return redirect()->back()->with([
                     'flash' => 'Unable to confirm session. Try again later',
                     'key' => 'error',
@@ -516,11 +509,6 @@ class StudentOperation extends Controller
             $slotLeft = $session->slotLeft();
 
             if ($slotLeft < 1) {
-                // return redirect(url('student/select-session/' . $user->userId))->with([
-                //     'flash' => 'Unable to confirm session. No slots available',
-                //     'key' => 'error',
-                // ]);
-
                 return redirect()->back()->with([
                     'flash' => 'Unable to confirm session. No slots available',
                     'key' => 'error',
@@ -529,17 +517,32 @@ class StudentOperation extends Controller
 
             $admission->confirmed = now();
             $admission->session = $session->id;
-            // $admission->email_sent = now();
+            $admission->email_sent = now();
             $admission->location = $courseDetails->location;
             $admission->save();
 
             if (!$changingSession) {
                 AdmitStudentJob::dispatch($admission);
+                activity('user_admission')
+                    ->causedBy($user)
+                    ->performedOn($admission)
+                    ->withProperties([
+                        'session' => $session->name,
+                        'course' => $courseDetails->course_name,
+                    ])
+                    ->event('Session Confirmed')
+                    ->log("$user->name confirmed their session: {$session->name}");
+            } else {
+                activity('user_admission')
+                    ->causedBy($user)
+                    ->performedOn($admission)
+                    ->withProperties([
+                        'session' => $session->name,
+                        'course' => $courseDetails->course_name,
+                    ])
+                    ->event('Session Changed')
+                    ->log("$user->name changed their session to: {$session->name}");
             }
-            // return redirect(url('student/select-session/' . $user->userId))->with([
-            //     'flash' => $changingSession ? 'Session changed successfully' : 'Confirmation successful',
-            //     'key' => 'success',
-            // ]);
 
             return redirect()->back()->with([
                 'flash' => $changingSession ? 'Session changed successfully' : 'Confirmation successful',
@@ -547,22 +550,10 @@ class StudentOperation extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error($e);
-            // return redirect(url('student/select-session/' . $user->userId))->with([
-            //     'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
-            //     'key' => 'error',
-            // ]);
-
             return redirect()->back()->with([
                 'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
                 'key' => 'error',
             ]);
-
-            // return response()->json([
-            //     'status' => [
-            //         'key' => 'error',
-            //         'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later'
-            //     ]
-            // ]);
         }
     }
 
@@ -683,6 +674,10 @@ class StudentOperation extends Controller
                 CreateStudentAdmissionJob::dispatch($user, $course, null);
                 $count++;
             }
+            activity('user_admission')
+                ->causedBy($user)
+                ->event('Admission Created')
+                ->log("Admitted {$count} students successfully!");
 
             return response()->json([
                 'success' => true,
@@ -713,6 +708,10 @@ class StudentOperation extends Controller
             ]);
 
             $user->update(['shortlist' => 0]);
+            activity('user_admission')
+                ->causedBy($user)
+                ->event('Admission Deleted')
+                ->log("$user->name deleted admission successfully!");
 
             return Redirect::route('student.application-status');
         } else {
@@ -820,6 +819,10 @@ class StudentOperation extends Controller
 
         $user->details_updated_at = now();
         $user->save();
+        activity('student')
+            ->causedBy($user)
+            ->event('Details Updated')
+            ->log("{$user->name}'s details updated successfully!");
 
         return redirect()
             ->back()
@@ -1055,6 +1058,33 @@ class StudentOperation extends Controller
                 'instructor_button_text' => ($sectionIndex >= $totalSections - 1 && count($yetToComplete) === 1) ? 'Submit' : 'Save & Next',
             ],
         ]);
+    }
+
+    // Notifications
+    public function notifications()
+    {
+        $notifications = Notification::where('user_id', Auth::id())
+            ->orderByDesc('created_at')
+            ->paginate(20);
+
+        return Inertia::render('Student/Notifications/Index', compact('notifications'));
+    }
+
+    public function markNotificationAsRead($id)
+    {
+        $notification = Notification::where('user_id', Auth::id())->findOrFail($id);
+        $notification->update(['read_at' => now()]);
+
+        return redirect()->back();
+    }
+
+    public function markAllNotificationsAsRead()
+    {
+        Notification::where('user_id', Auth::id())
+            ->unread()
+            ->update(['read_at' => now()]);
+
+        return redirect()->back();
     }
 
     // Student results page

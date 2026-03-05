@@ -6,11 +6,23 @@ use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class CourseSession extends Model
 {
     use CrudTrait;
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->useLogName('course_session')
+            ->setDescriptionForEvent(fn(string $event) => "Course Session {$event}");
+    }
+
     protected $table = 'course_sessions';
 
     protected $fillable = [
@@ -19,7 +31,12 @@ class CourseSession extends Model
         'limit',
         'course_time',
         'session',
-        'link'
+        'link',
+        'status',
+    ];
+
+    protected $casts = [
+        'status' => 'boolean',
     ];
 
     public function course()
