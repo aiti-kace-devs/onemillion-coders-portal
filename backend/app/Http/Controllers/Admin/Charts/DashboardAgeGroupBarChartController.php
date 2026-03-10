@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Charts;
 
+use App\Helpers\CourseVisibilityHelper;
 use App\Helpers\DashboardWidgetHelper;
 use Backpack\CRUD\app\Http\Controllers\ChartController;
 use ConsoleTVs\Charts\Classes\Chartjs\Chart;
@@ -15,7 +16,7 @@ class DashboardAgeGroupBarChartController extends ChartController
         $this->chart = new Chart();
         $this->chart->height(260);
 
-        $visibleCourseIds = DashboardWidgetHelper::currentAdminVisibleCourseIds();
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'chart_age_groups_dynamic_decades_' . DashboardWidgetHelper::scopeCacheKeySuffix($visibleCourseIds);
 
         // Cache for 1 hour (fallback 10s)

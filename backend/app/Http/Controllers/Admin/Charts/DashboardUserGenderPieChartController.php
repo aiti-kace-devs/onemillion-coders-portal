@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Charts;
 
+use App\Helpers\CourseVisibilityHelper;
 use App\Helpers\DashboardWidgetHelper;
 use App\Models\User;
 use Backpack\CRUD\app\Http\Controllers\ChartController;
@@ -24,7 +25,7 @@ class DashboardUserGenderPieChartController extends ChartController
             'female'    => 'rgba(255, 99, 132, 0.6)',
         ];
 
-        $visibleCourseIds = DashboardWidgetHelper::currentAdminVisibleCourseIds();
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'chart_gender_distribution_' . DashboardWidgetHelper::scopeCacheKeySuffix($visibleCourseIds);
 
         $payload = Cache::flexible($cacheKey, [(60 * 60), 10], function () use ($UserTypes, $visibleCourseIds) {

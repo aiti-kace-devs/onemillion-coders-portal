@@ -10,8 +10,8 @@ use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\CourseFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
+use App\Helpers\CourseVisibilityHelper;
 use App\Models\Course;
-use App\Models\Admin;
 
 /**
  * Class CourseCrudController
@@ -222,37 +222,11 @@ class CourseCrudController extends CrudController
     }
 
     /**
-     * Return course IDs visible to the current admin.
-     * `null` means unrestricted visibility (super admin or non-admin contexts).
-     */
-    protected function currentAdminVisibleCourseIds(): ?array
-    {
-        $admin = backpack_user();
-
-        if (! $admin instanceof Admin) {
-            return null;
-        }
-
-        if (method_exists($admin, 'visibleCourseIds')) {
-            return $admin->visibleCourseIds();
-        }
-
-        if (method_exists($admin, 'isSuper') && $admin->isSuper()) {
-            return null;
-        }
-
-        return $admin->assignedCourses()
-            ->pluck('courses.id')
-            ->map(fn ($courseId) => (int) $courseId)
-            ->all();
-    }
-
-    /**
      * Restrict course records by current admin's assigned courses.
      */
     protected function applyCurrentAdminCourseScope(): void
     {
-        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
 
         if ($visibleCourseIds === null) {
             return;
@@ -272,7 +246,7 @@ class CourseCrudController extends CrudController
     protected function addCurrentAdminCourseFilter(string $columnName = 'id', string $label = 'Course'): void
     {
         $coursesQuery = Course::query()->orderBy('course_name');
-        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
 
         if (is_array($visibleCourseIds)) {
             if (empty($visibleCourseIds)) {

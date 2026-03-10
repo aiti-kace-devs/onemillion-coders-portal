@@ -3,12 +3,11 @@
 namespace App\Helpers;
 
 use Backpack\CRUD\app\Library\Widget;
-use App\Models\Admin;
 use App\Models\Course;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use App\Helpers\UserFieldHelpers;
+
 class DashboardWidgetHelper
 {
     
@@ -19,12 +18,6 @@ class DashboardWidgetHelper
      * @param array $params
      * @return string
      */
-
-    /**
-     * Return course IDs visible to the current admin.
-     * `null` means unrestricted visibility (super admin or non-admin context).
-     */
-
 
     /**
      * Build a stable cache suffix for course-scoped dashboard data.
@@ -65,7 +58,7 @@ class DashboardWidgetHelper
 
     public static function dashboardCountStatisticsWidget()
     {
-        $visibleCourseIds = UserFieldHelpers::currentAdminVisibleCourseIds();
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'dashboard_count_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
         $dasboardCountStatistics = Cache::flexible($cacheKey, [(60 * 60), 10], function () use ($visibleCourseIds) {
@@ -180,7 +173,7 @@ class DashboardWidgetHelper
 
     public static function dashboardBatchStatisticsWidget()
     {
-        $visibleCourseIds = UserFieldHelpers::currentAdminVisibleCourseIds();
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'dashboard_table_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
         $dashboardTableStatistics = Cache::flexible($cacheKey, [(60 * 60), 10], function () use ($visibleCourseIds) {

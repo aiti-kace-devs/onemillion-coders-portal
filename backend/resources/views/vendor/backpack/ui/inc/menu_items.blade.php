@@ -48,9 +48,9 @@
         <!-- @can('course.read.all')
             <x-backpack::menu-dropdown-item title="Manage Course batches" icon="la la-question" :link="backpack_url('course-batch')" />
         @endcan -->
-        <!-- @can('course-session.read.all')
+        @can('course-session.read.all')
             <x-backpack::menu-dropdown-item title="Course Sessions" icon="la la-clock" :link="backpack_url('course-session')" />
-        @endcan -->
+        @endcan
         @can('course-category.read.all')
             <x-backpack::menu-dropdown-item title="Course Categories" icon="la la-layer-group" :link="backpack_url('course-category')" />
         @endcan
