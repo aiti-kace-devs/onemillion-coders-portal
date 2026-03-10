@@ -21,6 +21,7 @@ import {
   getConsentData,
 } from "../services/pages";
 import Button from "./Button";
+import EmailOtpField from "./EmailOtpField";
 import { getCourseImage } from "../utils/courseImages";
 import GhanaGradientText from "./GhanaGradients/GhanaGradientText";
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
@@ -46,6 +47,7 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
   const [submitting, setSubmitting] = useState(false);
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [consentContent, setConsentContent] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
 
   // Fetch programme locations
   const fetchLocations = useCallback(async () => {
@@ -75,6 +77,7 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
       setFormErrors({});
       setConsentAccepted(false);
       setConsentContent("");
+      setEmailVerified(false);
       fetchLocations();
     }
   }, [isOpen, programme?.id, fetchLocations]);
@@ -171,6 +174,8 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(value)) {
             errors[field.field_name] = "Please enter a valid email address";
+          } else if (!emailVerified) {
+            errors[field.field_name] = "Please verify your email address before submitting";
           }
         }
 
@@ -262,6 +267,21 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
               </option>
             ))}
         </select>
+      );
+    }
+
+    // Email field with OTP verification
+    if (field.type === "email") {
+      return (
+        <EmailOtpField
+          value={value}
+          onChange={(newValue) => handleFieldChange(field.field_name, newValue)}
+          onVerifiedChange={setEmailVerified}
+          isVerified={emailVerified}
+          hasError={!!hasError}
+          placeholder={field.description || `Enter your ${field.title.toLowerCase()}`}
+          baseInputClasses={baseClasses}
+        />
       );
     }
 

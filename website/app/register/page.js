@@ -25,6 +25,7 @@ import {
   getConsentData,
 } from "../../services/pages";
 import Button from "../../components/Button";
+import EmailOtpField from "../../components/EmailOtpField";
 import GhanaGradientText from "../../components/GhanaGradients/GhanaGradientText";
 import { getCourseImage } from "../../utils/courseImages";
 
@@ -58,6 +59,7 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [consentContent, setConsentContent] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
 
   // Fetch all regions on component mount
   useEffect(() => {
@@ -173,6 +175,7 @@ export default function RegisterPage() {
   // Handle course selection
   const handleCourseSelect = (course) => {
     setSelectedCourse(course);
+    setEmailVerified(false);
     fetchFormSchema();
     setStep(4);
   };
@@ -219,6 +222,8 @@ export default function RegisterPage() {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(value)) {
             errors[field.field_name] = "Please enter a valid email address";
+          } else if (!emailVerified) {
+            errors[field.field_name] = "Please verify your email address before submitting";
           }
         }
 
@@ -315,6 +320,21 @@ export default function RegisterPage() {
               </option>
             ))}
         </select>
+      );
+    }
+
+    // Email field with OTP verification
+    if (field.type === "email") {
+      return (
+        <EmailOtpField
+          value={value}
+          onChange={(newValue) => handleFieldChange(field.field_name, newValue)}
+          onVerifiedChange={setEmailVerified}
+          isVerified={emailVerified}
+          hasError={!!hasError}
+          placeholder={field.description || `Enter your ${field.title.toLowerCase()}`}
+          baseInputClasses={baseClasses}
+        />
       );
     }
 
