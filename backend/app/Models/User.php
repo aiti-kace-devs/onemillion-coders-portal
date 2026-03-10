@@ -167,6 +167,11 @@ class User extends Authenticatable
         return $this->hasMany(QuestionnaireResponse::class);
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
     public function hasAttendance()
     {
         return Attendance::where('user_id', $this->userId)->count() > 0;

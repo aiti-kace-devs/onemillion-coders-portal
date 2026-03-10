@@ -67,6 +67,7 @@ class HandleInertiaRequests extends Middleware
                         ]
                     )
                     : null,
+                'unreadNotifications' => $user ? $user->notifications()->unread()->count() : 0,
             ],
             'config' => $configs,
             'flash' => [

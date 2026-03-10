@@ -579,6 +579,13 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course');
         Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course');
 
+        // Notifications
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [StudentOperation::class, 'notifications'])->name('index');
+            Route::patch('/{id}/read', [StudentOperation::class, 'markNotificationAsRead'])->name('mark-read');
+            Route::post('/mark-all-read', [StudentOperation::class, 'markAllNotificationsAsRead'])->name('mark-all-read');
+        });
+
         // Course assessment route
         Route::prefix('assessment')->name('assessment.')->group(function () {
             Route::get('/', [StudentOperation::class, 'questionnaire'])->name('index');
