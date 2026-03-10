@@ -4,6 +4,7 @@
 namespace App\Helpers;
 use App\Models\Course;
 
+use App\Models\Tag;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Illuminate\Support\Facades\Log;
 
@@ -81,14 +82,14 @@ class FilterHelper
 
 
     public static function addOngoingExamsFilter(string $label): void
-{
-    CRUD::filter('ongoing')
-        ->type('simple')
-        ->label($label)
-        ->whenActive(function () {
-            CRUD::addClause('whereDate', 'exam_date', '>=', now()->toDateString());
-        });
-}
+    {
+        CRUD::filter('ongoing')
+            ->type('simple')
+            ->label($label)
+            ->whenActive(function () {
+                CRUD::addClause('whereDate', 'exam_date', '>=', now()->toDateString());
+            });
+    }
 
     public static function addDateRangeFilter($columnName, $label = null, array $pickerOptions = [])
     {
@@ -141,71 +142,71 @@ class FilterHelper
 
 
 
-        public static function addGenericRelationshipColumn(string $methodName, string $label, string $pathName, string $columnName = null)
-{
-    CRUD::addColumn([
-        'name' => $methodName,
-        'label' => $label,
-        'type' => 'closure',
-        'function' => function($entry) use ($methodName, $pathName, $columnName) {
-            if ($entry->$methodName) {
-                $url = backpack_url($pathName . '/' . $entry->$methodName->id . '/show');
-                return '<a href="' . $url . '">' . e($entry->$methodName->$columnName) . '</a>';
-            }
-            return '';
-        },
-        'escaped' => false,
-    ]);
-}
-
-
-
-
-        public static function addCategoryColumn()
-{
-    CRUD::addColumn([
-        'name' => 'categoryRelation',
-        'label' => 'Category',
-        'type' => 'closure',
-        'function' => function($entry) {
-            if ($entry->categoryRelation) {
-                $url = backpack_url( 'category/' . $entry->categoryRelation->id . '/show');
-                return '<a href="' . $url . '">' . e($entry->categoryRelation->name) . '</a>';
-            }
-            return '';
-        },
-        'escaped' => false,
-    ]);
-}
-
-
-
-public static function addBooleanFilter(string $columnName, ?string $permissionName = null, ?string $label = null)
-{
-    $user = backpack_user();
-
-    if (!$user) {
-        return;
+    public static function addGenericRelationshipColumn(string $methodName, string $label, string $pathName, string $columnName = null)
+    {
+        CRUD::addColumn([
+            'name' => $methodName,
+            'label' => $label,
+            'type' => 'closure',
+            'function' => function ($entry) use ($methodName, $pathName, $columnName) {
+                if ($entry->$methodName) {
+                    $url = backpack_url($pathName . '/' . $entry->$methodName->id . '/show');
+                    return '<a href="' . $url . '">' . e($entry->$methodName->$columnName) . '</a>';
+                }
+                return '';
+            },
+            'escaped' => false,
+        ]);
     }
 
-    if (!$user->can($permissionName)) {
-        return;
+
+
+
+    public static function addCategoryColumn()
+    {
+        CRUD::addColumn([
+            'name' => 'categoryRelation',
+            'label' => 'Category',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                if ($entry->categoryRelation) {
+                    $url = backpack_url('category/' . $entry->categoryRelation->id . '/show');
+                    return '<a href="' . $url . '">' . e($entry->categoryRelation->name) . '</a>';
+                }
+                return '';
+            },
+            'escaped' => false,
+        ]);
     }
 
-    $label = $label ?? ucwords(str_replace('_', ' ', $columnName));
 
-    CRUD::filter($columnName)
-        ->type('dropdown')
-        ->label($label)
-        ->values([
-            'true' => 'Yes',
-            'false' => 'No',
-        ])
-        ->whenActive(function ($value) use ($columnName) {
-            $booleanValue = $value === 'true';
-            CRUD::addClause('where', $columnName, $booleanValue);
-        });
-}
+
+    public static function addBooleanFilter(string $columnName, ?string $permissionName = null, ?string $label = null)
+    {
+        $user = backpack_user();
+
+        if (!$user) {
+            return;
+        }
+
+        if (!$user->can($permissionName)) {
+            return;
+        }
+
+        $label = $label ?? ucwords(str_replace('_', ' ', $columnName));
+
+        CRUD::filter($columnName)
+            ->type('dropdown')
+            ->label($label)
+            ->values([
+                'true' => 'Yes',
+                'false' => 'No',
+            ])
+            ->whenActive(function ($value) use ($columnName) {
+                $booleanValue = $value === 'true';
+                CRUD::addClause('where', $columnName, $booleanValue);
+            });
+    }
 
 
 
@@ -278,18 +279,20 @@ public static function addBooleanFilter(string $columnName, ?string $permissionN
 
     public static function addExpiringSoonFilter(): void
     {
-        CRUD::addFilter([
-            'name'  => 'expires_soon',
-            'type'  => 'simple',
-            'label' => 'Expiring Soon (7 days)',
-        ],
-        false,
-        function () {
-            $from = \Carbon\Carbon::now();
-            $to = \Carbon\Carbon::now()->addDays(7);
+        CRUD::addFilter(
+            [
+                'name' => 'expires_soon',
+                'type' => 'simple',
+                'label' => 'Expiring Soon (7 days)',
+            ],
+            false,
+            function () {
+                $from = \Carbon\Carbon::now();
+                $to = \Carbon\Carbon::now()->addDays(7);
 
-            CRUD::addClause('whereBetween', 'expires', [$from, $to]);
-        });
+                CRUD::addClause('whereBetween', 'expires', [$from, $to]);
+            }
+        );
     }
 
 
@@ -300,47 +303,60 @@ public static function addBooleanFilter(string $columnName, ?string $permissionN
 
 
     public static function addAgeRangeFilter(string $label = 'Age Group')
-{
-    CRUD::addFilter([
-        'name'  => 'age_range',
-        'type'  => 'dropdown',
-        'label' => $label,
-    ], [
-        '15-19' => '15 - 19 years',
-        '20-24' => '20 - 24 years',
-        '25-35' => '25 - 35 years',
-        '36-45' => '36 - 45 years',
-        '45+'   => '45+ years',
-    ],
-    function ($value) {
-        CRUD::addClause('where', 'age', 'LIKE', '%' . $value . '%');
-    });
-}
+    {
+        CRUD::addFilter(
+            [
+                'name' => 'age_range',
+                'type' => 'dropdown',
+                'label' => $label,
+            ],
+            [
+                '15-19' => '15 - 19 years',
+                '20-24' => '20 - 24 years',
+                '25-35' => '25 - 35 years',
+                '36-45' => '36 - 45 years',
+                '45+' => '45+ years',
+            ],
+            function ($value) {
+                CRUD::addClause('where', 'age', 'LIKE', '%' . $value . '%');
+            }
+        );
+    }
 
 
 
 
 
     public static function addGenderFilter(string $label = 'Gender')
-{
-    CRUD::addFilter([
-        'name'  => 'gender',
-        'type'  => 'dropdown',
-        'label' => $label,
-    ], [
-        'male' => 'Male',
-        'female' => 'Female',
-    ], function ($value) {
-        CRUD::addClause('where', 'gender', $value);
-    });
-}
+    {
+        CRUD::addFilter([
+            'name' => 'gender',
+            'type' => 'dropdown',
+            'label' => $label,
+        ], [
+            'male' => 'Male',
+            'female' => 'Female',
+        ], function ($value) {
+            CRUD::addClause('where', 'gender', $value);
+        });
+    }
 
-
-
-
-
-
-
-
+    public static function addTagsFilter(string $relationName = 'tags', string $label = 'Tags')
+    {
+        CRUD::filter($relationName)
+            ->type('select2_multiple')
+            ->label($label)
+            ->values(function () {
+                return \App\Models\Tag::pluck('name', 'id')->toArray();
+            })
+            ->whenActive(function ($values) use ($relationName) {
+                $tags = json_decode($values, true);
+                if (is_array($tags) && count($tags) > 0) {
+                    CRUD::addClause('whereHas', $relationName, function ($query) use ($tags) {
+                        $query->whereIn('tags.id', $tags);
+                    });
+                }
+            });
+    }
 
 }

@@ -81,6 +81,7 @@ class CourseCrudController extends CrudController
         FilterHelper::addDateRangeFilter('start_date', 'Start Date');
         $this->addOngoingCoursesFilter('Ongoing Courses');
         FilterHelper::addBooleanFilter('status', 'Status');
+        FilterHelper::addTagsFilter('tags', 'Tags');
         FilterHelper::addDateRangeFilter('end_date', 'End Date');
         // FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();

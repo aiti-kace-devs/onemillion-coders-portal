@@ -58,6 +58,11 @@ class Course extends Model
         return $this->hasMany(CourseSession::class, 'course_id');
     }
 
+    public function tags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+
     public function scopeMyAssignedCourses($query)
     {
         $user = auth()->user();
@@ -103,7 +108,7 @@ class Course extends Model
                 '4 Months' => 120,
                 '4 months' => 120,
             ];
-            $course->no_of_days = $durations[$course->duration] ?? null;
+            // $course->no_of_days = $durations[$course->duration] ?? null;
 
             $programme = $course->programme()->first();
             $centre = $course->centre()->with('branch')->first();
