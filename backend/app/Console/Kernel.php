@@ -28,6 +28,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('email:sendFeedback')->everyTenMinutes();
 
         $schedule->command('horizon:snapshot')->everyFiveMinutes();
+
+        // Purge expired / stale OTP verification records every minute
+        $schedule->command('otp:clean')->everyMinute();
     }
 
     /**
