@@ -29,6 +29,7 @@ class RegistrationFormAPIController extends Controller
                 'gender',
                 'email',
                 'phone',
+                'do_you_have_any_disability'
             ],
             'Educational Information' => [
                 'highest_level_of_education',

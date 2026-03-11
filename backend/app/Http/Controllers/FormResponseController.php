@@ -279,7 +279,12 @@ class FormResponseController extends Controller
                 $destinationPath = 'form/uploads/';
                 $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
 
-                $diskName = $field['field_name'] === 'certificate' ? 'gcs_uploads' : 'public';
+                $defaultDisk = config('filesystems.default', 'local');
+                $resolvedDefaultDisk = $defaultDisk === 'local' ? 'public' : $defaultDisk;
+                $diskName = $resolvedDefaultDisk;
+                if ($field['field_name'] === 'certificate') {
+                    $diskName = $defaultDisk === 'gcs' ? 'gcs_uploads' : $resolvedDefaultDisk;
+                }
                 $disk = Storage::disk($diskName);
                 $disk->putFileAs($destinationPath, $file, $fileName);
 
