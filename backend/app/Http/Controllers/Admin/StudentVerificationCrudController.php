@@ -10,6 +10,7 @@ use App\Helpers\CourseFieldHelpers;
 use App\Helpers\FilterHelper;
 use App\Models\Centre;
 use App\Models\Admin;
+use App\Models\Course;
 
 /**
  * Class StudentVerificationCrudController
@@ -51,6 +52,7 @@ class StudentVerificationCrudController extends CrudController
     protected function setupListOperation()
     {
         WidgetHelper::verificationStatisticsWidget();
+        $this->applyCurrentAdminVerificationCourseScope();
 
         CRUD::addColumn([
             'name' => 'name_previous_name',
@@ -72,6 +74,27 @@ class StudentVerificationCrudController extends CrudController
         ]);
         CRUD::column('ghcard')->lable('Card Number');
         CRUD::addColumn([
+            'name' => 'certificate_url',
+            'label' => 'Certificate',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $data = $entry->data ?? null;
+                if (is_string($data)) {
+                    $data = json_decode($data, true) ?: [];
+                }
+                if (!is_array($data)) {
+                    $data = [];
+                }
+                $url = $data['certificate'] ?? null;
+                if (empty($url)) {
+                    return '-';
+                }
+                $safeUrl = e($url);
+                return "<a href=\"{$safeUrl}\" target=\"_blank\" rel=\"noopener\">View</a>";
+            },
+            'escaped' => false,
+        ]);
+        CRUD::addColumn([
             'name' => 'verify_by_on',
             'label' => 'Verification BY (On)',
             'type' => 'model_function',
@@ -81,25 +104,108 @@ class StudentVerificationCrudController extends CrudController
         ]);
 
         CRUD::addButton('line', 'verification_status', 'view', 'crud::buttons.verification_status');
-        $this->addStudentBatchFilter('admission', 'Student Batch');
-        $this->courseFilter('registered_course');
-        FilterHelper::addNullableColumnFilter('verification_status', 'verification_date', 'Verified');
-        $admins = Admin::whereIn('id', function ($query) {
+        $currentAdmin = backpack_user();
+        if ($currentAdmin instanceof Admin && $currentAdmin->isSuper()) {
+            $this->addStudentBatchFilter('admission', 'Student Batch');
+            $this->addCurrentAdminVerificationCourseFilter('registered_course');
+            $admins = Admin::whereIn('id', function ($query) {
             $query->select('verified_by')
                 ->from('users')
                 ->whereNotNull('verified_by')
                 ->groupBy('verified_by');
-        })->pluck('name', 'id')->toArray();
+            })->pluck('name', 'id')->toArray();
 
-        CRUD::filter('verified_by')
-            ->type('select2')
-            ->label('Verification BY')
-            ->values($admins)
-            ->whenActive(function ($value) {
-                CRUD::addClause('where', 'verified_by', $value);
-            });
+            CRUD::filter('verified_by')
+                ->type('select2')
+                ->label('Verification BY')
+                ->values($admins)
+                ->whenActive(function ($value) {
+                    CRUD::addClause('where', 'verified_by', $value);
+                });
+        }
+        
+        
+        FilterHelper::addNullableColumnFilter('verification_status', 'verification_date', 'Verified');
         FilterHelper::addDateRangeFilter('verification_date', 'Verification Date');
         CRUD::enableExportButtons();
+    }
+
+    /**
+     * Return course IDs visible to the current admin.
+     * `null` means unrestricted visibility (super admin or non-admin contexts).
+     */
+    protected function currentAdminVisibleCourseIds(): ?array
+    {
+        $admin = backpack_user();
+
+        if (! $admin instanceof Admin) {
+            return null;
+        }
+
+        if (method_exists($admin, 'visibleCourseIds')) {
+            return $admin->visibleCourseIds();
+        }
+
+        if (method_exists($admin, 'isSuper') && $admin->isSuper()) {
+            return null;
+        }
+
+        return $admin->assignedCourses()
+            ->pluck('courses.id')
+            ->map(fn ($courseId) => (int) $courseId)
+            ->all();
+    }
+
+    /**
+     * Restrict student verification records by current admin's assigned courses.
+     */
+    protected function applyCurrentAdminVerificationCourseScope(): void
+    {
+        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+
+        if ($visibleCourseIds === null) {
+            return;
+        }
+
+        if (empty($visibleCourseIds)) {
+            CRUD::addClause('whereRaw', '1 = 0');
+            return;
+        }
+
+        CRUD::addClause('whereIn', 'registered_course', $visibleCourseIds);
+    }
+
+    /**
+     * Add course filter options limited to the current admin's visible courses.
+     */
+    protected function addCurrentAdminVerificationCourseFilter(string $columnName = 'registered_course', string $label = 'Course'): void
+    {
+        $coursesQuery = Course::query()->orderBy('course_name');
+        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+
+        if (is_array($visibleCourseIds)) {
+            if (empty($visibleCourseIds)) {
+                $courseOptions = [];
+            } else {
+                $courseOptions = $coursesQuery
+                    ->whereIn('id', $visibleCourseIds)
+                    ->pluck('course_name', 'id')
+                    ->toArray();
+            }
+        } else {
+            $courseOptions = $coursesQuery->pluck('course_name', 'id')->toArray();
+        }
+
+        FilterHelper::addSelectFilter(
+            columnName: $columnName,
+            label: $label,
+            options: $courseOptions,
+            type: 'select2_multiple',
+            callback: function ($value) use ($columnName) {
+                $values = is_array($value) ? $value : explode(',', $value);
+                CRUD::addClause('whereIn', $columnName, $values);
+            },
+        );
     }
 
     /**

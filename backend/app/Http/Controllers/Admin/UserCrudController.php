@@ -12,6 +12,7 @@ use App\Http\Controllers\Traits\ShortlistActionsTrait;
 use App\Http\Controllers\Traits\ShortlistRowActionsTrait;
 use App\Models\UserAdmission;
 use App\Models\User;
+use App\Models\CourseBatch;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
@@ -47,11 +48,16 @@ class UserCrudController extends CrudController
      */
     public function setup()
     {
-        CRUD::setModel(\App\Models\User::class);
+        CRUD::setModel(User::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/user');
         CRUD::setEntityNameStrings('student', 'students');
         $this->setSearchableColumns(['name', 'email', 'mobile_no']);
         $this->setSearchResultAttributes(['id', 'name', 'email', 'mobile_no']);
+
+        $this->crud->denyAccess('create');
+        // $this->crud->denyAccess('update');
+        // $this->crud->denyAccess('delete');
+        // $this->crud->denyAccess('show');
 
         // Add permission checks
         LifecycleHook::hookInto(['list:before_setup', 'show:before_setup'], function () {
@@ -80,8 +86,9 @@ class UserCrudController extends CrudController
 
         $this->crud->setModel(User::class);
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/user');
-        $this->crud->setEntityNameStrings('user', 'users');
+        $this->crud->setEntityNameStrings('student', 'students');
         $this->setupFilter();
+        $this->applyCurrentAdminUserCourseScope();
 
         // Ensure we load the fields needed for relationships & columns
         $this->crud->query->select([
@@ -99,21 +106,40 @@ class UserCrudController extends CrudController
         $this->addConfirmedAdmissionColumn();
         View::share('mailable', \App\Helpers\MailerHelper::getMailableClasses());
         $this->setupStudentColumns();
-        CRUD::addButtonFromView('top', 'student_views_dropdown', 'student_views_dropdown', 'beginning');
-        CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
-        CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'beginning');
-        CRUD::addColumn([
-            'name' => 'userId',
-            'label' => 'User ID',
-            'type' => 'text',
-        ]);
+        // CRUD::disablePersistentTable();
+        // CRUD::addButtonFromView('top', 'student_views_dropdown', 'student_views_dropdown', 'beginning');
+        // CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
+        // CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'beginning');
+        // Add userId column to the list view
+        // CRUD::addColumn([
+        //     'name' => 'userId',
+        //     'label' => 'User ID',
+        //     'type' => 'text',
+        // ]);
+
+        // $this->setupStudentColumns();
+        // Disable responsive table
+        // CRUD::disableResponsiveTable();
+        // $this->setupFilter();
+        // Enable bulk operations
         CRUD::enableBulkActions();
         CRUD::enableExportButtons();
+
+        CRUD::removeButton('update', 'line');
+        CRUD::removeButton('delete', 'line');
+        CRUD::removeButton('show', 'line');
+        CRUD::addButtonFromView('line', 'user_preview_manage_student', 'user_preview_manage_student', 'beginning');
     }
 
     protected function setupShowOperation()
     {
-        $this->setupShowStudentColumns();
+        // $this->setupShowStudentColumns();
+        $this->crud->set('show.setFromDb', false);
+        
+        $this->crud->setShowView('vendor.backpack.crud.manage_student_show');
+
+        CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
+
     }
     /**
      * Define what happens when the Create operation is loaded.
@@ -175,34 +201,60 @@ class UserCrudController extends CrudController
         ]);
 
         $updated = 0;
+        $notFound = [];
         $studentIds = $request->student_ids;
 
         $userIds = User::whereIn('id', $studentIds)->pluck('userId')->toArray();
 
         foreach (array_chunk($userIds, 100) as $chunk) {
-            $affected = UserAdmission::whereIn('user_id', $chunk)
-                ->update(['batch_id' => $request->batch_id]);
-            $updated += $affected;
+            $admissions = UserAdmission::whereIn('user_id', $chunk)->get();
+
+            foreach ($admissions as $admission) {
+                // Get the course directly and use its batch_id
+                $course = \App\Models\Course::find($admission->course_id);
+
+                if ($course && $course->batch_id) {
+                    $admission->batch_id = $course->batch_id;
+                    $admission->save();
+                    $updated++;
+                } else {
+                    $notFound[] = $admission->user_id;
+                }
+            }
         }
 
         if ($updated === 0) {
+            if (!empty($notFound)) {
+                return response()->json([
+                    'message' => 'No admissions updated. No matching courses with batch_id found for the students.',
+                    'not_found' => $notFound
+                ], 400);
+            }
             return response()->json(['message' => 'No admissions updated.'], 400);
         }
 
-        return response()->json(['message' => 'Batch assignment successful']);
+        $message = 'Batch assignment successful';
+        if (!empty($notFound)) {
+            $message .= '. However, ' . count($notFound) . ' students could not be updated because no matching courses with batch_id were found.';
+        }
+
+        return response()->json(['message' => $message, 'updated' => $updated]);
     }
 
     public function setupFilter()
     {
-        $this->courseFilter('registered_course');
+        // $this->addStudentBatchFilter('Batch Filter');
+        $this->addCurrentAdminCourseFilter('registered_course');
         $this->addConfirmedAdmissionFilter();
-        $this->addAdmissionLocationFilter();
-        $this->addAdmittedAtFilter();
-        FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
+        // $this->addAdmissionLocationFilter();
+        // $this->addAdmittedAtFilter();
+        // FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
         FilterHelper::addAgeRangeFilter();
         FilterHelper::addGenderFilter();
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
-        $this->addStudentBatchFilterFromDashboard('admission');
+        // if (backpack_user()->is_super) {
+        //     $this->addStudentBatchFilterFromDashboard('admission');
+        // }
     }
 
 

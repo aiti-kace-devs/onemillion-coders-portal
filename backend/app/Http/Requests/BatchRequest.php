@@ -2,10 +2,19 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Batch;
 use Illuminate\Foundation\Http\FormRequest;
 
 class BatchRequest extends FormRequest
 {
+    protected function prepareForValidation()
+    {
+        // A completed batch should never be active.
+        if ($this->boolean('completed')) {
+            $this->merge(['status' => 0]);
+        }
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -32,6 +41,40 @@ class BatchRequest extends FormRequest
             'status' => 'boolean',
             'completed' => 'boolean',
         ];
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $status = $this->boolean('status');
+            $completed = $this->boolean('completed');
+
+            // Only enforce for active, not completed batches.
+            if (!$status || $completed) {
+                return;
+            }
+
+            $currentBatchId = $this->route('id')
+                ?? $this->route('batch')
+                ?? $this->route('batchId');
+
+            $currentBatchId = is_numeric($currentBatchId) ? (int) $currentBatchId : null;
+
+            // Only one active batch is allowed at a time.
+            $conflictingBatch = Batch::query()
+                ->where('status', true)
+                ->when($currentBatchId, fn ($q) => $q->where('id', '!=', $currentBatchId))
+                ->orderBy('start_date')
+                ->first();
+
+            if ($conflictingBatch) {
+                $conflictRange = trim(($conflictingBatch->start_date ?? '') . ' to ' . ($conflictingBatch->end_date ?? ''));
+                $validator->errors()->add(
+                    'status',
+                    "There is already an active batch ({$conflictingBatch->title}) scheduled for {$conflictRange}. Deactivate or complete it before activating another batch."
+                );
+            }
+        });
     }
 
     /**

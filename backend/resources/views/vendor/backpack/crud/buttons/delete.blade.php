@@ -1,5 +1,28 @@
 @if ($crud->hasAccess('delete', $entry))
-    <a href="javascript:void(0)" onclick="deleteEntry(this)" bp-button="delete" data-route="{{ url($crud->route.'/'.$entry->getKey()) }}" class="btn btn-sm btn-link" data-button-type="delete">
+    @php
+        $deleteBlocked = false;
+        $deleteBlockedMessage = null;
+
+        if ($entry instanceof \App\Models\Batch) {
+            $coursesCount = (int) ($entry->courses_count ?? $entry->courses()->count());
+            if ($coursesCount > 0) {
+                $deleteBlocked = true;
+                $deleteBlockedMessage = sprintf(
+                    "%d %s already assigned to this batch, so you can't delete it.",
+                    $coursesCount,
+                    \Illuminate\Support\Str::plural('course', $coursesCount)
+                );
+            }
+        }
+    @endphp
+
+    <a href="javascript:void(0)"
+       onclick="deleteEntry(this)"
+       bp-button="delete"
+       data-route="{{ url($crud->route.'/'.$entry->getKey()) }}"
+       @if($deleteBlocked) data-delete-blocked="1" data-delete-blocked-message="{{ $deleteBlockedMessage }}" @endif
+       class="btn btn-sm btn-link"
+       data-button-type="delete">
         <i class="la la-trash"></i> <span>{{ trans('backpack::crud.delete') }}</span>
     </a>
 @endif
@@ -15,6 +38,28 @@
 	  $("[data-button-type=delete]").unbind('click');
 
 	  function deleteEntry(button) {
+		// block deletion when the entry has constraints (ex: batches with assigned courses)
+		var isBlocked = $(button).data('delete-blocked');
+		if (isBlocked) {
+			var blockedMessage = $(button).data('delete-blocked-message') || 'This item cannot be deleted.';
+			swal({
+				title: "Cannot delete",
+				text: blockedMessage,
+				icon: "warning",
+				buttons: {
+					cancel: {
+						text: "OK",
+						value: null,
+						visible: true,
+						className: "bg-secondary",
+						closeModal: true,
+					},
+				},
+				dangerMode: false,
+			});
+			return;
+		}
+
 		// ask for confirmation before deleting an item
 		// e.preventDefault();
 		var route = $(button).attr('data-route');

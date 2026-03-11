@@ -12,6 +12,7 @@ use App\Models\Batch;
 use App\Models\Course;
 use App\Models\UserAdmission;
 use App\Models\CourseMatch;
+
 trait CourseFieldHelpers
 {
 
@@ -68,34 +69,34 @@ trait CourseFieldHelpers
 
 
 
-        CRUD::addField([
-            'name' => 'centre_id',
-            'label' => 'Centre',
-            'type' => 'select2_from_ajax',
-            'attribute' => 'title',
-            'data_source' => backpack_url('api/centre-by-branch'),
-            'dependencies' => ['branch_id'],
-            'method' => 'GET',
-            'include_all_form_fields' => true,
-            'placeholder' => 'Select a branch first',
-            'minimum_input_length' => 0,
-            'wrapper' => ['class' => 'form-group col-6'],
-            'model' => Centre::class,
-            'value' => $this->crud->getCurrentEntry()?->centre_id ?? null,
-        ]);
+CRUD::addField([
+    'name' => 'centre_id',
+    'label' => 'Centre',
+    'type' => 'select2_from_ajax',
+    'attribute' => 'title',
+    'data_source' => backpack_url('api/centre-by-branch'),
+    'dependencies' => ['branch_id'],
+    'method' => 'GET',
+    'include_all_form_fields' => true,
+    'placeholder' => 'Select a branch first',
+    'minimum_input_length' => 0,
+    'wrapper' => ['class' => 'form-group col-6'],
+    'model' => Centre::class,
+    'value' => optional($this->crud->getCurrentEntry())->centre_id ?? null,
+]);
 
 
 
         // CRUD::addField([
-//     'name' => 'batch_id',
-//     'label' => 'Select Batch',
-//     'type' => 'select2',
-//     'entity' => 'batch',
-//     'attribute' => 'title',
-//     'model' => Batch::class,
-//     'allows_null' => false,
-//     'wrapper' => ['class' => 'form-group col-6'],
-// ]);
+        //     'name' => 'batch_id',
+        //     'label' => 'Select Batch',
+        //     'type' => 'select2',
+        //     'entity' => 'batch',
+        //     'attribute' => 'title',
+        //     'model' => Batch::class,
+        //     'allows_null' => false,
+        //     'wrapper' => ['class' => 'form-group col-6'],
+        // ]);
 
 
 
@@ -121,21 +122,21 @@ trait CourseFieldHelpers
             'hint' => 'eg 3  Week or 120 hrs'
         ]);
         // CRUD::addField([
-//     'name' => 'duration',
-//     'label' => 'Duration',
-//     'type' => 'select_from_array',
-//     'options' => [
-//         '1 Week' => '1 Week',
-//         '2 Week' => '2 Weeks',
-//         '3 Weeks' => '3 Weeks',
-//         '4 Weeks' => '4 Weeks',
-//         '1 Month' => '1 Month',
-//         '2 Months' => '2 Months',
-//         '3 Months' => '3 Months',
-//         '4 Months' => '4 Months',
-//     ],
-//     'wrapper' => ['class' => 'form-group col-6'],
-// ]);
+        //     'name' => 'duration',
+        //     'label' => 'Duration',
+        //     'type' => 'select_from_array',
+        //     'options' => [
+        //         '1 Week' => '1 Week',
+        //         '2 Week' => '2 Weeks',
+        //         '3 Weeks' => '3 Weeks',
+        //         '4 Weeks' => '4 Weeks',
+        //         '1 Month' => '1 Month',
+        //         '2 Months' => '2 Months',
+        //         '3 Months' => '3 Months',
+        //         '4 Months' => '4 Months',
+        //     ],
+        //     'wrapper' => ['class' => 'form-group col-6'],
+        // ]);
 
         CRUD::addField([
             'name' => 'start_date',
@@ -223,8 +224,6 @@ trait CourseFieldHelpers
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. https://chat.whatsapp.com/BekTu3PWEqc8UtydifN8Mt'
         ]);
-
-
     }
 
 
@@ -285,8 +284,6 @@ trait CourseFieldHelpers
         ]);
 
         $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
-
-
     }
 
 
@@ -515,21 +512,23 @@ trait CourseFieldHelpers
 
 
 
-    public static function addAdmissionLocationFilter(string $label = 'Admission Location')
+    public static function centreFilter(string $label = 'Centre')
     {
-        CRUD::addFilter(
-            [
-                'name' => 'admission_location',
-                'type' => 'dropdown',
-                'label' => $label,
-            ],
-            self::getAdmissionLocations(),
-            function ($value) {
-                CRUD::addClause('whereExists', function ($query) use ($value) {
+        FilterHelper::addSelectFilter(
+            columnName: 'admission_location',
+            label: $label,
+            options: self::getAdmissionLocations(),
+            type: 'select2_multiple',
+            callback: function (array $values) {
+                if (empty($values)) {
+                    return;
+                }
+
+                CRUD::addClause('whereExists', function ($query) use ($values) {
                     $query->select(\DB::raw(1))
                         ->from('user_admission')
                         ->whereColumn('user_admission.user_id', 'users.userId')
-                        ->where('user_admission.location', $value);
+                        ->whereIn('user_admission.location', $values);
                 });
             }
         );
@@ -656,11 +655,5 @@ trait CourseFieldHelpers
 
         $this->addFieldsToTab('Question', true, ['tag', 'question', 'description', 'order', 'status']);
         $this->addFieldsToTab('Options', true, ['course_match_options']);
-
-
     }
-
-
-
-
 }
