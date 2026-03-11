@@ -45,13 +45,14 @@ class AddNewStudentsJob implements ShouldQueue
                 'mobile_no' => 'required',
                 'gender' => 'required',
                 'exam' => 'required_if:exam_name,null|exists:oex_exam_masters,id',
-                'registered_course' => 'required|exists:courses,id',
+                'registered_course' => 'nullable|exists:courses,id',
                 'age' => 'required',
                 'userId' => 'required',
                 'password' => 'sometimes',
                 'exam_name' => 'sometimes',
                 'ghcard' => 'nullable',
-                'form_response_id' => 'required'
+                'form_response_id' => 'required',
+                'data' => 'nullable|array',
             ]);
 
             if ($validator->fails()) {
@@ -92,7 +93,8 @@ class AddNewStudentsJob implements ShouldQueue
                 $std->exam = $student['exam'];
                 $std->userId = $student['userId'];
                 $std->password = $plainPassword;
-                $std->registered_course = $student['registered_course'];
+                $std->registered_course = !empty($student['registered_course']) ? $student['registered_course'] : null;
+                $std->data = $student['data'] ?? null;
                 $std->age  = $student['age'];
                 $std->gender = $student['gender'];
                 $std->status = 1;

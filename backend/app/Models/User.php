@@ -42,7 +42,8 @@ class User extends Authenticatable
         'gender',
         'network_type',
         'registered_course',
-        'shortlist'
+        'shortlist',
+        'data',
     ];
 
     /**
@@ -66,6 +67,7 @@ class User extends Authenticatable
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'status' => 'boolean',
+        'data' => 'array',
     ];
 
 

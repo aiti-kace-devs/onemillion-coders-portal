@@ -128,23 +128,6 @@ class FormResponseController extends Controller
                 $rules[] = 'nullable';
             }
 
-            // Unique validation
-            if (!empty($field['validators']['unique'])) {
-                $value = $request->input($inputField);
-                if ($value) {
-                    $userFieldMap = [
-                        'email' => 'email',
-                        'phone' => 'mobile_no',
-                    ];
-                    $dbColumn = $userFieldMap[$fieldName] ?? null;
-                    if ($dbColumn && User::where($dbColumn, $value)->exists()) {
-                        throw \Illuminate\Validation\ValidationException::withMessages([
-                            $inputField => ["{$fieldTitle} has already been taken."]
-                        ]);
-                    }
-                }
-            }
-
             switch ($field['type']) {
                 case 'text':
                 case 'textarea': $rules[] = 'string'; break;
@@ -177,7 +160,40 @@ class FormResponseController extends Controller
             $validationRules[$inputField] = implode('|', $rules);
         }
 
-        $validated = $request->validate($validationRules, $customMessages, $attributes);
+        $validator = Validator::make($request->all(), $validationRules, $customMessages, $attributes);
+        $validator->after(function ($validator) use ($schema, $request) {
+            foreach ($schema as $field) {
+                if (empty($field['validators']['unique'])) {
+                    continue;
+                }
+
+                $inputField = $field['field_name'];
+                $fieldTitle = ucwords(str_replace(['-', '_'], ' ', $field['title']));
+                $value = $request->input($inputField);
+                if (! $value) {
+                    continue;
+                }
+
+                $userFieldMap = [
+                    'email' => 'email',
+                    'phone' => 'mobile_no',
+                ];
+                $dbColumn = $userFieldMap[$inputField] ?? null;
+                if ($dbColumn && User::where($dbColumn, $value)->exists()) {
+                    $validator->errors()->add($inputField, "{$fieldTitle} has already been taken.");
+                }
+            }
+        });
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
 
         // ═══════════════════════════════════════════════════════════════════════
         // MANDATORY SECURITY CHECKS — OTP Verification & Email Uniqueness
@@ -263,11 +279,13 @@ class FormResponseController extends Controller
                 $destinationPath = 'form/uploads/';
                 $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
 
-                Storage::disk('public')->putFileAs($destinationPath, $file, $fileName);
+                $diskName = $field['field_name'] === 'certificate' ? 'gcs_uploads' : 'public';
+                $disk = Storage::disk($diskName);
+                $disk->putFileAs($destinationPath, $file, $fileName);
 
                 $validated[$field['field_name']] = [
                     'name' => $fileName,
-                    'url' => Storage::url($destinationPath . $fileName),
+                    'url' => $disk->url($destinationPath . $fileName),
                 ];
             }
         }
