@@ -8,9 +8,11 @@ use App\Models\CourseCategory;
 use App\Models\Branch;
 use App\Models\Form;
 use App\Models\Course;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use App\Models\UserAdmission;
 
 class RegistrationFormAPIController extends Controller
 {
@@ -96,6 +98,62 @@ class RegistrationFormAPIController extends Controller
         ]);
 
     }
+
+
+
+
+    public function check_user_by_userID($userID)
+    {
+        $user = User::where('userId', $userID)->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $user
+        ]);
+    }
+
+
+
+
+
+    //     public function check_user_by_userID($userID)
+    // {
+    //     $user = User::where('userId', $userID)->first();
+
+    //     if (!$user) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'User not found'
+    //         ], 404);
+    //     }
+
+    //     $admission = UserAdmission::where('user_id', $userID)
+    //         ->whereNotNull('confirmed')
+    //         ->first();
+
+    //     if (!$admission) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'User admission not confirmed'
+    //         ]);
+    //     }
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'User admission confirmed',
+    //         'data' => [
+    //             'user' => $user,
+    //             'admission' => $admission
+    //         ]
+    //     ]);
+    // }
 
 
 
