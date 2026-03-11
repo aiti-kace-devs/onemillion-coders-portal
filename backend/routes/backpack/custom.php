@@ -47,6 +47,8 @@ Route::group([
     Route::post('centre/{id}/toggle-is-pwd-friendly', 'CentreCrudController@toggleIsPwdFriendly');
     Route::crud('course', 'CourseCrudController');
     Route::crud('batch', 'BatchCrudController');
+    Route::crud('tag', 'TagCrudController');
+    Route::crud('tag-type', 'TagTypeCrudController');
     Route::post('batch/add-courses/{batchId}', [BatchCrudController::class, 'addCourses']);
     Route::post('batch/update-course/{courseId}', [BatchCrudController::class, 'updateCourse']);
     Route::get('batch/course/{courseId}/sessions', [BatchCrudController::class, 'getCourseSessions']);
@@ -76,12 +78,12 @@ Route::group([
     Route::post('manage-student/{user}/change-admission', 'ManageStudentCrudController@changeAdmission')->name('manage-student.change-admission');
     Route::post('manage-student/{user}/choose-session', 'ManageStudentCrudController@chooseSession')->name('manage-student.choose-session');
     Route::delete('manage-student/delete-admission/{user_id}', 'ManageStudentCrudController@deleteAdmission')->name('manage-student.delete-admission');
-    
+
     // AJAX routes for student metrics and dropdowns
     Route::get('manage-student/{user}/metrics', 'ManageStudentCrudController@getStudentMetrics')->name('manage-student.metrics');
     Route::get('manage-student/courses-ajax', 'ManageStudentCrudController@getCoursesAjax')->name('manage-student.courses-ajax');
     Route::get('manage-student/sessions-ajax', 'ManageStudentCrudController@getSessionsAjax')->name('manage-student.sessions-ajax');
-    
+
     // Use UserCrudController's bulkAdmit for single student admission
     Route::post('manage-student/bulk-admit', 'UserCrudController@bulkAdmit')->name('manage-student.bulk-admit');
 

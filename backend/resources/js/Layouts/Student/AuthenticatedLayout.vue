@@ -209,6 +209,22 @@ const user = auth?.user || {};
             <slot name="header" />
           </div>
         </div>
+
+        <!-- Notification Bell -->
+        <Link
+          :href="route('student.notifications.index')"
+          class="relative p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+          aria-label="Notifications"
+        >
+          <span class="material-symbols-outlined text-[22px]">notifications</span>
+          <span
+            v-if="auth?.unreadNotifications > 0"
+            class="absolute top-1 right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white"
+          >
+            {{ auth.unreadNotifications > 99 ? '99+' : auth.unreadNotifications }}
+          </span>
+        </Link>
+
       </header>
 
       <!-- Page content -->

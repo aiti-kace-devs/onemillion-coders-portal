@@ -396,7 +396,7 @@ class CourseProgrammeController extends Controller
 
     public function getBranch()
     {
-        $branch = Branch::all();
+        $branch = Branch::where('status', 1)->get();
 
         return response()->json([
             'success' => true,

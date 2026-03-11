@@ -51,10 +51,6 @@ class UserCrudController extends CrudController
         CRUD::setModel(User::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/user');
         CRUD::setEntityNameStrings('student', 'students');
-
-        // CRUD::denyAccess('create');
-        // CRUD::denyAccess('update');
-        // $this->setupFilter();
         $this->setSearchableColumns(['name', 'email', 'mobile_no']);
         $this->setSearchResultAttributes(['id', 'name', 'email', 'mobile_no']);
 
@@ -108,18 +104,7 @@ class UserCrudController extends CrudController
             'ghcard',
         ]);
         $this->addConfirmedAdmissionColumn();
-        // $this->setupStudentColumns();
-        // FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
-        // $this->addStudentBatchFilter('admission', 'Student Batch');
-        // $this->courseFilter('registered_course');
-        // $this->addConfirmedAdmissionFilter();
-        // FilterHelper::addBooleanFilter('shortlist', 'Shortlist');
-        // FilterHelper::addAgeRangeFilter();
-        // FilterHelper::addGenderFilter();
-        // $this->addAdmissionLocationFilter();
-        // $this->addAdmittedAtFilter();
         View::share('mailable', \App\Helpers\MailerHelper::getMailableClasses());
-        // CRUD::setFromDb(); // set columns from db columns.
         $this->setupStudentColumns();
         // CRUD::disablePersistentTable();
         // CRUD::addButtonFromView('top', 'student_views_dropdown', 'student_views_dropdown', 'beginning');
@@ -138,8 +123,6 @@ class UserCrudController extends CrudController
         // $this->setupFilter();
         // Enable bulk operations
         CRUD::enableBulkActions();
-
-        // Add export options
         CRUD::enableExportButtons();
 
         CRUD::removeButton('update', 'line');
@@ -210,8 +193,6 @@ class UserCrudController extends CrudController
         }
     }
 
-
-
     public function assignBatch(Request $request)
     {
         $request->validate([
@@ -227,11 +208,11 @@ class UserCrudController extends CrudController
 
         foreach (array_chunk($userIds, 100) as $chunk) {
             $admissions = UserAdmission::whereIn('user_id', $chunk)->get();
-            
+
             foreach ($admissions as $admission) {
                 // Get the course directly and use its batch_id
                 $course = \App\Models\Course::find($admission->course_id);
-                
+
                 if ($course && $course->batch_id) {
                     $admission->batch_id = $course->batch_id;
                     $admission->save();
@@ -260,11 +241,6 @@ class UserCrudController extends CrudController
         return response()->json(['message' => $message, 'updated' => $updated]);
     }
 
-
-
-
-
-
     public function setupFilter()
     {
         // $this->addStudentBatchFilter('Batch Filter');
@@ -281,7 +257,7 @@ class UserCrudController extends CrudController
         // }
     }
 
-    
+
     /**
      * Handle bulk admit operation via AJAX
      */
@@ -289,103 +265,6 @@ class UserCrudController extends CrudController
     {
         $this->traitAdmitStudent($request);
     }
-
-    /**
-     * Admit shortlisted students (bulk or single) via AJAX for Backpack Shortlist Actions.
-     */
-    // public function admitShortlistedStudents(AdmitShortlistedStudentsRequest $request)
-    // {
-    //     $validated = $request->validated();
-
-    //     // If admit_all is set, admit all shortlisted students
-    //     if ($request->input('admit_all')) {
-    //         $course = Course::find($validated['course_id']);
-    //         $session = CourseSession::find($validated['session_id'] ?? '');
-    //         if ($session && $session->course_id != $course->id) {
-    //             return response()->json(
-    //                 [
-    //                     'success' => false,
-    //                     'message' => 'Session not valid for selected course',
-    //                 ],
-    //                 422,
-    //             );
-    //         }
-    //         $message = 'All shortlisted students admitted successfully';
-    //         $admittedCount = 0;
-    //         try {
-    //             $users = User::where('shortlist', 1)->get();
-    //             foreach ($users as $user) {
-    //                 CreateStudentAdmissionJob::dispatch($user, $course, $session);
-    //                 $admittedCount++;
-    //             }
-    //             return response()->json([
-    //                 'success' => true,
-    //                 'message' => $message,
-    //                 'admitted_count' => $admittedCount,
-    //             ]);
-    //         } catch (\Exception $e) {
-    //             return response()->json(
-    //                 [
-    //                     'success' => false,
-    //                     'message' => 'Failed to admit students: ' . $e->getMessage(),
-    //                 ],
-    //                 500,
-    //             );
-    //         }
-    //     }
-
-    //     $course = Course::find($validated['course_id']);
-    //     $session = CourseSession::find($validated['session_id'] ?? '');
-    //     $change = ($validated['change'] ?? false) == 'true';
-
-    //     if ($session && $session->course_id != $course->id) {
-    //         return response()->json(
-    //             [
-    //                 'success' => false,
-    //                 'message' => 'Session not valid for selected course',
-    //             ],
-    //             422,
-    //         );
-    //     }
-    //     $message = 'Student(s) admitted successfully';
-    //     $admittedCount = 0;
-    //     try {
-    //         if ($validated['user_id'] ?? false) {
-    //             $user_id = $validated['user_id'];
-    //             $user = User::where('userId', $user_id)->first();
-    //             if ($user) {
-    //                 CreateStudentAdmissionJob::dispatch($user, $course, $session);
-    //                 $oldAdmission = UserAdmission::where('user_id', $user_id)->first();
-    //                 if ($oldAdmission && $change) {
-    //                     $message = 'Student admission changed successfully';
-    //                 }
-    //                 $admittedCount = 1;
-    //             }
-    //         } elseif (count($validated['user_ids'] ?? []) > 0) {
-    //             $user_ids = $validated['user_ids'];
-    //             foreach ($user_ids as $user_id) {
-    //                 $user = User::where('userId', $user_id)->first();
-    //                 if ($user) {
-    //                     CreateStudentAdmissionJob::dispatch($user, $course, $session);
-    //                     $admittedCount++;
-    //                 }
-    //             }
-    //         }
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => $message,
-    //             'admitted_count' => $admittedCount,
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         return response()->json(
-    //             [
-    //                 'success' => false,
-    //                 'message' => 'Failed to admit students: ' . $e->getMessage(),
-    //             ],
-    //             500,
-    //         );
-    //     }
-    // }
 
     /**
      * Show the exam result for a student (Backpack admin panel)
@@ -397,13 +276,10 @@ class UserCrudController extends CrudController
             return back()->with(['flash' => 'Student not found.', 'key' => 'error']);
         }
 
-        // Get the latest exam result for the student
         $latestResult = $student->examResults()->latest()->first();
         if (!$latestResult) {
             return back()->with(['flash' => 'No exam results found for this student.', 'key' => 'error']);
         }
-
-        // Get the related exam info
         $exam = $latestResult->exam ?? null;
         if (!$exam) {
             return back()->with(['flash' => 'Exam information not found.', 'key' => 'error']);
@@ -487,6 +363,4 @@ class UserCrudController extends CrudController
             return response()->json(['message' => 'Failed to delete admission.'], 500);
         }
     }
-
-    // Remove the proxy methods for AJAX endpoints, as the trait methods are used directly.
 }

@@ -34,15 +34,17 @@ class User extends Authenticatable
         'status',
         'mobile_no',
         'age',
-        'age',
         'password',
         'userId',
         'card_type',
         'ghcard',
         'gender',
         'network_type',
+        'has_disability',
         'registered_course',
-        'shortlist'
+        'shortlist',
+        'student_level',
+        'data',
     ];
 
     /**
@@ -66,6 +68,8 @@ class User extends Authenticatable
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'status' => 'boolean',
+        'has_disability' => 'boolean',
+        'data' => 'array',
     ];
 
 
@@ -170,7 +174,17 @@ class User extends Authenticatable
         return $this->hasMany(QuestionnaireResponse::class);
     }
 
-        public function attendances()
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class, 'user_id', 'userId');
+    }
+
+    public function hasAttendance()
     {
         return $this->hasMany(Attendance::class, 'user_id', 'userId');
     }
@@ -215,7 +229,7 @@ class User extends Authenticatable
         if (now()->isAfter($exam->exam_date)) {
             return [
                 'status' => false,
-                'message' =>  "Unable to take exam. Exam deadline was  {$exam->exam_date->format(config('app.fulldate_format'))}",
+                'message' => "Unable to take exam. Exam deadline was  {$exam->exam_date->format(config('app.fulldate_format'))}",
             ];
         }
 
@@ -253,5 +267,3 @@ class User extends Authenticatable
         ];
     }
 }
-
-

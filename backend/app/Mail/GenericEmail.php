@@ -9,8 +9,6 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Str;
-use League\CommonMark\CommonMarkConverter;
 use Throwable;
 
 class GenericEmail extends Mailable implements ShouldQueue
@@ -23,6 +21,12 @@ class GenericEmail extends Mailable implements ShouldQueue
     /**
      * Create a new message instance.
      *
+     * The raw markdown content is stored as-is. Do NOT pre-convert with
+     * CommonMarkConverter here — the `markdown:` Content type causes Laravel's
+     * <x-mail::message> component to process slot content through its own
+     * markdown-to-HTML pipeline. Pre-converting would double-process the
+     * content, corrupting headings, bold text, and HTML blocks.
+     *
      * @return void
      */
     public function __construct($markdownContent = '', $subjectLine = '', $view = 'mail.generic-email', public $data = [])
@@ -30,9 +34,6 @@ class GenericEmail extends Mailable implements ShouldQueue
         $this->markdownContent = $markdownContent;
         $this->subjectLine = $subjectLine;
         $this->view = $view;
-
-        $converter = new CommonMarkConverter();
-        $this->markdownContent = $converter->convert($markdownContent)->getContent();
     }
 
     /**
@@ -69,17 +70,6 @@ class GenericEmail extends Mailable implements ShouldQueue
         return [];
     }
 
-    // public function build()
-    // {
-    //     $combinedMarkdown = "\n\n" . $this->markdownContent; // Concatenate with newlines for separation
-
-    //     $converter = new CommonMarkConverter();
-    //     $htmlContent = $converter->convert($combinedMarkdown)->getContent();
-
-    //     return $this->subject($this->subjectLine)
-    //         ->html($htmlContent);
-    // }
-
     // Called when job succeeds
     public function success()
     {
@@ -88,17 +78,10 @@ class GenericEmail extends Mailable implements ShouldQueue
 
     public function failed(?Throwable $exception): void
     {
-        // TODO: remove recreation of view on error
-        // $message = $exception->getMessage();
-        // fix for view not found
-        // if (Str::contains($message, ["View [$this->view] not found"])) {
-        // view not found create it
+        // Recreate the temp view so the queued job can be retried
         $file = str_replace('mail.temp.', '', $this->view);
         MailerHelper::createView($this->markdownContent, $file);
-        // }
-        // $this->removeTempView();
     }
-
 
 
     private function removeTempView()

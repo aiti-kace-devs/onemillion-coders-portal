@@ -74,6 +74,27 @@ class StudentVerificationCrudController extends CrudController
         ]);
         CRUD::column('ghcard')->lable('Card Number');
         CRUD::addColumn([
+            'name' => 'certificate_url',
+            'label' => 'Certificate',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $data = $entry->data ?? null;
+                if (is_string($data)) {
+                    $data = json_decode($data, true) ?: [];
+                }
+                if (!is_array($data)) {
+                    $data = [];
+                }
+                $url = $data['certificate'] ?? null;
+                if (empty($url)) {
+                    return '-';
+                }
+                $safeUrl = e($url);
+                return "<a href=\"{$safeUrl}\" target=\"_blank\" rel=\"noopener\">View</a>";
+            },
+            'escaped' => false,
+        ]);
+        CRUD::addColumn([
             'name' => 'verify_by_on',
             'label' => 'Verification BY (On)',
             'type' => 'model_function',
