@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -9,7 +10,7 @@ use Illuminate\Support\ServiceProvider;
 use Statamic\Facades\CP\Nav;
 use Illuminate\Support\Facades\Validator;
 use App\Rules\Recaptcha;
-
+use Illuminate\Support\Facades\Gate;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -37,6 +38,11 @@ class AppServiceProvider extends ServiceProvider
             \Statamic\Eloquent\Commands\ExportAssets::class,
             \App\Console\Commands\ExportAssetsCommand::class
         );
+
+        if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
+            $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
+            $this->app->register(TelescopeServiceProvider::class);
+        }
     }
 
     /**
@@ -114,5 +120,10 @@ class AppServiceProvider extends ServiceProvider
 
             return $passed;
         });
+
+        // Gate::define('viewPulse', function (User $user) {
+        //     return true;
+        //     // return $user->hasRole('super-admin');
+        // });
     }
 }
