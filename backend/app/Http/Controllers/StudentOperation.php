@@ -1329,6 +1329,8 @@ class StudentOperation extends Controller
 
         $assessment->save();
 
+        $new_question = $this->fetch_assessment_question($request);
+
         return response()->json([
             'status' => 'success',
             'is_correct' => $isCorrect,
@@ -1337,7 +1339,7 @@ class StudentOperation extends Controller
             'assessment_completed' => $assessment->completed,
             'current_level' => $assessment->current_level,
             'user_overall_level' => $user->student_level,
-            'correct_answer' => $question->ans
+            'next_question' => $new_question->original['question'] ?? null,
         ]);
     }
 }
