@@ -36,11 +36,15 @@
     <x-backpack::menu-item title="Programmes" icon="la la-graduation-cap" :link="backpack_url('programme')" />
 @endcan
 
-@can('course.read.all')
+<!-- @can('course.read.all') -->
     <x-backpack::menu-dropdown title="Course Moderation" icon="la la-book-reader">
-        @can('course.read.all')
+<!-- @endcan -->
+        <!-- @can('course.read.all') -->
             <x-backpack::menu-dropdown-item title="Courses" icon="la la-book" :link="backpack_url('course')" />
-        @endcan
+        <!-- @endcan -->
+        <!-- @can('course.read.all')
+            <x-backpack::menu-dropdown-item title="Manage Course batches" icon="la la-question" :link="backpack_url('course-batch')" />
+        @endcan -->
         @can('course-session.read.all')
             <x-backpack::menu-dropdown-item title="Course Sessions" icon="la la-clock" :link="backpack_url('course-session')" />
         @endcan
@@ -60,7 +64,6 @@
             <x-backpack::menu-dropdown-item title="Course Match Options" icon="la la-list-ul" :link="backpack_url('course-match-option')" />
         @endcan
     </x-backpack::menu-dropdown>
-@endcan
 
 @if (auth()->user()->can('category.read.all') || auth()->user()->can('manage-exam.read.all'))
     <x-backpack::menu-dropdown title="Exam Management" icon="la la-file-signature">
@@ -163,3 +166,4 @@
 
 
 {{-- <x-backpack::menu-item :title="trans('backpack::crud.file_manager')" icon="la la-files-o" /> --}}
+
