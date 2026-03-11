@@ -1124,9 +1124,9 @@ class StudentOperation extends Controller
             $assessment->save();
         }
 
-        $timeoutMinutes = config('ASSESSMENT_LEVEL_TIMEOUT_MINUTES', 15);
+        $timeoutSeconds = config('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 900);
         $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
-        $timeRemainingSeconds = ($timeoutMinutes * 60) - $timeElapsedSeconds;
+        $timeRemainingSeconds = $timeoutSeconds - $timeElapsedSeconds;
 
         if ($timeRemainingSeconds <= 0) {
             $assessment->completed = true;
@@ -1221,9 +1221,9 @@ class StudentOperation extends Controller
             $assessment->save();
         }
 
-        $timeoutMinutes = config('ASSESSMENT_LEVEL_TIMEOUT_MINUTES', 15);
+        $timeoutSeconds = config('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 900);
         $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
-        $timeRemainingSeconds = ($timeoutMinutes * 60) - $timeElapsedSeconds;
+        $timeRemainingSeconds = $timeoutSeconds - $timeElapsedSeconds;
 
         if ($timeRemainingSeconds <= 0) {
             $assessment->completed = true;
