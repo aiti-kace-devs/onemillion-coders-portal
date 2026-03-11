@@ -117,6 +117,10 @@ class AppConfigSeeder extends Seeder
                 ['key' => 'OTP_MAX_REQUESTS', 'value' => 3, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
                 ['key' => 'OTP_REQUEST_WINDOW', 'value' => 600, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
                 ['key' => 'OTP_MAX_ATTEMPTS', 'value' => 5, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+
+                // Tiered Assessment parameters
+                ['key' => ASSESSMENT_MAX_QUESTIONS, 'value' => 10, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => ASSESSMENT_PASSING_SCORE, 'value' => 8, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
             ]);
         } catch (\Exception $e) {
             echo $e->getMessage();

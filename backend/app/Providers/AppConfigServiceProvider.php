@@ -34,6 +34,10 @@ class AppConfigServiceProvider extends ServiceProvider
         defined('OTP_MAX_REQUESTS') or define('OTP_MAX_REQUESTS', 'OTP_MAX_REQUESTS');
         defined('OTP_REQUEST_WINDOW') or define('OTP_REQUEST_WINDOW', 'OTP_REQUEST_WINDOW');
         defined('OTP_MAX_ATTEMPTS') or define('OTP_MAX_ATTEMPTS', 'OTP_MAX_ATTEMPTS');
+
+        // Tiered Assessment settings
+        defined('ASSESSMENT_MAX_QUESTIONS') or define('ASSESSMENT_MAX_QUESTIONS', 'ASSESSMENT_MAX_QUESTIONS');
+        defined('ASSESSMENT_PASSING_SCORE') or define('ASSESSMENT_PASSING_SCORE', 'ASSESSMENT_PASSING_SCORE');
     }
 
     /**

@@ -34,7 +34,6 @@ class User extends Authenticatable
         'status',
         'mobile_no',
         'age',
-        'age',
         'password',
         'userId',
         'card_type',
@@ -42,7 +41,8 @@ class User extends Authenticatable
         'gender',
         'network_type',
         'registered_course',
-        'shortlist'
+        'shortlist',
+        'student_level',
     ];
 
     /**
@@ -212,7 +212,7 @@ class User extends Authenticatable
         if (now()->isAfter($exam->exam_date)) {
             return [
                 'status' => false,
-                'message' =>  "Unable to take exam. Exam deadline was  {$exam->exam_date->format(config('app.fulldate_format'))}",
+                'message' => "Unable to take exam. Exam deadline was  {$exam->exam_date->format(config('app.fulldate_format'))}",
             ];
         }
 

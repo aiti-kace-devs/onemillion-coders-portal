@@ -29,7 +29,7 @@ use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-
+use App\Models\UserAssessment;
 
 class StudentOperation extends Controller
 {
@@ -263,7 +263,7 @@ class StudentOperation extends Controller
 
         $data = ['status' => 'true', 'message' => 'started successfully'];
         $data['questions'] = $questions;
-
+        // user answers 10 beginner questions. When the user answers a question and is moving on to the next, it should submit the answer provided by the user and mark while fetching the next question so we can keep track of the student's scores. User should score 80% or more of the questions, if user does not score 80% or more, skip the rest of the beginner questions and submit and then determine the level of the student by  creating  a level for the student in the users table. If the student score more than 80% then the student is eligible for the next level so you have to display the intermediate questions which also will have a maximum of 10 questions and the flow should follow suit and then do same for the advanced as well which will also have a maximum of 10 questions.
         return response()->json($data);
     }
 
@@ -1056,6 +1056,188 @@ class StudentOperation extends Controller
 
         return Inertia::render('Student/Results', [
             'results' => $results,
+        ]);
+    }
+
+    public function fetch_assessment_question(Request $request)
+    {
+        $user = $request->user('sanctum');
+
+        if (!$user && $request->has('user_id')) {
+            $user = User::find($request->user_id);
+        }
+
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized or missing user_id.'], 401);
+        }
+
+        $assessment = UserAssessment::firstOrCreate(
+            ['user_id' => $user->id, 'completed' => false],
+            [
+                'current_level' => 'beginner',
+                'questions_answered' => 0,
+                'correct_answers' => 0,
+                'wrong_answers' => 0,
+                'answered_question_ids' => []
+            ]
+        );
+
+        if ($assessment->completed) {
+            return response()->json([
+                'status' => 'completed',
+                'message' => 'Assessment already completed.',
+                'user_level' => $user->student_level
+            ]);
+        }
+
+        $level = $assessment->current_level;
+        $answeredIds = $assessment->answered_question_ids ?? [];
+
+        $question = OexQuestionMaster::whereHas('tags', function ($query) use ($level) {
+            $query->where('name', 'LIKE', $level);
+        })
+            ->whereNotIn('id', $answeredIds)
+            ->inRandomOrder()
+            ->first();
+
+        if (!$question) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "No more $level questions available."
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'question' => [
+                'id' => $question->id,
+                'question' => $question->questions,
+                'options' => $question->options,
+                'level' => $level,
+                'progress' => $assessment->questions_answered + 1,
+                'total_level_questions' => config(ASSESSMENT_MAX_QUESTIONS, 10)
+            ]
+        ]);
+    }
+
+    public function submit_assessment_answer(Request $request)
+    {
+        $user = $request->user('sanctum');
+
+        if (!$user && $request->has('user_id')) {
+            $user = User::find($request->user_id);
+        }
+
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized or missing user_id.'], 401);
+        }
+
+        $request->validate([
+            'question_id' => 'required|exists:oex_question_masters,id',
+            'answer' => 'required|string',
+            'user_id' => 'sometimes|exists:users,id'
+        ]);
+
+        $assessment = UserAssessment::where('user_id', $user->id)
+            ->where('completed', false)
+            ->first();
+
+        if (!$assessment) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No active assessment found.'
+            ], 404);
+        }
+
+        $question = OexQuestionMaster::find($request->question_id);
+
+        $answeredIds = $assessment->answered_question_ids ?? [];
+        if (in_array($question->id, $answeredIds)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Question already answered.'
+            ], 400);
+        }
+
+        $answeredIds[] = $question->id;
+        $assessment->answered_question_ids = $answeredIds;
+        $assessment->questions_answered += 1;
+
+        $isCorrect = ($question->ans === $request->answer);
+
+        if ($isCorrect) {
+            $assessment->correct_answers += 1;
+        } else {
+            $assessment->wrong_answers += 1;
+        }
+
+        $maxQuestions = config(ASSESSMENT_MAX_QUESTIONS, 10);
+        $passingScore = config(ASSESSMENT_PASSING_SCORE, 8);
+
+        $questionsLeft = $maxQuestions - $assessment->questions_answered;
+        $maxPossibleScore = $assessment->correct_answers + $questionsLeft;
+
+        $levelComplete = false;
+        $passedLevel = false;
+
+        if ($assessment->correct_answers >= $passingScore) {
+            $levelComplete = true;
+            $passedLevel = true;
+        } elseif ($maxPossibleScore < $passingScore) {
+            $levelComplete = true;
+            $passedLevel = false;
+        } elseif ($assessment->questions_answered >= $maxQuestions) {
+            $levelComplete = true;
+            $passedLevel = false;
+        }
+
+        if ($levelComplete) {
+            if ($passedLevel) {
+                if ($assessment->current_level === 'beginner') {
+                    $user->student_level = 'beginner';
+                    $user->save();
+
+                    $assessment->current_level = 'intermediate';
+                    $assessment->questions_answered = 0;
+                    $assessment->correct_answers = 0;
+                    $assessment->wrong_answers = 0;
+                } elseif ($assessment->current_level === 'intermediate') {
+                    $user->student_level = 'intermediate';
+                    $user->save();
+
+                    $assessment->current_level = 'advanced';
+                    $assessment->questions_answered = 0;
+                    $assessment->correct_answers = 0;
+                    $assessment->wrong_answers = 0;
+                } elseif ($assessment->current_level === 'advanced') {
+                    $user->student_level = 'advanced';
+                    $user->save();
+                    $assessment->completed = true;
+                }
+            } else {
+                if ($assessment->current_level === 'beginner') {
+                    $user->student_level = 'beginner';
+                } elseif ($assessment->current_level === 'intermediate') {
+                    $user->student_level = 'beginner';
+                } elseif ($assessment->current_level === 'advanced') {
+                    $user->student_level = 'intermediate';
+                }
+                $user->save();
+                $assessment->completed = true;
+            }
+        }
+
+        $assessment->save();
+
+        return response()->json([
+            'status' => 'success',
+            'is_correct' => $isCorrect,
+            'level_complete' => $levelComplete,
+            'passed_level' => $passedLevel,
+            'assessment_completed' => $assessment->completed,
+            'current_level' => $assessment->current_level,
+            'user_overall_level' => $user->student_level,
+            'correct_answer' => $question->ans
         ]);
     }
 }
