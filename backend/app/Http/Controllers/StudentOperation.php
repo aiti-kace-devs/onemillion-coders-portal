@@ -263,7 +263,6 @@ class StudentOperation extends Controller
 
         $data = ['status' => 'true', 'message' => 'started successfully'];
         $data['questions'] = $questions;
-        // user answers 10 beginner questions. When the user answers a question and is moving on to the next, it should submit the answer provided by the user and mark while fetching the next question so we can keep track of the student's scores. User should score 80% or more of the questions, if user does not score 80% or more, skip the rest of the beginner questions and submit and then determine the level of the student by  creating  a level for the student in the users table. If the student score more than 80% then the student is eligible for the next level so you have to display the intermediate questions which also will have a maximum of 10 questions and the flow should follow suit and then do same for the advanced as well which will also have a maximum of 10 questions.
         return response()->json($data);
     }
 
@@ -1064,7 +1063,7 @@ class StudentOperation extends Controller
         $user = $request->user('sanctum');
 
         if (!$user && $request->has('user_id')) {
-            $user = User::find($request->user_id);
+            $user = User::where('userId', $request->user_id)->first();
         }
 
         if (!$user) {
@@ -1082,6 +1081,36 @@ class StudentOperation extends Controller
             ]
         );
 
+        if (is_null($assessment->level_started_at)) {
+            $assessment->level_started_at = now();
+            $assessment->save();
+        }
+
+        $timeoutMinutes = config('ASSESSMENT_LEVEL_TIMEOUT_MINUTES', 15);
+        $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
+        $timeRemainingSeconds = ($timeoutMinutes * 60) - $timeElapsedSeconds;
+
+        if ($timeRemainingSeconds <= 0) {
+            $assessment->completed = true;
+            $assessment->save();
+
+            if ($assessment->current_level === 'beginner') {
+                $user->student_level = 'beginner';
+            } elseif ($assessment->current_level === 'intermediate') {
+                $user->student_level = 'beginner';
+            } elseif ($assessment->current_level === 'advanced') {
+                $user->student_level = 'intermediate';
+            }
+            $user->save();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Time limit exceeded! You have failed this level.',
+                'level_complete' => true,
+                'passed_level' => false,
+                'user_overall_level' => $user->student_level
+            ], 403);
+        }
         if ($assessment->completed) {
             return response()->json([
                 'status' => 'completed',
@@ -1106,7 +1135,6 @@ class StudentOperation extends Controller
                 'message' => "No more $level questions available."
             ], 404);
         }
-
         return response()->json([
             'status' => 'success',
             'question' => [
@@ -1115,7 +1143,8 @@ class StudentOperation extends Controller
                 'options' => $question->options,
                 'level' => $level,
                 'progress' => $assessment->questions_answered + 1,
-                'total_level_questions' => config(ASSESSMENT_MAX_QUESTIONS, 10)
+                'total_level_questions' => config(ASSESSMENT_MAX_QUESTIONS, 10),
+                'time_remaining_seconds' => $timeRemainingSeconds
             ]
         ]);
     }
@@ -1125,7 +1154,7 @@ class StudentOperation extends Controller
         $user = $request->user('sanctum');
 
         if (!$user && $request->has('user_id')) {
-            $user = User::find($request->user_id);
+            $user = User::where('userId', $request->user_id)->first();
         }
 
         if (!$user) {
@@ -1135,7 +1164,7 @@ class StudentOperation extends Controller
         $request->validate([
             'question_id' => 'required|exists:oex_question_masters,id',
             'answer' => 'required|string',
-            'user_id' => 'sometimes|exists:users,id'
+            'user_id' => 'sometimes|exists:users,userId'
         ]);
 
         $assessment = UserAssessment::where('user_id', $user->id)
@@ -1147,6 +1176,37 @@ class StudentOperation extends Controller
                 'status' => 'error',
                 'message' => 'No active assessment found.'
             ], 404);
+        }
+
+        if (is_null($assessment->level_started_at)) {
+            $assessment->level_started_at = now();
+            $assessment->save();
+        }
+
+        $timeoutMinutes = config('ASSESSMENT_LEVEL_TIMEOUT_MINUTES', 15);
+        $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
+        $timeRemainingSeconds = ($timeoutMinutes * 60) - $timeElapsedSeconds;
+
+        if ($timeRemainingSeconds <= 0) {
+            $assessment->completed = true;
+            $assessment->save();
+
+            if ($assessment->current_level === 'beginner') {
+                $user->student_level = 'beginner';
+            } elseif ($assessment->current_level === 'intermediate') {
+                $user->student_level = 'beginner';
+            } elseif ($assessment->current_level === 'advanced') {
+                $user->student_level = 'intermediate';
+            }
+            $user->save();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Time limit exceeded! You have failed this level.',
+                'level_complete' => true,
+                'passed_level' => false,
+                'user_overall_level' => $user->student_level
+            ], 403);
         }
 
         $question = OexQuestionMaster::find($request->question_id);
@@ -1198,6 +1258,7 @@ class StudentOperation extends Controller
                     $user->save();
 
                     $assessment->current_level = 'intermediate';
+                    $assessment->level_started_at = null;
                     $assessment->questions_answered = 0;
                     $assessment->correct_answers = 0;
                     $assessment->wrong_answers = 0;
@@ -1206,6 +1267,7 @@ class StudentOperation extends Controller
                     $user->save();
 
                     $assessment->current_level = 'advanced';
+                    $assessment->level_started_at = null;
                     $assessment->questions_answered = 0;
                     $assessment->correct_answers = 0;
                     $assessment->wrong_answers = 0;

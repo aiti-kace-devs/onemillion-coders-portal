@@ -18,6 +18,7 @@ return new class extends Migration {
             $table->integer('correct_answers')->default(0);
             $table->integer('wrong_answers')->default(0);
             $table->json('answered_question_ids')->nullable();
+            $table->timestamp('level_started_at')->nullable();
             $table->boolean('completed')->default(false);
             $table->timestamps();
         });

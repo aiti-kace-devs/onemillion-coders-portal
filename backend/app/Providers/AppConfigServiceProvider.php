@@ -38,6 +38,7 @@ class AppConfigServiceProvider extends ServiceProvider
         // Tiered Assessment settings
         defined('ASSESSMENT_MAX_QUESTIONS') or define('ASSESSMENT_MAX_QUESTIONS', 'ASSESSMENT_MAX_QUESTIONS');
         defined('ASSESSMENT_PASSING_SCORE') or define('ASSESSMENT_PASSING_SCORE', 'ASSESSMENT_PASSING_SCORE');
+        defined('ASSESSMENT_LEVEL_TIMEOUT_MINUTES') or define('ASSESSMENT_LEVEL_TIMEOUT_MINUTES', 'ASSESSMENT_LEVEL_TIMEOUT_MINUTES');
     }
 
     /**
