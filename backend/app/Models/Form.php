@@ -39,16 +39,54 @@ class Form extends Model
             }
 
             if ($model->isDirty('schema')) {
-                $model->schema = array_map(function ($schema) {
-                    $schema['field_name'] = Str::slug(strtolower($schema['title']));
-                    
+                $originalSchema = $model->getOriginal('schema');
+                if (is_string($originalSchema)) {
+                    $originalSchema = json_decode($originalSchema, true) ?: [];
+                }
+                if (!is_array($originalSchema)) {
+                    $originalSchema = [];
+                }
+
+                $originalValidatorsByField = [];
+                foreach ($originalSchema as $originalField) {
+                    $originalFieldName = $originalField['field_name']
+                        ?? (isset($originalField['title']) ? Str::slug(strtolower($originalField['title']), '_') : null);
+                    if ($originalFieldName && isset($originalField['validators']) && is_array($originalField['validators'])) {
+                        $originalValidatorsByField[$originalFieldName] = $originalField['validators'];
+                    }
+                }
+
+                $model->schema = array_map(function ($schema) use ($originalValidatorsByField) {
+                    $fieldName = $schema['field_name'] ?? Str::slug(strtolower($schema['title']), '_');
+                    $schema['field_name'] = $fieldName;
+
+                    if (!isset($schema['validators']) || !is_array($schema['validators'])) {
+                        $inlineRequired = $schema['validators.required'] ?? null;
+                        $inlineUnique = $schema['validators.unique'] ?? null;
+
+                        if ($inlineRequired !== null || $inlineUnique !== null) {
+                            $schema['validators'] = [
+                                'required' => filter_var($inlineRequired, FILTER_VALIDATE_BOOLEAN),
+                                'unique' => filter_var($inlineUnique, FILTER_VALIDATE_BOOLEAN),
+                            ];
+                        } elseif (isset($originalValidatorsByField[$fieldName])) {
+                            $schema['validators'] = $originalValidatorsByField[$fieldName];
+                        }
+
+                        unset($schema['validators.required'], $schema['validators.unique']);
+                    }
+
                     if (isset($schema['validators']) && is_array($schema['validators'])) {
                         $schema['validators'] = array_map(
                             fn($value) => filter_var($value, FILTER_VALIDATE_BOOLEAN),
                             $schema['validators']
                         );
+                        $schema['validators'] += [
+                            'required' => false,
+                            'unique' => false,
+                        ];
                     }
-                    
+
                     return $schema;
                 }, $model->schema);
             }

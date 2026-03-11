@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Centre;
 use App\Models\CourseMatch;
 use App\Models\CourseCategory;
 use App\Models\Branch;
@@ -11,7 +12,6 @@ use App\Models\Programme;
 use App\Models\Course;
 use App\Models\Batch;
 use App\Models\CourseBatch;
-use App\Models\Centre;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -82,7 +82,7 @@ class CourseMatchAPIController extends Controller
 
 
 
-        public function recommend(Request $request)
+    public function recommend(Request $request)
         {
             $data = $request->validate([
                 'option_ids' => 'required|array',
@@ -185,7 +185,7 @@ class CourseMatchAPIController extends Controller
                         'has_access_ramp' => $centre->has_access_ramp,
                         'has_accessible_toilet' => $centre->has_accessible_toilet,
                         'has_elevator' => $centre->has_elevator,
-                        'branch' => $centre->branch ? [
+                        'region' => $centre->branch ? [
                             'title' => $centre->branch->title,
                         ] : null,
                     ] : null,
@@ -202,7 +202,7 @@ class CourseMatchAPIController extends Controller
         }
         
 
-
+    
 
 
 
