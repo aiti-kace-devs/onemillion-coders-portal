@@ -131,6 +131,9 @@
     $correctAnswers = $latestResult ? $latestResult->yes_ans : 0;
     $wrongAnswers = $latestResult ? $latestResult->no_ans : 0;
     $totalAnswers = $correctAnswers + $wrongAnswers;
+
+    $currentAdmin = backpack_user();
+    $isSuperAdmin = $currentAdmin && method_exists($currentAdmin, 'isSuper') && $currentAdmin->isSuper();
 @endphp
 
 @section('content')
@@ -275,23 +278,25 @@
                         @endif
                     </table>
                     
+                    @if($isSuperAdmin)
                         @if (!$hasAnyAdmission)
-    <button type="button" class="btn btn-sm btn-primary" onclick="if (window.openAdmitStudentModal) window.openAdmitStudentModal({ change: false })">
-        <i class="la la-user-plus"></i> Admit
-    </button>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="if (window.openAdmitStudentModal) window.openAdmitStudentModal({ change: false })">
+                                <i class="la la-user-plus"></i> Admit
+                            </button>
                         @else
-    <div class="btn-group" role="group">
-        <button type="button" class="btn btn-sm btn-outline-primary" onclick="if (window.openAdmitStudentModal) window.openAdmitStudentModal({ change: true })">
-            <i class="la la-user-edit"></i> Change Admission
-        </button>
-        <button type="button" class="btn btn-sm btn-outline-success" onclick="if (window.openChooseSessionModal) window.openChooseSessionModal()">
-            <i class="la la-calendar"></i> Change Session
-        </button>
-        <button type="button" class="btn btn-sm btn-outline-danger" onclick="if (window.deleteStudentAdmission) window.deleteStudentAdmission()">
-            <i class="la la-trash"></i> Delete Admission
-        </button>
-    </div>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="if (window.openAdmitStudentModal) window.openAdmitStudentModal({ change: true })">
+                                    <i class="la la-user-edit"></i> Change Admission
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick="if (window.openChooseSessionModal) window.openChooseSessionModal()">
+                                    <i class="la la-calendar"></i> Change Session
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="if (window.deleteStudentAdmission) window.deleteStudentAdmission()">
+                                    <i class="la la-trash"></i> Delete Admission
+                                </button>
+                            </div>
                         @endif
+                    @endif
                 </div>
             </div>
         </div>
@@ -353,10 +358,10 @@
                     
                     @if($hasExamResults)
                         <div class="d-flex gap-2 flex-wrap">
-                            <a href="{{ url('admin/admin_view_result/' . $userId) }}" class="btn btn-sm btn-outline-info" target="_blank">
+                            <a href="{{ url('admin/admin_view_result/' . $userId) }}" class="btn btn-sm btn-outline-info js-view-result-modal" data-url="{{ url('admin/admin_view_result/' . $userId) }}">
                                 <i class="la la-poll"></i> View Results
                             </a>
-                            @if($examId)
+                            @if($examId && $isSuperAdmin)
                                 <a href="{{ route('results.reset', [$examId, $userId]) }}" class="btn btn-sm btn-outline-warning js-reset-results">
                                     <i class="la la-redo"></i> Reset Results
                                 </a>
@@ -562,7 +567,7 @@
                                         <td>{{ $result->created_at ? $result->created_at->format('Y-m-d') : 'N/A' }}</td>
                                         <td>
                                             @if($result->exam)
-                                                <a href="{{ url('admin/admin_view_result/' . $userId) }}" class="btn btn-sm btn-outline-primary">
+                                                <a href="{{ url('admin/admin_view_result/' . $userId) }}" class="btn btn-sm btn-outline-primary js-view-result-modal" data-url="{{ url('admin/admin_view_result/' . $userId) }}">
                                                     <i class="la la-eye"></i> View
                                                 </a>
                                             @endif
@@ -764,6 +769,13 @@
                     }
                 }
 
+                function openExamResultModal(url) {
+                    if (!url) return;
+                    const frame = document.getElementById('examResultFrame');
+                    if (frame) frame.setAttribute('src', url);
+                    showModal('examResultModal');
+                }
+
                 function filterSessionsByCourse(selectEl, courseId) {
                     if (!selectEl) return;
                     const course = String(courseId || '');
@@ -836,21 +848,33 @@
 
                 // Ensure we always cleanup any stuck backdrop (works for both BS4/jQuery and BS5/native)
                 (function bindModalCleanup() {
-                    const ids = ['admitModal', 'chooseSessionModal'];
+                    const ids = ['admitModal', 'chooseSessionModal', 'examResultModal'];
                     ids.forEach((id) => {
                         const el = document.getElementById(id);
                         if (!el || el.__cleanupBound) return;
                         el.__cleanupBound = true;
 
                         try {
-                            el.addEventListener('hidden.bs.modal', cleanupModalBackdrops);
+                            el.addEventListener('hidden.bs.modal', function () {
+                                if (id === 'examResultModal') {
+                                    const frame = document.getElementById('examResultFrame');
+                                    if (frame) frame.setAttribute('src', 'about:blank');
+                                }
+                                cleanupModalBackdrops();
+                            });
                         } catch (e) {
                             // ignore
                         }
 
                         const jq = window.jQuery;
                         if (jq && jq.fn && typeof jq.fn.on === 'function') {
-                            jq(el).on('hidden.bs.modal', cleanupModalBackdrops);
+                            jq(el).on('hidden.bs.modal', function () {
+                                if (id === 'examResultModal') {
+                                    const frame = document.getElementById('examResultFrame');
+                                    if (frame) frame.setAttribute('src', 'about:blank');
+                                }
+                                cleanupModalBackdrops();
+                            });
                         }
                     });
                 })();
@@ -952,6 +976,15 @@
                 };
 
                 document.addEventListener('DOMContentLoaded', function () {
+                    // Open exam result in modal (works for static rows and future dynamic buttons).
+                    document.addEventListener('click', function (e) {
+                        const trigger = e.target.closest('.js-view-result-modal');
+                        if (!trigger) return;
+                        e.preventDefault();
+                        const url = trigger.getAttribute('data-url') || trigger.getAttribute('href');
+                        openExamResultModal(url);
+                    });
+
                     // Datatables
                     safeInitDataTable('#dtAttendanceHistory', { order: [[0, 'desc']] });
                     safeInitDataTable('#dtExamResults', { order: [[3, 'desc']] });
@@ -978,7 +1011,7 @@
 
                     const jq = window.jQuery;
                     if (jq && jq.fn && jq.fn.modal) {
-                        jq('#admitModal, #chooseSessionModal').on('hidden.bs.modal', cleanupModalBackdrops);
+                        jq('#admitModal, #chooseSessionModal, #examResultModal').on('hidden.bs.modal', cleanupModalBackdrops);
                     }
 
                     // Admit modal: filter sessions by selected course
@@ -1325,6 +1358,22 @@
                             <button class="btn btn-success flex-grow-1" type="submit" @if(empty($sessions ?? null)) disabled @endif>Save Session</button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="examResultModal" tabindex="-1" aria-labelledby="examResultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header d-flex align-items-center">
+                    <h5 class="modal-title" id="examResultModalLabel">Exam Result</h5>
+                    <button type="button" class="close ms-auto ml-auto" style="margin-left:auto" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-0">
+                    <iframe id="examResultFrame" src="about:blank" style="width:100%;height:75vh;border:0;" loading="lazy"></iframe>
                 </div>
             </div>
         </div>

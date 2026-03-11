@@ -302,6 +302,8 @@ class CourseBatchCrudController extends CrudController
     public function admittedStudentsData($id, Request $request)
     {
         Course::findOrFail($id);
+        $currentAdmin = backpack_user();
+        $isSuperAdmin = $currentAdmin && method_exists($currentAdmin, 'isSuper') && $currentAdmin->isSuper();
 
         $draw = (int) $request->input('draw', 0);
         $start = max(0, (int) $request->input('start', 0));
@@ -436,7 +438,8 @@ class CourseBatchCrudController extends CrudController
                     . '<i class="la la-chart-bar"></i> View Metrics</a>';
             }
             if ($hasExam && $userInternalId) {
-                $actions[] = '<a href="' . e(url('admin/admin_view_result/' . $userInternalId)) . '" class="btn btn-sm btn-outline-primary" target="_blank">'
+                $resultUrl = e(url('admin/admin_view_result/' . $userInternalId));
+                $actions[] = '<a href="' . $resultUrl . '" data-url="' . $resultUrl . '" class="btn btn-sm btn-outline-primary js-view-result-modal">'
                     . '<i class="la la-eye"></i> View Results</a>';
             }
             $actionsHtml = !empty($actions) ? implode(' ', $actions) : '-';

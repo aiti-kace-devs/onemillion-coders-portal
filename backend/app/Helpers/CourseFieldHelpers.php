@@ -69,21 +69,21 @@ trait CourseFieldHelpers
 
 
 
-        CRUD::addField([
-            'name' => 'centre_id',
-            'label' => 'Centre',
-            'type' => 'select2_from_ajax',
-            'attribute' => 'title',
-            'data_source' => backpack_url('api/centre-by-branch'),
-            'dependencies' => ['branch_id'],
-            'method' => 'GET',
-            'include_all_form_fields' => true,
-            'placeholder' => 'Select a branch first',
-            'minimum_input_length' => 0,
-            'wrapper' => ['class' => 'form-group col-6'],
-            'model' => Centre::class,
-            'value' => optional($this->crud->getCurrentEntry())->centre_id ?? null,
-        ]);
+CRUD::addField([
+    'name' => 'centre_id',
+    'label' => 'Centre',
+    'type' => 'select2_from_ajax',
+    'attribute' => 'title',
+    'data_source' => backpack_url('api/centre-by-branch'),
+    'dependencies' => ['branch_id'],
+    'method' => 'GET',
+    'include_all_form_fields' => true,
+    'placeholder' => 'Select a branch first',
+    'minimum_input_length' => 0,
+    'wrapper' => ['class' => 'form-group col-6'],
+    'model' => Centre::class,
+    'value' => optional($this->crud->getCurrentEntry())->centre_id ?? null,
+]);
 
 
 

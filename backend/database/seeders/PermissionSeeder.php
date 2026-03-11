@@ -42,6 +42,7 @@ class PermissionSeeder extends Seeder
             'category',
             'manage-exam',
             'qr-scanner',
+            'manage-student',
             'student',
             'email-template',
             'sms-template',
@@ -153,7 +154,7 @@ class PermissionSeeder extends Seeder
         // ATTENDANCE OFFICER ROLE
         $attendanceOfficerRole = Role::findByName('attendance-officer', 'admin');
         $attendanceOfficerPermissions = $this->findResourcePermissions(
-            ['attendance', 'qr-scanner', 'student-verification'],
+            ['attendance', 'qr-scanner', 'student-verification', 'student', 'course'],
             ['create', 'read', 'update'],
             ['all', 'self'],
             ['attendance' => ['present', 'absent', 'late'], 'qr-scanner' => ['scan', 'generate'], 'student-verification' => ['verify']]
@@ -183,7 +184,7 @@ class PermissionSeeder extends Seeder
         // STUDENT MANAGER ROLE
         $studentManagerRole = Role::findByName('student-manager', 'admin');
         $studentManagerPermissions = $this->findResourcePermissions(
-            ['student', 'user-admission', 'form'],
+            ['student', 'user-admission', 'form', 'manage-student'],
             ['create', 'read', 'update', 'delete'],
             ['all', 'self'],
             ['student' => ['shortlist', 'verify'], 'user-admission' => ['pending', 'approved', 'rejected', 'shortlisted']]

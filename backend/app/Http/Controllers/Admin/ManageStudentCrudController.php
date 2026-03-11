@@ -67,13 +67,9 @@ class ManageStudentCrudController extends CrudController
         // $this->crud->denyAccess('update');
         // $this->crud->denyAccess('delete');
 
-        // Add permission checks
+        // Apply course visibility scope on list/show for non-super admins.
         $this->crud->operation(['list', 'show'], function () {
-            $this->crud->addClause('where', function ($query) {
-                if (!backpack_user()->can('student.read.all')) {
-                    // Add any specific filtering logic here if needed
-                }
-            });
+            $this->applyCurrentAdminUserCourseScope();
         });
     }
 
@@ -87,7 +83,7 @@ class ManageStudentCrudController extends CrudController
     {
 
         WidgetHelper::userStatisticsWidget();
-        if (!backpack_user()->can('student.read.all')) {
+        if (!backpack_user()->can('student.update.all')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -95,6 +91,7 @@ class ManageStudentCrudController extends CrudController
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/manage-student');
         $this->crud->setEntityNameStrings('manage student', 'manage students');
         $this->setupFilter();
+        $this->applyCurrentAdminUserCourseScope();
 
         $this->crud->query->select([
             'id',
@@ -137,6 +134,8 @@ class ManageStudentCrudController extends CrudController
         $this->crud->setShowView('vendor.backpack.crud.manage_student_show');
 
         CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
+
+        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
         
         $coursesQuery = Course::query()
             ->with('centre')
@@ -146,12 +145,33 @@ class ManageStudentCrudController extends CrudController
             })
             ->orderBy('course_name');
 
+        if (is_array($visibleCourseIds)) {
+            if (empty($visibleCourseIds)) {
+                $courses = collect();
+                $sessions = collect();
+
+                View::share([
+                    'courses' => $courses,
+                    'sessions' => $sessions,
+                ]);
+
+                return;
+            }
+
+            $coursesQuery->whereIn('id', $visibleCourseIds);
+        }
+
         $courses = $coursesQuery
             ->get()
             ->mapWithKeys(fn (Course $course) => [$course->id => $course->display_name]);
 
-        $sessions = CourseSession::all();
-        \Illuminate\Support\Facades\View::share([
+        $sessionsQuery = CourseSession::query();
+        if (is_array($visibleCourseIds)) {
+            $sessionsQuery->whereIn('course_id', $visibleCourseIds);
+        }
+        $sessions = $sessionsQuery->get();
+
+        View::share([
             'courses' => $courses,
             'sessions' => $sessions,
         ]);
@@ -319,7 +339,7 @@ class ManageStudentCrudController extends CrudController
     public function setupFilter()
     {
         // $this->addStudentBatchFilter('Batch Filter');
-        $this->courseFilter('registered_course');
+        $this->addCurrentAdminCourseFilter('registered_course');
         $this->addConfirmedAdmissionFilter();
         $this->addRegionFilter();
         // $this->addDistrictFilter();
@@ -502,13 +522,23 @@ class ManageStudentCrudController extends CrudController
      */
     public function getCoursesAjax()
     {
-        $courses = Course::query()
+        $coursesQuery = Course::query()
             ->with('centre')
             ->whereHas('batch', function ($query) {
                 $query->where('completed', false)
                     ->where('status', true);
             })
-            ->orderBy('course_name')
+            ->orderBy('course_name');
+
+        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+        if (is_array($visibleCourseIds)) {
+            if (empty($visibleCourseIds)) {
+                return response()->json([]);
+            }
+            $coursesQuery->whereIn('id', $visibleCourseIds);
+        }
+
+        $courses = $coursesQuery
             ->get()
             ->map(fn (Course $course) => [
                 'id' => $course->id,
@@ -526,6 +556,12 @@ class ManageStudentCrudController extends CrudController
     public function getSessionsAjax(Request $request)
     {
         $courseId = $request->input('course_id');
+
+        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+        if (is_array($visibleCourseIds) && ! in_array((int) $courseId, $visibleCourseIds, true)) {
+            return response()->json([]);
+        }
+
         $sessions = CourseSession::where('course_id', $courseId)
             ->select('id', 'name', 'course_id')
             ->get();
