@@ -64,8 +64,9 @@ Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
 
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
 Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
-Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
+Route::get('/api/programmes-with-course-match', action: [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
 Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+Route::get('/api/programmes-with-batches', [CourseProgrammeController::class, 'programmeWithBatch']);
 Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
 Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
 
@@ -76,6 +77,8 @@ Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
 Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
 Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
 Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
+Route::get('/api/districts-by-branch', [CourseProgrammeController::class, 'districtsByBranch']);
+Route::get('/api/centres-by-district', [CourseProgrammeController::class, 'centresByDistrict']);
 
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');

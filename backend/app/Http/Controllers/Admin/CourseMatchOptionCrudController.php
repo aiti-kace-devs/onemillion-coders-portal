@@ -49,7 +49,12 @@ class CourseMatchOptionCrudController extends CrudController
         CRUD::column('answer');
         CRUD::column('description');
         FilterHelper::addGenericRelationshipColumn('courseMatch', 'Course Match', 'courseMatch', 'question');
-        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created Date');
     }
@@ -75,5 +80,24 @@ class CourseMatchOptionCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    public function toggleStatus(\Illuminate\Http\Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $courseMatchOption = \App\Models\CourseMatchOption::findOrFail($id);
+        $courseMatchOption->status = (bool) $data['value'];
+        $courseMatchOption->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Course match option status updated successfully.',
+            'value' => $courseMatchOption->status ? 1 : 0,
+        ]);
     }
 }

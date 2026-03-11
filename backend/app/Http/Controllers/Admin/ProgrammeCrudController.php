@@ -58,7 +58,12 @@ class ProgrammeCrudController extends CrudController
         CRUD::column('duration');
         CRUD::column('start_date');
         CRUD::column('end_date');
-        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
         FilterHelper::addDateRangeFilter('start_date', 'Start Date');
         $this->addOngoingCoursesFilter('Ongoing Programmes');
         FilterHelper::addBooleanFilter('status', 'Status');
@@ -96,6 +101,25 @@ class ProgrammeCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    public function toggleStatus(\Illuminate\Http\Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $programme = \App\Models\Programme::findOrFail($id);
+        $programme->status = (bool) $data['value'];
+        $programme->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Programme status updated successfully.',
+            'value' => $programme->status ? 1 : 0,
+        ]);
     }
 
 

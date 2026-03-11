@@ -10,8 +10,11 @@ use App\Models\Branch;
 use App\Models\UserAdmission;
 use App\Models\Programme;
 use App\Models\Course;
+use App\Models\Batch;
+use App\Models\CourseBatch;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class CourseMatchAPIController extends Controller
 {
@@ -27,6 +30,7 @@ class CourseMatchAPIController extends Controller
             'data' => $courseMatch
         ]);
     }
+
 
 
 
@@ -76,7 +80,9 @@ class CourseMatchAPIController extends Controller
 
 
 
-            public function recommend(Request $request)
+
+
+    public function recommend(Request $request)
         {
             $data = $request->validate([
                 'option_ids' => 'required|array',
@@ -151,6 +157,7 @@ class CourseMatchAPIController extends Controller
                 ->get()
                 ->keyBy('id');
             
+            // Format response with ranking number and each programme's own centre
             $result = $top->map(function ($programme, $index) use ($topCourses, $centresMap) {
                 // Get the centre ID for this programme from its courses
                 $programmeCourses = $topCourses->where('programme_id', $programme->id);
@@ -178,7 +185,7 @@ class CourseMatchAPIController extends Controller
                         'has_access_ramp' => $centre->has_access_ramp,
                         'has_accessible_toilet' => $centre->has_accessible_toilet,
                         'has_elevator' => $centre->has_elevator,
-                        'branch' => $centre->branch ? [
+                        'region' => $centre->branch ? [
                             'title' => $centre->branch->title,
                         ] : null,
                     ] : null,
@@ -197,38 +204,40 @@ class CourseMatchAPIController extends Controller
 
 
 
+
+
     // public function recommend(Request $request)
     // {
     //     $data = $request->validate([
     //         'option_ids' => 'required|array',
     //         'option_ids.*' => 'integer|exists:course_match_options,id',
     //     ]);
-    
+        
     //     $optionIds = $data['option_ids'];
     //     $totalOptions = count($optionIds);
-    
+        
     //     // Get Programmes with ONLY needed columns + tags relationship
     //     $programmes = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'image', 'prerequisites')
     //         ->with('tags')
     //         ->get();
-    
+        
     //     // Score each programme by matching option IDs
     //     $scored = $programmes->map(function ($programme) use ($optionIds, $totalOptions) {
     //         $programmeOptionIds = $programme->tags->pluck('id')->toArray();
     //         $matches = count(array_intersect($optionIds, $programmeOptionIds));
     //         $percentage = $totalOptions > 0 ? round(($matches / $totalOptions) * 100) : 0;
-    
+        
     //         $programme->match_percentage = $percentage;
     //         $programme->match_count = $matches;
     //         return $programme;
     //     });
-    
+        
     //     // Filter and sort top 5 matches
     //     $top = $scored->filter(fn($p) => $p->match_count > 0)
     //                   ->sortByDesc('match_percentage')
     //                   ->take(5)
     //                   ->values();
-    
+        
     //     // Format response with ranking number
     //     $result = $top->map(function ($programme, $index) {
     //         return [
@@ -245,7 +254,8 @@ class CourseMatchAPIController extends Controller
     //             'match_percentage' => $programme->match_percentage . '% Match',
     //         ];
     //     });
-    
+        
+
     //     return response()->json([
     //         'success' => true,
     //         'title' => 'Your Course Matches',
@@ -254,7 +264,6 @@ class CourseMatchAPIController extends Controller
     //     ]);
     // }
     
-
 
 
 

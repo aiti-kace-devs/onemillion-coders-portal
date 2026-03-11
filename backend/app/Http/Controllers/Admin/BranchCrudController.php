@@ -32,7 +32,7 @@ class BranchCrudController extends CrudController
     {
         CRUD::setModel(\App\Models\Branch::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/branch');
-        CRUD::setEntityNameStrings('branch', 'branches');
+        CRUD::setEntityNameStrings('Region', 'Regions');
     }
 
     /**
@@ -46,7 +46,12 @@ class BranchCrudController extends CrudController
         WidgetHelper::branchStatisticsWidget();
 
         CRUD::column('title');
-        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
         CRUD::column('created_at');
         FilterHelper::addBooleanFilter('status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
@@ -80,5 +85,24 @@ class BranchCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    public function toggleStatus(\Illuminate\Http\Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $branch = \App\Models\Branch::findOrFail($id);
+        $branch->status = (bool) $data['value'];
+        $branch->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Branch status updated successfully.',
+            'value' => $branch->status ? 1 : 0,
+        ]);
     }
 }

@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 
 
@@ -119,6 +120,7 @@ class FormResponseController extends Controller
 
             $attributes[$inputField] = $fieldTitle;
 
+            // Required
             if (!empty($field['validators']['required'])) {
                 $rules[] = 'required';
                 $customMessages["{$inputField}.required"] = "{$fieldTitle} is required.";
@@ -126,6 +128,7 @@ class FormResponseController extends Controller
                 $rules[] = 'nullable';
             }
 
+            // Unique validation
             if (!empty($field['validators']['unique'])) {
                 $value = $request->input($inputField);
                 if ($value) {

@@ -1,4 +1,4 @@
-<div class="saveActions form-group my-3">
+<div id="saveActions" class="saveActions form-group my-3">
     @if (isset($saveAction['active']) && !is_null($saveAction['active']['value']))
 
         <input type="hidden" name="_save_action" value="{{ $saveAction['active']['value'] }}">
@@ -15,6 +15,7 @@
                     <span data-value="{{ $saveAction['active']['value'] }}">{{ $saveAction['active']['label'] }}</span>
                 </button>
                 <button type="button"
+                    id="bpSaveButtonsGroup"
                     class="bpSaveButtonsGroup btn btn-success text-white dropdown-toggle dropdown-toggle-split"
                     data-toggle="dropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <span class="d-none visually-hidden">Toggle Dropdown</span>
@@ -171,7 +172,9 @@
                                             buttons: false,
                                         });
                                     }
+                                    return;
                                 }
+
                                 // All is good, show a success message!
                                 swal({
                                     title: "{!! trans('backpack::crud.delete_confirmation_title') !!}",
