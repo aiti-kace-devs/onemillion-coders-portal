@@ -50,6 +50,8 @@ use Illuminate\Support\Str;
 
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
 Route::post('/api/add-student', [FormResponseController::class, 'store']);
+Route::get('/api/check-user/{userID}', [RegistrationFormAPIController::class, 'check_user_by_userID']);
+
 
 // OTP verification routes for registration
 Route::get('/api/otp/check-email', [OtpController::class, 'checkEmail'])->middleware('throttle:30,1');
@@ -63,7 +65,7 @@ Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
 });
 
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
-// Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
+Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
 Route::get('/api/programmes-with-course-match', action: [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
 Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
 Route::get('/api/programmes-with-batches', [CourseProgrammeController::class, 'programmeWithBatch']);

@@ -45,9 +45,9 @@
         <!-- @can('course.read.all')
             <x-backpack::menu-dropdown-item title="Manage Course batches" icon="la la-question" :link="backpack_url('course-batch')" />
         @endcan -->
-        <!-- @can('course-session.read.all')
+        @can('course-session.read.all')
             <x-backpack::menu-dropdown-item title="Course Sessions" icon="la la-clock" :link="backpack_url('course-session')" />
-        @endcan -->
+        @endcan
         @can('course-category.read.all')
             <x-backpack::menu-dropdown-item title="Course Categories" icon="la la-layer-group" :link="backpack_url('course-category')" />
         @endcan
@@ -135,12 +135,8 @@
     <x-backpack::menu-item :title="trans('backpack::crud.file_manager')" icon="la la-folder-open" :link="backpack_url('elfinder')" />
 @endcan
 
-{{-- Only show dropdown if user has at least one permission for the dropdown items --}}
-@if (auth()->user()->can('form-response.read.all') ||
-        auth()->user()->can('oex-result.read.all') ||
-        auth()->user()->can('period.read.all'))
+
     <!-- <x-backpack::menu-item title="Form responses" icon="la la-reply" :link="backpack_url('form-response')" /> -->
-@endif
 
 {{-- <x-backpack::menu-item title="Results" icon="la la-chart-bar" :link="backpack_url('oex-result')" /> --}}
 <!-- <x-backpack::menu-item title="Periods" icon="la la-calendar" :link="backpack_url('period')" /> -->
@@ -156,16 +152,12 @@
 <!-- <x-backpack::menu-item title="Admission rejections" icon="la la-times-circle" :link="backpack_url('admission-rejection')" /> -->
 
 {{-- Only show dropdown if user has at least one permission for the dropdown items --}}
-@if (auth()->user()->can('student.read.all') ||
-        auth()->user()->can('role.read.all') ||
-        auth()->user()->can('permission.read.all'))
     <!-- <x-backpack::menu-dropdown title="Add-ons" icon="la la-puzzle-piece">
     <x-backpack::menu-dropdown-header title="Authentication" />
     <x-backpack::menu-dropdown-item title="Students" icon="la la-user-graduate" :link="backpack_url('user')" />
     <x-backpack::menu-dropdown-item title="Roles" icon="la la-user-tag" :link="backpack_url('role')" />
     <x-backpack::menu-dropdown-item title="Permissions" icon="la la-key" :link="backpack_url('permission')" />
 </x-backpack::menu-dropdown> -->
-@endif
 
 
 {{-- <x-backpack::menu-item :title="trans('backpack::crud.file_manager')" icon="la la-files-o" /> --}}

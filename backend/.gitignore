@@ -23,3 +23,5 @@ composerauth.json
 auth.json
 public/vendor/runway/build/manifest.json
 public/vendor/statamic/cp/build/manifest.json
+*.php.backup
+storage/google-cloud-key.json

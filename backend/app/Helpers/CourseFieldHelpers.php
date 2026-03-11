@@ -12,6 +12,7 @@ use App\Models\Batch;
 use App\Models\Course;
 use App\Models\UserAdmission;
 use App\Models\CourseMatch;
+
 trait CourseFieldHelpers
 {
 
@@ -87,15 +88,15 @@ CRUD::addField([
 
 
         // CRUD::addField([
-//     'name' => 'batch_id',
-//     'label' => 'Select Batch',
-//     'type' => 'select2',
-//     'entity' => 'batch',
-//     'attribute' => 'title',
-//     'model' => Batch::class,
-//     'allows_null' => false,
-//     'wrapper' => ['class' => 'form-group col-6'],
-// ]);
+        //     'name' => 'batch_id',
+        //     'label' => 'Select Batch',
+        //     'type' => 'select2',
+        //     'entity' => 'batch',
+        //     'attribute' => 'title',
+        //     'model' => Batch::class,
+        //     'allows_null' => false,
+        //     'wrapper' => ['class' => 'form-group col-6'],
+        // ]);
 
 
 
@@ -121,21 +122,21 @@ CRUD::addField([
             'hint' => 'eg 3  Week or 120 hrs'
         ]);
         // CRUD::addField([
-//     'name' => 'duration',
-//     'label' => 'Duration',
-//     'type' => 'select_from_array',
-//     'options' => [
-//         '1 Week' => '1 Week',
-//         '2 Week' => '2 Weeks',
-//         '3 Weeks' => '3 Weeks',
-//         '4 Weeks' => '4 Weeks',
-//         '1 Month' => '1 Month',
-//         '2 Months' => '2 Months',
-//         '3 Months' => '3 Months',
-//         '4 Months' => '4 Months',
-//     ],
-//     'wrapper' => ['class' => 'form-group col-6'],
-// ]);
+        //     'name' => 'duration',
+        //     'label' => 'Duration',
+        //     'type' => 'select_from_array',
+        //     'options' => [
+        //         '1 Week' => '1 Week',
+        //         '2 Week' => '2 Weeks',
+        //         '3 Weeks' => '3 Weeks',
+        //         '4 Weeks' => '4 Weeks',
+        //         '1 Month' => '1 Month',
+        //         '2 Months' => '2 Months',
+        //         '3 Months' => '3 Months',
+        //         '4 Months' => '4 Months',
+        //     ],
+        //     'wrapper' => ['class' => 'form-group col-6'],
+        // ]);
 
         CRUD::addField([
             'name' => 'start_date',
@@ -223,8 +224,6 @@ CRUD::addField([
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. https://chat.whatsapp.com/BekTu3PWEqc8UtydifN8Mt'
         ]);
-
-
     }
 
 
@@ -285,8 +284,6 @@ CRUD::addField([
         ]);
 
         $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
-
-
     }
 
 
@@ -658,11 +655,5 @@ CRUD::addField([
 
         $this->addFieldsToTab('Question', true, ['tag', 'question', 'description', 'order', 'status']);
         $this->addFieldsToTab('Options', true, ['course_match_options']);
-
-
     }
-
-
-
-
 }

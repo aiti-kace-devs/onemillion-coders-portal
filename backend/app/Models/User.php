@@ -45,9 +45,10 @@ class User extends Authenticatable
         'ghcard',
         'gender',
         'network_type',
+        'has_disability',
         'registered_course',
         'shortlist',
-        'last_login'
+        'data',
     ];
 
     /**
@@ -71,6 +72,8 @@ class User extends Authenticatable
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'status' => 'boolean',
+        'has_disability' => 'boolean',
+        'data' => 'array',
     ];
 
 
@@ -198,6 +201,11 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class);
     }
 
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class, 'user_id', 'userId');
+    }
+
     public function hasAttendance()
     {
         return $this->hasMany(Attendance::class, 'user_id', 'userId');
@@ -291,5 +299,3 @@ class User extends Authenticatable
             ->dontLogIfAttributesChangedOnly(['last_login']);
     }
 }
-
-
