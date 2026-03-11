@@ -208,11 +208,11 @@ class UserCrudController extends CrudController
 
         foreach (array_chunk($userIds, 100) as $chunk) {
             $admissions = UserAdmission::whereIn('user_id', $chunk)->get();
-            
+
             foreach ($admissions as $admission) {
                 // Get the course directly and use its batch_id
                 $course = \App\Models\Course::find($admission->course_id);
-                
+
                 if ($course && $course->batch_id) {
                     $admission->batch_id = $course->batch_id;
                     $admission->save();

@@ -8,6 +8,7 @@ use App\Models\CourseCategory;
 use App\Models\Branch;
 use App\Models\UserAdmission;
 use App\Models\Centre;
+use App\Models\District;
 use App\Models\Course;
 use App\Models\Batch;
 use App\Models\CourseBatch;
@@ -505,16 +506,56 @@ class CourseProgrammeController extends Controller
     }
 
 
-        public function centresByBranch(Branch $branch)
-        {
-            $centres = $branch->centre()->get();
+    public function centresByBranch(Branch $branch)
+    {
+        $centres = $branch->centre()->get();
 
-            return response()->json([
-                'region' => $branch->title,
-                'centres' => $centres,
-            ]);
-        }
+        return response()->json([
+            'region' => $branch->title,
+            'centres' => $centres,
+        ]);
+    }
+
+    public function districtsByBranch(Request $request)
+    {
+        $data = $request->validate([
+            'branch_id' => 'required|integer|exists:branches,id',
+        ]);
+
+        $branch = Branch::query()->findOrFail($data['branch_id']);
+
+        $districts = District::query()
+            ->where('branch_id', $branch->id)
+            ->orderBy('title')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'branch_id' => $branch->id,
+            'branch' => $branch->title,
+            'districts' => $districts,
+        ]);
+    }
+
+    public function centresByDistrict(Request $request)
+    {
+        $data = $request->validate([
+            'district_id' => 'required|integer|exists:districts,id',
+        ]);
+
+        $district = District::query()
+            ->with(['centres' => function ($query) {
+                $query->orderBy('title');
+            }])
+            ->findOrFail($data['district_id']);
+
+        return response()->json([
+            'success' => true,
+            'district_id' => $district->id,
+            'district' => $district->title,
+            'centres' => $district->centres->values(),
+        ]);
+    }
 
 
 }
-
