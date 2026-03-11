@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 class GhanaConstituencySeeder extends Seeder
 {
@@ -387,7 +386,15 @@ class GhanaConstituencySeeder extends Seeder
             }
 
             if (!isset($resolved[$region])) {
-                throw new RuntimeException("Branch record not found for region '{$region}'. Seed or create regions first.");
+                $branchId = DB::table('branches')->insertGetId([
+                    'title' => $region,
+                    'status' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $resolved[$region] = $branchId;
+                $normalizedToId[$this->normalize($region)] = $branchId;
             }
         }
 
