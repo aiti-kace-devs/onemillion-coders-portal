@@ -40,7 +40,7 @@ class Form extends Model
 
             if ($model->isDirty('schema')) {
                 $model->schema = array_map(function ($schema) {
-                    $schema['field_name'] = Str::slug(strtolower($schema['title']));
+                    $schema['field_name'] = Str::slug(strtolower($schema['title']), '_');
                     
                     if (isset($schema['validators']) && is_array($schema['validators'])) {
                         $schema['validators'] = array_map(
