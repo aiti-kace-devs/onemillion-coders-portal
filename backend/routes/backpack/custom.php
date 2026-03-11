@@ -5,6 +5,9 @@ use App\Http\Controllers\Admin\Api\CentreController;
 use App\Http\Controllers\Admin\OexQuestionMasterCrudController;
 use App\Http\Controllers\Admin\StudentVerificationCrudController;
 use App\Http\Controllers\Admin\UserCrudController;
+use App\Http\Controllers\Admin\BatchCrudController;
+use App\Http\Controllers\Admin\CourseBatchCrudController;
+use App\Http\Controllers\Admin\DistrictCrudController;
 use App\Http\Controllers\Admin\ManageStudentCrudController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UtilitiesController;
@@ -17,7 +20,7 @@ use App\Http\Controllers\Admin\UtilitiesController;
 Route::group([
     'prefix' => config('backpack.base.route_prefix', 'admin'),
     'middleware' =>
-        config('backpack.base.middleware_key', 'admin'),
+    config('backpack.base.middleware_key', 'admin'),
     'namespace' => 'App\Http\Controllers\Admin',
 ], function () { // custom admin routes
     Route::crud('admin', 'AdminCrudController');
@@ -40,6 +43,12 @@ Route::group([
     Route::crud('batch', 'BatchCrudController');
     Route::crud('tag', 'TagCrudController');
     Route::crud('tag-type', 'TagTypeCrudController');
+    Route::post('batch/add-courses/{batchId}', [BatchCrudController::class, 'addCourses']);
+    Route::post('batch/update-course/{courseId}', [BatchCrudController::class, 'updateCourse']);
+    Route::get('batch/course/{courseId}/sessions', [BatchCrudController::class, 'getCourseSessions']);
+    Route::post('batch/course/{courseId}/sessions', [BatchCrudController::class, 'saveCourseSessions']);
+    Route::post('batch/{id}/toggle', [BatchCrudController::class, 'toggleStatus']);
+    Route::post('batch/{id}/toggle-completed', [BatchCrudController::class, 'toggleCompleted']);
     Route::crud('course-session', 'CourseSessionCrudController');
     Route::crud('email-template', 'EmailTemplateCrudController');
     Route::crud('form', 'FormCrudController');
@@ -53,6 +62,19 @@ Route::group([
     Route::crud('sms-template', 'SmsTemplateCrudController');
     Route::crud('user', 'UserCrudController');
     Route::crud('manage-student', 'ManageStudentCrudController');
+
+    // Manage Student actions (Per Student)
+    Route::post('manage-student/{user}/change-admission', 'ManageStudentCrudController@changeAdmission')->name('manage-student.change-admission');
+    Route::post('manage-student/{user}/choose-session', 'ManageStudentCrudController@chooseSession')->name('manage-student.choose-session');
+    Route::delete('manage-student/delete-admission/{user_id}', 'ManageStudentCrudController@deleteAdmission')->name('manage-student.delete-admission');
+
+    // AJAX routes for student metrics and dropdowns
+    Route::get('manage-student/{user}/metrics', 'ManageStudentCrudController@getStudentMetrics')->name('manage-student.metrics');
+    Route::get('manage-student/courses-ajax', 'ManageStudentCrudController@getCoursesAjax')->name('manage-student.courses-ajax');
+    Route::get('manage-student/sessions-ajax', 'ManageStudentCrudController@getSessionsAjax')->name('manage-student.sessions-ajax');
+
+    // Use UserCrudController's bulkAdmit for single student admission
+    Route::post('manage-student/bulk-admit', 'UserCrudController@bulkAdmit')->name('manage-student.bulk-admit');
 
     // Separate CRUD controllers for different student views
     Route::crud('students-with-admission', 'StudentsWithAdmissionCrudController');
@@ -110,11 +132,20 @@ Route::group([
     Route::crud('course-match', 'CourseMatchCrudController');
     Route::crud('course-match-option', 'CourseMatchOptionCrudController');
 
+
     // Utilities dashboard (super-admin only)
     Route::get('utilities', [UtilitiesController::class, 'index'])->name('admin.utilities.index');
     Route::post('utilities/run', [UtilitiesController::class, 'run'])->name('admin.utilities.run');
 
     // Route::crud('media', 'MediaCrudController');
+    Route::post('course-batch/{id}/toggle', [CourseBatchCrudController::class, 'toggleStatus']);
+    Route::get('course-batch/{id}/admitted-students-data', [CourseBatchCrudController::class, 'admittedStudentsData'])->name('course-batch.admitted-students-data');
+    Route::get('course-batch/{id}/attendance-history-data', [CourseBatchCrudController::class, 'attendanceHistoryData'])->name('course-batch.attendance-history-data');
+    Route::crud('course-batch', 'CourseBatchCrudController');
+    Route::post('district/{id}/toggle', [DistrictCrudController::class, 'toggleStatus']);
+    Route::post('district/{districtId}/add-centres', [DistrictCrudController::class, 'addCentres'])->name('district.add-centres');
+    Route::delete('district/{districtId}/remove-centre/{centreId}', [DistrictCrudController::class, 'removeCentre'])->name('district.remove-centre');
+    Route::crud('district', 'DistrictCrudController');
 }); // this should be the absolute last line of this file
 
 /**

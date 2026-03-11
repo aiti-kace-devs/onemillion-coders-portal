@@ -291,7 +291,7 @@ trait UserFieldHelpers
             'label' => 'Assign Course',
             'entity' => 'assignedCourses',
             'model' => 'App\\Models\\Course',
-            'attribute' => 'course_name',
+            'attribute' => 'display_name',
             'pivot' => true,
             'tab' => 'Account Info',
             'wrapper' => ['class' => 'form-group col-6'],

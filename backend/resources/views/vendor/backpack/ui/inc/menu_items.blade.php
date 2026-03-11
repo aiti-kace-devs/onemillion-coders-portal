@@ -30,6 +30,19 @@
 
 @can('form.read.all')
     <x-backpack::menu-item title="Registration Form" icon="la la-wpforms" :link="backpack_url('form')" />
+
+@can('filemanager.read.all')
+    <x-backpack::menu-item :title="trans('backpack::crud.file_manager')" icon="la la-folder-open" :link="backpack_url('elfinder')" />
+@endcan
+
+@can('branch.read.all')
+    <x-backpack::menu-item title="Manage Branches" icon="la la-code-branch" :link="backpack_url('branch')" />
+@endcan
+
+
+@can('centre.read.all')
+<x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
+<x-backpack::menu-item title="Manage Districts" icon="la la-question" :link="backpack_url('district')" />
 @endcan
 
 @can('programme.read.all')
@@ -40,6 +53,9 @@
     <x-backpack::menu-dropdown title="Course Moderation" icon="la la-book-reader">
         @can('course.read.all')
             <x-backpack::menu-dropdown-item title="Courses" icon="la la-book" :link="backpack_url('course')" />
+        @endcan
+        @can('course.read.all')
+            <x-backpack::menu-dropdown-item title="Manage Course batches" icon="la la-question" :link="backpack_url('course-batch')" />
         @endcan
         @can('course-session.read.all')
             <x-backpack::menu-dropdown-item title="Course Sessions" icon="la la-clock" :link="backpack_url('course-session')" />

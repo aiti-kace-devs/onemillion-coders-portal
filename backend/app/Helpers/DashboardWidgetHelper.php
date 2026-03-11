@@ -128,13 +128,14 @@ class DashboardWidgetHelper
     public static function dashboardBatchStatisticsWidget()
     {
         $dashboardTableStatistics = Cache::flexible('dashboard_table_statistics', [(60 * 60), 10], function () {
-            $topBatches = DB::table('admission_batches as ab')
+            $topBatches = DB::table('course_batches as cb')
+                ->join('admission_batches as ab', 'cb.batch_id', '=', 'ab.id')
                 ->leftJoin('user_admission as ua', function ($join) {
-                    $join->on('ab.id', '=', 'ua.batch_id')
+                    $join->on('cb.id', '=', 'ua.course_batch_id')
                         ->whereNotNull('ua.confirmed');
                 })
                 ->select(
-                    'ab.id',
+                    'ab.id as batch_id',
                     'ab.title',
                     'ab.year',
                     'ab.completed',
@@ -147,7 +148,7 @@ class DashboardWidgetHelper
 
             $batchesWithCourses = $topBatches->map(function ($batch) {
                 $courseIds = DB::table('course_batches')
-                    ->where('batch_id', $batch->id)
+                    ->where('batch_id', $batch->batch_id)
                     ->pluck('course_id')
                     ->unique()
                     ->values()

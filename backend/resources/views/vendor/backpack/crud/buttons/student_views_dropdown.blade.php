@@ -5,7 +5,7 @@
     </button>
     <ul class="dropdown-menu" aria-labelledby="studentViewsDropdown">
         <li>
-            <a class="dropdown-item" href="{{ backpack_url('user') }}">
+            <a class="dropdown-item" href="{{ backpack_url('manage-student') }}">
                 <i class="la la-users text-primary"></i> All Students
             </a>
         </li>
