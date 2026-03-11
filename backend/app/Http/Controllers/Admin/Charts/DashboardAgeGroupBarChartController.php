@@ -19,7 +19,7 @@ class DashboardAgeGroupBarChartController extends ChartController
         $cacheKey = 'chart_age_groups_dynamic_decades_' . DashboardWidgetHelper::scopeCacheKeySuffix($visibleCourseIds);
 
         // Cache for 1 hour (fallback 10s)
-        $payload = Cache::flexible($cacheKey, [(60 * 60), 10], function () use ($visibleCourseIds) {
+        $payload = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {
             // Handle all types of dashes, hyphens, and plus signs
             $rows = DB::table('users as u')
                 ->when(is_array($visibleCourseIds), function ($query) use ($visibleCourseIds) {
@@ -61,7 +61,7 @@ class DashboardAgeGroupBarChartController extends ChartController
 
             return [
                 'labels' => $rows->pluck('age_range')->values(),
-                'data'   => $rows->pluck('total')->map(fn ($v) => (int) $v)->values(),
+                'data'   => $rows->pluck('total')->map(fn($v) => (int) $v)->values(),
             ];
         });
 
@@ -81,7 +81,7 @@ class DashboardAgeGroupBarChartController extends ChartController
             'rgba(34,197,94,0.6)',
             'rgba(251,146,60,0.6)',
         ];
-        $barColors = array_map(fn ($i) => $palette[$i % count($palette)], array_keys($labels));
+        $barColors = array_map(fn($i) => $palette[$i % count($palette)], array_keys($labels));
 
         $this->chart
             ->dataset('Number of Students', 'bar', $data)

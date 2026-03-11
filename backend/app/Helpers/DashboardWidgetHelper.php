@@ -41,7 +41,7 @@ class DashboardWidgetHelper
 
         return $admin->assignedCourses()
             ->pluck('courses.id')
-            ->map(fn ($courseId) => (int) $courseId)
+            ->map(fn($courseId) => (int) $courseId)
             ->all();
     }
 
@@ -87,7 +87,7 @@ class DashboardWidgetHelper
         $visibleCourseIds = self::currentAdminVisibleCourseIds();
         $cacheKey = 'dashboard_count_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
-        $dasboardCountStatistics = Cache::flexible($cacheKey, [(60 * 60), 10], function () use ($visibleCourseIds) {
+        $dasboardCountStatistics = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {
             $baseUserQuery = User::query();
             self::applyCourseScope($baseUserQuery, $visibleCourseIds, 'registered_course');
 
@@ -96,13 +96,18 @@ class DashboardWidgetHelper
 
             return [
                 'userCount' => (clone $baseUserQuery)->count(),
-                'shortlistedUsers' => (clone $baseUserQuery)->where('shortlist', 1)->count(),
-                'admittedUsers' => (clone $baseUserQuery)->whereExists(function ($query) {
-                    $query->select(\DB::raw(1))
-                        ->from('user_admission')
-                        ->whereColumn('user_admission.user_id', 'users.userId')
-                        ->whereNotNull('user_admission.confirmed');
-                })->count(),
+                // cache shortlistedUsers
+                'shortlistedUsers' => Cache::remember('shortlistedUsers', 60 * 60, function () use ($baseUserQuery) {
+                    return (clone $baseUserQuery)->where('shortlist', 1)->count();
+                }),
+                'admittedUsers' => Cache::remember('admittedUsers', 60 * 60, function () use ($baseUserQuery) {
+                    return (clone $baseUserQuery)->whereExists(function ($query) {
+                        $query->select(\DB::raw(1))
+                            ->from('user_admission')
+                            ->whereColumn('user_admission.user_id', 'users.userId')
+                            ->whereNotNull('user_admission.confirmed');
+                    })->count();
+                }),
                 'courses' => $courseQuery->count(),
             ];
         });
@@ -111,50 +116,50 @@ class DashboardWidgetHelper
             'type' => 'div',
             'class' => 'row mb-4',
             'content' => [
-                    [
-                        'type' => 'progress_white',
-                        'description' => 'Total Users',
-                        'value' => number_format($dasboardCountStatistics['userCount']),
-                        'progressClass' => 'progress-bar bg-primary',
-                        'wrapper' => [
-                            'style' => 'background-color:rgb(40, 127, 167);',
-                        ],
-                        'hint' => 'All registered users.',
-                        'permission' => 'dashboard.read.all ',
+                [
+                    'type' => 'progress_white',
+                    'description' => 'Total Users',
+                    'value' => number_format($dasboardCountStatistics['userCount']),
+                    'progressClass' => 'progress-bar bg-primary',
+                    'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                    [
-                        'type' => 'progress_white',
-                        'description' => 'Total Shortlisted Students',
-                        'value' => number_format($dasboardCountStatistics['shortlistedUsers']),
-                        'progressClass' => 'progress-bar bg-warning',
-                        'wrapper' => [
-                            'style' => 'background-color:rgb(40, 127, 167);',
-                        ],
-                        'hint' => 'All Shortlisted Students.',
-                        'permission' => 'dashboard.read.all ',
+                    'hint' => 'All registered users.',
+                    'permission' => 'dashboard.read.all ',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'description' => 'Total Shortlisted Students',
+                    'value' => number_format($dasboardCountStatistics['shortlistedUsers']),
+                    'progressClass' => 'progress-bar bg-warning',
+                    'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                    [
-                        'type' => 'progress_white',
-                        'description' => 'Total Admitted Students',
-                        'value' => number_format($dasboardCountStatistics['admittedUsers']),
-                        'progressClass' => 'progress-bar bg-dark',
-                        'wrapper' => [
-                            'style' => 'background-color:rgb(40, 127, 167);',
-                        ],
-                        'hint' => 'All Admitted Students',
-                        'permission' => 'dashboard.read.all ',
+                    'hint' => 'All Shortlisted Students.',
+                    'permission' => 'dashboard.read.all ',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'description' => 'Total Admitted Students',
+                    'value' => number_format($dasboardCountStatistics['admittedUsers']),
+                    'progressClass' => 'progress-bar bg-dark',
+                    'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                    [
-                        'type' => 'progress_white',
-                        'description' => 'Total Courses',
-                        'value' => number_format($dasboardCountStatistics['courses']),
-                        'progressClass' => 'bg-success',
-                        'wrapper' => [
-                            'style' => 'background-color:rgb(40, 127, 167);',
-                        ],
-                        'hint' => 'All Courses in the system',
-                        'permission' => 'dashboard.read.all ',
+                    'hint' => 'All Admitted Students',
+                    'permission' => 'dashboard.read.all ',
+                ],
+                [
+                    'type' => 'progress_white',
+                    'description' => 'Total Courses',
+                    'value' => number_format($dasboardCountStatistics['courses']),
+                    'progressClass' => 'bg-success',
+                    'wrapper' => [
+                        'style' => 'background-color:rgb(40, 127, 167);',
                     ],
+                    'hint' => 'All Courses in the system',
+                    'permission' => 'dashboard.read.all ',
+                ],
             ]
         ]);
     }
@@ -202,7 +207,7 @@ class DashboardWidgetHelper
         $visibleCourseIds = self::currentAdminVisibleCourseIds();
         $cacheKey = 'dashboard_table_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
-        $dashboardTableStatistics = Cache::flexible($cacheKey, [(60 * 60), 10], function () use ($visibleCourseIds) {
+        $dashboardTableStatistics = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {
             $topBatches = DB::table('course_batches as cb')
                 ->join('admission_batches as ab', 'cb.batch_id', '=', 'ab.id')
                 ->leftJoin('user_admission as ua', function ($join) {
@@ -247,7 +252,7 @@ class DashboardWidgetHelper
 
                 $batch->course_ids = $courseIds;
                 $batch->courses_count = count($courseIds);
-                
+
                 return $batch;
             });
 
@@ -337,8 +342,4 @@ class DashboardWidgetHelper
             ],
         ]);
     }
-
-
-
-
 }
