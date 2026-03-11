@@ -38,7 +38,6 @@ class User extends Authenticatable
         'status',
         'mobile_no',
         'age',
-        'age',
         'password',
         'userId',
         'card_type',
@@ -48,6 +47,7 @@ class User extends Authenticatable
         'has_disability',
         'registered_course',
         'shortlist',
+        'student_level',
         'data',
     ];
 
