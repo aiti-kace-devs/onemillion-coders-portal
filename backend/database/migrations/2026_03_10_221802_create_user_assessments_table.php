@@ -12,7 +12,7 @@ return new class extends Migration {
     {
         Schema::create('user_assessments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade')->unique();
+            $table->foreignId('user_id')->unique()->constrained('users')->onDelete('cascade');
             $table->string('current_level')->default('beginner');
             $table->integer('questions_answered')->default(0);
             $table->integer('correct_answers')->default(0);

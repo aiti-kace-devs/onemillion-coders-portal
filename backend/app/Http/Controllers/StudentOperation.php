@@ -1109,7 +1109,7 @@ class StudentOperation extends Controller
         }
 
         $assessment = UserAssessment::firstOrCreate(
-            ['user_id' => $user->id, 'completed' => false],
+            ['user_id' => $user->id],
             [
                 'current_level' => 'beginner',
                 'questions_answered' => 0,
@@ -1118,6 +1118,14 @@ class StudentOperation extends Controller
                 'answered_question_ids' => []
             ]
         );
+
+        if ($assessment->completed) {
+            return response()->json([
+                'status' => 'completed',
+                'message' => 'Assessment already completed.',
+                'user_level' => $user->student_level
+            ]);
+        }
 
         if (is_null($assessment->level_started_at)) {
             $assessment->level_started_at = now();
@@ -1149,14 +1157,6 @@ class StudentOperation extends Controller
                 'user_overall_level' => $user->student_level
             ], 403);
         }
-        if ($assessment->completed) {
-            return response()->json([
-                'status' => 'completed',
-                'message' => 'Assessment already completed.',
-                'user_level' => $user->student_level
-            ]);
-        }
-
         $level = $assessment->current_level;
         $answeredIds = $assessment->answered_question_ids ?? [];
 
