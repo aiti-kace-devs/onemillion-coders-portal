@@ -11,6 +11,7 @@ use App\Models\Centre;
 use App\Models\District;
 use App\Models\Course;
 use App\Models\Batch;
+use App\Models\Constituency;
 use App\Models\CourseBatch;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -534,6 +535,29 @@ class CourseProgrammeController extends Controller
             'branch_id' => $branch->id,
             'branch' => $branch->title,
             'districts' => $districts,
+        ]);
+    }
+
+
+
+    public function constituencyByRegion(Request $request)
+    {
+        $data = $request->validate([
+            'branch_id' => 'required|integer|exists:branches,id',
+        ]);
+
+        $branch = Branch::query()->findOrFail($data['branch_id']);
+
+        $constituencies = Constituency::query()
+            ->where('branch_id', $branch->id)
+            ->orderBy('title')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'branch_id' => $branch->id,
+            'branch' => $branch->title,
+            'constituencies' => $constituencies,
         ]);
     }
 

@@ -176,19 +176,8 @@ class CourseMatchAPIController extends Controller
                     'job_responsible' => $programme->job_responsible,
                     'prerequisites' => $programme->prerequisites,
                     'match_percentage' => $programme->match_percentage . '% Match',
-                    'centre' => $centre ? [
-                        'id' => $centre->id,
-                        'title' => $centre->title,
-                        'gps_address' => $centre->gps_address,
-                        'is_pwd_friendly' => $centre->is_pwd_friendly,
-                        'wheelchair_accessible' => $centre->wheelchair_accessible,
-                        'has_access_ramp' => $centre->has_access_ramp,
-                        'has_accessible_toilet' => $centre->has_accessible_toilet,
-                        'has_elevator' => $centre->has_elevator,
-                        'branch' => $centre->branch ? [
-                            'title' => $centre->branch->title,
-                        ] : null,
-                    ] : null,
+                    "course_id"=> $programmeCourses->first()?->id,
+                    "centre_id" => $centreId
                 ];
             });
             

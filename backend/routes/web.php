@@ -15,6 +15,7 @@ use App\Http\Controllers\Traits\AttendanceViewRemoveTrait;
 // use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CentreController;
+use App\Http\Controllers\Admin\ConstituencyCrudController;
 use App\Http\Controllers\Admin\Api\FormPreviewController;
 use App\Http\Controllers\Admin\Api\CourseProgrammeController;
 use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
@@ -49,6 +50,7 @@ use Illuminate\Support\Str;
 
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
 Route::post('/api/add-student', [FormResponseController::class, 'store']);      
+Route::get('/api/constituencies/{constituency}/metrics', [ConstituencyCrudController::class, 'metrics']);
 
 // Redirect Statamic login to Backpack login
 Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
@@ -72,6 +74,7 @@ Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview
 Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
 Route::get('/api/districts-by-branch', [CourseProgrammeController::class, 'districtsByBranch']);
 Route::get('/api/centres-by-district', [CourseProgrammeController::class, 'centresByDistrict']);
+Route::get('/api/constituencies-by-branch', [CourseProgrammeController::class, 'constituencyByRegion']);
 
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');

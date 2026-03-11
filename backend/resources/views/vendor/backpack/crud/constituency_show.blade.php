@@ -238,38 +238,15 @@
 @section('content')
     @parent
 
-    <div class="mb-3 d-flex align-items-start justify-content-between flex-wrap gap-2">
-        <div class="d-flex align-items-start gap-2">
-            <a href="{{ backpack_url('constituency') }}" class="btn btn-sm btn-outline-secondary" title="Back to Constituencies">
-                <i class="la la-arrow-left"></i>
-            </a>
             <div>
-                <h4 class="mb-0">Constituency Metrics</h4>
-                <div class="text-muted">
+                <!-- <h4 class="mb-0">Constituency Metrics</h4> -->
+                <div class="text-muted text-center" style="font-size: 50px; color: black">
                     {{ $constituency->title ?? 'Constituency' }}
                     @if($branch?->title)
-                        • {{ $branch->title }}
+                        - {{ $branch->title }}
                     @endif
                 </div>
             </div>
-        </div>
-
-        <div class="d-flex align-items-center gap-2">
-            <div class="d-flex align-items-center gap-2">
-                <span class="text-muted small">Status</span>
-                @include('admin.status_toggle.status_column', [
-                    'entry' => $constituency,
-                    'crud' => $crud ?? null,
-                    'column' => [
-                        'name' => 'status',
-                        'toggle_url' => 'constituency/{id}/toggle',
-                        'toggle_success_message' => 'Constituency status updated successfully.',
-                        'toggle_error_message' => 'Error updating constituency status.',
-                    ],
-                ])
-            </div>
-        </div>
-    </div>
 
     <div class="row g-3 mb-4">
         <div class="col-md-3">
