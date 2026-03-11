@@ -8,6 +8,7 @@ use App\Jobs\SendSMSAfterRegistrationJob;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class FormSubmitedListener implements ShouldQueue
@@ -55,18 +56,7 @@ class FormSubmitedListener implements ShouldQueue
         $student['exam_name'] = 'random';
         $student['form_response_id'] = $event->formResponseId;
 
-        $extraData = [];
-        $highestEducation = $this->getField($event->submissionData, 'highest_level_of_education', 'highest-level-of-education');
-        if (!empty($highestEducation)) {
-            $extraData['highest_level_of_education'] = $highestEducation;
-        }
-
-        $certificate = $this->getField($event->submissionData, 'certificate');
-        if (is_array($certificate) && !empty($certificate['url'])) {
-            $extraData['certificate'] = $certificate['url'];
-        } elseif (!empty($certificate)) {
-            $extraData['certificate'] = $certificate;
-        }
+        $extraData = $this->buildExtraData($event->submissionData);
 
         if (!empty($extraData)) {
             $student['data'] = $extraData;
@@ -111,6 +101,61 @@ class FormSubmitedListener implements ShouldQueue
         }
 
         return false;
+    }
+
+    private function buildExtraData(array $payload): array
+    {
+        $userColumns = array_flip(Schema::getColumnListing('users'));
+        $extraData = [];
+
+        $aliasMap = [
+            'first_name' => 'first_name',
+            'middle_name' => 'middle_name',
+            'last_name' => 'last_name',
+            'email' => 'email',
+            'phone' => 'mobile_no',
+            'phone_number' => 'mobile_no',
+            'mobile' => 'mobile_no',
+            'mobile_no' => 'mobile_no',
+            'age' => 'age',
+            'gender' => 'gender',
+            'ghana_card_number' => 'ghcard',
+            'ghana-card-number' => 'ghcard',
+            'ghcard' => 'ghcard',
+            'course' => 'registered_course',
+            'course_id' => 'registered_course',
+            'has_disability' => 'has_disability',
+        ];
+
+        foreach ($payload as $key => $value) {
+            if ($key === 'phone_number_field') {
+                continue;
+            }
+
+            $normalizedKey = strtolower((string) $key);
+            $normalizedKey = str_replace('-', '_', $normalizedKey);
+
+            $alias = $aliasMap[$normalizedKey] ?? $normalizedKey;
+            if (stripos($normalizedKey, 'disability') !== false) {
+                $alias = 'has_disability';
+            }
+
+            if (isset($userColumns[$alias])) {
+                continue;
+            }
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            if (is_array($value)) {
+                $extraData[$normalizedKey] = $value['url'] ?? $value;
+            } else {
+                $extraData[$normalizedKey] = $value;
+            }
+        }
+
+        return $extraData;
     }
 
 }
