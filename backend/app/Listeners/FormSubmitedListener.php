@@ -51,6 +51,7 @@ class FormSubmitedListener implements ShouldQueue
         $student['age'] = $this->getField($event->submissionData, 'age');
         $student['gender'] = $this->getField($event->submissionData, 'gender');
         $student['ghcard'] = $this->getField($event->submissionData, 'ghana_card_number', 'ghana-card-number', 'ghcard');
+        $student['has_disability'] = $this->extractDisabilityFlag($event->submissionData);
         $student['exam_name'] = 'random';
         $student['form_response_id'] = $event->formResponseId;
 
@@ -83,6 +84,33 @@ class FormSubmitedListener implements ShouldQueue
         }
 
         return null;
+    }
+
+    private function extractDisabilityFlag(array $payload): bool
+    {
+        foreach ($payload as $key => $value) {
+            if (stripos((string) $key, 'disability') === false) {
+                continue;
+            }
+
+            if (is_bool($value)) {
+                return $value;
+            }
+
+            if (is_numeric($value)) {
+                return (int) $value === 1;
+            }
+
+            $normalized = strtolower(trim((string) $value));
+            if (in_array($normalized, ['1', 'true', 'yes', 'y'], true)) {
+                return true;
+            }
+            if (in_array($normalized, ['0', 'false', 'no', 'n'], true)) {
+                return false;
+            }
+        }
+
+        return false;
     }
 
 }
