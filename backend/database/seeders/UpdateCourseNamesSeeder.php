@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Course;
+use App\Models\CourseSession;
 
 class UpdateCourseNamesSeeder extends Seeder
 {
@@ -15,13 +16,20 @@ class UpdateCourseNamesSeeder extends Seeder
     public function run()
     {
         $courses = Course::all();
-        $count = 0;
-
+        $courseCount = 0;
         foreach ($courses as $course) {
             $course->save();
-            $count++;
+            $courseCount++;
         }
 
-        $this->command->info("Updated {$count} course names to the new format: Programme - (Centre)");
+        $sessions = CourseSession::all();
+        $sessionCount = 0;
+        foreach ($sessions as $session) {
+            $session->setSessionName();
+            $session->save();
+            $sessionCount++;
+        }
+
+        $this->command->info("Successfully refreshed names for {$courseCount} Courses and {$sessionCount} Course Sessions.");
     }
 }

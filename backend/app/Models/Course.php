@@ -137,7 +137,10 @@ class Course extends Model
         });
 
         static::saved(function ($course) {
-            $course->sessions->each->save();
+            $course->sessions->each(function ($session) {
+                $session->setSessionName();
+                $session->save();
+            });
         });
     }
 }
