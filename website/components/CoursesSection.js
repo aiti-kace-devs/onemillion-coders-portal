@@ -115,7 +115,6 @@ const CoursesSection = ({ categories: apiCategories }) => {
       console.error("Error handling category click:", error);
       setProgrammes([]); // Clear programmes on error
     } finally {
-      console.log("Setting loading to false");
       setIsLoading(false);
     }
   };
