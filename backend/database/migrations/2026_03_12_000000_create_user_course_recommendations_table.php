@@ -14,9 +14,7 @@ return new class extends Migration
         Schema::create('user_course_recommendations', function (Blueprint $table) {
             $table->id();
             $table->string('user_id');
-            $table->foreignId('programme_id')->nullable()->constrained('programmes')->nullOnDelete();
             $table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete();
-            $table->foreignId('centre_id')->nullable()->constrained('centres')->nullOnDelete();
             $table->unsignedSmallInteger('rank')->nullable();
             $table->unsignedSmallInteger('match_percentage')->nullable();
             $table->unsignedSmallInteger('match_count')->nullable();

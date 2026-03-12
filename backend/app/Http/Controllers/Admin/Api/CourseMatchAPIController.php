@@ -176,7 +176,7 @@ class CourseMatchAPIController extends Controller
                 ];
             });
 
-            $this->storeRecommendations($combined, $centreCourses, $centreId, $optionIds, $studentLevel, $data['userId']);
+            $this->storeRecommendations($combined, $centreCourses, $optionIds, $studentLevel, $data['userId']);
 
             return response()->json([
                 'success' => true,
@@ -324,21 +324,19 @@ class CourseMatchAPIController extends Controller
          * @param  \Illuminate\Support\Collection<int, \App\Models\Course>  $centreCourses
          * @param  array<int>  $optionIds
          */
-        protected function storeRecommendations($combined, $centreCourses, int $centreId, array $optionIds, string $studentLevel, string $userId): void
+        protected function storeRecommendations($combined, $centreCourses, array $optionIds, string $studentLevel, string $userId): void
         {
             if ($combined->isEmpty()) {
                 return;
             }
 
             $now = now();
-            $recommendationRows = $combined->map(function ($programme, $index) use ($centreCourses, $centreId, $optionIds, $studentLevel, $now, $userId) {
+            $recommendationRows = $combined->map(function ($programme, $index) use ($centreCourses, $optionIds, $studentLevel, $now, $userId) {
                 $programmeCourses = $centreCourses->where('programme_id', $programme->id);
 
                 return [
                     'user_id' => $userId,
-                    'programme_id' => $programme->id,
                     'course_id' => $programmeCourses->first()?->id,
-                    'centre_id' => $centreId,
                     'rank' => $index + 1,
                     'match_percentage' => $programme->match_percentage,
                     'match_count' => $programme->match_count,
@@ -351,10 +349,26 @@ class CourseMatchAPIController extends Controller
                 ];
             })->all();
 
-            DB::transaction(function () use ($userId, $centreId, $recommendationRows) {
+            $courseIds = collect($recommendationRows)
+                ->pluck('course_id')
+                ->filter()
+                ->unique()
+                ->values();
+
+            $hasNullCourse = collect($recommendationRows)->pluck('course_id')->contains(null);
+
+            DB::transaction(function () use ($userId, $courseIds, $hasNullCourse, $recommendationRows) {
                 DB::table('user_course_recommendations')
                     ->where('user_id', $userId)
-                    ->where('centre_id', $centreId)
+                    ->where(function ($query) use ($courseIds, $hasNullCourse) {
+                        if ($courseIds->isNotEmpty()) {
+                            $query->whereIn('course_id', $courseIds->all());
+                        }
+
+                        if ($hasNullCourse) {
+                            $query->orWhereNull('course_id');
+                        }
+                    })
                     ->delete();
 
                 DB::table('user_course_recommendations')->insert($recommendationRows);

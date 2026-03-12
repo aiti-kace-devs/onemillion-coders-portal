@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Api\CentreController;
 use App\Http\Controllers\Admin\Api\ConstituencyController as ConstituencyApiController;
+use App\Http\Controllers\Admin\Api\DistrictController as DistrictApiController;
 use App\Http\Controllers\Admin\OexQuestionMasterCrudController;
 use App\Http\Controllers\Admin\StudentVerificationCrudController;
 use App\Http\Controllers\Admin\UserCrudController;
@@ -33,6 +34,7 @@ Route::group([
     Route::post('/user/assign-batch', [UserCrudController::class, 'assignBatch']);
     Route::get('api/centre-by-branch', [CentreController::class, 'filterByBranch']);
     Route::get('api/constituency-by-branch', [ConstituencyApiController::class, 'filterByBranch']);
+    Route::get('api/district-by-branch', [DistrictApiController::class, 'filterByBranch']);
     Route::get('admin/exam/{exam_id}/add-question', [OexQuestionMasterCrudController::class, 'addQuestion'])
         ->name('admin.exam.add-question');
     Route::crud('role', 'RoleCrudController');

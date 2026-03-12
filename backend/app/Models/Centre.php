@@ -69,4 +69,5 @@ class Centre extends Model
         return $this->belongsToMany(District::class, 'district_centre', 'centre_id', 'district_id')
             ->withTimestamps();
     }
+
 }

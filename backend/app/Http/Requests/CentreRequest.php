@@ -35,6 +35,13 @@ class CentreRequest extends FormRequest
                     $query->where('branch_id', (int) $this->input('branch_id'));
                 }),
             ],
+            'district_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('districts', 'id')->where(function ($query) {
+                    $query->where('branch_id', (int) $this->input('branch_id'));
+                }),
+            ],
         ];
     }
 
@@ -49,6 +56,7 @@ class CentreRequest extends FormRequest
             'branch_id' => 'Branch name',
             'title' => 'Title',
             'constituency_id' => 'Constituency',
+            'district_id' => 'District',
         ];
     }
 
@@ -65,6 +73,7 @@ class CentreRequest extends FormRequest
             'title.required' => 'The title field is required.',
             'constituency_id.required' => 'The constituency field is required.',
             'constituency_id.exists' => 'The selected constituency is invalid for the selected region.',
+            'district_id.exists' => 'The selected district is invalid for the selected region.',
         ];
     }
 }

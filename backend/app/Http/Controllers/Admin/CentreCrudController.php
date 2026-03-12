@@ -8,6 +8,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Models\Branch;
 use App\Models\Centre;
 use App\Models\Constituency;
+use App\Models\District;
 use App\Helpers\GeneralFieldsAndColumns;
 use Illuminate\Http\Request;
 use App\Helpers\FilterHelper;
@@ -22,8 +23,12 @@ class CentreCrudController extends CrudController
 {
     use GeneralFieldsAndColumns;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation {
+        store as traitStore;
+    }
+    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation {
+        update as traitUpdate;
+    }
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
@@ -165,6 +170,42 @@ class CentreCrudController extends CrudController
             'wrapper' => ['class' => 'd-none'],
         ]);
 
+        $centre = $this->crud->getCurrentEntry();
+        $selectedDistrictId = null;
+        if ($centre instanceof Centre) {
+            $selectedDistrictId = $centre->districts()->pluck('districts.id')->first();
+        }
+
+        CRUD::addField([
+            'name' => 'district_id',
+            'label' => 'Select District',
+            'type' => 'select2_from_ajax',
+            'entity' => false,
+            'model' => District::class,
+            'attribute' => 'title',
+            'data_source' => backpack_url('api/district-by-branch'),
+            'dependencies' => ['branch_id'],
+            'include_all_form_fields' => true,
+            'minimum_input_length' => 0,
+            'method' => 'GET',
+            'allows_null' => true,
+            'wrapper' => ['class' => 'form-group col-6'],
+            'attributes' => [
+                'id' => 'district_id',
+                'disabled' => 'disabled',
+            ],
+            'value' => $selectedDistrictId,
+            'hint' => 'Select a region first to load districts.',
+            'fake' => true,
+        ]);
+
+        CRUD::addField([
+            'name' => 'district_dependency_script',
+            'type' => 'custom_html',
+            'value' => view('admin.centre.fields.district_dependency_script'),
+            'wrapper' => ['class' => 'd-none'],
+        ]);
+
 
         CRUD::addField([
             'name' => 'gps_address',
@@ -210,6 +251,36 @@ class CentreCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    public function store()
+    {
+        $response = $this->traitStore();
+        $this->syncDistrictSelection();
+        return $response;
+    }
+
+    public function update()
+    {
+        $response = $this->traitUpdate();
+        $this->syncDistrictSelection();
+        return $response;
+    }
+
+    protected function syncDistrictSelection(): void
+    {
+        $centre = $this->crud->getCurrentEntry();
+        if (!$centre) {
+            return;
+        }
+
+        $districtId = $this->crud->getRequest()->input('district_id');
+        if ($districtId === null || $districtId === '') {
+            $centre->districts()->sync([]);
+            return;
+        }
+
+        $centre->districts()->sync([(int) $districtId]);
     }
 
     public function toggleStatus(Request $request, $id)
