@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use App\Helpers\CrudListHelper;
 
 class TagTypeCrudController extends CrudController
 {
@@ -22,6 +23,7 @@ class TagTypeCrudController extends CrudController
 
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
         CRUD::column('name');
 
         CRUD::addColumn([

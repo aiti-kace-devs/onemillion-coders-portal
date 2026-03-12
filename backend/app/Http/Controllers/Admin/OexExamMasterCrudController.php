@@ -12,6 +12,7 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\OexCategory;
 use App\Helpers\CourseFieldHelpers;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class OexExamMasterCrudController
@@ -49,6 +50,7 @@ class OexExamMasterCrudController extends CrudController
     protected function setupListOperation()
     {
         WidgetHelper::manageExamStatisticsWidget();
+        CrudListHelper::editInDropdown(['crud::buttons.custom_action']);
 
         CRUD::column('title');
         FilterHelper::addCategoryColumn();
@@ -75,8 +77,6 @@ class OexExamMasterCrudController extends CrudController
         FilterHelper::addOngoingExamsFilter('Ongoing Exams');
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
-        $this->crud->addButtonFromView('line', 'custom_action', 'custom_action', 'end');
-
 
         CRUD::enableExportButtons();
     }

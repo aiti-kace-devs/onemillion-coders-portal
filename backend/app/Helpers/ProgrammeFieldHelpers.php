@@ -99,21 +99,21 @@ trait ProgrammeFieldHelpers
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
-        // MediaHelper::getMediaSelector(
-        //     name: 'coverImage',
-        //     disk_options: MediaHelper::getArticleImagesDiskOptions(),
-        //     label: 'Cover Image',
-        //     value: $entry->coverImage->file ?? '',
-        // );
+        MediaHelper::getMediaSelector(
+            name: 'image',
+            disk_options: MediaHelper::getArticleImagesDiskOptions(),
+            label: 'Cover Image',
+            value: $entry->coverImage->file ?? '',
+        );
 
 
-        CRUD::addField([
-            'name' => 'image',
-            'label' => 'Cover Image URL',
-            'type' => 'text',
-            'wrapper' => ['class' => 'form-group col-6'],
-            'hint' => 'Copy and paste image URL eg. https://cdn.msme.gikace.org/media/image/partners/undp-logo.png'
-        ]);
+        // CRUD::addField([
+        //     'name' => 'image',
+        //     'label' => 'Cover Image URL',
+        //     'type' => 'text',
+        //     'wrapper' => ['class' => 'form-group col-6'],
+        //     'hint' => 'Copy and paste image URL eg. https://cdn.msme.gikace.org/media/image/partners/undp-logo.png'
+        // ]);
 
         CRUD::addField([
             'name' => 'start_date',
