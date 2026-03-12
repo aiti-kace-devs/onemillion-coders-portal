@@ -1,25 +1,21 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  FiMapPin,
-  FiChevronRight,
   FiUser,
   FiLoader,
   FiCheckCircle,
   FiAlertCircle,
-  FiBookOpen,
   FiArrowLeft,
+  FiArrowRight,
   FiClock,
+  FiUpload,
+  FiChevronDown,
 } from "react-icons/fi";
 import {
-  getAllRegions,
-  getRegionCenters,
-  getCentreProgrammes,
   getRegistrationForm,
   submitRegistration,
   getConsentData,
@@ -28,52 +24,48 @@ import {
 import Button from "../../components/Button";
 import GhanaGradientText from "../../components/GhanaGradients/GhanaGradientText";
 import OtpVerification from "../../components/OtpVerification";
-import { getCourseImage } from "../../utils/courseImages";
 
 import parsePhoneNumberFromString from "libphonenumber-js";
 
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 
-
-
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { executeRecaptcha } = useGoogleReCaptcha();
 
+  // Read pre-selected IDs from query params (set by /courses page)
+  const regionId = searchParams.get("region_id");
+  const centreId = searchParams.get("centre_id");
+  const programmeId = searchParams.get("programme_id");
+
   // State management
-  const [step, setStep] = useState(1); // 1: region, 2: center, 3: course, 4: form, 5: success
+  const [step, setStep] = useState("form"); // "form" | "success"
+  const [currentGroupIndex, setCurrentGroupIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Location and course selection state
-  const [allRegions, setAllRegions] = useState(null);
-  const [selectedRegion, setSelectedRegion] = useState(null);
-  const [availableCenters, setAvailableCenters] = useState(null);
-  const [selectedCentre, setSelectedCentre] = useState(null);
-  const [availableCourses, setAvailableCourses] = useState(null);
-  const [selectedCourse, setSelectedCourse] = useState(null);
-
   // Form state
   const [formSchema, setFormSchema] = useState(null);
+  const [groupedSchema, setGroupedSchema] = useState([]);
   const [formData, setFormData] = useState({});
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [consentContent, setConsentContent] = useState("");
 
-  // OTP verification state — tracks whether the email (and optionally phone) has been verified
+  // OTP verification state
   const [otpVerified, setOtpVerified] = useState(false);
   const [emailFieldName, setEmailFieldName] = useState(null);
   const [phoneFieldName, setPhoneFieldName] = useState(null);
 
   // Real-time email availability state
-  // status: null | "checking" | "available" | "registered" | "used" | "otp_active" | "error"
   const [emailAvailability, setEmailAvailability] = useState({ status: null, message: "" });
   const emailCheckTimerRef = React.useRef(null);
 
-  // Fetch all regions on component mount
+  // Fetch form schema on mount
   useEffect(() => {
-    fetchAllRegions();
+    fetchFormSchema();
   }, []);
 
   // Detect email and phone fields from the form schema (case-insensitive)
@@ -94,7 +86,7 @@ export default function RegisterPage() {
 
   // Fetch consent content when user reaches form step
   useEffect(() => {
-    if (step !== 4) return;
+    if (step !== "form") return;
     let cancelled = false;
     getConsentData()
       .then((res) => {
@@ -108,52 +100,7 @@ export default function RegisterPage() {
     return () => { cancelled = true; };
   }, [step]);
 
-  // Fetch all regions
-  const fetchAllRegions = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getAllRegions();
-      setAllRegions(data);
-    } catch (err) {
-      setError("Failed to load regions. Please try again.");
-      console.error("Error fetching regions:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch centers when region is selected
-  const fetchCenters = useCallback(async (regionId) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getRegionCenters(regionId);
-      setAvailableCenters(data);
-    } catch (err) {
-      setError("Failed to load centers. Please try again.");
-      console.error("Error fetching centers:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Fetch courses when center is selected
-  const fetchCourses = useCallback(async (centreId) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getCentreProgrammes(centreId);
-      setAvailableCourses(data);
-    } catch (err) {
-      setError("Failed to load courses. Please try again.");
-      console.error("Error fetching courses:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Fetch form schema when moving to form step
+  // Fetch form schema
   const fetchFormSchema = async () => {
     try {
       setLoading(true);
@@ -161,10 +108,20 @@ export default function RegisterPage() {
       const data = await getRegistrationForm();
 
       if (data && data.length > 0) {
-        setFormSchema(data[0]);
-        // Initialize form data (exclude course field since we handle it separately)
+        const form = data[0];
+        setFormSchema(form);
+
+        // Use grouped_schema if available, otherwise fall back to single group
+        const groups = form.grouped_schema && form.grouped_schema.length > 0
+          ? form.grouped_schema.filter(
+              (g) => g.fields.some((f) => f.field_name !== "course")
+            )
+          : [{ title: "Registration", fields: form.schema.filter((f) => f.field_name !== "course") }];
+
+        setGroupedSchema(groups);
+
         const initialData = {};
-        data[0].schema
+        form.schema
           .filter((field) => field.field_name !== "course")
           .forEach((field) => {
             initialData[field.field_name] = "";
@@ -179,42 +136,14 @@ export default function RegisterPage() {
     }
   };
 
-  // Handle region selection
-  const handleRegionSelect = (region) => {
-    setSelectedRegion(region);
-    setSelectedCentre(null);
-    setSelectedCourse(null);
-    setAvailableCenters(null);
-    setAvailableCourses(null);
-    fetchCenters(region.id);
-    setStep(2);
-  };
-
-  // Handle centre selection
-  const handleCentreSelect = (centre) => {
-    setSelectedCentre(centre);
-    setSelectedCourse(null);
-    fetchCourses(centre.id);
-    setStep(3);
-  };
-
-  // Handle course selection
-  const handleCourseSelect = (course) => {
-    setSelectedCourse(course);
-    fetchFormSchema();
-    setStep(4);
-  };
-
   // Debounced real-time email availability check
   const checkEmailAvailabilityDebounced = useCallback(
     (emailValue) => {
-      // Clear any pending check
       if (emailCheckTimerRef.current) {
         clearTimeout(emailCheckTimerRef.current);
         emailCheckTimerRef.current = null;
       }
 
-      // Basic email format check before hitting the API
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailValue || !emailRegex.test(emailValue.trim())) {
         setEmailAvailability({ status: null, message: "" });
@@ -223,7 +152,6 @@ export default function RegisterPage() {
 
       setEmailAvailability({ status: "checking", message: "Checking email availability..." });
 
-      // Debounce: wait 600ms after last keystroke before calling API
       emailCheckTimerRef.current = setTimeout(async () => {
         try {
           const result = await checkEmailAvailability(emailValue.trim());
@@ -235,7 +163,6 @@ export default function RegisterPage() {
               message: result?.message || "This email is already registered.",
             });
           } else if (result?.reason === "used") {
-            // Email was consumed by a previous registration (used_at is set)
             setEmailAvailability({
               status: "used",
               message: result?.message || "This email has already been used for registration.",
@@ -252,7 +179,6 @@ export default function RegisterPage() {
             });
           }
         } catch (err) {
-          // Network error or server down — don't block the user
           setEmailAvailability({ status: null, message: "" });
         }
       }, 600);
@@ -276,18 +202,15 @@ export default function RegisterPage() {
       [fieldName]: value,
     }));
 
-    // Reset OTP verification if the email field value changes after verification
     if (fieldName === emailFieldName && otpVerified) {
       setOtpVerified(false);
     }
 
-    // Real-time email availability check when the email field changes
     if (fieldName === emailFieldName) {
       setEmailAvailability({ status: null, message: "" });
       checkEmailAvailabilityDebounced(value);
     }
 
-    // Clear error for this field
     if (formErrors[fieldName]) {
       setFormErrors((prev) => ({
         ...prev,
@@ -296,28 +219,25 @@ export default function RegisterPage() {
     }
   };
 
-  // Validate form
-  const validateForm = () => {
+  // Validate fields for a specific group
+  const validateGroup = (groupIndex) => {
     const errors = {};
+    const group = groupedSchema[groupIndex];
+    if (!group) return errors;
 
-    if (!formSchema?.schema) return errors;
-
-    // Only validate fields that are actually displayed (exclude course field)
-    formSchema.schema
+    group.fields
       .filter((field) => field.field_name !== "course")
       .forEach((field) => {
         const value = formData[field.field_name];
 
-        // Required validation
         if (
-          field.validators?.required &&
+          (field.required === "1" || field.validators?.required) &&
           (!value || value.toString().trim() === "")
         ) {
           errors[field.field_name] = `${field.title} is required`;
           return;
         }
 
-        // Email validation
         if (field.type === "email" && value) {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(value)) {
@@ -329,7 +249,6 @@ export default function RegisterPage() {
           }
         }
 
-        // Phone validation
         if (field.type === "phonenumber" && value) {
           try {
             const phoneNumber = parsePhoneNumberFromString(value, "GH");
@@ -342,22 +261,62 @@ export default function RegisterPage() {
         }
       });
 
+    return errors;
+  };
+
+  // Validate entire form (all groups)
+  const validateForm = () => {
+    let errors = {};
+    groupedSchema.forEach((_, index) => {
+      Object.assign(errors, validateGroup(index));
+    });
+
     if (!consentAccepted) {
       errors.consent = "You must accept the terms and privacy policy to register.";
     }
 
-    // OTP verification check — email must be verified before submission
     if (emailFieldName && !otpVerified) {
       errors.otp = "Please verify your email address with the OTP code before submitting.";
     }
 
     return errors;
   };
-    
+
+  // Handle next step
+  const handleNextStep = () => {
+    const errors = validateGroup(currentGroupIndex);
+    setFormErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      const firstErrorField = Object.keys(errors)[0];
+      setTimeout(() => {
+        const el = document.getElementById(`field-${firstErrorField}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+      return;
+    }
+
+    if (currentGroupIndex < groupedSchema.length - 1) {
+      setCurrentGroupIndex(currentGroupIndex + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  // Handle previous step
+  const handlePrevStep = () => {
+    if (currentGroupIndex > 0) {
+      setCurrentGroupIndex(currentGroupIndex - 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  // Check if current group is the last one
+  const isLastGroup = currentGroupIndex === groupedSchema.length - 1;
 
   // Handle form submission
   const handleSubmit = async (e) => {
-    // Prevent default form submission and page reload
     if (e) {
       e.preventDefault();
     }
@@ -366,34 +325,76 @@ export default function RegisterPage() {
     setFormErrors(errors);
 
     if (Object.keys(errors).length > 0) {
+      // Find the first group with an error and navigate to it
+      for (let i = 0; i < groupedSchema.length; i++) {
+        const groupErrors = validateGroup(i);
+        if (Object.keys(groupErrors).length > 0) {
+          setCurrentGroupIndex(i);
+          break;
+        }
+      }
       return;
     }
-
-    // if (!executeRecaptcha) {
-    //   setError("Failed to verify reCaptcha.");
-    //   return;
-    // }
-
-    // const token = await executeRecaptcha('register_form'); 
 
     try {
       setSubmitting(true);
 
-      // Prepare submission data - include course info since it's required
-      const submissionData = {
-        ...formData,
-        course: 27, //selectedCourse.id,  //selectedCourse.title, // Add course title since it's required by API
-        programme_id: selectedCourse.id,
-        region_id: selectedRegion.id,
-        centre_id: selectedCentre.id,
-        form_uuid: formSchema.uuid,
-        // recaptcha_token: token,
-      };
+      const payload = new FormData();
 
-      await submitRegistration(submissionData);
-      setStep(5); // Success step
+      // Append all form fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value instanceof File) {
+          payload.append(key, value);
+        } else if (value !== "" && value !== null && value !== undefined) {
+          payload.append(key, value);
+        }
+      });
+
+      payload.append("course", 27);
+      payload.append("form_uuid", formSchema.uuid);
+
+      if (programmeId) payload.append("programme_id", programmeId);
+      if (regionId) payload.append("region_id", regionId);
+      if (centreId) payload.append("centre_id", centreId);
+
+      await submitRegistration(payload);
+      setStep("success");
     } catch (err) {
-      setError("Failed to submit registration. Please try again.");
+      const responseData = err?.response?.data;
+
+      if (responseData?.errors) {
+        // Map server validation errors to form field errors
+        const serverErrors = {};
+        Object.entries(responseData.errors).forEach(([field, messages]) => {
+          serverErrors[field] = Array.isArray(messages) ? messages[0] : messages;
+        });
+        setFormErrors(serverErrors);
+
+        // Navigate to the step containing the first errored field and scroll to it
+        const firstErrorField = Object.keys(serverErrors)[0];
+        for (let i = 0; i < groupedSchema.length; i++) {
+          const hasErrorField = groupedSchema[i].fields.some(
+            (f) => serverErrors[f.field_name]
+          );
+          if (hasErrorField) {
+            setCurrentGroupIndex(i);
+            // Wait for render then scroll to the errored field
+            setTimeout(() => {
+              const el = document.getElementById(`field-${firstErrorField}`);
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
+            }, 300);
+            break;
+          }
+        }
+
+        setError(responseData.message || "Please fix the errors below.");
+      } else {
+        setError(
+          responseData?.message || "Failed to submit registration. Please try again."
+        );
+      }
       console.error("Error submitting registration:", err);
     } finally {
       setSubmitting(false);
@@ -405,28 +406,116 @@ export default function RegisterPage() {
     const value = formData[field.field_name] || "";
     const hasError = formErrors[field.field_name];
 
-    const baseClasses = `w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-base bg-white ${
+    const baseClasses = `w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 ${
       hasError
         ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
-        : "border-gray-300 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200"
-    } focus:outline-none hover:border-gray-400 disabled:bg-gray-50 disabled:cursor-not-allowed`;
+        : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
+    } focus:outline-none hover:border-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed`;
+
+    // Handle radio fields
+    if (field.type === "radio") {
+      const options = field.options ? field.options.split(",") : [];
+      return (
+        <div className="flex flex-wrap gap-3">
+          {options.map((option, index) => {
+            const trimmed = option.trim();
+            const isSelected = value === trimmed;
+            return (
+              <button
+                key={index}
+                type="button"
+                onClick={() => handleFieldChange(field.field_name, trimmed)}
+                className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 ${
+                  isSelected
+                    ? "border-yellow-400 bg-yellow-50 text-gray-900"
+                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                }`}
+              >
+                {trimmed}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
 
     // Handle select fields
     if (field.type === "select" || field.type === "select_course") {
       return (
-        <select
-          value={value}
-          onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
-          className={baseClasses}
+        <div className="relative">
+          <select
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+            className={`${baseClasses} appearance-none pr-10`}
+          >
+            <option value="">Select {field.title}</option>
+            {field.options &&
+              field.options.split(",").map((option, index) => (
+                <option key={index} value={option.trim()}>
+                  {option.trim()}
+                </option>
+              ))}
+          </select>
+          <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+        </div>
+      );
+    }
+
+    // Handle file upload
+    if (field.type === "file" || field.type === "image") {
+      return (
+        <div
+          className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 cursor-pointer ${
+            hasError
+              ? "border-red-300 bg-red-50"
+              : value
+              ? "border-green-300 bg-green-50"
+              : "border-gray-200 hover:border-yellow-400 hover:bg-yellow-50"
+          }`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.currentTarget.classList.add("border-yellow-400", "bg-yellow-50");
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove("border-yellow-400", "bg-yellow-50");
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove("border-yellow-400", "bg-yellow-50");
+            const file = e.dataTransfer.files[0];
+            if (file) {
+              handleFieldChange(field.field_name, file);
+            }
+          }}
+          onClick={() => document.getElementById(`file-${field.field_name}`).click()}
         >
-          <option value="">Select {field.title}</option>
-          {field.options &&
-            field.options.split(",").map((option, index) => (
-              <option key={index} value={option.trim()}>
-                {option.trim()}
-              </option>
-            ))}
-        </select>
+          <input
+            id={`file-${field.field_name}`}
+            type="file"
+            className="hidden"
+            accept={field.type === "image" ? "image/*" : undefined}
+            onChange={(e) => {
+              const file = e.target.files[0];
+              if (file) {
+                handleFieldChange(field.field_name, file);
+              }
+            }}
+          />
+          <FiUpload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+          {value ? (
+            <p className="text-sm text-green-700 font-medium">{value.name || "File selected"}</p>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600 font-medium">
+                Drag & drop or click to upload
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {field.type === "image" ? "PNG, JPG, GIF up to 5MB" : "PDF, DOC up to 10MB"}
+              </p>
+            </>
+          )}
+        </div>
       );
     }
 
@@ -458,25 +547,20 @@ export default function RegisterPage() {
           value={value}
           onChange={(e) => {
             const inputValue = e.target.value;
-            
+
             try {
-              // Parse the phone number with Ghana as default country
               const phoneNumber = parsePhoneNumberFromString(inputValue, "GH");
-              
+
               if (phoneNumber && phoneNumber.isValid()) {
-                // Store the international format in state
                 handleFieldChange(field.field_name, phoneNumber.formatInternational());
               } else {
-                // Store the raw input if it's not yet valid (user is still typing)
                 handleFieldChange(field.field_name, inputValue);
               }
             } catch (error) {
-              // Store the raw input if parsing fails
               handleFieldChange(field.field_name, inputValue);
             }
           }}
           onKeyPress={(e) => {
-            // Allow numbers, spaces, +, -, parentheses, and control keys
             const allowedChars = /[0-9+\-\s()]/;
             if (
               !allowedChars.test(e.key) &&
@@ -506,92 +590,91 @@ export default function RegisterPage() {
     );
   };
 
-  return (
+  // Get current group
+  const currentGroup = groupedSchema[currentGroupIndex];
 
+  return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
                 <GhanaGradientText variant="red-yellow-green">
                   Programme Registration
                 </GhanaGradientText>
               </h1>
-              <p className="text-gray-600 mt-1 text-sm sm:text-base leading-relaxed">
-                Register for your preferred training programme
-              </p>
             </div>
-            <div className="flex-shrink-0">
-              <Button
-                onClick={() => router.push("/")}
-                variant="ghost"
-                icon={FiArrowLeft}
-                iconPosition="left"
-                className="w-full sm:w-auto min-h-[44px]"
-              >
-                Back to Home
-              </Button>
-            </div>
+            <button
+              onClick={() => router.push("/")}
+              className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 hover:text-gray-700 transition-colors py-1.5 px-2.5 sm:px-3 rounded-lg hover:bg-gray-50 flex-shrink-0"
+            >
+              <FiArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Back to Home</span>
+            </button>
           </div>
 
-          {/* Progress Steps */}
-          <div className="mt-4 sm:mt-6 lg:mt-8">
-            <div className="flex items-center justify-center space-x-1 sm:space-x-2 overflow-x-auto pb-2 px-2">
-              {[1, 2, 3, 4].map((num) => (
-                <React.Fragment key={num}>
-                  <div
-                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 flex-shrink-0 ${
-                      step >= num
-                        ? "bg-yellow-400 text-gray-900 shadow-md"
-                        : "bg-gray-200 text-gray-500"
-                    }`}
-                    role="progressbar"
-                    aria-valuenow={step}
-                    aria-valuemax={4}
-                    aria-label={`Step ${num} of 4`}
-                  >
-                    {step > num ? (
-                      <FiCheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
-                    ) : (
-                      num
+          {/* Stepper */}
+          {step === "form" && groupedSchema.length > 1 && (
+            <div className="pb-4 pt-4 sm:pt-3 border-t border-gray-100 mt-3">
+              <div className="flex items-center max-w-lg mx-auto">
+                {groupedSchema.map((group, index) => (
+                  <React.Fragment key={index}>
+                    <button
+                      onClick={() => {
+                        if (index < currentGroupIndex) {
+                          setCurrentGroupIndex(index);
+                        }
+                      }}
+                      disabled={index > currentGroupIndex}
+                      className="flex items-center gap-1 sm:gap-2 group flex-shrink-0"
+                    >
+                      <div
+                        className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${
+                          index < currentGroupIndex
+                            ? "bg-green-500 text-white cursor-pointer group-hover:bg-green-600"
+                            : index === currentGroupIndex
+                            ? "bg-yellow-400 text-gray-900 ring-2 sm:ring-4 ring-yellow-100"
+                            : "bg-gray-200 text-gray-400"
+                        }`}
+                      >
+                        {index < currentGroupIndex ? (
+                          <FiCheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                        ) : (
+                          index + 1
+                        )}
+                      </div>
+                      <span
+                        className={`text-[10px] sm:text-xs font-medium transition-colors ${
+                          index <= currentGroupIndex ? "text-gray-700" : "text-gray-400"
+                        }`}
+                      >
+                        {group.title}
+                      </span>
+                    </button>
+                    {index < groupedSchema.length - 1 && (
+                      <div
+                        className={`flex-1 h-0.5 rounded-full mx-1.5 sm:mx-3 transition-all duration-500 ${
+                          index < currentGroupIndex ? "bg-green-400" : "bg-gray-200"
+                        }`}
+                      />
                     )}
-                  </div>
-                  {num < 4 && (
-                    <div
-                      className={`w-12 sm:w-16 lg:w-20 h-1 rounded-full transition-all duration-300 flex-shrink-0 ${
-                        step > num ? "bg-yellow-400" : "bg-gray-200"
-                      }`}
-                    ></div>
-                  )}
-                </React.Fragment>
-              ))}
+                  </React.Fragment>
+                ))}
+              </div>
             </div>
-            <div className="flex justify-center mt-3 sm:mt-4 px-4">
-              <p className="text-xs sm:text-sm text-gray-600 text-center font-medium">
-                {step === 1
-                  ? "Select Region"
-                  : step === 2
-                  ? "Choose Training Center"
-                  : step === 3
-                  ? "Pick Your Course"
-                  : step === 4
-                  ? "Complete Registration"
-                  : "Registration Complete!"}
-              </p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-12">
+      <div className="max-w-3xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-4 sm:mb-6 lg:mb-8 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3 shadow-sm"
+            className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3"
           >
             <FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
@@ -608,566 +691,273 @@ export default function RegisterPage() {
           </motion.div>
         )}
 
-        <motion.div
-          className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* Step 1: Region Selection */}
-          {step === 1 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <div className="flex items-center space-x-3 mb-6 sm:mb-8">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <FiMapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-                    Select Your Region
-                  </h2>
-                  <p className="text-gray-600 text-sm sm:text-base mt-1">
-                    Choose the region where you&apos;d like to attend training
-                  </p>
-                </div>
-              </div>
-
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-16 sm:py-20">
-                  <div className="relative">
-                    <FiLoader className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-yellow-600" />
-                    <div className="absolute inset-0 w-10 h-10 sm:w-12 sm:h-12 border-2 border-yellow-200 rounded-full animate-pulse"></div>
+        {/* Registration Form */}
+        {step === "form" && (
+          <div>
+            {loading ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+                {/* Skeleton loader */}
+                <div className="animate-pulse space-y-6">
+                  <div className="space-y-2">
+                    <div className="h-5 bg-gray-200 rounded w-1/3" />
+                    <div className="h-3 bg-gray-100 rounded w-2/3" />
                   </div>
-                  <p className="text-gray-600 mt-4 text-sm sm:text-base font-medium">
-                    Loading regions...
-                  </p>
-                </div>
-              ) : allRegions && allRegions.length > 0 ? (
-                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-                  {allRegions.map((region) => (
-                    <motion.button
-                      key={region.id}
-                      onClick={() => handleRegionSelect(region)}
-                      className="p-4 sm:p-6 rounded-xl border-2 border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:bg-yellow-50 hover:shadow-md group min-h-[80px] sm:min-h-[90px] flex items-center"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      aria-label={`Select ${region.title} region`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 group-hover:text-yellow-700 truncate">
-                            {region.title}
-                          </h3>
-                          <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                            Training centers available
-                          </p>
-                        </div>
-                        <FiChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 group-hover:text-yellow-600 flex-shrink-0 ml-3 transition-transform group-hover:translate-x-1" />
-                      </div>
-                    </motion.button>
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="h-4 bg-gray-200 rounded w-1/4" />
+                      <div className="h-12 bg-gray-100 rounded-xl" />
+                    </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-16 sm:py-20">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FiMapPin className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    No regions available
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Please try again later or contact support.
-                  </p>
-                  <Button
-                    onClick={() => fetchAllRegions()}
-                    variant="outline"
-                    className="min-h-[44px]"
-                  >
-                    Try Again
-                  </Button>
-                </div>
-              )}
-            </motion.div>
-          )}
-
-          {/* Step 2: Centre Selection */}
-          {step === 2 && selectedRegion && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <div className="flex items-center space-x-3 mb-6 sm:mb-8">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <FiMapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-                    Choose Training Center
-                  </h2>
-                  <p className="text-gray-600 text-sm sm:text-base mt-1">
-                    Select a training center in {selectedRegion.title}
-                  </p>
-                </div>
               </div>
-
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-16 sm:py-20">
-                  <div className="relative">
-                    <FiLoader className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-yellow-600" />
-                    <div className="absolute inset-0 w-10 h-10 sm:w-12 sm:h-12 border-2 border-yellow-200 rounded-full animate-pulse"></div>
-                  </div>
-                  <p className="text-gray-600 mt-4 text-sm sm:text-base font-medium">
-                    Loading training centers...
-                  </p>
-                </div>
-              ) : availableCenters?.centres &&
-                availableCenters.centres.length > 0 ? (
-                <div className="space-y-3 sm:space-y-4">
-                  {availableCenters.centres.map((centre) => (
-                    <motion.button
-                      key={centre.id}
-                      onClick={() => handleCentreSelect(centre)}
-                      className="w-full p-4 sm:p-6 rounded-xl border-2 border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:bg-yellow-50 hover:shadow-md group min-h-[80px] sm:min-h-[90px] flex items-center"
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      aria-label={`Select ${centre.title} training center`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 group-hover:text-yellow-700 truncate">
-                            {centre.title}
-                          </h3>
-                        </div>
-                        <FiChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 group-hover:text-yellow-600 flex-shrink-0 ml-3 transition-transform group-hover:translate-x-1" />
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-16 sm:py-20">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FiMapPin className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    No training centers available
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    No training centers found in {selectedRegion.title}.
-                  </p>
-                  <Button
-                    onClick={() => setStep(1)}
-                    variant="outline"
-                    className="min-h-[44px]"
-                  >
-                    Choose Different Region
-                  </Button>
-                </div>
-              )}
-
-              <div className="mt-6 sm:mt-8">
-                <Button
-                  onClick={() => setStep(1)}
-                  variant="outline"
-                  icon={FiArrowLeft}
-                  iconPosition="left"
-                  className="w-full sm:w-auto min-h-[48px] px-6"
+            ) : formSchema && currentGroup ? (
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={currentGroupIndex}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
                 >
-                  Back to Regions
-                </Button>
-              </div>
-            </motion.div>
-          )}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    {/* Group header */}
+                    <div className="px-4 sm:px-6 pt-5 sm:pt-6 pb-4">
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                        {currentGroup.title}
+                      </h2>
+                      <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
+                        Step {currentGroupIndex + 1} of {groupedSchema.length}
+                      </p>
+                    </div>
 
-          {/* Step 3: Course Selection */}
-          {step === 3 && selectedCentre && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <div className="flex items-center space-x-3 mb-6 sm:mb-8">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <FiBookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-                    Select Your Course
-                  </h2>
-                  <p className="text-gray-600 text-sm sm:text-base mt-1">
-                    Available courses at {selectedCentre.title}
-                  </p>
-                </div>
-              </div>
-
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-16 sm:py-20">
-                  <div className="relative">
-                    <FiLoader className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-yellow-600" />
-                    <div className="absolute inset-0 w-10 h-10 sm:w-12 sm:h-12 border-2 border-yellow-200 rounded-full animate-pulse"></div>
-                  </div>
-                  <p className="text-gray-600 mt-4 text-sm sm:text-base font-medium">
-                    Loading available courses...
-                  </p>
-                </div>
-              ) : availableCourses?.programmes ? (
-                <div className="space-y-4 sm:space-y-6">
-                  {availableCourses.programmes.map((course) => (
-                    <motion.button
-                      key={course.id}
-                      onClick={() => handleCourseSelect(course)}
-                      className="w-full p-4 sm:p-6 rounded-xl border-2 border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:bg-yellow-50 hover:shadow-md group"
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      aria-label={`Select ${course.title} course`}
+                    {/* Fields */}
+                    <form
+                      className="px-4 sm:px-6 pb-6 space-y-5"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (isLastGroup) {
+                          handleSubmit();
+                        } else {
+                          handleNextStep();
+                        }
+                      }}
                     >
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 mx-auto sm:mx-0 border border-gray-200">
-                          <Image
-                            // TEMPORARY: Commented out API image, using static image for consistency
-                            // src={
-                            //   course.image ||
-                            //   "/images/hero/Certified-Data-Protection-Manager.jpg"
-                            // }
-                            src={getCourseImage(course.id)}
-                            alt={course.title}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0 text-center sm:text-left">
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between h-full">
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 group-hover:text-yellow-700 mb-2">
-                                {course.title}
-                              </h3>
-                              {course.sub_title && (
-                                <p className="text-sm text-gray-600 mb-3">
-                                  {course.sub_title}
-                                </p>
+                      {currentGroup.fields
+                        .filter((field) => field.field_name !== "course")
+                        .map((field) => (
+                          <div key={field.field_name} id={`field-${field.field_name}`} className="space-y-1.5">
+                            <label className="block text-sm font-medium text-gray-700">
+                              {field.title}
+                              {(field.required === "1" || field.validators?.required) && (
+                                <span
+                                  className="text-red-500 ml-1"
+                                  aria-label="required"
+                                >
+                                  *
+                                </span>
                               )}
-                              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-sm text-gray-500">
-                                <div className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full">
-                                  <FiClock className="w-4 h-4" />
-                                  <span>{course.duration}</span>
-                                </div>
-                                {course.category?.title && (
-                                  <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-                                    {course.category.title}
-                                  </span>
+                            </label>
+                            {renderFormField(field)}
+                            {formErrors[field.field_name] && (
+                              <motion.p
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-sm text-red-600 flex items-center"
+                              >
+                                <FiAlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                                {formErrors[field.field_name]}
+                              </motion.p>
+                            )}
+                            {field.description && !formErrors[field.field_name] && (
+                              <p className="text-xs text-gray-400 leading-relaxed">
+                                {field.description}
+                              </p>
+                            )}
+
+                            {/* Real-time email availability indicator */}
+                            {field.type?.toLowerCase() === "email" && emailAvailability.status && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className={`flex items-center gap-2 text-sm mt-1 ${
+                                  emailAvailability.status === "checking"
+                                    ? "text-gray-500"
+                                    : emailAvailability.status === "available"
+                                    ? "text-green-600"
+                                    : emailAvailability.status === "otp_active"
+                                    ? "text-amber-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                {emailAvailability.status === "checking" && (
+                                  <FiLoader className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
                                 )}
-                              </div>
-                            </div>
-                            <FiChevronRight className="w-6 h-6 text-gray-400 group-hover:text-yellow-600 flex-shrink-0 mx-auto sm:mx-0 mt-3 sm:mt-0 sm:ml-4 transition-transform group-hover:translate-x-1" />
+                                {emailAvailability.status === "available" && (
+                                  <FiCheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                                )}
+                                {emailAvailability.status === "otp_active" && (
+                                  <FiClock className="w-3.5 h-3.5 flex-shrink-0" />
+                                )}
+                                {(emailAvailability.status === "registered" ||
+                                  emailAvailability.status === "used" ||
+                                  emailAvailability.status === "error") && (
+                                  <FiAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                                )}
+                                <span>{emailAvailability.message}</span>
+                              </motion.div>
+                            )}
+
+                            {/* OTP Verification */}
+                            {field.type?.toLowerCase() === "email" &&
+                              emailAvailability.status !== "registered" &&
+                              emailAvailability.status !== "used" && (
+                              <OtpVerification
+                                email={formData[field.field_name] || ""}
+                                phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
+                                formUuid={formSchema.uuid}
+                                onVerified={setOtpVerified}
+                                emailStatus={emailAvailability.status}
+                              />
+                            )}
                           </div>
-                        </div>
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-16 sm:py-20">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FiBookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    No courses available
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    No courses found at {selectedCentre.title}.
-                  </p>
-                  <Button
-                    onClick={() => setStep(2)}
-                    variant="outline"
-                    className="min-h-[44px]"
-                  >
-                    Choose Different Center
-                  </Button>
-                </div>
-              )}
+                        ))}
 
-              <div className="mt-6 sm:mt-8">
-                <Button
-                  onClick={() => setStep(2)}
-                  variant="outline"
-                  icon={FiArrowLeft}
-                  iconPosition="left"
-                  className="w-full sm:w-auto min-h-[48px] px-6"
-                >
-                  Back to Centers
-                </Button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Step 4: Registration Form */}
-          {step === 4 && selectedCourse && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <div className="flex items-center space-x-3 mb-6 sm:mb-8">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <FiUser className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-                    Complete Registration
-                  </h2>
-                  <p className="text-gray-600 text-sm sm:text-base mt-1">
-                    Fill in your details to register for {selectedCourse.title}
-                  </p>
-                </div>
-              </div>
-
-              {/* Selection Summary */}
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 border border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-3 sm:mb-4 text-base flex items-center">
-                  <FiCheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                  Registration Summary
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                  <div className="bg-white rounded-lg p-3 border border-gray-200">
-                    <p className="text-gray-600 text-xs font-medium uppercase tracking-wide">
-                      Region
-                    </p>
-                    <p className="font-semibold text-gray-900 mt-1 truncate">
-                      {selectedRegion.title}
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-lg p-3 border border-gray-200">
-                    <p className="text-gray-600 text-xs font-medium uppercase tracking-wide">
-                      Training Center
-                    </p>
-                    <p className="font-semibold text-gray-900 mt-1 truncate">
-                      {selectedCentre.title}
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-lg p-3 border border-gray-200">
-                    <p className="text-gray-600 text-xs font-medium uppercase tracking-wide">
-                      Course
-                    </p>
-                    <p className="font-semibold text-gray-900 mt-1 truncate">
-                      {selectedCourse.title}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-16 sm:py-20">
-                  <div className="relative">
-                    <FiLoader className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-yellow-600" />
-                    <div className="absolute inset-0 w-10 h-10 sm:w-12 sm:h-12 border-2 border-yellow-200 rounded-full animate-pulse"></div>
-                  </div>
-                  <p className="text-gray-600 mt-4 text-sm sm:text-base font-medium">
-                    Loading registration form...
-                  </p>
-                </div>
-              ) : formSchema ? (
-                <form
-                  className="space-y-5 sm:space-y-6"
-                  onSubmit={handleSubmit}
-                >
-                  {formSchema.schema
-                    .filter((field) => field.field_name !== "course") // Hide course field
-                    .map((field) => (
-                      <div key={field.field_name} className="space-y-2">
-                        <label className="block text-sm font-semibold text-gray-900">
-                          {field.title}
-                          {field.validators?.required && (
-                            <span
-                              className="text-red-500 ml-1"
-                              aria-label="required"
+                      {/* Consent + OTP errors on last step */}
+                      {isLastGroup && (
+                        <>
+                          {/* OTP verification error */}
+                          {formErrors.otp && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl"
                             >
-                              *
-                            </span>
+                              <FiAlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                              <p className="text-sm text-amber-700 font-medium">{formErrors.otp}</p>
+                            </motion.div>
                           )}
-                        </label>
-                        {renderFormField(field)}
-                        {formErrors[field.field_name] && (
-                          <motion.p
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-sm text-red-600 flex items-center"
-                          >
-                            <FiAlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
-                            {formErrors[field.field_name]}
-                          </motion.p>
-                        )}
-                        {field.description && !formErrors[field.field_name] && (
-                          <p className="text-sm text-gray-500 leading-relaxed">
-                            {field.description}
-                          </p>
-                        )}
 
-                        {/* Real-time email availability indicator */}
-                        {field.type?.toLowerCase() === "email" && emailAvailability.status && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className={`flex items-center gap-2 text-sm mt-1 ${
-                              emailAvailability.status === "checking"
-                                ? "text-gray-500"
-                                : emailAvailability.status === "available"
-                                ? "text-green-600"
-                                : emailAvailability.status === "otp_active"
-                                ? "text-amber-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {emailAvailability.status === "checking" && (
-                              <FiLoader className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                          {/* Consent block */}
+                          <div className="space-y-3 pt-4 border-t border-gray-200">
+                            <p className="text-sm text-gray-700 leading-relaxed">
+                              I have read the {" "}
+                              <Link
+                                href="/terms-and-privacy"
+                                className="text-yellow-600 hover:text-yellow-700 font-medium underline underline-offset-2"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                Terms & Privacy Policy
+                              </Link>
+                              {consentContent ? " " : ""}
+                              {consentContent ? (
+                                <span dangerouslySetInnerHTML={{ __html: consentContent }} />
+                              ) : null}
+                            </p>
+                            <label className="flex items-start gap-3 cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                checked={consentAccepted}
+                                onChange={(e) => setConsentAccepted(e.target.checked)}
+                                className="mt-0.5 w-[18px] h-[18px] rounded border-gray-300 text-yellow-500 focus:ring-yellow-500 group-hover:border-yellow-400 transition-colors"
+                              />
+                              <span className="text-sm text-gray-700">
+                                I accept the terms and privacy policy
+                              </span>
+                            </label>
+                            {formErrors.consent && (
+                              <motion.p
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-sm text-red-600 flex items-center"
+                              >
+                                <FiAlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                                {formErrors.consent}
+                              </motion.p>
                             )}
-                            {emailAvailability.status === "available" && (
-                              <FiCheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                            )}
-                            {emailAvailability.status === "otp_active" && (
-                              <FiClock className="w-3.5 h-3.5 flex-shrink-0" />
-                            )}
-                            {(emailAvailability.status === "registered" ||
-                              emailAvailability.status === "used" ||
-                              emailAvailability.status === "error") && (
-                              <FiAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                            )}
-                            <span>{emailAvailability.message}</span>
-                          </motion.div>
-                        )}
+                          </div>
+                        </>
+                      )}
 
-                        {/* OTP Verification — auto-injected after the email field.
-                            Hidden when email is already registered OR already used (no point verifying).
-                            Shown but DISABLED for "otp_active" — the email is locked by
-                            another verification flow, so the Get OTP button is greyed out. */}
-                        {field.type?.toLowerCase() === "email" &&
-                          emailAvailability.status !== "registered" &&
-                          emailAvailability.status !== "used" && (
-                          <OtpVerification
-                            email={formData[field.field_name] || ""}
-                            phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
-                            formUuid={formSchema.uuid}
-                            onVerified={setOtpVerified}
-                            emailStatus={emailAvailability.status}
-                          />
+                      {/* Navigation buttons */}
+                      <div className="flex gap-3 pt-4">
+                        {currentGroupIndex > 0 && (
+                          <button
+                            type="button"
+                            onClick={handlePrevStep}
+                            className="flex items-center justify-center gap-2 px-5 py-3 border border-gray-200 text-gray-700 font-medium text-sm rounded-xl hover:bg-gray-50 transition-colors"
+                          >
+                            <FiArrowLeft className="w-4 h-4" />
+                            Back
+                          </button>
                         )}
+                        <button
+                          type="submit"
+                          disabled={submitting}
+                          className="flex-1 flex items-center justify-center gap-2 py-3 font-semibold text-sm rounded-xl transition-colors bg-yellow-400 hover:bg-yellow-500 text-gray-900 disabled:opacity-50"
+                        >
+                          {isLastGroup ? (
+                            submitting ? (
+                              <>
+                                <FiLoader className="w-4 h-4 animate-spin" />
+                                Submitting...
+                              </>
+                            ) : (
+                              <>
+                                Submit Registration
+                                <FiCheckCircle className="w-4 h-4" />
+                              </>
+                            )
+                          ) : (
+                            <>
+                              Continue
+                              <FiArrowRight className="w-4 h-4" />
+                            </>
+                          )}
+                        </button>
                       </div>
-                    ))}
-
-                  {/* OTP verification error */}
-                  {formErrors.otp && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl"
-                    >
-                      <FiAlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                      <p className="text-sm text-amber-700 font-medium">{formErrors.otp}</p>
-                    </motion.div>
-                  )}
-
-                  {/* Consent block */}
-                  <div className="space-y-3 pt-4 border-t border-gray-200">
-                    <p className="text-sm text-gray-700 leading-relaxed">
-                      I have read the {" "}
-                      <Link
-                        href="/terms-and-privacy"
-                        className="text-yellow-600 hover:text-yellow-700 font-medium underline underline-offset-2"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Terms & Privacy Policy
-                      </Link>
-                      {consentContent ? " " : ""}
-                      {consentContent ? (
-                        <span dangerouslySetInnerHTML={{ __html: consentContent }} />
-                      ) : null}
-                    </p>
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={consentAccepted}
-                        onChange={(e) => setConsentAccepted(e.target.checked)}
-                        className="mt-1 w-4 h-4 rounded border-gray-300 text-yellow-500 focus:ring-yellow-500"
-                      />
-                      <span className="text-sm text-gray-700">
-                        I accept the terms and privacy policy
-                      </span>
-                    </label>
-                    {formErrors.consent && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-sm text-red-600 flex items-center"
-                      >
-                        <FiAlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
-                        {formErrors.consent}
-                      </motion.p>
-                    )}
+                    </form>
                   </div>
+                </motion.div>
+              </AnimatePresence>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
+                <p className="text-gray-600">
+                  Failed to load registration form.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
-                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-6 sm:pt-8 border-t border-gray-200">
-                    <Button
-                      onClick={() => setStep(3)}
-                      variant="outline"
-                      className="w-full sm:flex-1 order-2 sm:order-1 min-h-[48px]"
-                      type="button"
-                    >
-                      Back to Courses
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={submitting || (emailFieldName && !otpVerified)}
-                      icon={submitting ? FiLoader : FiCheckCircle}
-                      className="w-full sm:flex-1 order-1 sm:order-2 min-h-[48px] font-semibold"
-                    >
-                      {submitting
-                        ? "Submitting..."
-                        : emailFieldName && !otpVerified
-                        ? "Verify Email to Submit"
-                        : "Submit Registration"}
-                    </Button>
-                  </div>
-                </form>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-600">
-                    Failed to load registration form.
-                  </p>
-                </div>
-              )}
-            </motion.div>
-          )}
-
-          {/* Step 5: Success */}
-          {step === 5 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="text-center py-8 sm:py-12"
-            >
+        {/* Success */}
+        {step === "success" && (
+          <motion.div
+            className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <div className="text-center py-4 sm:py-8">
               <motion.div
-                className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg"
+                className="w-16 h-16 sm:w-20 sm:h-20 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-5"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
               >
-                <FiCheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />
+                <FiCheckCircle className="w-8 h-8 sm:w-10 sm:h-10 text-green-600" />
               </motion.div>
               <motion.h2
-                className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 px-4"
-                initial={{ opacity: 0, y: 20 }}
+                className="text-xl sm:text-2xl font-bold text-gray-900 mb-2"
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
                 Registration Successful!
               </motion.h2>
               <motion.p
-                className="text-gray-600 mb-6 sm:mb-8 leading-relaxed max-w-2xl mx-auto text-sm sm:text-base px-4"
-                initial={{ opacity: 0, y: 20 }}
+                className="text-gray-500 mb-6 sm:mb-8 text-sm sm:text-base max-w-md mx-auto"
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
@@ -1175,30 +965,28 @@ export default function RegisterPage() {
                   "Thank you for registering! Further instructions will be sent to you via email/SMS."}
               </motion.p>
               <motion.div
-                className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 px-4"
-                initial={{ opacity: 0, y: 20 }}
+                className="flex flex-col sm:flex-row justify-center gap-3"
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
-                <Button
+                <button
                   onClick={() => router.push("/")}
-                  variant="outline"
-                  className="w-full sm:w-auto min-h-[48px] px-6"
+                  className="px-5 py-3 border border-gray-200 text-gray-700 font-medium text-sm rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   Back to Home
-                </Button>
-                <Button
+                </button>
+                <button
                   onClick={() => router.push("/programmes")}
-                  variant="primary"
-                  className="w-full sm:w-auto min-h-[48px] px-6 font-semibold"
+                  className="px-5 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
                 >
                   Browse More Courses
-                </Button>
+                </button>
               </motion.div>
-            </motion.div>
-          )}
-        </motion.div>
+            </div>
+          </motion.div>
+        )}
       </div>
-    </div> 
+    </div>
   );
 }

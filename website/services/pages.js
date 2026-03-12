@@ -201,7 +201,10 @@ export const getCourseRecommendations = async (answers) => {
 export const getAllRegions = async () => {
   try {
     const response = await apiRequest("/branches");
-    return response.data;
+    const filteredRegions  =  response?.data?.filter((item) => {
+      return item.status === true
+    })
+    return filteredRegions;
   } catch (error) {
     console.error("Error fetching regions:", error);
     throw error;
@@ -259,9 +262,13 @@ export const getRegistrationForm = async () => {
  */
 export const submitRegistration = async (formData) => {
   try {
+    const isFormData = formData instanceof FormData;
     const response = await apiRequest("/add-student", {
       method: 'POST',
-      data: formData
+      data: formData,
+      ...(isFormData && {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }),
     });
     return response;
   } catch (error) {
@@ -281,6 +288,36 @@ export const getCentreProgrammes = async (centreId) => {
     return response;
   } catch (error) {
     console.error(`Error fetching programmes for centre ${centreId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch districts in a specific branch/region
+ * @param {string|number} branchId - Branch/Region ID
+ * @returns {Promise<Object>} - Districts data
+ */
+export const getDistrictsByBranch = async (branchId) => {
+  try {
+    const response = await apiRequest(`/districts-by-branch?branch_id=${branchId}`);
+    return response;
+  } catch (error) {
+    console.error(`Error fetching districts for branch ${branchId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch centres in a specific district
+ * @param {string|number} districtId - District ID
+ * @returns {Promise<Object>} - Centres data
+ */
+export const getCentresByDistrict = async (districtId) => {
+  try {
+    const response = await apiRequest(`/centres-by-district?district_id=${districtId}`);
+    return response;
+  } catch (error) {
+    console.error(`Error fetching centres for district ${districtId}:`, error);
     throw error;
   }
 };
