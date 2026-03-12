@@ -10,13 +10,13 @@ return new class extends Migration
     {
         Schema::table('course_batches', function (Blueprint $table) {
             // Drop wrong foreign key (branches)
-            $table->dropForeign(['batch_id']);
+            // $table->dropForeign(['batch_id']);
 
-            // Re-create correct foreign key (admission_batches)
-            $table->foreign('batch_id')
-                ->references('id')
-                ->on('admission_batches')
-                ->nullOnDelete();
+            // // Re-create correct foreign key (admission_batches)
+            // $table->foreign('batch_id')
+            //     ->references('id')
+            //     ->on('admission_batches')
+            //     ->nullOnDelete();
         });
     }
 

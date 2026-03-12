@@ -20,7 +20,7 @@ class DashboardStudentRegistrationBarChartController extends ChartController
         $cacheKey = 'chart_registrations_per_region_' . DashboardWidgetHelper::scopeCacheKeySuffix($visibleCourseIds);
 
         // Cache for 1 hour (with a quick fallback)
-        $payload = Cache::flexible($cacheKey, [(60 * 60), 10], function () use ($visibleCourseIds) {
+        $payload = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {
             $rows = DB::table('users as u')
                 ->leftJoin('courses as c', 'u.registered_course', '=', 'c.id')
                 ->leftJoin('centres as ce', 'c.centre_id', '=', 'ce.id')
@@ -41,7 +41,7 @@ class DashboardStudentRegistrationBarChartController extends ChartController
 
             return [
                 'labels' => $rows->pluck('region_name')->values(),
-                'data'   => $rows->pluck('students_count')->map(fn ($v) => (int) $v)->values(),
+                'data'   => $rows->pluck('students_count')->map(fn($v) => (int) $v)->values(),
             ];
         });
 
@@ -61,7 +61,7 @@ class DashboardStudentRegistrationBarChartController extends ChartController
             'rgba(34,197,94,0.6)',    // green
             'rgba(251,146,60,0.6)',   // orange
         ];
-        $barColors = array_map(fn ($i) => $palette[$i % count($palette)], array_keys($labels));
+        $barColors = array_map(fn($i) => $palette[$i % count($palette)], array_keys($labels));
 
         $this->chart
             ->dataset('Number of Students', 'bar', $data)

@@ -28,7 +28,7 @@ class DashboardUserGenderPieChartController extends ChartController
         $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'chart_gender_distribution_' . DashboardWidgetHelper::scopeCacheKeySuffix($visibleCourseIds);
 
-        $payload = Cache::flexible($cacheKey, [(60 * 60), 10], function () use ($UserTypes, $visibleCourseIds) {
+        $payload = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($UserTypes, $visibleCourseIds) {
             $labels = [];
             $counts = [];
 
