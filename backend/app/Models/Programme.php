@@ -109,5 +109,9 @@ class Programme extends Model
                 'why_choose_this_course' => $whyChoose
             ];
         });
+
+        static::saved(function ($programme) {
+            $programme->courses->each->save();
+        });
     }
 }
