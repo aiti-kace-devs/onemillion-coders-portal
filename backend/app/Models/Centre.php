@@ -57,9 +57,21 @@ class Centre extends Model
         return $this->belongsToMany(Programme::class, 'courses');
     }
 
+    public function courses()
+    {
+        return $this->hasMany(Course::class);
+    }
+
     public function districts()
     {
         return $this->belongsToMany(District::class, 'district_centre', 'centre_id', 'district_id')
             ->withTimestamps();
+    }
+
+    protected static function booted()
+    {
+        static::saved(function ($centre) {
+            $centre->courses->each->save();
+        });
     }
 }
