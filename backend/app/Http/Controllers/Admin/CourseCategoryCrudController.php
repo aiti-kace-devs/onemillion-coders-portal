@@ -8,6 +8,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\FilterHelper;
 use App\Helpers\WidgetHelper;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class CourseCategoryCrudController
@@ -43,6 +44,7 @@ class CourseCategoryCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
         WidgetHelper::courseCategoryStatisticsWidget();
 
         CRUD::column('title')->type('textarea');

@@ -11,6 +11,7 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\CourseModule;
 use App\Models\CourseCertification;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class ProgrammeCrudController
@@ -51,6 +52,7 @@ class ProgrammeCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
         WidgetHelper::programmeStatisticsWidget();
 
         CRUD::column('title')->type('textarea');

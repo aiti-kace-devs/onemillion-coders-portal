@@ -41,7 +41,7 @@ trait GeneralFieldsAndColumns
     /**
      * Add an is_active switch field
      */
-    public function addIsActiveField(array $options = [], string $label = 'Status', string $name = 'is_active', string $tab = ''): void
+    public function addIsActiveField(array $options = [], string $label = 'Status', string $name = 'is_active', ?string $tab = null): void
     {
         CRUD::field($name)
             ->type('switch')
@@ -51,7 +51,7 @@ trait GeneralFieldsAndColumns
                 1 => $this->defaultBooleanLabelTrue,
             ])
             ->wrapper(['class' => 'form-group col-6'])
-            ->when(!is_null($tab), fn($field) => $field->tab($tab));
+            ->when(!empty($tab), fn($field) => $field->tab($tab));
     }
 
     /**

@@ -8,6 +8,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Backpack\CRUD\app\Library\CrudPanel\Hooks\Facades\LifecycleHook;
 use App\Helpers\FilterHelper;
 use App\Helpers\StudentFormFieldHelpers;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class FormCrudController
@@ -61,6 +62,7 @@ class FormCrudController extends CrudController
             abort(403, 'Unauthorized action.');
         }
 
+        CrudListHelper::editInDropdown();
         CRUD::column('title')->type('textarea');
         CRUD::addColumn([
             'name' => 'active',
