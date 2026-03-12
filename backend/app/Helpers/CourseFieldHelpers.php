@@ -564,27 +564,39 @@ CRUD::addField([
 
     protected function courseMatchFields()
     {
+        $typeOptions = [
+            'General' => 'General',
+            'Choice' => 'Choice',
+        ];
 
         CRUD::addField([
             'name' => 'tag',
             'label' => 'Tag',
             'type' => 'text',
-            'wrapper' => ['class' => 'form-group col-6'],
+            'wrapper' => ['class' => 'form-group col-4'],
         ]);
 
         CRUD::addField([
             'name' => 'question',
             'label' => 'Question',
             'type' => 'text',
-            'wrapper' => ['class' => 'form-group col-6'],
+            'wrapper' => ['class' => 'form-group col-8'],
         ]);
 
+        CRUD::addField([
+            'name' => 'type',
+            'label' => 'Type',
+            'type' => 'select_from_array',
+            'options' => $typeOptions,
+            'allows_null' => false,
+            'wrapper' => ['class' => 'form-group col-4'],
+        ]);
 
         CRUD::addField([
             'name' => 'description',
             'label' => 'Description',
             'type' => 'text',
-            'wrapper' => ['class' => 'form-group col-7'],
+            'wrapper' => ['class' => 'form-group col-12'],
         ]);
 
 
@@ -601,9 +613,11 @@ CRUD::addField([
             'name' => 'order',
             'label' => 'Order',
             'type' => 'number',
-            'wrapper' => ['class' => 'form-group col-5'],
+            'wrapper' => ['class' => 'form-group col-4'],
         ]);
 
+
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Multiple Select', 'is_multiple_select');
         $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
 
         CRUD::addField([
@@ -653,7 +667,7 @@ CRUD::addField([
         ]);
 
 
-        $this->addFieldsToTab('Question', true, ['tag', 'question', 'description', 'order', 'status']);
+        $this->addFieldsToTab('Question', true, ['tag', 'question', 'description', 'type',  'order', 'is_multiple_select', 'status']);
         $this->addFieldsToTab('Options', true, ['course_match_options']);
     }
 }

@@ -119,6 +119,37 @@ class RegistrationFormAPIController extends Controller
         ]);
     }
 
+    public function check_user_course(Request $request)
+    {
+        $data = $request->validate([
+            'userId' => 'required|exists:users,userId',
+            'course_id' => 'required|integer|exists:courses,id',
+        ]);
+
+        $user = User::where('userId', $data['userId'])->first();
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ]);
+        }
+        
+        $course = Course::with('programme')->find($data['course_id']);
+
+        $user->registered_course = $course->id;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'user' => $user->fresh(),
+                'course' => $course,
+                'already_registered' => (int) $user->registered_course === (int) $course->id,
+            ],
+        ]);
+    }
+
 
 
 
