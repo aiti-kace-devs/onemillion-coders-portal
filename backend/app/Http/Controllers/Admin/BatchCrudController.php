@@ -154,7 +154,22 @@ class BatchCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        $this->setupListOperation();
+        $this->setupCommonBatchListFields();
+
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
+
+        CRUD::addColumn([
+            'name' => 'completed',
+            'label' => 'Completed',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+            'toggle_url' => 'batch/{id}/toggle-completed',
+        ]);
     }
 
 

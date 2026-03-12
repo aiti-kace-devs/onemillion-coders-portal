@@ -112,7 +112,7 @@ class OexQuestionMasterCrudController extends CrudController
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
         CrudListHelper::editInDropdown();
-
+        CRUD::denyAccess('show');
     }
 
     protected function setupShowOperation()
