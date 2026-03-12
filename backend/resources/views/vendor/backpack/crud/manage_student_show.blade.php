@@ -144,7 +144,7 @@
 @endphp
 
 @section('content')
-    @parent
+    {{-- @parent --}}
 
     <div class="mb-3 d-flex align-items-start justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-start gap-2">
@@ -160,8 +160,8 @@
                     @endif
                 </div>
                 <!-- <div class="text-muted small">
-                                                    User ID: {{ $entry->userId ?? 'N/A' }}
-                                                </div> -->
+                                                                User ID: {{ $entry->userId ?? 'N/A' }}
+                                                            </div> -->
             </div>
         </div>
 
@@ -172,8 +172,8 @@
                 </a>
             @endif
             <!-- <a href="{{ backpack_url('user/' . $userId . '/edit') }}" class="btn btn-sm btn-outline-primary">
-                                                <i class="la la-edit"></i> Edit Student
-                                            </a> -->
+                                                            <i class="la la-edit"></i> Edit Student
+                                                        </a> -->
         </div>
     </div>
 
