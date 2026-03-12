@@ -196,7 +196,10 @@ export default function CourseDetailsPage() {
               {/* CTA Button */}
               <div className="flex">
                 <Button
-                  onClick={() => isAvailable && setShowRegistrationDialog(true)}
+                  // onClick={() => isAvailable && setShowRegistrationDialog(true)}
+                  onClick={() => {
+                    router.push('/register')
+                  }}
                   variant="primary"
                   icon={FiPlay}
                   disabled={!isAvailable}
