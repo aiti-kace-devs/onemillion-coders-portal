@@ -58,6 +58,7 @@ class OexCategoryCrudController extends CrudController
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
+        CRUD::denyAccess('show');
     }
 
     protected function setupShowOperation()

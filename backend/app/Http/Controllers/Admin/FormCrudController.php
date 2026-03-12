@@ -72,6 +72,8 @@ class FormCrudController extends CrudController
         ]);
         CRUD::column('created_at');
         CRUD::enableExportButtons();
+
+        CRUD::denyAccess('show');
     }
 
     protected function setupShowOperation()
