@@ -78,7 +78,23 @@ class ProgrammeCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        $this->setupShowCommonFields();
+        // $this->setupShowCommonFields();
+        CRUD::column('title')->type('textarea');
+        FilterHelper::addGenericRelationshipColumn('category', 'Course Category', 'course-category', 'title');
+        CRUD::column('duration');
+        CRUD::column('start_date');
+        CRUD::column('end_date');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
+        FilterHelper::addDateRangeFilter('start_date', 'Start Date');
+        $this->addOngoingCoursesFilter('Ongoing Programmes');
+        FilterHelper::addBooleanFilter('status', 'Status');
+        FilterHelper::addTagsFilter('programmeTags', 'Tags');
+        FilterHelper::addDateRangeFilter('end_date', 'End Date');
     }
 
     /**
