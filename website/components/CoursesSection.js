@@ -10,7 +10,8 @@ import Button from "./Button";
 import ProgrammeCard from "./ProgrammeCard";
 import CoursesSkeleton from "./CoursesSkeleton";
 
-const CoursesSection = ({ categories: apiCategories = [] }) => {
+const CoursesSection = ({ categories: apiCategories }) => {
+  const safeCategories = Array.isArray(apiCategories) ? apiCategories : [];
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,12 +78,15 @@ const CoursesSection = ({ categories: apiCategories = [] }) => {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Get categories from API
+  // Get categories from API (safe when API fails and returns null/undefined)
   const categories =
-    apiCategories.length > 0
+    safeCategories.length > 0
       ? [
           "All",
-          ...apiCategories.filter((cat) => cat.status).map((cat) => cat.title),
+          ...safeCategories
+            .filter((cat) => cat?.status)
+            .map((cat) => cat?.title ?? "")
+            .filter(Boolean),
         ]
       : ["All"];
 
@@ -98,8 +102,8 @@ const CoursesSection = ({ categories: apiCategories = [] }) => {
       if (category === "All") {
         const data = await fetchProgrammes();
       } else {
-        const categoryId = apiCategories.find(
-          (cat) => cat.title === category
+        const categoryId = safeCategories.find(
+          (cat) => cat?.title === category
         )?.id;
         if (categoryId) {
           const data = await fetchProgrammes(categoryId);

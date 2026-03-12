@@ -37,16 +37,18 @@ class User extends Authenticatable
         'status',
         'mobile_no',
         'age',
-        'age',
         'password',
         'userId',
         'card_type',
         'ghcard',
         'gender',
         'network_type',
+        'has_disability',
         'registered_course',
         'shortlist',
-        'last_login'
+        'last_login',
+        'student_level',
+        'data',
     ];
 
     /**
@@ -70,6 +72,8 @@ class User extends Authenticatable
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'status' => 'boolean',
+        'has_disability' => 'boolean',
+        'data' => 'array',
     ];
 
 
@@ -119,6 +123,14 @@ class User extends Authenticatable
         return $this->belongsTo(Course::class, 'registered_course', 'id');
     }
 
+    /**
+     * Get the user's admissions
+     */
+    public function admissions()
+    {
+        return $this->hasMany(UserAdmission::class, 'user_id', 'userId');
+    }
+
 
     public function isAdmitted()
     {
@@ -163,11 +175,6 @@ class User extends Authenticatable
         return $this->hasMany(AdmissionRejection::class, 'user_id', 'userId');
     }
 
-    public function admissions()
-    {
-        return $this->hasMany(UserAdmission::class, 'user_id', 'userId');
-    }
-
     public function userExams()
     {
         return $this->hasMany(\App\Models\user_exam::class, 'user_id', 'id');
@@ -189,9 +196,19 @@ class User extends Authenticatable
         return $this->hasMany(QuestionnaireResponse::class);
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class, 'user_id', 'userId');
+    }
+
     public function hasAttendance()
     {
-        return Attendance::where('user_id', $this->userId)->count() > 0;
+        return $this->hasMany(Attendance::class, 'user_id', 'userId');
     }
 
     public function getNameWithEmail()
@@ -282,5 +299,3 @@ class User extends Authenticatable
             ->dontLogIfAttributesChangedOnly(['last_login']);
     }
 }
-
-

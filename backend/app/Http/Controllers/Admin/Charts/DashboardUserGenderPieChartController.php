@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Admin\Charts;
 
+use App\Helpers\DashboardWidgetHelper;
 use App\Models\User;
 use Backpack\CRUD\app\Http\Controllers\ChartController;
 use ConsoleTVs\Charts\Classes\Chartjs\Chart;
+use Illuminate\Support\Facades\Cache;
 
 class DashboardUserGenderPieChartController extends ChartController
 {
@@ -22,13 +24,25 @@ class DashboardUserGenderPieChartController extends ChartController
             'female'    => 'rgba(255, 99, 132, 0.6)',
         ];
 
-        $labels = [];
-        $counts = [];
+        $visibleCourseIds = DashboardWidgetHelper::currentAdminVisibleCourseIds();
+        $cacheKey = 'chart_gender_distribution_' . DashboardWidgetHelper::scopeCacheKeySuffix($visibleCourseIds);
 
-        foreach ($UserTypes as $type) {
-            $labels[] = ucfirst($type);
-            $counts[] = User::where('gender', $type)->count();
-        }
+        $payload = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($UserTypes, $visibleCourseIds) {
+            $labels = [];
+            $counts = [];
+
+            foreach ($UserTypes as $type) {
+                $labels[] = ucfirst($type);
+                $query = User::query()->where('gender', $type);
+                DashboardWidgetHelper::applyCourseScope($query, $visibleCourseIds, 'registered_course');
+                $counts[] = $query->count();
+            }
+
+            return compact('labels', 'counts');
+        });
+
+        $labels = $payload['labels'];
+        $counts = $payload['counts'];
 
         $this->chart->labels($labels);
 

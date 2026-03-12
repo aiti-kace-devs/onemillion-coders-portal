@@ -46,7 +46,7 @@ class CentreController extends Controller
         return response()->json([]);
     }
 
-    $term = $request->input('term', '');
+    $term = $request->input('term', $request->input('q', ''));
 
     $centres = Centre::where('branch_id', $branchId)
         ->when($term, fn($q) => $q->where('title', 'like', "%{$term}%"))

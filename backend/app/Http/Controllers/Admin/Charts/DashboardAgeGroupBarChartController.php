@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Charts;
 
+use App\Helpers\DashboardWidgetHelper;
 use Backpack\CRUD\app\Http\Controllers\ChartController;
 use ConsoleTVs\Charts\Classes\Chartjs\Chart;
 use Illuminate\Support\Facades\DB;
@@ -14,32 +15,43 @@ class DashboardAgeGroupBarChartController extends ChartController
         $this->chart = new Chart();
         $this->chart->height(260);
 
+        $visibleCourseIds = DashboardWidgetHelper::currentAdminVisibleCourseIds();
+        $cacheKey = 'chart_age_groups_dynamic_decades_' . DashboardWidgetHelper::scopeCacheKeySuffix($visibleCourseIds);
+
         // Cache for 1 hour (fallback 10s)
-        $payload = Cache::flexible('chart_age_groups_dynamic_decades', [(60 * 60), 10], function () {
+        $payload = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {
             // Handle all types of dashes, hyphens, and plus signs
-            $rows = DB::table('users')
+            $rows = DB::table('users as u')
+                ->when(is_array($visibleCourseIds), function ($query) use ($visibleCourseIds) {
+                    if (empty($visibleCourseIds)) {
+                        $query->whereRaw('1 = 0');
+                        return;
+                    }
+
+                    $query->whereIn('u.registered_course', $visibleCourseIds);
+                })
                 ->selectRaw("
                     CASE 
-                        WHEN age IS NULL OR age = '' THEN 'Unknown'
-                        WHEN age LIKE '%-%' OR age LIKE '%–%' OR age LIKE '%—%' THEN age
-                        WHEN age LIKE '%+%' THEN age
-                        WHEN age REGEXP '^[0-9]+$' THEN 
+                        WHEN u.age IS NULL OR u.age = '' THEN 'Unknown'
+                        WHEN u.age LIKE '%-%' OR u.age LIKE '%–%' OR u.age LIKE '%—%' THEN u.age
+                        WHEN u.age LIKE '%+%' THEN u.age
+                        WHEN u.age REGEXP '^[0-9]+$' THEN 
                             CONCAT(
-                                FLOOR(CAST(age AS UNSIGNED) / 10) * 10, 
+                                FLOOR(CAST(u.age AS UNSIGNED) / 10) * 10, 
                                 '-', 
-                                FLOOR(CAST(age AS UNSIGNED) / 10) * 10 + 9
+                                FLOOR(CAST(u.age AS UNSIGNED) / 10) * 10 + 9
                             )
                         ELSE 'Unknown'
                     END AS age_range,
                     COUNT(*) AS total,
                     CASE 
-                        WHEN age IS NULL OR age = '' THEN 9999
-                        WHEN age LIKE '%-%' OR age LIKE '%–%' OR age LIKE '%—%' THEN 
-                            CAST(SUBSTRING_INDEX(age, '-', 1) AS UNSIGNED)
-                        WHEN age LIKE '%+%' THEN 
-                            CAST(SUBSTRING_INDEX(age, '+', 1) AS UNSIGNED)
-                        WHEN age REGEXP '^[0-9]+$' THEN 
-                            FLOOR(CAST(age AS UNSIGNED) / 10)
+                        WHEN u.age IS NULL OR u.age = '' THEN 9999
+                        WHEN u.age LIKE '%-%' OR u.age LIKE '%–%' OR u.age LIKE '%—%' THEN 
+                            CAST(SUBSTRING_INDEX(u.age, '-', 1) AS UNSIGNED)
+                        WHEN u.age LIKE '%+%' THEN 
+                            CAST(SUBSTRING_INDEX(u.age, '+', 1) AS UNSIGNED)
+                        WHEN u.age REGEXP '^[0-9]+$' THEN 
+                            FLOOR(CAST(u.age AS UNSIGNED) / 10)
                         ELSE 9999
                     END AS bucket_order
                 ")
@@ -49,7 +61,7 @@ class DashboardAgeGroupBarChartController extends ChartController
 
             return [
                 'labels' => $rows->pluck('age_range')->values(),
-                'data'   => $rows->pluck('total')->map(fn ($v) => (int) $v)->values(),
+                'data'   => $rows->pluck('total')->map(fn($v) => (int) $v)->values(),
             ];
         });
 
@@ -69,7 +81,7 @@ class DashboardAgeGroupBarChartController extends ChartController
             'rgba(34,197,94,0.6)',
             'rgba(251,146,60,0.6)',
         ];
-        $barColors = array_map(fn ($i) => $palette[$i % count($palette)], array_keys($labels));
+        $barColors = array_map(fn($i) => $palette[$i % count($palette)], array_keys($labels));
 
         $this->chart
             ->dataset('Number of Students', 'bar', $data)

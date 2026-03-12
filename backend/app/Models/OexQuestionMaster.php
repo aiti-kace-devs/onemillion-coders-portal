@@ -24,14 +24,15 @@ class OexQuestionMaster extends Model
         'options' => 'array',
     ];
 
-    public function programmes()
-    {
-        return $this->belongsToMany(Programme::class, 'oex_question_master_programme');
-    }
 
     public function exam()
     {
         return $this->belongsTo(OexExamMaster::class, 'exam_id', 'id');
+    }
+
+    public function tags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
     }
 
 

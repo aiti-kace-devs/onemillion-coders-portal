@@ -1,7 +1,12 @@
 @extends(backpack_view('blank'))
 @section('header')
     <section class="content-header">
-        <h1 class="text-center">Result</h1>
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="text-center">Result</h1>
+            <a href="{{ url('admin/manage-student/' . $student_info->id . '/show') }}" class="btn btn-secondary">
+                <i class="la la-arrow-left"></i> Back to Preview
+            </a>
+        </div>
     </section>
 @endsection
 

@@ -166,6 +166,35 @@ trait GeneralFieldsAndColumns
     }
 
     /**
+     * Add a tags field with target model constraints
+     */
+    public function addTagsField(string $targetModelClass, string $relationName = 'tags', string $tab = ''): void
+    {
+        $field = [
+            'name' => $relationName,
+            'label' => 'Select Tags',
+            'type' => 'select2_multiple',
+            'entity' => $relationName,
+            'attribute' => 'name',
+            'model' => \App\Models\Tag::class,
+            'pivot' => true,
+            'wrapper' => ['class' => 'form-group col-12'],
+            'allows_null' => true,
+            'options' => (function ($query) use ($targetModelClass) {
+                return $query->whereHas('tagType', function ($q) use ($targetModelClass) {
+                    $q->whereJsonContains('target_models', $targetModelClass);
+                })->get();
+            }),
+        ];
+
+        if (!empty($tab)) {
+            $field['tab'] = $tab;
+        }
+
+        CRUD::addField($field);
+    }
+
+    /**
      * Add a description text area field
      */
     public function addDescriptionField(string $name = 'description', string $label = 'Description', string $tab = '', int $limit = 0, int $row = 2): void
@@ -269,9 +298,9 @@ trait GeneralFieldsAndColumns
             ->type('text')
             ->label($label)
             ->searchLogic($searchable ? fn($query, $column, $term) =>
-            $query->orWhere('name', 'like', "%{$term}%") : false)
+                $query->orWhere('name', 'like', "%{$term}%") : false)
             ->orderLogic($orderable ? fn($query, $column, $direction) =>
-            $query->orderBy('name', $direction) : false);
+                $query->orderBy('name', $direction) : false);
     }
 
     /**
@@ -283,9 +312,9 @@ trait GeneralFieldsAndColumns
             ->type('text')
             ->label($label)
             ->searchLogic($searchable ? fn($query, $column, $term) =>
-            $query->orWhere('title', 'like', "%{$term}%") : false)
+                $query->orWhere('title', 'like', "%{$term}%") : false)
             ->orderLogic($orderable ? fn($query, $column, $direction) =>
-            $query->orderBy('title', $direction) : false);
+                $query->orderBy('title', $direction) : false);
     }
 
     /**
@@ -302,9 +331,9 @@ trait GeneralFieldsAndColumns
             ->label($label ?? ucfirst($relationName) . ' Count')
             ->value(fn($entry) => $entry->$relationName()->count())
             ->searchLogic($searchable ? fn($query, $column, $term) =>
-            $query->orWhereHas($relationName, fn($q) => $q->where('name', 'like', "%{$term}%")) : false)
+                $query->orWhereHas($relationName, fn($q) => $q->where('name', 'like', "%{$term}%")) : false)
             ->orderLogic($orderable ? fn($query, $column, $direction) =>
-            $query->withCount($relationName)->orderBy($relationName . '_count', $direction) : false);
+                $query->withCount($relationName)->orderBy($relationName . '_count', $direction) : false);
     }
 
     /**
@@ -323,10 +352,10 @@ trait GeneralFieldsAndColumns
             ->entity($relationName)
             ->attribute($attribute)
             ->searchLogic($searchable ? fn($query, $column, $term) =>
-            $query->orWhereHas($relationName, fn($q) => $q->where($attribute, 'like', "%{$term}%")) : false)
+                $query->orWhereHas($relationName, fn($q) => $q->where($attribute, 'like', "%{$term}%")) : false)
             ->orderLogic($orderable ? fn($query, $column, $direction) =>
-            $query->leftJoinRelationship($relationName)
-                ->orderBy($relationName . '.' . $attribute, $direction) : false);
+                $query->leftJoinRelationship($relationName)
+                    ->orderBy($relationName . '.' . $attribute, $direction) : false);
     }
 
     // CONFIGURATION METHODS ============================================

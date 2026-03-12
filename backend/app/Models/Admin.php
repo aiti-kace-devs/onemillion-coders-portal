@@ -55,6 +55,7 @@ class Admin extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'preferences' => 'json',
+        'is_super' => 'boolean',
     ];
 
 
@@ -81,10 +82,35 @@ class Admin extends Authenticatable
     {
         return $this->is_super;
     }
+
+    /**
+     * Return course IDs explicitly assigned to this admin.
+     */
+    public function assignedCourseIds(): array
+    {
+        return $this->assignedCourses()
+            ->pluck('courses.id')
+            ->map(fn ($courseId) => (int) $courseId)
+            ->all();
+    }
+
+    /**
+     * Return visible course IDs for this admin.
+     * `null` means unrestricted visibility (super admin).
+     */
+    public function visibleCourseIds(): ?array
+    {
+        if ($this->isSuper()) {
+            return null;
+        }
+
+        return $this->assignedCourseIds();
+    }
+
     public function assignedCourses()
     {
         return $this->belongsToMany(Course::class, 'admin_course', 'admin_id', 'course_id')
-            ->select(['courses.id', 'courses.course_name', 'courses.duration', 'courses.status'])
+            ->select(['courses.id', 'courses.course_name', 'courses.centre_id', 'courses.duration', 'courses.status'])
             ->withTimestamps();
     }
 

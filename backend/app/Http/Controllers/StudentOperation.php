@@ -28,10 +28,13 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
+use App\Http\Controllers\NotificationController;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
 
+use App\Models\UserAssessment;
 
 class StudentOperation extends Controller
 {
@@ -143,8 +146,6 @@ class StudentOperation extends Controller
         $usedTime = $eligibilityStatus['usedTime'] ?? 0;
 
         return Inertia::render('Student/Exam/JoinExam', compact('questions', 'exam', 'usedTime'));
-
-        // return view('student.join_exam', ['question' => $questions, 'exam' => $exam, 'usedTime' => $usedTime]);
     }
 
     // start exam
@@ -165,18 +166,21 @@ class StudentOperation extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        // Get user's programme ID
-        $programmeId = null;
+        $courseTags = collect();
         if ($user->course) {
-            $programmeId = $user->course->programme_id;
+            $courseTags = $user->course->tags->pluck('id');
+            if ($courseTags->isEmpty() && $user->course->programme) {
+                $courseTags = $user->course->programme->programmeTags->pluck('id');
+            }
         }
 
-        // Try to find questions for the user's programme
-        $programmeSetIds = collect();
-        if ($programmeId) {
-            $programmeSetIds = OexQuestionMaster::where('exam_id', $id)
-                ->whereHas('programmes', function ($q) use ($programmeId) {
-                    $q->where('programme_id', $programmeId);
+        $courseTags = $courseTags->unique();
+
+        $tagSetIds = collect();
+        if ($courseTags->isNotEmpty()) {
+            $tagSetIds = OexQuestionMaster::where('exam_id', $id)
+                ->whereHas('tags', function ($q) use ($courseTags) {
+                    $q->whereIn('tags.id', $courseTags);
                 })
                 ->distinct()
                 ->pluck('exam_set_id');
@@ -184,8 +188,8 @@ class StudentOperation extends Controller
 
         $randomExamId = null;
 
-        if ($programmeSetIds->isNotEmpty()) {
-            $randomExamId = $programmeSetIds->random();
+        if ($tagSetIds->isNotEmpty()) {
+            $randomExamId = $tagSetIds->random();
         }
 
         $questions = collect();
@@ -223,7 +227,7 @@ class StudentOperation extends Controller
                     ]
                 )
                     ->where('exam_id', $id)
-                    ->doesntHave('programmes')
+                    ->doesntHave('tags')
                     ->inRandomOrder()
                     ->limit($needed)
                     ->get();
@@ -319,7 +323,16 @@ class StudentOperation extends Controller
         $total = $yes_ans + $no_ans;
         $res->exam_set = $exam_set_id;
         $res->save();
-
+        // $storedResult = Oex_result::where('user_id', $user->id)
+        //     ->where('exam_id', $request->exam_id)
+        //     ->first();
+        // GoogleSheets::updateGoogleSheets($userId, ['result' => $storedResult->yes_ans]);
+        NotificationController::notify(
+            $user->id,
+            'AFTER_EXAM_SUBMISSION_EMAIL',
+            'Exams submitted successfully',
+            'Hi, <br>We acknowledge your assessment test submission.<br>Please note that shortlisted applicants will be contacted as soon as possible.'
+        );
         TestSubmittedJob::dispatch($user, $res);
 
         activity('exam')
@@ -1031,6 +1044,33 @@ class StudentOperation extends Controller
         ]);
     }
 
+    // Notifications
+    public function notifications()
+    {
+        $notifications = Notification::where('user_id', Auth::id())
+            ->orderByDesc('created_at')
+            ->paginate(20);
+
+        return Inertia::render('Student/Notifications/Index', compact('notifications'));
+    }
+
+    public function markNotificationAsRead($id)
+    {
+        $notification = Notification::where('user_id', Auth::id())->findOrFail($id);
+        $notification->update(['read_at' => now()]);
+
+        return redirect()->back();
+    }
+
+    public function markAllNotificationsAsRead()
+    {
+        Notification::where('user_id', Auth::id())
+            ->unread()
+            ->update(['read_at' => now()]);
+
+        return redirect()->back();
+    }
+
     // Student results page
     public function results()
     {
@@ -1058,6 +1098,253 @@ class StudentOperation extends Controller
 
         return Inertia::render('Student/Results', [
             'results' => $results,
+        ]);
+    }
+
+    public function fetch_assessment_question(Request $request)
+    {
+        $user = $request->user('sanctum');
+
+        if (!$user && $request->has('user_id')) {
+            $user = User::where('userId', $request->user_id)->first();
+        }
+
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized or missing user_id.'], 401);
+        }
+
+        $assessment = UserAssessment::firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'current_level' => 'beginner',
+                'questions_answered' => 0,
+                'correct_answers' => 0,
+                'wrong_answers' => 0,
+                'answered_question_ids' => []
+            ]
+        );
+
+        if ($assessment->completed) {
+            return response()->json([
+                'status' => 'completed',
+                'message' => 'Assessment already completed.',
+                'user_level' => $user->student_level
+            ]);
+        }
+
+        if (is_null($assessment->level_started_at)) {
+            $assessment->level_started_at = now();
+            $assessment->save();
+        }
+
+        $timeoutSeconds = config('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 900);
+        $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
+        $timeRemainingSeconds = $timeoutSeconds - $timeElapsedSeconds;
+
+        if ($timeRemainingSeconds <= 0) {
+            $assessment->completed = true;
+            $assessment->save();
+
+            if ($assessment->current_level === 'beginner') {
+                $user->student_level = 'beginner';
+            } elseif ($assessment->current_level === 'intermediate') {
+                $user->student_level = 'beginner';
+            } elseif ($assessment->current_level === 'advanced') {
+                $user->student_level = 'intermediate';
+            }
+            $user->save();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Time limit exceeded! You have failed this level.',
+                'level_complete' => true,
+                'passed_level' => false,
+                'user_overall_level' => $user->student_level
+            ], 403);
+        }
+        $level = $assessment->current_level;
+        $answeredIds = $assessment->answered_question_ids ?? [];
+
+        $question = OexQuestionMaster::whereHas('tags', function ($query) use ($level) {
+            $query->where('name', 'LIKE', $level);
+        })
+            ->whereNotIn('id', $answeredIds)
+            ->inRandomOrder()
+            ->first();
+
+        if (!$question) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "No more $level questions available."
+            ], 404);
+        }
+        return response()->json([
+            'status' => 'success',
+            'question' => [
+                'id' => $question->id,
+                'question' => $question->questions,
+                'options' => $question->options,
+                'level' => $level,
+                'progress' => $assessment->questions_answered + 1,
+                'total_level_questions' => config(ASSESSMENT_MAX_QUESTIONS, 10),
+                'time_remaining_seconds' => $timeRemainingSeconds
+            ]
+        ]);
+    }
+
+    public function submit_assessment_answer(Request $request)
+    {
+        $user = $request->user('sanctum');
+
+        if (!$user && $request->has('user_id')) {
+            $user = User::where('userId', $request->user_id)->first();
+        }
+
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized or missing user_id.'], 401);
+        }
+
+        $request->validate([
+            'question_id' => 'required|exists:oex_question_masters,id',
+            'answer' => 'required|string',
+            'user_id' => 'sometimes|exists:users,userId'
+        ]);
+
+        $assessment = UserAssessment::where('user_id', $user->id)
+            ->where('completed', false)
+            ->first();
+
+        if (!$assessment) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No active assessment found.'
+            ], 404);
+        }
+
+        if (is_null($assessment->level_started_at)) {
+            $assessment->level_started_at = now();
+            $assessment->save();
+        }
+
+        $timeoutSeconds = config('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 900);
+        $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
+        $timeRemainingSeconds = $timeoutSeconds - $timeElapsedSeconds;
+
+        if ($timeRemainingSeconds <= 0) {
+            $assessment->completed = true;
+            $assessment->save();
+
+            if ($assessment->current_level === 'beginner') {
+                $user->student_level = 'beginner';
+            } elseif ($assessment->current_level === 'intermediate') {
+                $user->student_level = 'beginner';
+            } elseif ($assessment->current_level === 'advanced') {
+                $user->student_level = 'intermediate';
+            }
+            $user->save();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Time limit exceeded! You have failed this level.',
+                'level_complete' => true,
+                'passed_level' => false,
+                'user_overall_level' => $user->student_level
+            ], 403);
+        }
+
+        $question = OexQuestionMaster::find($request->question_id);
+
+        $answeredIds = $assessment->answered_question_ids ?? [];
+        if (in_array($question->id, $answeredIds)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Question already answered.'
+            ], 400);
+        }
+
+        $answeredIds[] = $question->id;
+        $assessment->answered_question_ids = $answeredIds;
+        $assessment->questions_answered += 1;
+
+        $isCorrect = ($question->ans === $request->answer);
+
+        if ($isCorrect) {
+            $assessment->correct_answers += 1;
+        } else {
+            $assessment->wrong_answers += 1;
+        }
+
+        $maxQuestions = config(ASSESSMENT_MAX_QUESTIONS, 10);
+        $passingScore = config(ASSESSMENT_PASSING_SCORE, 8);
+
+        $questionsLeft = $maxQuestions - $assessment->questions_answered;
+        $maxPossibleScore = $assessment->correct_answers + $questionsLeft;
+
+        $levelComplete = false;
+        $passedLevel = false;
+
+        if ($assessment->correct_answers >= $passingScore) {
+            $levelComplete = true;
+            $passedLevel = true;
+        } elseif ($maxPossibleScore < $passingScore) {
+            $levelComplete = true;
+            $passedLevel = false;
+        } elseif ($assessment->questions_answered >= $maxQuestions) {
+            $levelComplete = true;
+            $passedLevel = false;
+        }
+
+        if ($levelComplete) {
+            if ($passedLevel) {
+                if ($assessment->current_level === 'beginner') {
+                    $user->student_level = 'beginner';
+                    $user->save();
+
+                    $assessment->current_level = 'intermediate';
+                    $assessment->level_started_at = null;
+                    $assessment->questions_answered = 0;
+                    $assessment->correct_answers = 0;
+                    $assessment->wrong_answers = 0;
+                } elseif ($assessment->current_level === 'intermediate') {
+                    $user->student_level = 'intermediate';
+                    $user->save();
+
+                    $assessment->current_level = 'advanced';
+                    $assessment->level_started_at = null;
+                    $assessment->questions_answered = 0;
+                    $assessment->correct_answers = 0;
+                    $assessment->wrong_answers = 0;
+                } elseif ($assessment->current_level === 'advanced') {
+                    $user->student_level = 'advanced';
+                    $user->save();
+                    $assessment->completed = true;
+                }
+            } else {
+                if ($assessment->current_level === 'beginner') {
+                    $user->student_level = 'beginner';
+                } elseif ($assessment->current_level === 'intermediate') {
+                    $user->student_level = 'beginner';
+                } elseif ($assessment->current_level === 'advanced') {
+                    $user->student_level = 'intermediate';
+                }
+                $user->save();
+                $assessment->completed = true;
+            }
+        }
+
+        $assessment->save();
+
+        $new_question = $this->fetch_assessment_question($request);
+
+        return response()->json([
+            'status' => 'success',
+            'is_correct' => $isCorrect,
+            'level_complete' => $levelComplete,
+            'passed_level' => $passedLevel,
+            'assessment_completed' => $assessment->completed,
+            'current_level' => $assessment->current_level,
+            'user_overall_level' => $user->student_level,
+            'next_question' => $new_question->original['question'] ?? null,
         ]);
     }
 }

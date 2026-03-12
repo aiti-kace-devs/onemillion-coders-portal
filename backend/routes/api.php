@@ -7,6 +7,7 @@ use App\Http\Controllers\StatamicEntryApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
+use App\Http\Controllers\Admin\BatchCrudController;
 use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
 /*
 |--------------------------------------------------------------------------
@@ -18,7 +19,8 @@ use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-
+Route::post('batch/add-courses/{batch}', [BatchCrudController::class, 'addCourses'])
+       ->name('batch.add-courses');
 Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
 Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
 
@@ -37,7 +39,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // Route::post('/api/add-student', [CreateStudentAPIController::class, 'store'])->middleware('api'); // This applies the api middleware group
 
 
-
+// Tiered Assessment endpoints (External API)
+Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->group(function () {
+    Route::get('/fetch', [StudentOperation::class, 'fetch_assessment_question'])->name('fetch');
+    Route::post('/submit', [StudentOperation::class, 'submit_assessment_answer'])->name('submit');
+});
 /*
 |--------------------------------------------------------------------------
 | Statamic Custom API Routes
