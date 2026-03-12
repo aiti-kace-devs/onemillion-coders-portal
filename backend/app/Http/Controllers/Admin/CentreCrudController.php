@@ -49,9 +49,30 @@ class CentreCrudController extends CrudController
     {
         WidgetHelper::centreStatisticsWidget();
 
+        $this->crud->query->with('districts');
+
         CRUD::column('title')->type('textarea');
         CRUD::column('branch_id')->label('Region')->linkTo('branch.show');
         FilterHelper::addGenericRelationshipColumn('constituency', 'Constituency', 'constituency', 'title');
+        CRUD::addColumn([
+            'name' => 'districts',
+            'label' => 'Districts',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $districts = $entry->districts ?? collect();
+                if ($districts->isEmpty()) {
+                    return 'N/A';
+                }
+
+                return $districts
+                    ->map(function ($district) {
+                        $url = backpack_url('district/' . $district->id . '/show');
+                        return '<a href="' . $url . '">' . e($district->title) . '</a>';
+                    })
+                    ->implode(', ');
+            },
+            'escaped' => false,
+        ]);
         CRUD::addColumn([
             'name' => 'is_pwd_friendly',
             'label' => 'Is PWD Friendly',
