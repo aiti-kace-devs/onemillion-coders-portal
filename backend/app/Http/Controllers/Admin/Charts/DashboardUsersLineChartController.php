@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Admin\Charts;
 
+use App\Helpers\DashboardWidgetHelper;
 use App\Models\User;
 use ConsoleTVs\Charts\Classes\Chartjs\Chart;
 use Backpack\CRUD\app\Http\Controllers\ChartController;
-use App\Helpers\WidgetHelper;
 use Illuminate\Support\Facades\Cache;
 
 
@@ -16,7 +16,10 @@ class DashboardUsersLineChartController extends ChartController
         $this->chart = new Chart();
         $this->chart->height(250);
 
-        $userStats = Cache::flexible('chart_user_count_last_8_days', [(60 * 60), 10], function () {
+        $visibleCourseIds = DashboardWidgetHelper::currentAdminVisibleCourseIds();
+        $cacheKey = 'chart_user_count_last_8_days_' . DashboardWidgetHelper::scopeCacheKeySuffix($visibleCourseIds);
+
+        $userStats = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {
             $users = [];
             $labels = [];
 
@@ -31,7 +34,9 @@ class DashboardUsersLineChartController extends ChartController
                     $labels[] = $i . ' days ago';
                 }
 
-                $users[] = User::whereDate('created_at', $date)->count();
+                $query = User::query()->whereDate('created_at', $date);
+                DashboardWidgetHelper::applyCourseScope($query, $visibleCourseIds, 'registered_course');
+                $users[] = $query->count();
             }
 
             return compact('labels', 'users');

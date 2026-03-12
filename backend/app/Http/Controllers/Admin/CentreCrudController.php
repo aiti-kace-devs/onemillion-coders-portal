@@ -50,7 +50,19 @@ class CentreCrudController extends CrudController
 
         CRUD::column('title')->type('textarea');
         CRUD::column('branch_id')->label('Branch')->linkTo('branch.show');
-        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'is_pwd_friendly',
+            'label' => 'Is PWD Friendly',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+            'toggle_url' => 'centre/{id}/toggle-is-pwd-friendly',
+        ]);
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
         CRUD::column('created_at');
         FilterHelper::addBooleanFilter('status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
@@ -91,7 +103,39 @@ class CentreCrudController extends CrudController
         ]);
 
 
-        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
+        CRUD::addField([
+            'name' => 'gps_address',
+            'label' => 'GPS Address',
+            'type'      => 'textarea',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+
+        CRUD::addField([
+            'name' => 'pwd_notes',
+            'label' => 'PWD Notes',
+            'type'      => 'textarea',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Is PWD Friendly', 'is_pwd_friendly');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Wheelchair Accessible', 'wheelchair_accessible');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Has Access Ramp', 'has_access_ramp');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Has Accessible Toilet', 'has_accessible_toilet');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Has Elevator', 'has_elevator');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Supports Hearing Impaired', 'supports_hearing_impaired');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Supports Visually Impaired', 'supports_visually_impaired');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Staff Trained for PWDs', 'staff_trained_for_pwd');
+
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+
     }
 
     /**
@@ -103,6 +147,44 @@ class CentreCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    public function toggleStatus(Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $centre = Centre::findOrFail($id);
+        $centre->status = (bool) $data['value'];
+        $centre->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Centre status updated successfully.',
+            'value' => $centre->status ? 1 : 0,
+        ]);
+    }
+
+    public function toggleIsPwdFriendly(Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $centre = Centre::findOrFail($id);
+        $centre->is_pwd_friendly = (bool) $data['value'];
+        $centre->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Centre PWD accessibility updated successfully.',
+            'value' => $centre->is_pwd_friendly ? 1 : 0,
+        ]);
     }
 
 

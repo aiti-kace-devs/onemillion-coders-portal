@@ -75,7 +75,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'title',
             'label' => 'Title',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. Data Analyst (Microsoft Option)'
         ]);
@@ -83,7 +83,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'sub_title',
             'label' => 'Sub Title',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. Data Analyst Associate'
         ]);
@@ -110,7 +110,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'image',
             'label' => 'Cover Image URL',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'Copy and paste image URL eg. https://cdn.msme.gikace.org/media/image/partners/undp-logo.png'
         ]);
@@ -118,14 +118,14 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'start_date',
             'label' => 'Start Date',
-            'type'      => 'date',
+            'type' => 'date',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
         CRUD::addField([
             'name' => 'end_date',
             'label' => 'End Date',
-            'type'      => 'date',
+            'type' => 'date',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
@@ -134,7 +134,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'duration',
             'label' => 'Duration',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg 3  Week or 120 hrs'
         ]);
@@ -143,7 +143,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'level',
             'label' => 'Course Level',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. Professional'
         ]);
@@ -151,7 +151,7 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'job_responsible',
             'label' => 'Job Responsible',
-            'type'      => 'textarea',
+            'type' => 'textarea',
             // 'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. Provide technical support with a focus on networking. Assist in network device management.'
         ]);
@@ -234,35 +234,77 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'prerequisites',
             'label' => 'Entry Requirements',
-            'type'      => 'textarea',
+            'type' => 'textarea',
             // 'wrapper' => ['class' => 'form-group col-6'],
             'hint' => 'eg. 1. Minimum of a Masters degree in law, IT, data management, cybersecurity, business administration, or related fields.'
         ]);
 
-        $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
 
         $this->addOverviewField();
 
+        $this->addTagsField(Programme::class, 'programmeTags', 'Tags');
+
         // get the number of course matches
+        // $courseMatches = CourseMatch::all();
+        // $tagFieldNames = [];
+        // foreach ($courseMatches as $courseMatch) {
+        //     $name = 'course_match_' . $courseMatch->id;
+        //     $tagFieldNames[] = $name;
+        //     CRUD::addField([
+        //         'name' => $name,
+        //         'label' => $courseMatch->question,
+        //         'type'      => 'select2_multiple',
+        //         'entity' => 'tags',
+        //         'attribute' => 'answer',
+        //         'model' => CourseMatchOption::class,
+        //         'allows_null' => true,
+        //         'options' => function ($query) use ($courseMatch) {
+        //             return $query->where('course_match_id', $courseMatch->id)->get();
+        //         },
+        //         // 'wrapper' => ['class' => 'form-group col-6'],
+        //     ]);
+        // }
+
         $courseMatches = CourseMatch::all();
         $tagFieldNames = [];
+
+        $programme = $this->crud->getCurrentEntry(); // null on create, model on edit
+
         foreach ($courseMatches as $courseMatch) {
-            $name = 'course_match_' . $courseMatch->id;
-            $tagFieldNames[] = $name;
+
+            $fieldName = 'course_match_' . $courseMatch->id;
+            $tagFieldNames[] = $fieldName;
+
+            // 👇 Preload selected values (IMPORTANT PART)
+            $selectedValues = [];
+
+            if ($programme) {
+                $selectedValues = $programme->tags()
+                    ->where('course_match_id', $courseMatch->id)
+                    ->pluck('course_match_option_id')
+                    ->toArray();
+            }
+
             CRUD::addField([
-                'name' => $name,
+                'name' => $fieldName,
                 'label' => $courseMatch->question,
-                'type'      => 'select2_multiple',
-                'entity' => 'tags',
-                'attribute' => 'answer',
+                'type' => 'select2_multiple',
+
+                'fake' => true,   // prevent relationship call
+                'value' => $selectedValues, // 👈 THIS FIXES DISPLAY
+
                 'model' => CourseMatchOption::class,
+                'attribute' => 'answer',
                 'allows_null' => true,
+
                 'options' => function ($query) use ($courseMatch) {
                     return $query->where('course_match_id', $courseMatch->id)->get();
                 },
-                // 'wrapper' => ['class' => 'form-group col-6'],
             ]);
         }
+
+
 
 
         $this->addFieldsToTab('Info', true, ['title', 'sub_title', 'image', 'start_date', 'end_date', 'duration', 'course_category_id', 'status', 'level', 'job_responsible']);

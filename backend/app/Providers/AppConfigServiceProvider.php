@@ -28,6 +28,18 @@ class AppConfigServiceProvider extends ServiceProvider
         defined('SEND_SMS_AFTER_ADMISSION_CONFIRMATION') or define('SEND_SMS_AFTER_ADMISSION_CONFIRMATION', 'SEND_SMS_AFTER_ADMISSION_CONFIRMATION');
         defined('SHOW_RESULTS_TO_STUDENTS') or define('SHOW_RESULTS_TO_STUDENTS', 'SHOW_RESULTS_TO_STUDENTS');
         defined('MINIMUM_EXAM_PASS_PERCENTAGE') or define('MINIMUM_EXAM_PASS_PERCENTAGE', 'MINIMUM_EXAM_PASS_PERCENTAGE');
+
+        // OTP verification settings (admin-configurable)
+        defined('OTP_TTL') or define('OTP_TTL', 'OTP_TTL');
+        defined('OTP_VERIFIED_TTL') or define('OTP_VERIFIED_TTL', 'OTP_VERIFIED_TTL');
+        defined('OTP_MAX_REQUESTS') or define('OTP_MAX_REQUESTS', 'OTP_MAX_REQUESTS');
+        defined('OTP_REQUEST_WINDOW') or define('OTP_REQUEST_WINDOW', 'OTP_REQUEST_WINDOW');
+        defined('OTP_MAX_ATTEMPTS') or define('OTP_MAX_ATTEMPTS', 'OTP_MAX_ATTEMPTS');
+
+        // Tiered Assessment settings
+        defined('ASSESSMENT_MAX_QUESTIONS') or define('ASSESSMENT_MAX_QUESTIONS', 'ASSESSMENT_MAX_QUESTIONS');
+        defined('ASSESSMENT_PASSING_SCORE') or define('ASSESSMENT_PASSING_SCORE', 'ASSESSMENT_PASSING_SCORE');
+        defined('ASSESSMENT_LEVEL_TIMEOUT_SECONDS') or define('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 'ASSESSMENT_LEVEL_TIMEOUT_SECONDS');
     }
 
     /**

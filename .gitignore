@@ -7,7 +7,6 @@ node_modules/
 node_modules
 /.vscode
 /.vite
-vendor
 .env.docker
 .vscode/
 .idea/
@@ -36,3 +35,8 @@ yarn-error.log*
 # Lock files (optional - uncomment if needed)
 # package-lock.json
 # yarn.lock
+
+backend/storage/logs/laravel.log
+
+backend/public/vendor/runway/build/*
+backend/public/vendor/statamic/pro/build/*

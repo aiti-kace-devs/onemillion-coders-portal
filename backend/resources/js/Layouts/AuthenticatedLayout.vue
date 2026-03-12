@@ -53,7 +53,7 @@ const { component } = usePage().props;
                         </svg>
                     </button>
                     <Link :href="route('admin.dashboard')">
-                    <!-- <ApplicationLogo class="hidden lg:block h-10 w-auto fill-current" /> -->
+                        <!-- <ApplicationLogo class="hidden lg:block h-10 w-auto fill-current" /> -->
                     </Link>
                 </div>
 

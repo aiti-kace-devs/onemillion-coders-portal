@@ -23,14 +23,18 @@ class GenderQuota implements AdmissionRuleInterface
      */
     public function apply(Builder $query, $value, Closure $next): Builder
     {
+        if (is_string($value)) {
+            $value = json_decode($value, true) ?? [];
+        }
+
         $gender = $value['gender'] ?? $this->params['gender'] ?? 'female';
         $minCount = $value['min_count'] ?? $this->params['min_count'] ?? 0;
-        
+
         // Prioritize the target gender by sorting them first
         if ($minCount > 0) {
             $query->orderByRaw("CASE WHEN gender = ? THEN 0 ELSE 1 END", [$gender]);
         }
-        
+
         return $next($query);
     }
 }

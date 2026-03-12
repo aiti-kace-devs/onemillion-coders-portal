@@ -82,6 +82,11 @@ class Programme extends Model
             ->orderBy('rule_assignments.priority', 'asc');
     }
 
+    public function programmeTags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+
     /**
      * Get effective rules for admission
      */

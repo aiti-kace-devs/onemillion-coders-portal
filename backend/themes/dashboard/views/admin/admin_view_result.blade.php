@@ -1,7 +1,7 @@
 @extends(backpack_view('blank'))
 @section('header')
     <section class="content-header">
-        <h1>Result</h1>
+        <h1>Results</h1>
         <ol class="breadcrumb">
             <li><a href="{{ backpack_url('dashboard') }}">Dashboard</a></li>
             <li class="active">Exam</li>
@@ -34,7 +34,7 @@
                     </tr>
                 </table>
                 <br>
-                <h2>Exam Result</h2>
+                <h2>Exam Results</h2>
                 <table class="table">
                     <tr>
                         <td>Number of correct answers : </td>

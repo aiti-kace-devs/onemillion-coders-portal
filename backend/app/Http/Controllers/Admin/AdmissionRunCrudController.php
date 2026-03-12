@@ -164,7 +164,7 @@ class AdmissionRunCrudController extends CrudController
                 'email' => $student->email,
                 'gender' => $student->gender,
                 'age' => $student->age,
-                'exam_score' => $student->examResults->first()?->yes_ans ?? 'N/A',
+                'student_level' => $student->student_level ?? 'N/A',
                 'educational_level' => $student->educational_level ?? 'N/A',
                 'applied_date' => $student->created_at->format('Y-m-d'),
             ];
@@ -178,6 +178,7 @@ class AdmissionRunCrudController extends CrudController
                 'name' => $r->name,
                 'priority' => $r->pivot->priority
             ])->values()->toArray(),
+            'course_programme_level' => $preview['course_programme_level'],
         ]);
     }
 

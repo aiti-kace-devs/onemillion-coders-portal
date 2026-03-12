@@ -77,6 +77,16 @@ class AdmissionRulesSeeder extends Seeder
                 ],
                 'is_active' => true,
             ],
+            [
+                'name' => 'Student Level',
+                'rule_class_path' => 'App\\Services\\AdmissionRules\\StudentLevel',
+                'description' => 'Filter students by assessment level',
+                'default_parameters' => [
+                    'level' => 'beginner',
+                    'not' => false
+                ],
+                'is_active' => true,
+            ],
         ];
 
         foreach ($rules as $rule) {

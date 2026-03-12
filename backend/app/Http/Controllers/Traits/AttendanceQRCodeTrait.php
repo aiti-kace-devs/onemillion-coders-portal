@@ -12,7 +12,7 @@ trait AttendanceQRCodeTrait
     {
         $date = Carbon::parse($data['date']);
         $course = Course::findOrFail($data['course_id']);
-        $secret = env('JWT_KEY');
+        $secret = config('app.jwt_token');
         $dataToEncode = json_encode([
             'course_id' => $course->id,
             'location' => $course->location,

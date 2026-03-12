@@ -48,6 +48,7 @@ class RuleCrudController extends CrudController
             'name' => 'required|string|max:255',
             'rule_class_path' => 'required|string|max:255',
             'description' => 'nullable|string',
+            // rule_parameters field posts an array of [key,value] rows
             'default_parameters' => 'nullable|array',
         ]);
 
@@ -76,10 +77,23 @@ class RuleCrudController extends CrudController
         ]);
 
         CRUD::addField([
-            'name' => 'default_parameters',
+            'name'  => 'default_parameters',
             'label' => 'Default Parameters',
-            'type' => 'rule_parameters',
-            'hint' => 'Define the default keys and values for this rule.',
+            'type'  => 'rule_parameters',
+            'hint'  => <<<HTML
+<strong>Recommended keys by rule:</strong><br>
+<ul class="mb-0">
+  <li><strong>PassMark</strong>: <code>pass_mark</code> (number, e.g. 70)</li>
+  <li><strong>CompletedExam</strong>: <code>require_completion</code> (true/false), <code>require_submission</code> (true/false)</li>
+  <li><strong>AppliedBefore</strong>: <code>before_date</code> (YYYY-MM-DD), <code>priority</code> (include_only | prioritize | exclude)</li>
+  <li><strong>SortByDate</strong>: <code>direction</code> (asc | desc)</li>
+  <li><strong>GenderQuota</strong>: <code>gender</code> (male | female), <code>min_count</code> (number)</li>
+  <li><strong>AgeRange</strong>: <code>min_age</code> (number), <code>max_age</code> (number)</li>
+  <li><strong>EducationalLevel</strong>: <code>hierarchy</code> (JSON array of levels), <code>min_level</code> (e.g. Bachelors)</li>
+  <li><strong>StudentLevel</strong>: <code>level</code> (beginner, intermediate, advanced)
+
+</ul>
+HTML,
         ]);
 
         CRUD::addField([
@@ -103,15 +117,20 @@ class RuleCrudController extends CrudController
             'App\\Services\\AdmissionRules\\GenderQuota' => 'Gender Quota (Ensure gender representation)',
             'App\\Services\\AdmissionRules\\AgeRange' => 'Age Range (Filter by age)',
             'App\\Services\\AdmissionRules\\EducationalLevel' => 'Educational Level (Sort by education hierarchy)',
+            'App\\Services\\AdmissionRules\\StudentLevel' => 'Student Level (Filter by student level)',
         ];
     }
 
     public function store()
     {
         $request = $this->crud->getRequest();
-        if ($request->has('default_parameters') && is_string($request->default_parameters)) {
-            $request->merge(['default_parameters' => json_decode($request->default_parameters, true)]);
+
+        if (is_array($request->default_parameters ?? null)) {
+            $request->merge([
+                'default_parameters' => $this->normalizeParametersArray($request->default_parameters),
+            ]);
         }
+
         $this->crud->setRequest($request);
         return $this->traitStore();
     }
@@ -124,10 +143,45 @@ class RuleCrudController extends CrudController
     public function update()
     {
         $request = $this->crud->getRequest();
-        if ($request->has('default_parameters') && is_string($request->default_parameters)) {
-            $request->merge(['default_parameters' => json_decode($request->default_parameters, true)]);
+
+        if (is_array($request->default_parameters ?? null)) {
+            $request->merge([
+                'default_parameters' => $this->normalizeParametersArray($request->default_parameters),
+            ]);
         }
+
         $this->crud->setRequest($request);
         return $this->traitUpdate();
+    }
+
+    /**
+     * Turn an array of [ [key=>..., value=>...], ... ] into an associative array.
+     */
+    protected function normalizeParametersArray(array $rows): array
+    {
+        $result = [];
+
+        foreach ($rows as $row) {
+            $key = isset($row['key']) ? trim((string) $row['key']) : '';
+            if ($key === '') {
+                continue;
+            }
+
+            $value = $row['value'] ?? null;
+
+            // Best-effort type casting for simple scalars
+            if (is_string($value)) {
+                $trimmed = trim($value);
+                if ($trimmed === 'true' || $trimmed === 'false') {
+                    $value = $trimmed === 'true';
+                } elseif (is_numeric($trimmed)) {
+                    $value = $trimmed + 0;
+                }
+            }
+
+            $result[$key] = $value;
+        }
+
+        return $result;
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Helpers\MailerHelper;
+use App\Http\Controllers\NotificationController;
 use App\Mail\GenericEmail;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -101,6 +102,10 @@ class SendBulkEmailJob implements ShouldQueue
                     Mail::to($recipient->email)
                         ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                         ->send(new $this->template($recipient));
+                    $userId = $recipient->id ?? User::where('email', $recipient->email)->value('id');
+                    if ($userId) {
+                        NotificationController::notify($userId, 'email', $this->subject, $this->subject);
+                    }
                 }
             }
         });
@@ -128,6 +133,7 @@ class SendBulkEmailJob implements ShouldQueue
                 Mail::to($user->email)
                     ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                     ->send(new $this->template($user));
+                NotificationController::notify($user->id, 'email', $this->subject, $this->subject);
             }
         }
     }

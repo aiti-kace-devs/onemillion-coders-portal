@@ -13,18 +13,11 @@ class UserAdmission extends Model
 
     protected $table = 'user_admission';
 
-    protected $fillable = ['user_id', 'batch_id', 'course_id', 'email_sent', 'session', 'location', 'confirmed', 'admission_source'];
-
-    // protected $with = [
-    //     'course',
-    //     'courseSession',
-    //     'user',
-    //     'admissionRun'
-    // ];
+    protected $fillable = ['user_id', 'course_batch_id', 'batch_id', 'course_id', 'email_sent', 'session', 'location', 'confirmed', 'admission_source'];
 
     protected $casts = [
-        'email_sent' => 'boolean',
         'confirmed' => 'datetime',
+        'email_sent' => 'datetime',
     ];
 
     public function course()

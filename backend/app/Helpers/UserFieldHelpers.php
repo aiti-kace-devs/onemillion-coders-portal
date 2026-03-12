@@ -4,6 +4,7 @@ namespace App\Helpers;
 
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\FilterHelper;
+use App\Models\Admin;
 use App\Models\Course;
 use App\Helpers\CourseFieldHelpers;
 trait UserFieldHelpers
@@ -68,6 +69,84 @@ trait UserFieldHelpers
         $this->addPhoneColumn();
     }
 
+    /**
+     * Return course IDs visible to the current admin.
+     * `null` means unrestricted visibility (super admin or non-admin contexts).
+     */
+    protected function currentAdminVisibleCourseIds(): ?array
+    {
+        $admin = backpack_user();
+
+        if (! $admin instanceof Admin) {
+            return null;
+        }
+
+        if (method_exists($admin, 'visibleCourseIds')) {
+            return $admin->visibleCourseIds();
+        }
+
+        if ($admin->isSuper()) {
+            return null;
+        }
+
+        return $admin->assignedCourses()
+            ->pluck('courses.id')
+            ->map(fn ($courseId) => (int) $courseId)
+            ->all();
+    }
+
+    /**
+     * Restrict user list queries by the current admin's assigned courses.
+     */
+    public function applyCurrentAdminUserCourseScope(): void
+    {
+        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+
+        if ($visibleCourseIds === null) {
+            return;
+        }
+
+        if (empty($visibleCourseIds)) {
+            CRUD::addClause('whereRaw', '1 = 0');
+            return;
+        }
+
+        CRUD::addClause('whereIn', 'registered_course', $visibleCourseIds);
+    }
+
+    /**
+     * Add course filter with options limited to the current admin's visible courses.
+     */
+    public function addCurrentAdminCourseFilter(string $columnName = 'registered_course', string $label = 'Course'): void
+    {
+        $coursesQuery = Course::query()->orderBy('course_name');
+        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+
+        if (is_array($visibleCourseIds)) {
+            if (empty($visibleCourseIds)) {
+                $courseOptions = [];
+            } else {
+                $courseOptions = $coursesQuery
+                    ->whereIn('id', $visibleCourseIds)
+                    ->pluck('course_name', 'id')
+                    ->toArray();
+            }
+        } else {
+            $courseOptions = $coursesQuery->pluck('course_name', 'id')->toArray();
+        }
+
+        FilterHelper::addSelectFilter(
+            columnName: $columnName,
+            label: $label,
+            options: $courseOptions,
+            type: 'select2_multiple',
+            callback: function ($value) use ($columnName) {
+                $values = is_array($value) ? $value : explode(',', $value);
+                CRUD::addClause('whereIn', $columnName, $values);
+            },
+        );
+    }
+
 
     public function setupShowStudentColumns(): void
     {
@@ -82,6 +161,87 @@ trait UserFieldHelpers
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
         CRUD::column('created_at');
 
+    }
+
+    /**
+     * Setup show columns for Manage Student preview page with full student info and actions.
+     */
+    public function setupManageStudentShowColumns(): void
+    {
+        CRUD::column('name')->label('Name');
+        CRUD::column('email')->label('Email');
+        CRUD::column('age')->label('Age');
+        $this->addCourseField();
+        CRUD::addColumn([
+            'name' => 'admission_location',
+            'label' => 'Location',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $admission = $entry->admission;
+                return $admission?->location ?? '-';
+            },
+        ]);
+        CRUD::column('mobile_no')->label('Mobile Number');
+        CRUD::column('ghcard')->label('Ghana Card Number');
+        CRUD::addColumn([
+            'name' => 'session',
+            'label' => 'Session',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $admission = $entry->admission;
+                if (!$admission?->session) {
+                    return '-';
+                }
+                $courseSession = \App\Models\CourseSession::find($admission->session);
+                return $courseSession?->name ?? $admission->session;
+            },
+        ]);
+        CRUD::column('gender')->label('Gender');
+        CRUD::column('created_at')->label('Date Registered')->type('datetime');
+        $this->addConfirmedAdmissionColumn('Admitted');
+        CRUD::addColumn([
+            'name' => 'shortlist_display',
+            'label' => 'Shortlisted',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                return $entry->shortlist
+                    ? '<span class="badge bg-success">Yes</span>'
+                    : '<span class="badge bg-secondary">No</span>';
+            },
+            'escaped' => false,
+        ]);
+        CRUD::addColumn([
+            'name' => 'score',
+            'label' => 'Score',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $latestResult = $entry->examResults()->latest()->first();
+                if (!$latestResult) {
+                    return '-';
+                }
+                $total = $latestResult->yes_ans + $latestResult->no_ans;
+                $total = $total > 0 ? $total : 30;
+                return round(($latestResult->yes_ans / $total) * 100) . '%';
+            },
+        ]);
+        CRUD::addColumn([
+            'name' => 'exam_status',
+            'label' => 'Status',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $latestResult = $entry->examResults()->latest()->first();
+                if (!$latestResult) {
+                    return '<span class="badge bg-secondary">Not Taken</span>';
+                }
+                $exam = $latestResult->exam;
+                $passmark = $exam ? (int) $exam->passmark : 0;
+                $passed = $latestResult->yes_ans >= $passmark;
+                return $passed
+                    ? '<span class="badge bg-success">Pass</span>'
+                    : '<span class="badge bg-danger">Fail</span>';
+            },
+            'escaped' => false,
+        ]);
     }
 
     public function setupProfileColumns()
@@ -210,7 +370,7 @@ trait UserFieldHelpers
             'label' => 'Assign Course',
             'entity' => 'assignedCourses',
             'model' => 'App\\Models\\Course',
-            'attribute' => 'course_name',
+            'attribute' => 'display_name',
             'pivot' => true,
             'tab' => 'Account Info',
             'wrapper' => ['class' => 'form-group col-6'],

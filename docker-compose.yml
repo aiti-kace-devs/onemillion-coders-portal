@@ -201,7 +201,7 @@ services:
       context: ./website
       dockerfile: Dockerfile
       args:
-        - ENVIRONMENT=none
+        - ENVIRONMENT=.env
     container_name: omcp_website
     restart: unless-stopped
     env_file: .env

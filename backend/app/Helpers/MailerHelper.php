@@ -4,6 +4,8 @@ namespace App\Helpers;
 
 use App\Mail\GenericEmail;
 use App\Models\EmailTemplate;
+use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -44,15 +46,18 @@ class MailerHelper
         return $mailables;
     }
 
-    public static function getEmailTemplate(string $templateName, array $data)
+    private static function getEmailTemplate(string $name, array $data): ?string
     {
-        $template = EmailTemplate::where('name', $templateName)->select('content')->first();
-        if (!$template) {
-            return;
+        $template = EmailTemplate::where('name', $name)->value('content');
+        if (!$template) return null;
+
+        foreach ($data as $key => $value) {
+            $template = str_replace("{{$key}}", $value, $template);
         }
 
-        // replace variables
-        return  static::replaceVariables($template->content, $data);
+        $template = static::parseMarkdown($template);
+
+        return $template;
     }
 
     public static function replaceVariables($content, $data)
@@ -86,17 +91,38 @@ class MailerHelper
                 ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                 ->send($mailable);
         }
+
+        static::createNotifications($emails, $subject, $content);
     }
 
 
-    public static function sendTemplateEmail(string $templateName, string|array $emails, array $data, $subject = null, $bulk = false)
-    {
-        $content = static::getEmailTemplate($templateName, $data);
-        if (!$content) {
-            return;
-        }
+    public static function sendTemplateEmail(
+        string $templateName,
+        string|array $emails,
+        array $data,
+        string $subject,
+        bool $bulk = false
+    ): bool {
+        try {
+            $content = self::getEmailTemplate($templateName, $data);
 
-        static::sendGenericTemplateEmail($emails, $content, $subject, $bulk, $data);
+            if (!$content) {
+                Log::warning("Email template not found: {$templateName}");
+                return false;
+            }
+
+            self::sendGenericTemplateEmail($emails, $content, $subject, $bulk, $data);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('MailerHelper failed', [
+                'emails' => $emails,
+                'subject' => $subject,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     public static function createView($content, $filename = null)
@@ -121,5 +147,80 @@ class MailerHelper
         if (file_exists($jobViewFilePath)) {
             unlink($jobViewFilePath);
         }
+    }
+
+    public static function createNotifications(string|array $emails, ?string $subject, string $message)
+    {
+        try {
+            $emailList = is_array($emails) ? $emails : [$emails];
+            $users = User::whereIn('email', $emailList)->get();
+
+            $notifications = $users->map(function ($user) use ($subject, $message) {
+                $personalizedMessage = static::replaceVariables($message, $user->toArray());
+                $cleanMessage = static::convertToHtml($personalizedMessage);
+
+                return [
+                    'user_id' => $user->id,
+                    'type' => 'email',
+                    'title' => $subject ?? 'Notification',
+                    'message' => $cleanMessage,
+                    'priority' => 'normal',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            })->toArray();
+
+            if (!empty($notifications)) {
+                Notification::insert($notifications);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to create notifications: ' . $e->getMessage());
+        }
+    }
+
+    public static function convertToHtml(string $content): string
+    {
+        // Convert mail::button components to styled links
+        $content = preg_replace(
+            "/\[component\]:\s?#\s?\('mail::button',\s*\['url'\s*=>\s*'([^']+)'\]\)\s*\n(.*?)\n\s*\[endcomponent\]:\s?#/s",
+            '<p><a href="$1" style="display:inline-block;padding:10px 20px;background:#1d4ed8;color:#fff;border-radius:6px;text-decoration:none;">$2</a></p>',
+            $content
+        );
+
+        // Convert mail::panel components to styled divs
+        $content = preg_replace(
+            "/\[component\]:\s?#\s?\('mail::panel'\)\s*\n(.*?)\n\s*\[endcomponent\]:\s?#/s",
+            '<div style="padding:12px 16px;background:#f3f4f6;border-radius:8px;margin:8px 0;">$1</div>',
+            $content
+        );
+
+        // Remove any remaining component/endcomponent lines
+        $content = preg_replace('/\[(end)?component\]:\s?#\s?(\(.*?\))?\s*/i', '', $content);
+
+        // Convert ## headings to <h2>
+        $content = preg_replace('/^##\s*(.+)$/m', '<h2 style="margin:0 0 8px;">$1</h2>', $content);
+
+        // Convert **bold** to <strong>
+        $content = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $content);
+
+        // Convert markdown links [text](url) to <a>
+        $content = preg_replace('/\[([^\]]+)\]\(([^\)]+)\)/', '<a href="$2" style="color:#1d4ed8;">$1</a>', $content);
+
+        // Convert <br> and line breaks
+        $content = str_replace('<br>', '<br/>', $content);
+
+        // Convert double newlines to paragraph breaks
+        $content = preg_replace('/\n{2,}/', '</p><p>', $content);
+
+        // Convert single newlines to <br/>
+        $content = preg_replace('/\n/', '<br/>', $content);
+
+        // Wrap in paragraph
+        $content = '<p>' . $content . '</p>';
+
+        // Clean up empty paragraphs
+        $content = preg_replace('/<p>\s*<\/p>/', '', $content);
+
+        return trim($content);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Charts;
 
+use App\Helpers\DashboardWidgetHelper;
 use Backpack\CRUD\app\Http\Controllers\ChartController;
 use ConsoleTVs\Charts\Classes\Chartjs\Chart;
 use Illuminate\Support\Facades\Cache;
@@ -14,12 +15,23 @@ class DashboardStudentRegistrationBarChartController extends ChartController
         $this->chart = new Chart();
         $this->chart->height(260);
 
+        $visibleCourseIds = DashboardWidgetHelper::currentAdminVisibleCourseIds();
+        $cacheKey = 'chart_registrations_per_region_' . DashboardWidgetHelper::scopeCacheKeySuffix($visibleCourseIds);
+
         // Cache for 1 hour (with a quick fallback)
-        $payload = Cache::flexible('chart_registrations_per_region', [(60 * 60), 10], function () {
+        $payload = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {
             $rows = DB::table('users as u')
                 ->leftJoin('courses as c', 'u.registered_course', '=', 'c.id')
                 ->leftJoin('centres as ce', 'c.centre_id', '=', 'ce.id')
                 ->leftJoin('branches as br', 'ce.branch_id', '=', 'br.id')
+                ->when(is_array($visibleCourseIds), function ($query) use ($visibleCourseIds) {
+                    if (empty($visibleCourseIds)) {
+                        $query->whereRaw('1 = 0');
+                        return;
+                    }
+
+                    $query->whereIn('u.registered_course', $visibleCourseIds);
+                })
                 ->selectRaw("COALESCE(br.title, 'Unknown') as region_name, COUNT(u.id) as students_count")
                 ->groupBy('region_name')
                 ->orderByDesc('students_count')
@@ -28,7 +40,7 @@ class DashboardStudentRegistrationBarChartController extends ChartController
 
             return [
                 'labels' => $rows->pluck('region_name')->values(),
-                'data'   => $rows->pluck('students_count')->map(fn ($v) => (int) $v)->values(),
+                'data'   => $rows->pluck('students_count')->map(fn($v) => (int) $v)->values(),
             ];
         });
 
@@ -48,7 +60,7 @@ class DashboardStudentRegistrationBarChartController extends ChartController
             'rgba(34,197,94,0.6)',    // green
             'rgba(251,146,60,0.6)',   // orange
         ];
-        $barColors = array_map(fn ($i) => $palette[$i % count($palette)], array_keys($labels));
+        $barColors = array_map(fn($i) => $palette[$i % count($palette)], array_keys($labels));
 
         $this->chart
             ->dataset('Number of Students', 'bar', $data)

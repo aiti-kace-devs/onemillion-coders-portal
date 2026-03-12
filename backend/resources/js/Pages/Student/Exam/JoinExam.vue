@@ -25,7 +25,7 @@ const modalMessage = ref(null);
 
 const warn = ref(0);
 
-const timeLeft = ref((props.exam.exam_duration - 21 - props.usedTime) * 60); // in seconds
+const timeLeft = ref((props.exam.exam_duration - props.usedTime) * 60); // in seconds
 const timerDisplay = computed(() => {
     const m = Math.floor(timeLeft.value / 60);
     const s = Math.floor(timeLeft.value % 60);
@@ -250,10 +250,10 @@ onMounted(async () => {
                         <ul class="space-y-2">
                             <li v-for="opt in ['option1', 'option2', 'option3', 'option4']" :key="opt">
                                 <label class="inline-flex items-center">
-                                    <RadioInput :value="JSON.parse(q.options)[opt]"
+                                    <RadioInput :value="q.options[opt]"
                                         v-model:checked="form[`ans${idx + 1}`]"
                                         :disabled="form.processing || timeLeft === 0" />
-                                    <span class="ml-2">{{ JSON.parse(q.options)[opt] }}</span>
+                                    <span class="ml-2">{{ q.options[opt] }}</span>
                                 </label>
                             </li>
                         </ul>

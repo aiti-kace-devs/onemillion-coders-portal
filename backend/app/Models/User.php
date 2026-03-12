@@ -18,6 +18,10 @@ class User extends Authenticatable
 
     protected $guard_name = 'web';
 
+    public const beginner = 'beginner';
+    public const intermediate = 'intermediate';
+    public const advanced = 'advanced';
+
 
     /**
      * The attributes that are mass assignable.
@@ -34,7 +38,6 @@ class User extends Authenticatable
         'status',
         'mobile_no',
         'age',
-        'age',
         'password',
         'userId',
         'card_type',
@@ -42,8 +45,11 @@ class User extends Authenticatable
         'gender',
         'educational_level',
         'network_type',
+        'has_disability',
         'registered_course',
-        'shortlist'
+        'shortlist',
+        'student_level',
+        'data',
     ];
 
     /**
@@ -67,6 +73,8 @@ class User extends Authenticatable
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'status' => 'boolean',
+        'has_disability' => 'boolean',
+        'data' => 'array',
     ];
 
     protected $with = [
@@ -100,6 +108,14 @@ class User extends Authenticatable
         // Link the user to a course using the registered_course column as FK
         // users.registered_course -> courses.id
         return $this->belongsTo(Course::class, 'registered_course', 'id');
+    }
+
+    /**
+     * Get the user's admissions
+     */
+    public function admissions()
+    {
+        return $this->hasMany(UserAdmission::class, 'user_id', 'userId');
     }
 
 
@@ -148,19 +164,19 @@ class User extends Authenticatable
         return $this->hasMany(AdmissionRejection::class, 'user_id', 'userId');
     }
 
-    public function admissions()
-    {
-        return $this->hasMany(UserAdmission::class, 'user_id', 'userId');
-    }
-
     public function userExams()
     {
-        return $this->hasMany(\App\Models\user_exam::class, 'user_id', 'id');
+        return $this->hasMany(UserExam::class, 'user_id', 'id');
     }
 
     public function examResults()
     {
-        return $this->hasMany(\App\Models\Oex_result::class, 'user_id', 'id');
+        return $this->hasMany(Oex_result::class, 'user_id', 'id');
+    }
+
+    public function assessment()
+    {
+        return $this->hasMany(UserAssessment::class, 'user_id', 'id');
     }
 
     public function sendPasswordResetNotification($token)
@@ -174,9 +190,19 @@ class User extends Authenticatable
         return $this->hasMany(QuestionnaireResponse::class);
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class, 'user_id', 'userId');
+    }
+
     public function hasAttendance()
     {
-        return Attendance::where('user_id', $this->userId)->count() > 0;
+        return $this->hasMany(Attendance::class, 'user_id', 'userId');
     }
 
     public function getNameWithEmail()
@@ -219,7 +245,7 @@ class User extends Authenticatable
         if (now()->isAfter($exam->exam_date)) {
             return [
                 'status' => false,
-                'message' =>  "Unable to take exam. Exam deadline was  {$exam->exam_date->format(config('app.fulldate_format'))}",
+                'message' => "Unable to take exam. Exam deadline was  {$exam->exam_date->format(config('app.fulldate_format'))}",
             ];
         }
 

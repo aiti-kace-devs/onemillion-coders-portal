@@ -15,11 +15,35 @@ class Centre extends Model
     protected $fillable = [
         'title',
         'branch_id',
-        'status'
+        'status',
+
+        'gps_address',
+        'is_pwd_friendly',
+        'wheelchair_accessible',
+        'has_access_ramp',
+        'has_accessible_toilet',
+        'has_elevator',
+        'supports_hearing_impaired',
+        'supports_visually_impaired',
+        'staff_trained_for_pwd',
+        'accessibility_rating',
+        'pwd_notes',
     ];
+
 
     protected $casts = [
         'status' => 'boolean',
+        'is_pwd_friendly' => 'boolean',
+        'wheelchair_accessible' => 'boolean',
+        'has_access_ramp' => 'boolean',
+        'has_accessible_toilet' => 'boolean',
+        'has_elevator' => 'boolean',
+        'supports_hearing_impaired' => 'boolean',
+        'supports_visually_impaired' => 'boolean',
+        'staff_trained_for_pwd' => 'boolean',
+        'gps_address' => 'string',
+        'accessibility_rating' => 'integer',
+        'pwd_notes' => 'string',
     ];
 
 
@@ -31,5 +55,11 @@ class Centre extends Model
     public function programme()
     {
         return $this->belongsToMany(Programme::class, 'courses');
+    }
+
+    public function districts()
+    {
+        return $this->belongsToMany(District::class, 'district_centre', 'centre_id', 'district_id')
+            ->withTimestamps();
     }
 }

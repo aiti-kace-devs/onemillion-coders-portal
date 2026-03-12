@@ -11,6 +11,7 @@ use App\Models\OexCategory;
 use App\Helpers\CourseFieldHelpers;
 use App\Helpers\UserFieldHelpers;
 use App\Models\OexQuestionMaster;
+use Prologue\Alerts\Facades\Alert;
 
 /**
  * Class OexQuestionMasterCrudController
@@ -72,8 +73,8 @@ class OexQuestionMasterCrudController extends CrudController
 
         if ($examId) {
             CRUD::addField([
-                'name'  => 'exam_id',
-                'type'  => 'hidden',
+                'name' => 'exam_id',
+                'type' => 'hidden',
                 'value' => $examId,
             ]);
         }
@@ -83,8 +84,22 @@ class OexQuestionMasterCrudController extends CrudController
             'type' => 'textarea',
             'escaped' => false,
         ]);
+
+        CRUD::addColumn([
+            'name' => 'tags',
+            'label' => 'Tags',
+            'type' => 'relationship',
+            'entity' => 'tags',
+            'attribute' => 'name',
+            'model' => \App\Models\Tag::class,
+        ]);
         CRUD::column('ans')->type('textarea');
-        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
 
         if ($examId) {
             $this->crud->addClause('where', 'exam_id', $examId);
@@ -92,6 +107,7 @@ class OexQuestionMasterCrudController extends CrudController
 
         FilterHelper::addNullableColumnFilter('filter_ans', 'ans', 'Filter Answers');
         FilterHelper::addBooleanFilter('status', 'Status');
+        FilterHelper::addTagsFilter('tags', 'Tags');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
     }
@@ -123,6 +139,14 @@ class OexQuestionMasterCrudController extends CrudController
             'type' => 'hidden',
             'value' => 1,
         ]);
+
+        CRUD::addField([
+            'name' => 'exam_set_id',
+            'type' => 'hidden',
+            'value' => 1,
+        ]);
+
+        $this->addTagsField(OexQuestionMaster::class);
 
         CRUD::addField([
             'name' => 'questions',
@@ -281,7 +305,7 @@ class OexQuestionMasterCrudController extends CrudController
             return back()->withInput();
         }
 
-        OexQuestionMaster::create([
+        $question = OexQuestionMaster::create([
             'exam_id' => $exam_id,
             'exam_set_id' => 1,
             'questions' => $request->input('questions', ''),
@@ -289,6 +313,9 @@ class OexQuestionMasterCrudController extends CrudController
             'ans' => $transformed['actualAns'],
             'status' => $request->input('status', false),
         ]);
+
+        $question->tags()->sync($request->input('tags', []));
+        $question->tags()->sync($request->input('tags', []));
 
         \Alert::success(trans('backpack::crud.insert_success'))->flash();
         return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);
@@ -313,8 +340,30 @@ class OexQuestionMasterCrudController extends CrudController
             'status' => $request->input('status', false),
         ]);
 
+        $entry->tags()->sync($request->input('tags', []));
+        $entry->tags()->sync($request->input('tags', []));
+
         \Alert::success(trans('backpack::crud.update_success'))->flash();
         return redirect(backpack_url('question-master') . '?exam_id=' . $exam_id);
+    }
+
+    public function toggleStatus(\Illuminate\Http\Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $question = OexQuestionMaster::findOrFail($id);
+        $question->status = (bool) $data['value'];
+        $question->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Question status updated successfully.',
+            'value' => $question->status ? 1 : 0,
+        ]);
     }
 
 

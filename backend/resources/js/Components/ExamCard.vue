@@ -74,7 +74,7 @@ const getExamDeadline = (examDate, registeredAt) => {
                     <p class="text-sm">
                         <strong>Duration:</strong> {{ exam.exam_duration }} mins
                     </p>
-                    <p class="text-sm"><strong>Total Questions:</strong> 30</p>
+                    <p class="text-sm"><strong>Total Questions:</strong> {{ exam.number_of_questions }}</p>
 
                     <div v-if="getExamStatus(exam) === 'completed'">
                         <p class="text-sm">

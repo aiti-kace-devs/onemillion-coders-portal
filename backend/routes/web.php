@@ -11,6 +11,12 @@ use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
 use App\Http\Controllers\Admin\Api\RegistrationFormAPIController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProgrammeController;
+use App\Http\Controllers\SmsTemplateController;
+use App\Http\Controllers\EmailTemplateController;
+use App\Http\Controllers\QuestionnaireController;
+use App\Http\Controllers\Api\OtpController;
+use Illuminate\Support\Str;
 
 
 
@@ -27,6 +33,15 @@ use App\Http\Controllers\ProfileController;
 
 
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
+Route::post('/api/add-student', [FormResponseController::class, 'store']);
+Route::get('/api/check-user/{userID}', [RegistrationFormAPIController::class, 'check_user_by_userID']);
+
+
+// OTP verification routes for registration
+Route::get('/api/otp/check-email', [OtpController::class, 'checkEmail'])->middleware('throttle:30,1');
+Route::post('/api/otp/send', [OtpController::class, 'send'])->middleware('throttle:10,1');
+Route::post('/api/otp/verify', [OtpController::class, 'verify'])->middleware('throttle:20,1');
+Route::get('/api/otp/status', [OtpController::class, 'status'])->middleware('throttle:30,1');
 
 // Redirect Statamic login to Backpack login
 Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
@@ -34,9 +49,10 @@ Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
 });
 
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
-// Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
-Route::get('/api/programmes-with-course-match', [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
+Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
+Route::get('/api/programmes-with-course-match', action: [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
 Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+Route::get('/api/programmes-with-batches', [CourseProgrammeController::class, 'programmeWithBatch']);
 Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
 Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
 
@@ -47,6 +63,8 @@ Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
 Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
 Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview'])->name('forms.preview');
 Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
+Route::get('/api/districts-by-branch', [CourseProgrammeController::class, 'districtsByBranch']);
+Route::get('/api/centres-by-district', [CourseProgrammeController::class, 'centresByDistrict']);
 
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
@@ -109,6 +127,12 @@ Route::prefix('student')->name('student.')->group(function () {
         // Route::get('/scan-qrcode', [StudentOperation::class, 'get_scanner_page']);
         // Route::get('/meeting-link', [StudentOperation::class, 'get_meeting_link_page']);
         // Route::post('/update-details', [StudentOperation::class, 'updateDetails'])->name('updateDetails')->middleware('is_admitted');
+        // Notifications
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [StudentOperation::class, 'notifications'])->name('index');
+            Route::patch('/{id}/read', [StudentOperation::class, 'markNotificationAsRead'])->name('mark-read');
+            Route::post('/mark-all-read', [StudentOperation::class, 'markAllNotificationsAsRead'])->name('mark-all-read');
+        });
 
         // Course assessment route
         Route::prefix('assessment')->name('assessment.')->group(function () {

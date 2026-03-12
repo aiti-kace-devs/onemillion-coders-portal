@@ -58,6 +58,7 @@ class HandleInertiaRequests extends Middleware
                         ]
                     )
                     : null,
+                'unreadNotifications' => $user ? $user->notifications()->unread()->count() : 0,
             ],
             'config' => [
                 SHOW_RESULTS_TO_STUDENTS => config(SHOW_RESULTS_TO_STUDENTS),

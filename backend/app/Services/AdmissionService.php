@@ -5,10 +5,8 @@ namespace App\Services;
 use App\Models\Course;
 use App\Models\Programme;
 use App\Models\User;
-use App\Models\UserAdmission;
 use App\Models\AdmissionRun;
 use App\Models\Admin;
-use App\Jobs\AdmitStudentJob;
 use App\Jobs\CreateStudentAdmissionJob;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -55,7 +53,7 @@ class AdmissionService
 
         // Cap preview display at 200 for performance regardless of limit
         $displayLimit = min($limit, self::PREVIEW_DISPLAY_CAP);
-        $students = $query->with(['examResults', 'formResponse'])
+        $students = $query->with(['assessment'])
             ->limit($displayLimit)
             ->get();
 
@@ -63,11 +61,13 @@ class AdmissionService
         $stats = $this->calculateStatistics($students, $total);
         $stats['will_admit'] = min($limit, $total); // how many will actually be admitted
         $stats['preview_capped'] = $limit > self::PREVIEW_DISPLAY_CAP; // flag for UI
+        $level = $entity instanceof Programme ? $entity->level : $entity->programme->level;
 
         return [
             'students' => $students,
             'stats' => $stats,
             'rules_applied' =>  $rules,
+            'course_programme_level' => $level,
         ];
     }
 
@@ -222,11 +222,10 @@ class AdmissionService
      */
     protected function getBaseQuery(Course|Programme $entity)
     {
+        // based query uses student_level as this is only set after assessment
         $query = User::query()
-            ->whereHas('examResults', function ($q) {
-                // get the pass percentage
-                $q->whereRaw('ROUND ((yes_ans / (no_ans + yes_ans)) * 100, 2) >= CAST(? AS DECIMAL)', config(MINIMUM_EXAM_PASS_PERCENTAGE, 30));
-            })
+            // ->whereHas('assessment')  TODO: activate after assessment is implemented
+            ->whereNotNull('student_level') // TODO: remove after assessment is implemented
             ->whereDoesntHave('admission'); // Exclude already admitted
 
         if ($entity instanceof Course) {
@@ -281,21 +280,21 @@ class AdmissionService
             'female' => $students->where('gender', 'female')->count(),
         ];
 
-        $examScores = $students->map(function ($student) {
-            return $student->examResults->first()?->yes_ans ?? 0;
-        })->filter();
+        // $examScores = $students->map(function ($student) {
+        //     return $student->examResults->first()?->yes_ans ?? 0;
+        // })->filter();
 
         // calculate level distribution
         $levelDistribution = [
-            'beginner' => $students->where('level', 'beginner')->count(),
-            'intermediate' => $students->where('level', 'intermediate')->count(),
-            'advanced' => $students->where('level', 'advanced')->count(),
+            User::beginner => $students->where('student_level', User::beginner)->count(),
+            User::intermediate => $students->where('student_level', User::intermediate)->count(),
+            User::advanced => $students->where('student_level', User::advanced)->count(),
         ];
 
         return [
             'total_selected' => $students->count(),
             'gender_breakdown' => $genderBreakdown,
-            'avg_exam_score' => $examScores->isNotEmpty() ? round($examScores->avg(), 2) : 0,
+            'avg_exam_score' => 0,
             'date_range' => [
                 'oldest' => $students->min('created_at'),
                 'newest' => $students->max('created_at'),

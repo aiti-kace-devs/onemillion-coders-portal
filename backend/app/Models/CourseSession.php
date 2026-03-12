@@ -19,7 +19,12 @@ class CourseSession extends Model
         'limit',
         'course_time',
         'session',
-        'link'
+        'link',
+        'status',
+    ];
+
+    protected $casts = [
+        'status' => 'boolean',
     ];
 
     public function course()

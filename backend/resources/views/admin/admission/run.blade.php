@@ -130,10 +130,12 @@
                 </div>
                 <div class="card-body">
                     <div id="previewCapNotice" class="alert alert-warning d-none">
-                        <i class="la la-info-circle"></i>
-                        <strong>Performance Notice:</strong> Only the first 200 students are displayed in the preview.
-                        The actual number that <strong>will be admitted</strong> based on your limit is shown in the statistics.
-                        To admit <em>all</em> eligible students regardless of the limit, check <strong>"Admit All"</strong> above.
+                        <p>
+                            <i class="la la-info-circle"></i>
+                            <strong>Performance Notice:</strong> Only the first 200 students are displayed in the preview.
+                            The actual number that <strong>will be admitted</strong> based on your limit is shown in the statistics.
+                            To admit <em>all</em> eligible students regardless of the limit, check <strong>"Admit All"</strong> above.
+                        </p>
                     </div>
                     <div id="statsSection" class="mb-3"></div>
                     <div id="rulesSection" class="mb-3"></div>
@@ -145,7 +147,7 @@
                                     <th>Email</th>
                                     <th>Gender</th>
                                     <th>Age</th>
-                                    <th>Exam Score</th>
+                                    <th>Student Level</th>
                                     <th>Education Level</th>
                                     <th>Applied Date</th>
                                 </tr>
@@ -409,7 +411,7 @@
                     const stats = data.stats;
                     $('#statsSection').html(`
             <div class="row">
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <div class="alert alert-success">
                         <strong>Total Available:</strong> ${stats.total}
                     </div>
@@ -424,14 +426,14 @@
                         <strong>Gender:</strong> M: ${stats.gender_breakdown.male} / F: ${stats.gender_breakdown.female}
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-5">
                     <div class="alert alert-success">
-                        <strong>Level Distribution:</strong> Beginner: ${stats.avg_exam_score} || Intermediate: ${stats.avg_exam_score} || Advanced: ${stats.avg_exam_score}
+                        <strong>Level Distribution:</strong> Beginner: ${stats.level_distribution.beginner} / Intermediate: ${stats.level_distribution.intermediate} / Advanced: ${stats.level_distribution.advanced}
                     </div>
                 </div>
             </div>
         `);
-
+                    console.log(data.course_programme_level);
                     // Display rules
                     let rulesHtml = '<strong>Applied Rules:</strong> ';
                     data.rules.forEach(function(rule, index) {
@@ -450,13 +452,24 @@
                     <td>${student.email}</td>
                     <td>${student.gender}</td>
                     <td>${student.age}</td>
-                    <td>${student.exam_score}</td>
+                    <td>${data.course_programme_level ? displayLevel(student.student_level, data.course_programme_level) : displayLevel(student.student_level)}</td>
                     <td>${student.educational_level}</td>
                     <td>${student.applied_date}</td>
                 </tr>
             `);
                     });
                 }
+        
+
+                const displayLevel = (level, courseLevel = 'intermediate') => {
+
+                    if (level === 'advanced' || (level === 'intermediate' && courseLevel === 'beginner') || (level === courseLevel)) {
+                        return "<span class='badge bg-success text-white'>" + level.toUpperCase() + "</span>"
+                    }
+
+                    const spanClass = level === 'intermediate' ? 'bg-warning' : 'bg-danger';
+                    return "<span class='badge " + spanClass + " text-white'>" + level.toUpperCase() + "</span>"
+                }    
         </script>
     @endBassetBlock
 @endsection

@@ -6,13 +6,16 @@ use App\Events\FormSubmittedEvent;
 use App\Models\Form;
 use App\Models\User;
 use App\Models\FormResponse;
+use App\Services\OtpService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
+
 
 class FormResponseController extends Controller
 {
@@ -83,188 +86,256 @@ class FormResponseController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+
     public function store(Request $request)
     {
-        // \Log::info('STORE: Start', $request->all());
+        $formUuid = $request->input('form_uuid');
+        if (!$formUuid) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Form UUID is required'
+            ], 400);
+        }
 
-        $uuid = '6c004031-4efb-4b51-890f-0c3788defedf';
-        $form = Form::where('uuid',$uuid)->first();
-        // \Log::info('STORE: Form fetched', ['form' => $form]);
-        // dd($form);
+        $form = Form::where('uuid', $formUuid)->first();
         if (!$form) {
-            \Log::error('STORE: Form not found for UUID', ['uuid' => $uuid]);
-            abort(404, 'Form not found');
+            return response()->json([
+                'success' => false,
+                'message' => 'Form not found'
+            ], 404);
         }
+
         $schema = $form->schema;
-        // dd($schema);
-        // \Log::info('STORE: Schema loaded', ['schema' => $schema]);
 
-        // $validationRules = $form->getValidationRules();
-        $validationRules = [
-            'response_data' => 'required|array',
-        ];
-
-        $customMessages = [
-            'response_data.required' => 'The form responses are required.',
-        ];
-
-
-        $formattedData = [];
+        $validationRules = [];
+        $customMessages = [];
         $attributes = [];
+        $phoneFieldName = null;
 
-        foreach ($request->input('response_data', []) as $key => $value) {
-            foreach ($schema as $field) {
-                if (strcasecmp($key, $field['title']) == 0) {
-                    $formattedData[$field['field_name']] = trim($value);
-                    break;
-                }
-            }
-        }
-        
         foreach ($schema as $field) {
-            $fieldKey = $field['type'] == 'select_course' ? 'response_data.course_id' : "response_data.{$field['field_name']}";
-
-            $fieldTitle = ucwords(str_replace('_', ' ', $field['title']));
-
+            $fieldName = $field['field_name'];
+            $inputField = $fieldName;
+            $fieldTitle = ucwords(str_replace(['-', '_'], ' ', $field['title']));
             $rules = [];
 
-            $attributes[$fieldKey] = Str::remove('_id', Str::remove('response_data.', $fieldKey, true));
+            $attributes[$inputField] = $fieldTitle;
 
+            // Required
             if (!empty($field['validators']['required'])) {
                 $rules[] = 'required';
-                $customMessages["{$fieldKey}.required"] = "{$fieldTitle} is required.";
+                $customMessages["{$inputField}.required"] = "{$fieldTitle} is required.";
+            } else {
+                $rules[] = 'nullable';
             }
 
-            if (!empty($field['validators']['unique'])) {
-                $valueToCheck = $formattedData[$field['field_name']] ?? null;
-            
-                if (!empty($valueToCheck)) {
-                    $userFieldMap = [
-                        'email' => 'email',
-                        'phone' => 'mobile_no',
-                    ];
-            
-                    $dbColumn = $userFieldMap[$field['field_name']] ?? null;
-            
-                    if ($dbColumn) {
-                        $exists = User::where($dbColumn, $valueToCheck)->exists();
-            
-                        if ($exists) {
-                            throw \Illuminate\Validation\ValidationException::withMessages([
-                                $fieldKey => ["{$fieldTitle} has already been taken."]
-                            ]);
-                        }
-                    }
-                }
-            }
-            
             switch ($field['type']) {
                 case 'text':
-                case 'textarea':
-                    $rules[] = 'string';
-                    $customMessages["{$fieldKey}.string"] = "This field must be a string.";
-                    break;
-
+                case 'textarea': $rules[] = 'string'; break;
                 case 'radio':
-                case 'select':
-                    $rules[] = 'string';
-                    $customMessages["{$fieldKey}.string"] = "This field must be a valid option.";
-                    break;
-
-                case 'number':
-                    $rules[] = 'numeric';
-                    $customMessages["{$fieldKey}.numeric"] = "This field must be a number.";
-                    break;
-
-                case 'email':
-                    $rules[] = 'email';
-                    $customMessages["{$fieldKey}.email"] = "This field must be a valid email address.";
-                    break;
-
-                case 'checkbox':
-                    $rules[] = 'array';
-                    $customMessages["{$fieldKey}.array"] = "This field must be an array.";
-                    break;
-
+                case 'select': $rules[] = 'string'; break;
+                case 'number': $rules[] = 'numeric'; break;
+                case 'email': $rules[] = 'email'; break;
+                case 'checkbox': $rules[] = 'array'; break;
                 case 'file':
                     $rules[] = 'file';
                     $rules[] = 'max:2048';
-
                     if (!empty($field['options'])) {
                         $allowedMimes = array_map('trim', explode(',', strtolower($field['options'])));
                         $rules[] = 'mimes:' . implode(',', $allowedMimes);
-                        $customMessages["{$fieldKey}.mimes"] = "Must be a file of type: " . implode(', ', $allowedMimes) . ".";
                     }
-
-                    $customMessages["{$fieldKey}.file"] = "This field must be a file.";
-                    $customMessages["{$fieldKey}.max"] = "The file must not be greater than 2MB.";
-
                     break;
-
                 case 'select_course':
                     $rules[] = 'exists:courses,id';
-                    $customMessages["{$fieldKey}.exists"] = "The selected course is invalid";
                     break;
-
                 case 'phonenumber':
                     $rules[] = 'phone';
-                    $customMessages["{$fieldKey}.phone"] = "This must be a valid phonenumber.";
-                    $fieldName = $field['field_name'];
-                    break;
-
-                default:
-                    $rules[] = 'nullable';
+                    $phoneFieldName = $fieldName;
                     break;
             }
-            Log::info('below switch');
-            $validationRules[$fieldKey] = implode('|', $rules);
-            $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|' . $field['rules'] ?? '' : '';
-            $validationRules[$fieldKey] =  $validationRules[$fieldKey] . $additionRules;
-            Log::info('end of switch statement');
+
+            if (!empty($field['rules'])) {
+                $rules[] = $field['rules'];
+            }
+
+            $validationRules[$inputField] = implode('|', $rules);
         }
 
-        \Log::info('Get validationRules', ['validationRules' => $validationRules]);
-        // dd($validationRules, $attributes);
-        $validated = $request->validate($validationRules, $customMessages, $attributes);
-
-        // Handle file uploads
-        foreach ($schema as $field) {
-            if ($field['type'] === 'file' && $request->hasFile("response_data.{$field['field_name']}")) {
-                $destinationPath = 'form/uploads/';
-                $file = $request->file("response_data.{$field['field_name']}");
-
-                $fileName = time() . '.' . $file->getClientOriginalExtension();
-
-                // Delete old image if it exists
-                if (\Storage::disk('public')->exists($destinationPath . $fileName)) {
-                    \Storage::disk('public')->delete($destinationPath . $fileName);
+        $validator = Validator::make($request->all(), $validationRules, $customMessages, $attributes);
+        $validator->after(function ($validator) use ($schema, $request) {
+            foreach ($schema as $field) {
+                if (empty($field['validators']['unique'])) {
+                    continue;
                 }
 
-                // Save new image
-                \Storage::disk('public')->putFileAs($destinationPath, $file, $fileName);
+                $inputField = $field['field_name'];
+                $fieldTitle = ucwords(str_replace(['-', '_'], ' ', $field['title']));
+                $value = $request->input($inputField);
+                if (! $value) {
+                    continue;
+                }
 
-                $validated['response_data'][$field['field_name']] = $fileName;
+                $userFieldMap = [
+                    'email' => 'email',
+                    'phone' => 'mobile_no',
+                ];
+                $dbColumn = $userFieldMap[$inputField] ?? null;
+                if ($dbColumn && User::where($dbColumn, $value)->exists()) {
+                    $validator->errors()->add($inputField, "{$fieldTitle} has already been taken.");
+                }
+            }
+        });
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // MANDATORY SECURITY CHECKS — OTP Verification & Email Uniqueness
+        // ═══════════════════════════════════════════════════════════════════════
+        // These checks run unconditionally for any form with an email field,
+        // regardless of the form schema's validators.unique configuration.
+        //
+        // They serve as the backend's primary defence against:
+        //  1. External tools (Postman, curl, etc.) bypassing the frontend OTP flow
+        //  2. Duplicate registrations with already-taken email addresses
+        //  3. Fabricated otp_verified_emails rows (no otp_code_hash = illegitimate)
+        //
+        // HOW THIS BLOCKS EXTERNAL TOOL ABUSE:
+        //  - The otp_verified_emails table now tracks the FULL lifecycle from
+        //    OTP-send time. The otp_code_hash column is populated ONLY by the
+        //    legitimate OtpService::store() method when an OTP is actually sent.
+        //  - If a row has no otp_code_hash, it was fabricated (e.g. direct DB insert
+        //    by an attacker) — we reject it.
+        //  - If no row exists at all, the sender never went through the OTP flow.
+        //  - Even if an attacker somehow verifies an email, the uniqueness check
+        //    below prevents registration if that email is already in the users table.
+        // ═══════════════════════════════════════════════════════════════════════
+
+        $emailField = collect($schema)->first(function ($field) {
+            return strtolower($field['type']) === 'email';
+        });
+
+        $emailValue = null;
+        if ($emailField) {
+            $emailValue = $request->input($emailField['field_name']);
+            if ($emailValue) {
+                $emailNormalized = strtolower(trim($emailValue));
+                $otpService = app(OtpService::class);
+
+                // CHECK 1: Email Uniqueness — prevent registration with an email that
+                // already exists in the users table. Checked FIRST because it's the
+                // cheapest query and gives the most helpful error message.
+                if (User::where('email', $emailNormalized)->exists()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'This email address is already registered.',
+                        'errors'  => [
+                            $emailField['field_name'] => ['This email address is already registered. Please use a different email or log in to your existing account.'],
+                        ],
+                    ], 409);
+                }
+
+                // CHECK 2: OTP Verification + Legitimacy proof (single DB query).
+                //
+                // isVerified() now performs ALL of these checks internally:
+                //  a) Row exists in otp_verified_emails
+                //  b) otp_code_hash is present (proves the row was created by OtpService::store(),
+                //     not fabricated via manual DB insert, SQL injection, or external tools)
+                //  c) verified_at is set (OTP was actually verified via code entry or email link)
+                //  d) used_at is null (verification hasn't been consumed by a prior registration)
+                //  e) Verification is within the configured VERIFIED_TTL
+                //
+                // If ANY of these fail, the registration is rejected. This single check
+                // eliminates the need for a separate otp_code_hash query.
+                if (!$otpService->isVerified($emailNormalized)) {
+                    // Log extra detail for fabrication detection
+                    $record = \App\Models\OtpVerifiedEmail::where('email', $emailNormalized)->first();
+                    if ($record && empty($record->otp_code_hash)) {
+                        Log::warning('Registration attempt with missing otp_code_hash — possible fabrication', [
+                            'email' => $emailNormalized,
+                        ]);
+                    }
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Email verification is required before registration.',
+                        'errors'  => [
+                            'otp' => ['Please verify your email address with the OTP code before submitting.'],
+                        ],
+                    ], 422);
+                }
             }
         }
 
-        $response = new FormResponse($validated);
+        foreach ($schema as $field) {
+            if ($field['type'] === 'file' && $request->hasFile($field['field_name'])) {
+                $file = $request->file($field['field_name']);
+                $destinationPath = 'form/uploads/';
+                $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
 
-        $form->responses()->save($response);
+                $defaultDisk = config('filesystems.default', 'local');
+                $resolvedDefaultDisk = $defaultDisk === 'local' ? 'public' : $defaultDisk;
+                $diskName = $resolvedDefaultDisk;
+                if ($field['field_name'] === 'certificate') {
+                    $diskName = $defaultDisk === 'gcs' ? 'gcs_uploads' : $resolvedDefaultDisk;
+                }
+                $disk = Storage::disk($diskName);
+                $disk->putFileAs($destinationPath, $file, $fileName);
 
-        Log::info($validated['response_data']);
-        Log::info($fieldName);
+                $validated[$field['field_name']] = [
+                    'name' => $fileName,
+                    'url' => $disk->url($destinationPath . $fileName),
+                ];
+            }
+        }
 
-        FormSubmittedEvent::dispatch($validated['response_data'], $response->id, $fieldName);
+        $responseData = [];
+        foreach ($schema as $field) {
+            $fieldName = $field['field_name'];
+            $responseData[$fieldName] = $validated[$fieldName] ?? $request->input($fieldName);
+        }
 
+        // Wrap form creation + OTP consumption in a transaction so they
+        // either both succeed or both roll back. This prevents a state where
+        // the form response is saved but OTP remains unconsumed (or vice versa).
+        $response = DB::transaction(function () use ($form, $responseData, $emailField, $emailValue) {
+            $response = new FormResponse([
+                'form_id' => $form->id,
+                'response_data' => $responseData,
+            ]);
+            $form->responses()->save($response);
+
+            // Consume OTP verification — prevents reuse from Postman/curl etc.
+            // If consumption fails (no row found), throw to roll back the entire transaction.
+            if ($emailField && $emailValue) {
+                $consumed = app(OtpService::class)->consumeVerification($emailValue);
+                if (!$consumed) {
+                    throw new \RuntimeException('Failed to consume OTP verification for: ' . $emailValue);
+                }
+            }
+
+            return $response;
+        });
+
+        FormSubmittedEvent::dispatch($responseData, $response->id, $phoneFieldName);
 
         return response()->json([
-                'success' => true,
-                'message' => 'Student created successfully',
-                'data' => $response
-            ], 201);
-
-
+            'success' => true,
+            'message' => 'Student created successfully',
+            'data' => $response,
+        ], 201);
     }
+
+
+
+
+
 
 
     /**
