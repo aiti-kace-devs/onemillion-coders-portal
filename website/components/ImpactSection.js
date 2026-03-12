@@ -16,7 +16,6 @@ import { GhanaGradientBar } from "@/components/GhanaGradients";
 
 const ImpactSection = ({ data }) => {
 
-  console.log('data', data)
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
@@ -159,12 +158,14 @@ const ImpactSection = ({ data }) => {
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ duration: 0.3 }}
           className="text-center mb-16"
         >
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
             transition={{ duration: 0.3, delay: 0.05 }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 text-gray-900 text-sm font-semibold rounded-full mb-6"
           >
@@ -187,6 +188,7 @@ const ImpactSection = ({ data }) => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ duration: 0.3, delay: 0.1 }}
           className="mb-20"
         >
@@ -200,6 +202,7 @@ const ImpactSection = ({ data }) => {
                   key={index}
                   initial={{ opacity: 0, y: 15 }}
                   whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
                   transition={{ duration: 0.25, delay: 0.03 * index }}
                   className="group relative bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-yellow-500/40 transition-all duration-250 ease-out hover:bg-white/10 hover:shadow-xl hover:shadow-yellow-500/10"
                 >
@@ -218,6 +221,7 @@ const ImpactSection = ({ data }) => {
                       className="text-3xl font-bold text-white mb-2"
                       initial={{ opacity: 0 }}
                       whileInView={{ opacity: 1 }}
+                      viewport={{ once: true }}
                       transition={{ duration: 0.3, delay: 0.05 * index }}
                     >
                       {stat.number}
@@ -239,6 +243,7 @@ const ImpactSection = ({ data }) => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ duration: 0.3, delay: 0.15 }}
           className="mb-16"
         >
@@ -374,6 +379,7 @@ const ImpactSection = ({ data }) => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ duration: 0.3, delay: 0.2 }}
           className="text-center relative"
         >
