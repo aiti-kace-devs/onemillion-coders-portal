@@ -89,6 +89,17 @@ class DistrictCrudController extends CrudController
     }
 
     /**
+     * Define what happens when the Show operation is loaded.
+     *
+     * @return void
+     */
+    protected function setupShowOperation()
+    {
+        CRUD::set('show.setFromDb', false);
+        CRUD::set('show.view', 'vendor.backpack.crud.district_show');
+    }
+
+    /**
      * Define what happens when the Create operation is loaded.
      * 
      * @see https://backpackforlaravel.com/docs/crud-operation-create

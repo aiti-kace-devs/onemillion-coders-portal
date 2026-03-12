@@ -143,10 +143,41 @@ trait ProgrammeFieldHelpers
         CRUD::addField([
             'name' => 'level',
             'label' => 'Course Level',
+            'type' => 'select_from_array',
+            'options' => [
+                'Beginner' => 'Beginner',
+                'Intermediate' => 'Intermediate',
+                'Advanced' => 'Advanced',
+            ],
+            'allows_null' => false,
+            'wrapper' => ['class' => 'form-group col-6'],
+            'hint' => 'Select the course difficulty level'
+        ]);
+
+
+
+        CRUD::addField([
+            'name' => 'mode_of_delivery',
+            'label' => 'Mode of Delivery',
+            'type' => 'select_from_array',
+            'options' => [
+                'Online' => 'Online',
+                'In Person' => 'In Person',
+            ],
+            'allows_null' => false,
+            'wrapper' => ['class' => 'form-group col-6'],
+            // 'hint' => 'Select the course difficulty level'
+        ]);
+
+        CRUD::addField([
+            'name' => 'provider',
+            'label' => 'Provider',
             'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
-            'hint' => 'eg. Professional'
+            'hint' => 'eg Google, Microsoft, Coursera, etc.'
         ]);
+
+
 
         CRUD::addField([
             'name' => 'job_responsible',
@@ -266,17 +297,16 @@ trait ProgrammeFieldHelpers
         //     ]);
         // }
 
-        $courseMatches = CourseMatch::all();
+        $courseMatches = CourseMatch::where('status', 1)->get();
         $tagFieldNames = [];
 
-        $programme = $this->crud->getCurrentEntry(); // null on create, model on edit
+        $programme = $this->crud->getCurrentEntry();
 
         foreach ($courseMatches as $courseMatch) {
 
             $fieldName = 'course_match_' . $courseMatch->id;
             $tagFieldNames[] = $fieldName;
 
-            // 👇 Preload selected values (IMPORTANT PART)
             $selectedValues = [];
 
             if ($programme) {
@@ -291,8 +321,8 @@ trait ProgrammeFieldHelpers
                 'label' => $courseMatch->question,
                 'type' => 'select2_multiple',
 
-                'fake' => true,   // prevent relationship call
-                'value' => $selectedValues, // 👈 THIS FIXES DISPLAY
+                'fake' => true, 
+                'value' => $selectedValues,
 
                 'model' => CourseMatchOption::class,
                 'attribute' => 'answer',
@@ -307,7 +337,7 @@ trait ProgrammeFieldHelpers
 
 
 
-        $this->addFieldsToTab('Info', true, ['title', 'sub_title', 'image', 'start_date', 'end_date', 'duration', 'course_category_id', 'status', 'level', 'job_responsible']);
+        $this->addFieldsToTab('Info', true, ['title', 'sub_title', 'image', 'start_date', 'end_date', 'duration', 'course_category_id', 'status', 'level', 'mode_of_delivery', 'provider', 'job_responsible']);
         $this->addFieldsToTab('Module', true, ['course_modules']);
         $this->addFieldsToTab('Certification', true, ['course_certification']);
         $this->addFieldsToTab('Prerequisites', true, ['prerequisites']);
@@ -319,7 +349,7 @@ trait ProgrammeFieldHelpers
 
 
 
-    protected function setupShowCommonFields()
+     protected function setupShowCommonFields()
     {
         CRUD::addColumn([
             'name' => 'title',

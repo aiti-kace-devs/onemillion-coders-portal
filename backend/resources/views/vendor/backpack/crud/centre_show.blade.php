@@ -1,25 +1,25 @@
 @extends('crud::show')
 
 @php
-    /** @var \App\Models\Constituency $entry */
-    $constituency = $entry;
-    $constituencyId = (int) $constituency->getKey();
+    /** @var \App\Models\Centre $entry */
+    $centre = $entry;
+    $centreId = (int) $centre->getKey();
 
-    $constituency->loadMissing(['branch']);
-    $branch = $constituency->branch;
+    $centre->loadMissing(['branch', 'constituency', 'districts']);
+    $branch = $centre->branch;
+    $constituency = $centre->constituency;
+    $districtTitles = $centre->districts?->pluck('title')->filter()->sort()->values() ?? collect();
+    $totalDistricts = $districtTitles->count();
 
     $today = now()->toDateString();
 
-    $centreIdsArray = \Illuminate\Support\Facades\DB::table('centres')
-        ->where('constituency_id', $constituencyId)
+    $courseIdsArray = \Illuminate\Support\Facades\DB::table('courses')
+        ->where('centre_id', $centreId)
         ->pluck('id')
         ->map(fn ($id) => (int) $id)
         ->all();
 
-    $totalCentres = count($centreIdsArray);
-
-    $courseIdsArray = [];
-    $totalCourses = 0;
+    $totalCourses = count($courseIdsArray);
     $ongoingCourses = 0;
     $totalRegisteredUsers = 0;
     $totalShortlistedUsers = 0;
@@ -38,234 +38,164 @@
     $ageLabels = collect();
     $ageValues = collect();
 
-    $topCentres = collect();
     $topCourses = collect();
 
-    if (!empty($centreIdsArray)) {
-        $courseIdsArray = \Illuminate\Support\Facades\DB::table('courses')
-            ->whereIn('centre_id', $centreIdsArray)
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
+    if (!empty($courseIdsArray)) {
+        $ongoingCourses = (int) \Illuminate\Support\Facades\DB::table('courses')
+            ->whereIn('id', $courseIdsArray)
+            ->whereNotNull('start_date')
+            ->whereNotNull('end_date')
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->count('id');
 
-        $totalCourses = count($courseIdsArray);
+        $totalRegisteredUsers = (int) \Illuminate\Support\Facades\DB::table('users')
+            ->whereIn('registered_course', $courseIdsArray)
+            ->count('id');
 
-        if (!empty($courseIdsArray)) {
-            $ongoingCourses = (int) \Illuminate\Support\Facades\DB::table('courses')
-                ->whereIn('id', $courseIdsArray)
-                ->whereNotNull('start_date')
-                ->whereNotNull('end_date')
-                ->whereDate('start_date', '<=', $today)
-                ->whereDate('end_date', '>=', $today)
-                ->count('id');
+        $totalShortlistedUsers = (int) \Illuminate\Support\Facades\DB::table('users')
+            ->whereIn('registered_course', $courseIdsArray)
+            ->where(function ($query) {
+                $query->where('shortlist', 1)->orWhere('shortlist', true);
+            })
+            ->count('id');
 
-            $totalRegisteredUsers = (int) \Illuminate\Support\Facades\DB::table('users')
-                ->whereIn('registered_course', $courseIdsArray)
-                ->count('id');
+        $admissionsAgg = \Illuminate\Support\Facades\DB::table('user_admission')
+            ->whereIn('course_id', $courseIdsArray)
+            ->selectRaw('
+                COUNT(*) as total_count,
+                SUM(CASE WHEN confirmed IS NOT NULL THEN 1 ELSE 0 END) as confirmed_count,
+                SUM(CASE WHEN confirmed IS NULL THEN 1 ELSE 0 END) as pending_count,
+                COUNT(DISTINCT CASE WHEN confirmed IS NOT NULL THEN user_id END) as admitted_students_count
+            ')
+            ->first();
 
-            $totalShortlistedUsers = (int) \Illuminate\Support\Facades\DB::table('users')
-                ->whereIn('registered_course', $courseIdsArray)
-                ->where(function ($query) {
-                    $query->where('shortlist', 1)->orWhere('shortlist', true);
-                })
-                ->count('id');
+        $admissionsTotal = (int) ($admissionsAgg->total_count ?? 0);
+        $admissionsConfirmed = (int) ($admissionsAgg->confirmed_count ?? 0);
+        $admissionsPending = (int) ($admissionsAgg->pending_count ?? 0);
+        $totalAdmittedUsers = (int) ($admissionsAgg->admitted_students_count ?? 0);
 
-            $admissionsAgg = \Illuminate\Support\Facades\DB::table('user_admission')
-                ->whereIn('course_id', $courseIdsArray)
-                ->selectRaw('
-                    COUNT(*) as total_count,
-                    SUM(CASE WHEN confirmed IS NOT NULL THEN 1 ELSE 0 END) as confirmed_count,
-                    SUM(CASE WHEN confirmed IS NULL THEN 1 ELSE 0 END) as pending_count,
-                    COUNT(DISTINCT CASE WHEN confirmed IS NOT NULL THEN user_id END) as admitted_students_count
-                ')
-                ->first();
+        $admissionRate = $totalRegisteredUsers > 0
+            ? round(($totalAdmittedUsers / $totalRegisteredUsers) * 100, 1)
+            : 0;
 
-            $admissionsTotal = (int) ($admissionsAgg->total_count ?? 0);
-            $admissionsConfirmed = (int) ($admissionsAgg->confirmed_count ?? 0);
-            $admissionsPending = (int) ($admissionsAgg->pending_count ?? 0);
-            $totalAdmittedUsers = (int) ($admissionsAgg->admitted_students_count ?? 0);
+        $shortlistRate = $totalRegisteredUsers > 0
+            ? round(($totalShortlistedUsers / $totalRegisteredUsers) * 100, 1)
+            : 0;
 
-            $admissionRate = $totalRegisteredUsers > 0
-                ? round(($totalAdmittedUsers / $totalRegisteredUsers) * 100, 1)
-                : 0;
+        $genderCounts = \Illuminate\Support\Facades\DB::table('users as u')
+            ->whereIn('u.registered_course', $courseIdsArray)
+            ->selectRaw("
+                CASE
+                    WHEN LOWER(TRIM(COALESCE(u.gender, ''))) IN ('male', 'm') THEN 'Male'
+                    WHEN LOWER(TRIM(COALESCE(u.gender, ''))) IN ('female', 'f') THEN 'Female'
+                    WHEN TRIM(COALESCE(u.gender, '')) = '' THEN 'Unspecified'
+                    ELSE 'Other'
+                END as gender_label,
+                COUNT(*) as total
+            ")
+            ->groupBy('gender_label')
+            ->pluck('total', 'gender_label');
 
-            $shortlistRate = $totalRegisteredUsers > 0
-                ? round(($totalShortlistedUsers / $totalRegisteredUsers) * 100, 1)
-                : 0;
+        $genderValues = $genderLabels
+            ->map(fn ($label) => (int) ($genderCounts[$label] ?? 0))
+            ->values();
 
-            $genderCounts = \Illuminate\Support\Facades\DB::table('users as u')
-                ->whereIn('u.registered_course', $courseIdsArray)
-                ->selectRaw("
-                    CASE
-                        WHEN LOWER(TRIM(COALESCE(u.gender, ''))) IN ('male', 'm') THEN 'Male'
-                        WHEN LOWER(TRIM(COALESCE(u.gender, ''))) IN ('female', 'f') THEN 'Female'
-                        WHEN TRIM(COALESCE(u.gender, '')) = '' THEN 'Unspecified'
-                        ELSE 'Other'
-                    END as gender_label,
-                    COUNT(*) as total
-                ")
-                ->groupBy('gender_label')
-                ->pluck('total', 'gender_label');
+        $ageCounts = \Illuminate\Support\Facades\DB::table('users as u')
+            ->whereIn('u.registered_course', $courseIdsArray)
+            ->selectRaw("
+                CASE
+                    WHEN u.age IS NULL OR u.age = '' THEN 'Unknown'
+                    WHEN u.age LIKE '%-%' OR u.age LIKE '%–%' OR u.age LIKE '%—%' THEN u.age
+                    WHEN u.age LIKE '%+%' THEN u.age
+                    WHEN u.age REGEXP '^[0-9]+$' THEN
+                        CONCAT(
+                            FLOOR(CAST(u.age AS UNSIGNED) / 10) * 10,
+                            '-',
+                            FLOOR(CAST(u.age AS UNSIGNED) / 10) * 10 + 9
+                        )
+                    ELSE 'Unknown'
+                END AS age_range,
+                COUNT(*) AS total,
+                CASE
+                    WHEN u.age IS NULL OR u.age = '' THEN 9999
+                    WHEN u.age LIKE '%-%' OR u.age LIKE '%–%' OR u.age LIKE '%—%' THEN
+                        CAST(SUBSTRING_INDEX(u.age, '-', 1) AS UNSIGNED)
+                    WHEN u.age LIKE '%+%' THEN
+                        CAST(SUBSTRING_INDEX(u.age, '+', 1) AS UNSIGNED)
+                    WHEN u.age REGEXP '^[0-9]+$' THEN
+                        FLOOR(CAST(u.age AS UNSIGNED) / 10)
+                    ELSE 9999
+                END AS bucket_order
+            ")
+            ->groupBy('age_range', 'bucket_order')
+            ->orderBy('bucket_order')
+            ->get();
 
-            $genderValues = $genderLabels
-                ->map(fn ($label) => (int) ($genderCounts[$label] ?? 0))
-                ->values();
+        $ageLabels = $ageCounts->pluck('age_range')->values();
+        $ageValues = $ageCounts->pluck('total')->map(fn ($v) => (int) $v)->values();
 
-            $ageCounts = \Illuminate\Support\Facades\DB::table('users as u')
-                ->whereIn('u.registered_course', $courseIdsArray)
-                ->selectRaw("
-                    CASE
-                        WHEN u.age IS NULL OR u.age = '' THEN 'Unknown'
-                        WHEN u.age LIKE '%-%' OR u.age LIKE '%–%' OR u.age LIKE '%—%' THEN u.age
-                        WHEN u.age LIKE '%+%' THEN u.age
-                        WHEN u.age REGEXP '^[0-9]+$' THEN
-                            CONCAT(
-                                FLOOR(CAST(u.age AS UNSIGNED) / 10) * 10,
-                                '-',
-                                FLOOR(CAST(u.age AS UNSIGNED) / 10) * 10 + 9
-                            )
-                        ELSE 'Unknown'
-                    END AS age_range,
-                    COUNT(*) AS total,
-                    CASE
-                        WHEN u.age IS NULL OR u.age = '' THEN 9999
-                        WHEN u.age LIKE '%-%' OR u.age LIKE '%–%' OR u.age LIKE '%—%' THEN
-                            CAST(SUBSTRING_INDEX(u.age, '-', 1) AS UNSIGNED)
-                        WHEN u.age LIKE '%+%' THEN
-                            CAST(SUBSTRING_INDEX(u.age, '+', 1) AS UNSIGNED)
-                        WHEN u.age REGEXP '^[0-9]+$' THEN
-                            FLOOR(CAST(u.age AS UNSIGNED) / 10)
-                        ELSE 9999
-                    END AS bucket_order
-                ")
-                ->groupBy('age_range', 'bucket_order')
-                ->orderBy('bucket_order')
-                ->get();
+        $registeredByCourse = \Illuminate\Support\Facades\DB::table('users')
+            ->whereIn('registered_course', $courseIdsArray)
+            ->selectRaw('registered_course as course_id, COUNT(id) as total')
+            ->groupBy('registered_course')
+            ->pluck('total', 'course_id');
 
-            $ageLabels = $ageCounts->pluck('age_range')->values();
-            $ageValues = $ageCounts->pluck('total')->map(fn ($v) => (int) $v)->values();
+        $coursesWithRegistrations = (int) $registeredByCourse->count();
+        $coursesWithoutRegistrations = max($totalCourses - $coursesWithRegistrations, 0);
+        $courseRegistrationCoverageRate = $totalCourses > 0
+            ? round(($coursesWithRegistrations / $totalCourses) * 100, 1)
+            : 0;
 
-            $districtTitlesByCentre = \Illuminate\Support\Facades\DB::table('district_centre as dc')
-                ->join('districts as d', 'd.id', '=', 'dc.district_id')
-                ->whereIn('dc.centre_id', $centreIdsArray)
-                ->selectRaw("dc.centre_id, GROUP_CONCAT(DISTINCT d.title ORDER BY d.title SEPARATOR ', ') as district_titles")
-                ->groupBy('dc.centre_id')
-                ->pluck('district_titles', 'centre_id');
+        $admittedByCourse = \Illuminate\Support\Facades\DB::table('user_admission')
+            ->whereIn('course_id', $courseIdsArray)
+            ->whereNotNull('confirmed')
+            ->selectRaw('course_id, COUNT(DISTINCT user_id) as total')
+            ->groupBy('course_id')
+            ->pluck('total', 'course_id');
 
-            $districtLinksByCentre = \Illuminate\Support\Facades\DB::table('district_centre as dc')
-                ->join('districts as d', 'd.id', '=', 'dc.district_id')
-                ->whereIn('dc.centre_id', $centreIdsArray)
-                ->select('dc.centre_id', 'd.id', 'd.title')
-                ->orderBy('d.title')
-                ->get()
-                ->groupBy('centre_id')
-                ->map(function ($rows) {
-                    return $rows->map(function ($row) {
-                        $districtId = (int) $row->id;
-                        $url = backpack_url('district/' . $districtId . '/show');
-                        return '<a href="' . $url . '">' . e($row->title) . '</a>';
-                    })->implode(', ');
-                });
+        $topCourses = \Illuminate\Support\Facades\DB::table('courses as c')
+            ->where('c.centre_id', $centreId)
+            ->select(['c.id', 'c.course_name'])
+            ->get()
+            ->map(function ($course) use ($registeredByCourse, $admittedByCourse) {
+                $courseId = (int) $course->id;
 
-            $coursesByCentre = \Illuminate\Support\Facades\DB::table('courses')
-                ->whereIn('centre_id', $centreIdsArray)
-                ->selectRaw('centre_id, COUNT(*) as total')
-                ->groupBy('centre_id')
-                ->pluck('total', 'centre_id');
-
-            $registeredByCentre = \Illuminate\Support\Facades\DB::table('users as u')
-                ->join('courses as c', 'c.id', '=', 'u.registered_course')
-                ->whereIn('c.centre_id', $centreIdsArray)
-                ->selectRaw('c.centre_id as centre_id, COUNT(u.id) as total')
-                ->groupBy('c.centre_id')
-                ->pluck('total', 'centre_id');
-
-            $admittedByCentre = \Illuminate\Support\Facades\DB::table('user_admission as ua')
-                ->join('courses as c', 'c.id', '=', 'ua.course_id')
-                ->whereIn('c.centre_id', $centreIdsArray)
-                ->whereNotNull('ua.confirmed')
-                ->selectRaw('c.centre_id as centre_id, COUNT(DISTINCT ua.user_id) as total')
-                ->groupBy('c.centre_id')
-                ->pluck('total', 'centre_id');
-
-            $registeredByCourse = \Illuminate\Support\Facades\DB::table('users')
-                ->whereIn('registered_course', $courseIdsArray)
-                ->selectRaw('registered_course as course_id, COUNT(id) as total')
-                ->groupBy('registered_course')
-                ->pluck('total', 'course_id');
-
-            $coursesWithRegistrations = (int) $registeredByCourse->count();
-            $coursesWithoutRegistrations = max($totalCourses - $coursesWithRegistrations, 0);
-            $courseRegistrationCoverageRate = $totalCourses > 0
-                ? round(($coursesWithRegistrations / $totalCourses) * 100, 1)
-                : 0;
-
-            $admittedByCourse = \Illuminate\Support\Facades\DB::table('user_admission')
-                ->whereIn('course_id', $courseIdsArray)
-                ->whereNotNull('confirmed')
-                ->selectRaw('course_id, COUNT(DISTINCT user_id) as total')
-                ->groupBy('course_id')
-                ->pluck('total', 'course_id');
-
-            $topCentres = \Illuminate\Support\Facades\DB::table('centres')
-                ->whereIn('id', $centreIdsArray)
-                ->select(['id', 'title'])
-                ->get()
-                ->map(function ($centre) use ($coursesByCentre, $registeredByCentre, $admittedByCentre, $districtTitlesByCentre) {
-                    $centreId = (int) $centre->id;
-
-                    return (object) [
-                        'id' => $centreId,
-                        'title' => $centre->title,
-                        'district_title' => $districtTitlesByCentre[$centreId] ?? null,
-                        'courses_count' => (int) ($coursesByCentre[$centreId] ?? 0),
-                        'registered_users_count' => (int) ($registeredByCentre[$centreId] ?? 0),
-                        'admitted_users_count' => (int) ($admittedByCentre[$centreId] ?? 0),
-                    ];
-                })
-                ->sortByDesc('registered_users_count')
-                ->values();
-
-            $topCourses = \Illuminate\Support\Facades\DB::table('courses as c')
-                ->join('centres as ce', 'ce.id', '=', 'c.centre_id')
-                ->whereIn('c.id', $courseIdsArray)
-                ->select(['c.id', 'c.course_name', 'c.centre_id', 'ce.title as centre_title'])
-                ->get()
-                ->map(function ($course) use ($registeredByCourse, $admittedByCourse, $districtTitlesByCentre, $districtLinksByCentre) {
-                    $courseId = (int) $course->id;
-                    $centreId = (int) ($course->centre_id ?? 0);
-
-                    return (object) [
-                        'id' => $courseId,
-                        'course_name' => $course->course_name,
-                        'centre_id' => $centreId,
-                        'centre_title' => $course->centre_title,
-                        'district_title' => $districtTitlesByCentre[$centreId] ?? null,
-                        'district_links' => $districtLinksByCentre[$centreId] ?? null,
-                        'registered_users_count' => (int) ($registeredByCourse[$courseId] ?? 0),
-                        'admitted_users_count' => (int) ($admittedByCourse[$courseId] ?? 0),
-                    ];
-                })
-                ->sortByDesc('registered_users_count')
-                ->values();
-        }
+                return (object) [
+                    'id' => $courseId,
+                    'course_name' => $course->course_name,
+                    'registered_users_count' => (int) ($registeredByCourse[$courseId] ?? 0),
+                    'admitted_users_count' => (int) ($admittedByCourse[$courseId] ?? 0),
+                ];
+            })
+            ->sortByDesc('registered_users_count')
+            ->values();
     }
 @endphp
 
 @section('content')
     @parent
 
-            <div>
-                <!-- <h4 class="mb-0">Constituency Metrics</h4> -->
-                <div class="text-muted text-center" style="font-size: 50px; color: black">
-                    {{ $constituency->title ?? 'Constituency' }}
-                    @if($branch?->title)
-                        - {{ $branch->title }}
-                    @endif
-                </div>
+    <div>
+        <div class="text-muted text-center" style="font-size: 44px; color: black">
+            {{ $centre->title ?? 'Centre' }}
+        </div>
+        <div class="text-muted text-center">
+            @if($constituency?->title)
+                {{ $constituency->title }}
+            @endif
+            @if($branch?->title)
+                - {{ $branch->title }}
+            @endif
+        </div>
+        @if($districtTitles->isNotEmpty())
+            <div class="text-muted text-center small">
+                Districts: {{ $districtTitles->implode(', ') }}
             </div>
+        @endif
+    </div>
 
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4 mt-2">
         <div class="col-md-3">
             <div class="card metric-card h-100">
                 <div class="card-body">
@@ -274,7 +204,7 @@
                         <i class="la la-users text-primary"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalRegisteredUsers) }}</div>
-                    <div class="text-muted small">Users mapped by registered course in this constituency.</div>
+                    <div class="text-muted small">Users mapped by registered course in this centre.</div>
                 </div>
             </div>
         </div>
@@ -324,19 +254,6 @@
             <div class="card metric-card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
-                        <div class="text-muted">Total Centres</div>
-                        <i class="la la-building text-secondary"></i>
-                    </div>
-                    <div class="metric-value">{{ number_format($totalCentres) }}</div>
-                    <div class="text-muted small">Centres assigned to this constituency.</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card metric-card h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between">
                         <div class="text-muted">Courses Without Registrations</div>
                         <i class="la la-exclamation-circle text-dark"></i>
                     </div>
@@ -355,6 +272,19 @@
                     </div>
                     <div class="metric-value">{{ number_format($admissionsPending) }}</div>
                     <div class="text-muted small">Admission records not yet confirmed.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="text-muted">Assigned Districts</div>
+                        <i class="la la-map text-secondary"></i>
+                    </div>
+                    <div class="metric-value">{{ number_format($totalDistricts) }}</div>
+                    <div class="text-muted small">Districts linked to this centre.</div>
                 </div>
             </div>
         </div>
@@ -407,7 +337,7 @@
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-lg-6">
+        <div class="col-12">
             <div class="card h-100">
                 <div class="card-header">
                     <strong><i class="la la-signal"></i> Registration Funnel</strong>
@@ -418,50 +348,6 @@
                     </div>
                     <div class="text-muted small mt-2">
                         Suggested KPI: track drop-off from Registered to Shortlisted to Admitted.
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header">
-                    <strong><i class="la la-building"></i> Top Centres by Registrations</strong>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table id="dtTopCentres" class="table table-sm table-striped mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Centre</th>
-                                    <th>District</th>
-                                    <th>Courses</th>
-                                    <th>Registered</th>
-                                    <th>Admitted</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($topCentres as $centre)
-                                    <tr>
-                                        <td>
-                                            @if(!empty($centre->id))
-                                                <a href="{{ backpack_url('centre/' . $centre->id . '/show') }}">{{ $centre->title }}</a>
-                                            @else
-                                                {{ $centre->title ?? 'N/A' }}
-                                            @endif
-                                        </td>
-                                        <td>{{ $centre->district_title ?: 'N/A' }}</td>
-                                        <td>{{ number_format((int) ($centre->courses_count ?? 0)) }}</td>
-                                        <td>{{ number_format((int) ($centre->registered_users_count ?? 0)) }}</td>
-                                        <td>{{ number_format((int) ($centre->admitted_users_count ?? 0)) }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="5" class="text-center text-muted">No centre data found.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
@@ -480,8 +366,6 @@
                             <thead>
                                 <tr>
                                     <th>Course</th>
-                                    <th>Centre</th>
-                                    <th>District</th>
                                     <th>Registered Users</th>
                                     <th>Admitted Users</th>
                                 </tr>
@@ -496,26 +380,12 @@
                                                 {{ $course->course_name ?? 'N/A' }}
                                             @endif
                                         </td>
-                                        <td>
-                                            @if(!empty($course->centre_id))
-                                                <a href="{{ backpack_url('centre/' . $course->centre_id . '/show') }}">{{ $course->centre_title ?? ('Centre #' . $course->centre_id) }}</a>
-                                            @else
-                                                {{ $course->centre_title ?? 'N/A' }}
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if(!empty($course->district_links))
-                                                {!! $course->district_links !!}
-                                            @else
-                                                {{ $course->district_title ?: 'N/A' }}
-                                            @endif
-                                        </td>
                                         <td>{{ number_format((int) ($course->registered_users_count ?? 0)) }}</td>
                                         <td>{{ number_format((int) ($course->admitted_users_count ?? 0)) }}</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted">No course data found.</td>
+                                        <td colspan="3" class="text-center text-muted">No course data found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -583,7 +453,6 @@
             }
 
             document.addEventListener('DOMContentLoaded', function () {
-                safeInitDataTable('#dtTopCentres');
                 safeInitDataTable('#dtTopCourses');
                 if (typeof Chart !== 'function') return;
 

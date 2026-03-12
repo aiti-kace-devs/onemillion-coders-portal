@@ -1,18 +1,18 @@
 @extends('crud::show')
 
 @php
-    /** @var \App\Models\Constituency $entry */
-    $constituency = $entry;
-    $constituencyId = (int) $constituency->getKey();
+    /** @var \App\Models\District $entry */
+    $district = $entry;
+    $districtId = (int) $district->getKey();
 
-    $constituency->loadMissing(['branch']);
-    $branch = $constituency->branch;
+    $district->loadMissing(['branch']);
+    $branch = $district->branch;
 
     $today = now()->toDateString();
 
-    $centreIdsArray = \Illuminate\Support\Facades\DB::table('centres')
-        ->where('constituency_id', $constituencyId)
-        ->pluck('id')
+    $centreIdsArray = \Illuminate\Support\Facades\DB::table('district_centre')
+        ->where('district_id', $districtId)
+        ->pluck('centre_id')
         ->map(fn ($id) => (int) $id)
         ->all();
 
@@ -145,28 +145,6 @@
             $ageLabels = $ageCounts->pluck('age_range')->values();
             $ageValues = $ageCounts->pluck('total')->map(fn ($v) => (int) $v)->values();
 
-            $districtTitlesByCentre = \Illuminate\Support\Facades\DB::table('district_centre as dc')
-                ->join('districts as d', 'd.id', '=', 'dc.district_id')
-                ->whereIn('dc.centre_id', $centreIdsArray)
-                ->selectRaw("dc.centre_id, GROUP_CONCAT(DISTINCT d.title ORDER BY d.title SEPARATOR ', ') as district_titles")
-                ->groupBy('dc.centre_id')
-                ->pluck('district_titles', 'centre_id');
-
-            $districtLinksByCentre = \Illuminate\Support\Facades\DB::table('district_centre as dc')
-                ->join('districts as d', 'd.id', '=', 'dc.district_id')
-                ->whereIn('dc.centre_id', $centreIdsArray)
-                ->select('dc.centre_id', 'd.id', 'd.title')
-                ->orderBy('d.title')
-                ->get()
-                ->groupBy('centre_id')
-                ->map(function ($rows) {
-                    return $rows->map(function ($row) {
-                        $districtId = (int) $row->id;
-                        $url = backpack_url('district/' . $districtId . '/show');
-                        return '<a href="' . $url . '">' . e($row->title) . '</a>';
-                    })->implode(', ');
-                });
-
             $coursesByCentre = \Illuminate\Support\Facades\DB::table('courses')
                 ->whereIn('centre_id', $centreIdsArray)
                 ->selectRaw('centre_id, COUNT(*) as total')
@@ -211,13 +189,12 @@
                 ->whereIn('id', $centreIdsArray)
                 ->select(['id', 'title'])
                 ->get()
-                ->map(function ($centre) use ($coursesByCentre, $registeredByCentre, $admittedByCentre, $districtTitlesByCentre) {
+                ->map(function ($centre) use ($coursesByCentre, $registeredByCentre, $admittedByCentre) {
                     $centreId = (int) $centre->id;
 
                     return (object) [
                         'id' => $centreId,
                         'title' => $centre->title,
-                        'district_title' => $districtTitlesByCentre[$centreId] ?? null,
                         'courses_count' => (int) ($coursesByCentre[$centreId] ?? 0),
                         'registered_users_count' => (int) ($registeredByCentre[$centreId] ?? 0),
                         'admitted_users_count' => (int) ($admittedByCentre[$centreId] ?? 0),
@@ -231,17 +208,13 @@
                 ->whereIn('c.id', $courseIdsArray)
                 ->select(['c.id', 'c.course_name', 'c.centre_id', 'ce.title as centre_title'])
                 ->get()
-                ->map(function ($course) use ($registeredByCourse, $admittedByCourse, $districtTitlesByCentre, $districtLinksByCentre) {
+                ->map(function ($course) use ($registeredByCourse, $admittedByCourse) {
                     $courseId = (int) $course->id;
-                    $centreId = (int) ($course->centre_id ?? 0);
 
                     return (object) [
                         'id' => $courseId,
                         'course_name' => $course->course_name,
-                        'centre_id' => $centreId,
                         'centre_title' => $course->centre_title,
-                        'district_title' => $districtTitlesByCentre[$centreId] ?? null,
-                        'district_links' => $districtLinksByCentre[$centreId] ?? null,
                         'registered_users_count' => (int) ($registeredByCourse[$courseId] ?? 0),
                         'admitted_users_count' => (int) ($admittedByCourse[$courseId] ?? 0),
                     ];
@@ -255,17 +228,18 @@
 @section('content')
     @parent
 
-            <div>
-                <!-- <h4 class="mb-0">Constituency Metrics</h4> -->
-                <div class="text-muted text-center" style="font-size: 50px; color: black">
-                    {{ $constituency->title ?? 'Constituency' }}
-                    @if($branch?->title)
-                        - {{ $branch->title }}
-                    @endif
-                </div>
+    <div>
+        <div class="text-muted text-center" style="font-size: 50px; color: black">
+            {{ $district->title ?? 'District' }}
+        </div>
+        @if($branch?->title)
+            <div class="text-muted text-center">
+                {{ $branch->title }}
             </div>
+        @endif
+    </div>
 
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4 mt-2">
         <div class="col-md-3">
             <div class="card metric-card h-100">
                 <div class="card-body">
@@ -274,7 +248,7 @@
                         <i class="la la-users text-primary"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalRegisteredUsers) }}</div>
-                    <div class="text-muted small">Users mapped by registered course in this constituency.</div>
+                    <div class="text-muted small">Users mapped by registered course in this district.</div>
                 </div>
             </div>
         </div>
@@ -324,11 +298,11 @@
             <div class="card metric-card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
-                        <div class="text-muted">Total Centres</div>
+                        <div class="text-muted">Assigned Centres</div>
                         <i class="la la-building text-secondary"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalCentres) }}</div>
-                    <div class="text-muted small">Centres assigned to this constituency.</div>
+                    <div class="text-muted small">Centres linked to this district.</div>
                 </div>
             </div>
         </div>
@@ -407,7 +381,7 @@
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-lg-6">
+        <div class="col-12">
             <div class="card h-100">
                 <div class="card-header">
                     <strong><i class="la la-signal"></i> Registration Funnel</strong>
@@ -422,7 +396,9 @@
                 </div>
             </div>
         </div>
+    </div>
 
+    <div class="row g-3 mb-4">
         <div class="col-lg-6">
             <div class="card h-100">
                 <div class="card-header">
@@ -434,7 +410,6 @@
                             <thead>
                                 <tr>
                                     <th>Centre</th>
-                                    <th>District</th>
                                     <th>Courses</th>
                                     <th>Registered</th>
                                     <th>Admitted</th>
@@ -450,14 +425,13 @@
                                                 {{ $centre->title ?? 'N/A' }}
                                             @endif
                                         </td>
-                                        <td>{{ $centre->district_title ?: 'N/A' }}</td>
                                         <td>{{ number_format((int) ($centre->courses_count ?? 0)) }}</td>
                                         <td>{{ number_format((int) ($centre->registered_users_count ?? 0)) }}</td>
                                         <td>{{ number_format((int) ($centre->admitted_users_count ?? 0)) }}</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted">No centre data found.</td>
+                                        <td colspan="4" class="text-center text-muted">No centre data found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -466,22 +440,19 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-12">
-            <div class="card">
+        <div class="col-lg-6">
+            <div class="card h-100">
                 <div class="card-header">
                     <strong><i class="la la-book"></i> Courses by Registrations</strong>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table id="dtTopCourses" class="table table-sm table-hover table-striped mb-0">
+                        <table class="table table-sm table-hover table-striped mb-0">
                             <thead>
                                 <tr>
                                     <th>Course</th>
                                     <th>Centre</th>
-                                    <th>District</th>
                                     <th>Registered Users</th>
                                     <th>Admitted Users</th>
                                 </tr>
@@ -496,26 +467,13 @@
                                                 {{ $course->course_name ?? 'N/A' }}
                                             @endif
                                         </td>
-                                        <td>
-                                            @if(!empty($course->centre_id))
-                                                <a href="{{ backpack_url('centre/' . $course->centre_id . '/show') }}">{{ $course->centre_title ?? ('Centre #' . $course->centre_id) }}</a>
-                                            @else
-                                                {{ $course->centre_title ?? 'N/A' }}
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if(!empty($course->district_links))
-                                                {!! $course->district_links !!}
-                                            @else
-                                                {{ $course->district_title ?: 'N/A' }}
-                                            @endif
-                                        </td>
+                                        <td>{{ $course->centre_title ?? 'N/A' }}</td>
                                         <td>{{ number_format((int) ($course->registered_users_count ?? 0)) }}</td>
                                         <td>{{ number_format((int) ($course->admitted_users_count ?? 0)) }}</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted">No course data found.</td>
+                                        <td colspan="4" class="text-center text-muted">No course data found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -584,7 +542,6 @@
 
             document.addEventListener('DOMContentLoaded', function () {
                 safeInitDataTable('#dtTopCentres');
-                safeInitDataTable('#dtTopCourses');
                 if (typeof Chart !== 'function') return;
 
                 const genderLabels = @json($genderLabels->values());

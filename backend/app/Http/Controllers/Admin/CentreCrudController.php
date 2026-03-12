@@ -51,12 +51,7 @@ class CentreCrudController extends CrudController
 
         CRUD::column('title')->type('textarea');
         CRUD::column('branch_id')->label('Region')->linkTo('branch.show');
-        CRUD::addColumn([
-            'name' => 'constituency',
-            'label' => 'Constituency',
-            'type' => 'relationship',
-            'attribute' => 'title',
-        ]);
+        FilterHelper::addGenericRelationshipColumn('constituency', 'Constituency', 'constituency', 'title');
         CRUD::addColumn([
             'name' => 'is_pwd_friendly',
             'label' => 'Is PWD Friendly',
@@ -71,6 +66,18 @@ class CentreCrudController extends CrudController
             'view' => 'admin.status_toggle.status_column',
         ]);
         CRUD::column('created_at');
+        FilterHelper::addSelectFilter(
+            'branch_id',
+            'Region',
+            Branch::query()->orderBy('title')->pluck('title', 'id')->toArray(),
+            'select2'
+        );
+        FilterHelper::addSelectFilter(
+            'constituency_id',
+            'Constituency',
+            Constituency::query()->orderBy('title')->pluck('title', 'id')->toArray(),
+            'select2'
+        );
         FilterHelper::addBooleanFilter('status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
@@ -79,7 +86,8 @@ class CentreCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        $this->setupListOperation();
+        CRUD::set('show.setFromDb', false);
+        CRUD::set('show.view', 'vendor.backpack.crud.centre_show');
     }
     /**
      * Define what happens when the Create operation is loaded.

@@ -232,7 +232,7 @@
 
     <div class="mb-3 d-flex align-items-start justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-start gap-2">
-            <a href="{{ $backToCourseUrl }}" class="btn btn-sm btn-outline-secondary" title="Back to Batch Edit">
+            <a href="{{ backpack_url('batch/' . $batch->id . '/edit') }}" class="btn btn-sm btn-outline-secondary" title="Back to Batch Edit">
                 <i class="la la-arrow-left"></i>
             </a>
             <div>

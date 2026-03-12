@@ -1,22 +1,43 @@
 @extends('crud::show')
 
 @php
-    /** @var \App\Models\Constituency $entry */
-    $constituency = $entry;
-    $constituencyId = (int) $constituency->getKey();
-
-    $constituency->loadMissing(['branch']);
-    $branch = $constituency->branch;
+    /** @var \App\Models\Branch $entry */
+    $branch = $entry;
+    $branchId = (int) $branch->getKey();
 
     $today = now()->toDateString();
 
     $centreIdsArray = \Illuminate\Support\Facades\DB::table('centres')
-        ->where('constituency_id', $constituencyId)
+        ->where('branch_id', $branchId)
         ->pluck('id')
         ->map(fn ($id) => (int) $id)
         ->all();
 
     $totalCentres = count($centreIdsArray);
+    $totalConstituencies = (int) \Illuminate\Support\Facades\DB::table('constituencies')
+        ->where('branch_id', $branchId)
+        ->count('id');
+    $totalDistricts = (int) \Illuminate\Support\Facades\DB::table('districts')
+        ->where('branch_id', $branchId)
+        ->count('id');
+
+    $constituencies = \Illuminate\Support\Facades\DB::table('constituencies as co')
+        ->leftJoin('centres as ce', 'ce.constituency_id', '=', 'co.id')
+        ->where('co.branch_id', $branchId)
+        ->select('co.id', 'co.title')
+        ->selectRaw('COUNT(ce.id) as centres_count')
+        ->groupBy('co.id', 'co.title')
+        ->orderBy('co.title')
+        ->get();
+
+    $districts = \Illuminate\Support\Facades\DB::table('districts as d')
+        ->leftJoin('district_centre as dc', 'dc.district_id', '=', 'd.id')
+        ->where('d.branch_id', $branchId)
+        ->select('d.id', 'd.title')
+        ->selectRaw('COUNT(dc.centre_id) as centres_count')
+        ->groupBy('d.id', 'd.title')
+        ->orderBy('d.title')
+        ->get();
 
     $courseIdsArray = [];
     $totalCourses = 0;
@@ -145,13 +166,6 @@
             $ageLabels = $ageCounts->pluck('age_range')->values();
             $ageValues = $ageCounts->pluck('total')->map(fn ($v) => (int) $v)->values();
 
-            $districtTitlesByCentre = \Illuminate\Support\Facades\DB::table('district_centre as dc')
-                ->join('districts as d', 'd.id', '=', 'dc.district_id')
-                ->whereIn('dc.centre_id', $centreIdsArray)
-                ->selectRaw("dc.centre_id, GROUP_CONCAT(DISTINCT d.title ORDER BY d.title SEPARATOR ', ') as district_titles")
-                ->groupBy('dc.centre_id')
-                ->pluck('district_titles', 'centre_id');
-
             $districtLinksByCentre = \Illuminate\Support\Facades\DB::table('district_centre as dc')
                 ->join('districts as d', 'd.id', '=', 'dc.district_id')
                 ->whereIn('dc.centre_id', $centreIdsArray)
@@ -211,13 +225,13 @@
                 ->whereIn('id', $centreIdsArray)
                 ->select(['id', 'title'])
                 ->get()
-                ->map(function ($centre) use ($coursesByCentre, $registeredByCentre, $admittedByCentre, $districtTitlesByCentre) {
+                ->map(function ($centre) use ($coursesByCentre, $registeredByCentre, $admittedByCentre, $districtLinksByCentre) {
                     $centreId = (int) $centre->id;
 
                     return (object) [
                         'id' => $centreId,
                         'title' => $centre->title,
-                        'district_title' => $districtTitlesByCentre[$centreId] ?? null,
+                        'district_links' => $districtLinksByCentre[$centreId] ?? null,
                         'courses_count' => (int) ($coursesByCentre[$centreId] ?? 0),
                         'registered_users_count' => (int) ($registeredByCentre[$centreId] ?? 0),
                         'admitted_users_count' => (int) ($admittedByCentre[$centreId] ?? 0),
@@ -231,16 +245,14 @@
                 ->whereIn('c.id', $courseIdsArray)
                 ->select(['c.id', 'c.course_name', 'c.centre_id', 'ce.title as centre_title'])
                 ->get()
-                ->map(function ($course) use ($registeredByCourse, $admittedByCourse, $districtTitlesByCentre, $districtLinksByCentre) {
+                ->map(function ($course) use ($registeredByCourse, $admittedByCourse, $districtLinksByCentre) {
                     $courseId = (int) $course->id;
                     $centreId = (int) ($course->centre_id ?? 0);
 
                     return (object) [
                         'id' => $courseId,
                         'course_name' => $course->course_name,
-                        'centre_id' => $centreId,
                         'centre_title' => $course->centre_title,
-                        'district_title' => $districtTitlesByCentre[$centreId] ?? null,
                         'district_links' => $districtLinksByCentre[$centreId] ?? null,
                         'registered_users_count' => (int) ($registeredByCourse[$courseId] ?? 0),
                         'admitted_users_count' => (int) ($admittedByCourse[$courseId] ?? 0),
@@ -255,17 +267,13 @@
 @section('content')
     @parent
 
-            <div>
-                <!-- <h4 class="mb-0">Constituency Metrics</h4> -->
-                <div class="text-muted text-center" style="font-size: 50px; color: black">
-                    {{ $constituency->title ?? 'Constituency' }}
-                    @if($branch?->title)
-                        - {{ $branch->title }}
-                    @endif
-                </div>
-            </div>
+    <div>
+        <div class="text-muted text-center" style="font-size: 50px; color: black">
+            {{ $branch->title ?? 'Region' }}
+        </div>
+    </div>
 
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4 mt-2">
         <div class="col-md-3">
             <div class="card metric-card h-100">
                 <div class="card-body">
@@ -274,7 +282,7 @@
                         <i class="la la-users text-primary"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalRegisteredUsers) }}</div>
-                    <div class="text-muted small">Users mapped by registered course in this constituency.</div>
+                    <div class="text-muted small">Users mapped by registered course in this region.</div>
                 </div>
             </div>
         </div>
@@ -320,7 +328,7 @@
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card metric-card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
@@ -328,12 +336,38 @@
                         <i class="la la-building text-secondary"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalCentres) }}</div>
-                    <div class="text-muted small">Centres assigned to this constituency.</div>
+                    <div class="text-muted small">Centres assigned to this region.</div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="text-muted">Total Constituencies</div>
+                        <i class="la la-map text-secondary"></i>
+                    </div>
+                    <div class="metric-value">{{ number_format($totalConstituencies) }}</div>
+                    <div class="text-muted small">Constituencies in this region.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="text-muted">Total Districts</div>
+                        <i class="la la-map-marker text-secondary"></i>
+                    </div>
+                    <div class="metric-value">{{ number_format($totalDistricts) }}</div>
+                    <div class="text-muted small">Districts in this region.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
             <div class="card metric-card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
@@ -342,19 +376,6 @@
                     </div>
                     <div class="metric-value">{{ number_format($coursesWithoutRegistrations) }}</div>
                     <div class="text-muted small">Coverage: {{ $courseRegistrationCoverageRate }}% of courses have at least one registration.</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card metric-card h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="text-muted">Pending Admissions</div>
-                        <i class="la la-hourglass-half text-danger"></i>
-                    </div>
-                    <div class="metric-value">{{ number_format($admissionsPending) }}</div>
-                    <div class="text-muted small">Admission records not yet confirmed.</div>
                 </div>
             </div>
         </div>
@@ -407,7 +428,7 @@
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-lg-6">
+        <div class="col-12">
             <div class="card h-100">
                 <div class="card-header">
                     <strong><i class="la la-signal"></i> Registration Funnel</strong>
@@ -422,7 +443,9 @@
                 </div>
             </div>
         </div>
+    </div>
 
+    <div class="row g-3 mb-4">
         <div class="col-lg-6">
             <div class="card h-100">
                 <div class="card-header">
@@ -450,7 +473,13 @@
                                                 {{ $centre->title ?? 'N/A' }}
                                             @endif
                                         </td>
-                                        <td>{{ $centre->district_title ?: 'N/A' }}</td>
+                                        <td>
+                                            @if(!empty($centre->district_links))
+                                                {!! $centre->district_links !!}
+                                            @else
+                                                N/A
+                                            @endif
+                                        </td>
                                         <td>{{ number_format((int) ($centre->courses_count ?? 0)) }}</td>
                                         <td>{{ number_format((int) ($centre->registered_users_count ?? 0)) }}</td>
                                         <td>{{ number_format((int) ($centre->admitted_users_count ?? 0)) }}</td>
@@ -466,11 +495,9 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-12">
-            <div class="card">
+        <div class="col-lg-6">
+            <div class="card h-100">
                 <div class="card-header">
                     <strong><i class="la la-book"></i> Courses by Registrations</strong>
                 </div>
@@ -496,18 +523,12 @@
                                                 {{ $course->course_name ?? 'N/A' }}
                                             @endif
                                         </td>
-                                        <td>
-                                            @if(!empty($course->centre_id))
-                                                <a href="{{ backpack_url('centre/' . $course->centre_id . '/show') }}">{{ $course->centre_title ?? ('Centre #' . $course->centre_id) }}</a>
-                                            @else
-                                                {{ $course->centre_title ?? 'N/A' }}
-                                            @endif
-                                        </td>
+                                        <td>{{ $course->centre_title ?? 'N/A' }}</td>
                                         <td>
                                             @if(!empty($course->district_links))
                                                 {!! $course->district_links !!}
                                             @else
-                                                {{ $course->district_title ?: 'N/A' }}
+                                                N/A
                                             @endif
                                         </td>
                                         <td>{{ number_format((int) ($course->registered_users_count ?? 0)) }}</td>
@@ -516,6 +537,84 @@
                                 @empty
                                     <tr>
                                         <td colspan="5" class="text-center text-muted">No course data found.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <strong><i class="la la-map"></i> Constituencies in the Region</strong>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="dtConstituencies" class="table table-sm table-hover table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Constituency</th>
+                                    <th>Centres</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($constituencies as $constituency)
+                                    <tr>
+                                        <td>
+                                            @if(!empty($constituency->id))
+                                                <a href="{{ backpack_url('constituency/' . $constituency->id . '/show') }}">{{ $constituency->title ?? ('Constituency #' . $constituency->id) }}</a>
+                                            @else
+                                                {{ $constituency->title ?? 'N/A' }}
+                                            @endif
+                                        </td>
+                                        <td>{{ number_format((int) ($constituency->centres_count ?? 0)) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="2" class="text-center text-muted">No constituency data found.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <strong><i class="la la-map-marker"></i> Districts in the Region</strong>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="dtDistricts" class="table table-sm table-hover table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>District</th>
+                                    <th>Centres</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($districts as $district)
+                                    <tr>
+                                        <td>
+                                            @if(!empty($district->id))
+                                                <a href="{{ backpack_url('district/' . $district->id . '/show') }}">{{ $district->title ?? ('District #' . $district->id) }}</a>
+                                            @else
+                                                {{ $district->title ?? 'N/A' }}
+                                            @endif
+                                        </td>
+                                        <td>{{ number_format((int) ($district->centres_count ?? 0)) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="2" class="text-center text-muted">No district data found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -585,6 +684,8 @@
             document.addEventListener('DOMContentLoaded', function () {
                 safeInitDataTable('#dtTopCentres');
                 safeInitDataTable('#dtTopCourses');
+                safeInitDataTable('#dtConstituencies');
+                safeInitDataTable('#dtDistricts');
                 if (typeof Chart !== 'function') return;
 
                 const genderLabels = @json($genderLabels->values());

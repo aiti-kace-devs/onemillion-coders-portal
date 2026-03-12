@@ -13,6 +13,7 @@ use App\Models\Course;
 use App\Models\Batch;
 use App\Models\CourseBatch;
 use App\Models\User;
+use App\Models\CourseMatchOption;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -25,13 +26,18 @@ class CourseMatchAPIController extends Controller
 
     public function index(Request $request)
     {
-        $courseMatch = CourseMatch::with(['courseMatchOptions'])->get();
+        $courseMatch = CourseMatch::with(['courseMatchOptions' => function ($query) {
+            $query->where('status', 1);
+        }])
+            ->where('status', 1)
+            ->get();
 
         return response()->json([
             'success' => true,
             'data' => $courseMatch
         ]);
     }
+
 
 
 
@@ -47,7 +53,9 @@ class CourseMatchAPIController extends Controller
         $totalOptions = count($optionIds);
 
         // Get all Programmes with their tags (CourseMatchOptions)
-        $programmes = Programme::with('tags')->get();
+        $programmes = Programme::with('tags')
+            ->where('status', 1)
+            ->get();
 
         // Score each programme by how many of the selected options it has
         $scored = $programmes->map(function ($programme) use ($optionIds, $totalOptions) {
@@ -75,7 +83,7 @@ class CourseMatchAPIController extends Controller
         return response()->json([
             'success' => true,
             'ttile' => 'Your Course Matches',
-            'description' => 'Based on your preferences, here are the courses that align best with your goals',
+            'description' => 'Based on your preferences, here are recommended courses that align best with your goals',
             'matches' => $result,
         ]);
     }
@@ -83,7 +91,7 @@ class CourseMatchAPIController extends Controller
 
 
 
-        public function recommend(Request $request)
+        public function recommendCourses(Request $request)
         {
             $data = $request->validate([
                 'option_ids' => 'required|array',
@@ -100,65 +108,51 @@ class CourseMatchAPIController extends Controller
                 ]);
             }
 
-            $optionIds = $data['option_ids'];
-            $totalOptions = count($optionIds);
+            $optionIds = array_values($data['option_ids']);
             $centreId = (int) $data['centre_id'];
-        
+
             $studentLevel = strtolower(trim((string) $user?->student_level));
+            // Log::info('Student level: ' . $studentLevel);
 
-            $centreCourses = Course::where('centre_id', $centreId)
-                ->whereNotNull('programme_id')
-                ->get(['id', 'programme_id', 'centre_id']);
+            $centreCourses = $this->getCentreCourses($centreId);
+            $programmeIds = $centreCourses->pluck('programme_id')->unique()->values()->all();
 
-            $programmeIds = $centreCourses->pluck('programme_id')->unique()->values()->toArray();
+            [$preferredDelivery, $deliveryOptionIds] = $this->detectPreferredDelivery($optionIds);
+            $scoringOptionIds = array_values(array_diff($optionIds, $deliveryOptionIds));
 
-            $programmes = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'image', 'prerequisites', 'mode_of_delivery', 'provider')
-                ->with('tags')
-                ->whereIn('id', $programmeIds)
-                ->whereRaw('LOWER(level) = ?', [$studentLevel])
-                ->get();
+            $programmes = $this->getProgrammesForLevel($programmeIds, $studentLevel, $preferredDelivery);
+            $scored = $this->scoreProgrammes($programmes, $scoringOptionIds);
 
-            // Score each programme by matching option IDs
-            $scored = $programmes->map(function ($programme) use ($optionIds, $totalOptions) {
-                $programmeOptionIds = $programme->tags->pluck('id')->toArray();
-                $matches = count(array_intersect($optionIds, $programmeOptionIds));
-                $percentage = $totalOptions > 0 ? round(($matches / $totalOptions) * 100) : 0;
-
-                $programme->match_percentage = $percentage;
-                $programme->match_count = $matches;
-                return $programme;
-            });
+            $hasScoringOptions = count($scoringOptionIds) > 0;
+            if (!$hasScoringOptions) {
+                $scored = $scored->map(function ($programme) {
+                    $programme->setAttribute('match_percentage', 100);
+                    $programme->setAttribute('match_count', 0);
+                    return $programme;
+                });
+            }
 
             // Filter and sort top 5 matches
-            $top = $scored->filter(fn ($p) => $p->match_count > 0)
-                ->sortByDesc('match_percentage')
-                ->take(5)
-                ->values();
+            $top = $hasScoringOptions
+                ? $scored->filter(fn ($p) => $p->match_count > 0)
+                    ->sortByDesc('match_percentage')
+                    ->take(5)
+                    ->values()
+                : $scored->sortBy('title')->take(5)->values();
 
-            $topProgrammeIds = $top->pluck('id')->all();
+            $combined = $top;
+            $limit = 5;
+            if ($top->count() < $limit) {
+                $topProgrammeIds = $top->pluck('id')->all();
 
-            // Add all online programmes (from the selected centre) to recommendations
-            $onlineProgrammes = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'image', 'prerequisites', 'mode_of_delivery', 'provider')
-                ->with('tags')
-                ->whereIn('id', $programmeIds)
-                ->whereRaw('LOWER(mode_of_delivery) = ?', ['online'])
-                ->get();
+                $extras = $scored
+                    ->reject(fn ($programme) => in_array($programme->id, $topProgrammeIds, true))
+                    ->sortByDesc('match_percentage')
+                    ->take($limit - $top->count())
+                    ->values();
 
-            $onlineScored = $onlineProgrammes->map(function ($programme) use ($optionIds, $totalOptions) {
-                $programmeOptionIds = $programme->tags->pluck('id')->toArray();
-                $matches = count(array_intersect($optionIds, $programmeOptionIds));
-                $percentage = $totalOptions > 0 ? round(($matches / $totalOptions) * 100) : 0;
-
-                $programme->match_percentage = $percentage;
-                $programme->match_count = $matches;
-                return $programme;
-            });
-
-            $onlineToAdd = $onlineScored
-                ->reject(fn ($programme) => in_array($programme->id, $topProgrammeIds, true))
-                ->values();
-
-            $combined = $top->concat($onlineToAdd)->values();
+                $combined = $top->concat($extras)->values();
+            }
 
             // Format response with ranking number and the selected centre
             $result = $combined->map(function ($programme, $index) use ($centreCourses, $centreId) {
@@ -182,37 +176,7 @@ class CourseMatchAPIController extends Controller
                 ];
             });
 
-            if ($combined->isNotEmpty()) {
-                $now = now();
-                $recommendationRows = $combined->map(function ($programme, $index) use ($centreCourses, $centreId, $optionIds, $studentLevel, $now, $data) {
-                    $programmeCourses = $centreCourses->where('programme_id', $programme->id);
-
-                    return [
-                        'user_id' => $data['userId'],
-                        'programme_id' => $programme->id,
-                        'course_id' => $programmeCourses->first()?->id,
-                        'centre_id' => $centreId,
-                        'rank' => $index + 1,
-                        'match_percentage' => $programme->match_percentage,
-                        'match_count' => $programme->match_count,
-                        'student_level' => $studentLevel !== '' ? $studentLevel : null,
-                        'mode_of_delivery' => $programme->mode_of_delivery,
-                        'provider' => $programme->provider,
-                        'option_ids' => json_encode($optionIds),
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                })->all();
-
-                DB::transaction(function () use ($data, $centreId, $recommendationRows) {
-                    DB::table('user_course_recommendations')
-                        ->where('user_id', $data['userId'])
-                        ->where('centre_id', $centreId)
-                        ->delete();
-
-                    DB::table('user_course_recommendations')->insert($recommendationRows);
-                });
-            }
+            $this->storeRecommendations($combined, $centreCourses, $centreId, $optionIds, $studentLevel, $data['userId']);
 
             return response()->json([
                 'success' => true,
@@ -221,183 +185,249 @@ class CourseMatchAPIController extends Controller
                 'matches' => $result,
             ]);
         }
+
+        /**
+         * @return \Illuminate\Support\Collection<int, \App\Models\Course>
+         */
+        protected function getCentreCourses(int $centreId)
+        {
+            $today = Carbon::today()->toDateString();
+
+            return Course::join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
+                ->where('courses.centre_id', $centreId)
+                ->whereNotNull('courses.programme_id')
+                ->where('courses.status', 1)
+                ->where('admission_batches.start_date', '<=', $today)
+                ->where('admission_batches.end_date', '>=', $today)
+                ->where('admission_batches.completed', false)
+                ->where('admission_batches.status', true)
+                ->get(['courses.id', 'courses.programme_id', 'courses.centre_id']);
+        }
+
+        /**
+         * @param  array<int>  $programmeIds
+         * @return \Illuminate\Support\Collection<int, \App\Models\Programme>
+         */
+        protected function getProgrammesForLevel(array $programmeIds, string $studentLevel, ?string $preferredDelivery = null)
+        {
+            $query = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'image', 'prerequisites', 'mode_of_delivery', 'provider')
+                ->with('tags')
+                ->whereIn('id', $programmeIds)
+                ->where('status', true);
+
+            if ($studentLevel !== '') {
+                $query->whereRaw('LOWER(level) = ?', [$studentLevel]);
+            }
+
+            if ($preferredDelivery) {
+                $query->whereRaw('LOWER(mode_of_delivery) = ?', [strtolower($preferredDelivery)]);
+            }
+
+            return $query->get();
+        }
+
+        /**
+         * @param  array<int>  $optionIds
+         */
+        /**
+         * @param  array<int>  $optionIds
+         * @return array{0: string|null, 1: array<int>}
+         */
+        protected function detectPreferredDelivery(array $optionIds): array
+        {
+            $options = CourseMatchOption::whereIn('id', $optionIds)
+                ->get(['id', 'answer', 'value']);
+
+            $detected = [
+                'In Person' => [],
+                'Online' => [],
+            ];
+
+            foreach ($options as $option) {
+                $raw = $option->value ?: $option->answer;
+                $normalized = $this->normalizeOptionValue($raw);
+
+                if ($normalized === 'in person') {
+                    $detected['In Person'][] = $option->id;
+                    continue;
+                }
+
+                if (in_array($normalized, ['online', 'online for all'], true)) {
+                    $detected['Online'][] = $option->id;
+                }
+            }
+
+            $hasInPerson = count($detected['In Person']) > 0;
+            $hasOnline = count($detected['Online']) > 0;
+
+            if ($hasInPerson && !$hasOnline) {
+                return ['In Person', array_values(array_unique($detected['In Person']))];
+            }
+
+            if ($hasOnline && !$hasInPerson) {
+                return ['Online', array_values(array_unique($detected['Online']))];
+            }
+
+            return [null, []];
+        }
+
+        protected function normalizeOptionValue(?string $value): string
+        {
+            $value = strtolower(trim((string) $value));
+            $value = preg_replace('/[^a-z]+/', ' ', $value);
+            $value = preg_replace('/\s+/', ' ', $value);
+
+            return trim($value);
+        }
+
+        /**
+         * @param  array<int>  $programmeIds
+         * @return \Illuminate\Support\Collection<int, \App\Models\Programme>
+         */
+        protected function getOnlineProgrammes(array $programmeIds, string $studentLevel)
+        {
+            $query = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'image', 'prerequisites', 'mode_of_delivery', 'provider')
+                ->with('tags')
+                ->whereIn('id', $programmeIds)
+                ->where('status', true)
+                ->whereRaw('LOWER(mode_of_delivery) = ?', ['online']);
+
+            if ($studentLevel !== '') {
+                $query->whereRaw('LOWER(level) = ?', [$studentLevel]);
+            }
+
+            return $query->get();
+        }
+
+        /**
+         * @param  \Illuminate\Support\Collection<int, \App\Models\Programme>  $programmes
+         * @param  array<int>  $optionIds
+         * @return \Illuminate\Support\Collection<int, \App\Models\Programme>
+         */
+        protected function scoreProgrammes($programmes, array $optionIds)
+        {
+            $totalOptions = count($optionIds);
+
+            return $programmes->map(function ($programme) use ($optionIds, $totalOptions) {
+                $programmeOptionIds = $programme->tags->pluck('id')->toArray();
+                $matches = count(array_intersect($optionIds, $programmeOptionIds));
+                $percentage = $totalOptions > 0 ? round(($matches / $totalOptions) * 100) : 0;
+
+                $programme->setAttribute('match_percentage', $percentage);
+                $programme->setAttribute('match_count', $matches);
+                return $programme;
+            });
+        }
+
+        /**
+         * @param  \Illuminate\Support\Collection<int, \App\Models\Programme>  $combined
+         * @param  \Illuminate\Support\Collection<int, \App\Models\Course>  $centreCourses
+         * @param  array<int>  $optionIds
+         */
+        protected function storeRecommendations($combined, $centreCourses, int $centreId, array $optionIds, string $studentLevel, string $userId): void
+        {
+            if ($combined->isEmpty()) {
+                return;
+            }
+
+            $now = now();
+            $recommendationRows = $combined->map(function ($programme, $index) use ($centreCourses, $centreId, $optionIds, $studentLevel, $now, $userId) {
+                $programmeCourses = $centreCourses->where('programme_id', $programme->id);
+
+                return [
+                    'user_id' => $userId,
+                    'programme_id' => $programme->id,
+                    'course_id' => $programmeCourses->first()?->id,
+                    'centre_id' => $centreId,
+                    'rank' => $index + 1,
+                    'match_percentage' => $programme->match_percentage,
+                    'match_count' => $programme->match_count,
+                    'student_level' => $studentLevel !== '' ? $studentLevel : null,
+                    'mode_of_delivery' => $programme->mode_of_delivery,
+                    'provider' => $programme->provider,
+                    'option_ids' => json_encode($optionIds),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            })->all();
+
+            DB::transaction(function () use ($userId, $centreId, $recommendationRows) {
+                DB::table('user_course_recommendations')
+                    ->where('user_id', $userId)
+                    ->where('centre_id', $centreId)
+                    ->delete();
+
+                DB::table('user_course_recommendations')->insert($recommendationRows);
+            });
+        }
         
 
 
-
-
-
-
-    // public function recommend(Request $request)
-    //     {
-    //         $data = $request->validate([
-    //             'option_ids' => 'required|array',
-    //             'option_ids.*' => 'integer|exists:course_match_options,id',
-    //         ]);
-            
-    //         $optionIds = $data['option_ids'];
-    //         $totalOptions = count($optionIds);
-    //         $today = Carbon::today()->toDateString();
-
-            
-    //         // Get Programme IDs that have ongoing courses with batch_id
-    //         // Using the direct batch_id relationship on Course model
-    //         $ongoingCourses = Course::join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
-    //             ->select(
-    //                 'courses.*',
-    //                 'admission_batches.title as batch_title',
-    //                 'admission_batches.start_date as ab_start_date',
-    //                 'admission_batches.end_date as ab_end_date',
-    //                 'admission_batches.status',
-    //                 'admission_batches.completed'
-    //             )
-    //             ->where('admission_batches.start_date', '<=', $today)
-    //             ->where('admission_batches.end_date', '>=', $today)
-    //             ->where('admission_batches.completed', false)
-    //             ->where('admission_batches.status', true)
-    //             ->get();
-            
-    //         // Get the actual programme IDs (through courses.programme_id)
-    //         $ongoingProgrammeIds = $ongoingCourses->pluck('programme_id')->unique()->toArray();
-            
-    //         // Get unique centre IDs from ongoing courses
-    //         $centreIds = $ongoingCourses->pluck('centre_id')->unique()->toArray();
-            
-    //         // Get Programmes with ONLY needed columns + tags relationship
-    //         // Only include programmes that have ongoing course batches
-    //         $programmes = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'image', 'prerequisites')
-    //             ->with('tags')
-    //             ->whereIn('id', $ongoingProgrammeIds)
-    //             ->get();
-            
-            
-    //         // Score each programme by matching option IDs
-    //         $scored = $programmes->map(function ($programme) use ($optionIds, $totalOptions) {
-    //             $programmeOptionIds = $programme->tags->pluck('id')->toArray();
-    //             $matches = count(array_intersect($optionIds, $programmeOptionIds));
-    //             $percentage = $totalOptions > 0 ? round(($matches / $totalOptions) * 100) : 0;
-                
-    //             $programme->match_percentage = $percentage;
-    //             $programme->match_count = $matches;
-    //             return $programme;
-    //         });
-            
-    //         // Filter and sort top 5 matches
-    //         $top = $scored->filter(fn($p) => $p->match_count > 0)
-    //                       ->sortByDesc('match_percentage')
-    //                       ->take(5)
-    //                       ->values();
-            
-    //         // Get centre IDs for top programmes (through their course batches)
-    //         $topProgrammeIds = $top->pluck('id')->toArray();
-            
-    //         // Get courses for top programmes to get their centre IDs
-    //         $topCourses = $ongoingCourses->whereIn('programme_id', $topProgrammeIds);
-            
-    //         // Get unique centre IDs for top programmes
-    //         $topCentreIds = $topCourses->pluck('centre_id')->unique()->toArray();
-            
-    //         // Pre-fetch all centres with their branch info
-    //         $centresMap = Centre::whereIn('id', $topCentreIds)
-    //             ->with('branch:id,title')
-    //             ->get()
-    //             ->keyBy('id');
-            
-    //         // Format response with ranking number and each programme's own centre
-    //         $result = $top->map(function ($programme, $index) use ($topCourses, $centresMap) {
-    //             // Get the centre ID for this programme from its courses
-    //             $programmeCourses = $topCourses->where('programme_id', $programme->id);
-    //             $centreId = $programmeCourses->first()?->centre_id;
-                
-    //             $centre = $centreId && isset($centresMap[$centreId]) ? $centresMap[$centreId] : null;
-                
-    //             return [
-    //                 'rank' => '#' . ($index + 1),
-    //                 'id' => $programme->id,
-    //                 'title' => $programme->title,
-    //                 'sub_title' => $programme->sub_title,
-    //                 'duration' => $programme->duration,
-    //                 'level' => $programme->level,
-    //                 'image' => $programme->image,
-    //                 'job_responsible' => $programme->job_responsible,
-    //                 'prerequisites' => $programme->prerequisites,
-    //                 'match_percentage' => $programme->match_percentage . '% Match',
-    //                 "course_id"=> $programmeCourses->first()?->id,
-    //                 "centre_id" => $centreId
-    //             ];
-    //         });
-            
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'title' => 'Your Course Matches',
-    //             'description' => 'Based on your preferences, here are the courses that align best with your goals',
-    //             'matches' => $result,
-    //         ]);
-    //     }
-        
 
     
 
 
 
-    // public function recommend(Request $request)
-    // {
-    //     $data = $request->validate([
-    //         'option_ids' => 'required|array',
-    //         'option_ids.*' => 'integer|exists:course_match_options,id',
-    //     ]);
+    public function recommend(Request $request)
+    {
+        $data = $request->validate([
+            'option_ids' => 'required|array',
+            'option_ids.*' => 'integer|exists:course_match_options,id',
+        ]);
         
-    //     $optionIds = $data['option_ids'];
-    //     $totalOptions = count($optionIds);
+        $optionIds = $data['option_ids'];
+        $totalOptions = count($optionIds);
         
-    //     // Get Programmes with ONLY needed columns + tags relationship
-    //     $programmes = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'image', 'prerequisites')
-    //         ->with('tags')
-    //         ->get();
+        // Get Programmes with ONLY needed columns + tags relationship
+        $programmes = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'image', 'prerequisites', 'mode_of_delivery', 'provider')
+            ->with('tags')
+            ->where('status', true)
+            ->get();
         
-    //     // Score each programme by matching option IDs
-    //     $scored = $programmes->map(function ($programme) use ($optionIds, $totalOptions) {
-    //         $programmeOptionIds = $programme->tags->pluck('id')->toArray();
-    //         $matches = count(array_intersect($optionIds, $programmeOptionIds));
-    //         $percentage = $totalOptions > 0 ? round(($matches / $totalOptions) * 100) : 0;
+        // Score each programme by matching option IDs
+        $scored = $programmes->map(function ($programme) use ($optionIds, $totalOptions) {
+            $programmeOptionIds = $programme->tags->pluck('id')->toArray();
+            $matches = count(array_intersect($optionIds, $programmeOptionIds));
+            $percentage = $totalOptions > 0 ? round(($matches / $totalOptions) * 100) : 0;
         
-    //         $programme->match_percentage = $percentage;
-    //         $programme->match_count = $matches;
-    //         return $programme;
-    //     });
+            $programme->match_percentage = $percentage;
+            $programme->match_count = $matches;
+            return $programme;
+        });
         
-    //     // Filter and sort top 5 matches
-    //     $top = $scored->filter(fn($p) => $p->match_count > 0)
-    //                   ->sortByDesc('match_percentage')
-    //                   ->take(5)
-    //                   ->values();
+        // Filter and sort top 5 matches
+        $top = $scored->filter(fn($p) => $p->match_count > 0)
+                      ->sortByDesc('match_percentage')
+                      ->take(5)
+                      ->values();
         
-    //     // Format response with ranking number
-    //     $result = $top->map(function ($programme, $index) {
-    //         return [
-    //             'rank' => '#' . ($index + 1),
-    //             'id' => $programme->id,
-    //             'title' => $programme->title,
-    //             'sub_title' => $programme->sub_title,
-    //             'duration' => $programme->duration,
-    //             'level' => $programme->level,
-    //             'image' => $programme->image,
-    //             'job_responsible' => $programme->job_responsible,
-    //             'image' => $programme->image,
-    //             'prerequisites' => $programme->prerequisites,
-    //             'match_percentage' => $programme->match_percentage . '% Match',
-    //         ];
-    //     });
+        // Format response with ranking number
+        $result = $top->map(function ($programme, $index) {
+            return [
+                'rank' => '#' . ($index + 1),
+                'id' => $programme->id,
+                'title' => $programme->title,
+                'sub_title' => $programme->sub_title,
+                'duration' => $programme->duration,
+                'level' => $programme->level,
+                'image' => $programme->image,
+                'job_responsible' => $programme->job_responsible,
+                'image' => $programme->image,
+                'prerequisites' => $programme->prerequisites,
+                'mode_of_delivery' => $programme->mode_of_delivery,
+                'provider' => $programme->provider,
+                'match_percentage' => $programme->match_percentage . '% Match',
+            ];
+        });
         
 
-    //     return response()->json([
-    //         'success' => true,
-    //         'title' => 'Your Course Matches',
-    //         'description' => 'Based on your preferences, here are the courses that align best with your goals',
-    //         'matches' => $result,
-    //     ]);
-    // }
+        return response()->json([
+            'success' => true,
+            'title' => 'Your Course Matches',
+            'description' => 'Based on your preferences, here recommended courses that align best with your goals',
+            'matches' => $result,
+        ]);
+    }
     
 
 
@@ -405,7 +435,11 @@ class CourseMatchAPIController extends Controller
 
     public function allProgrammesWithCourseMatch()
     {
-        $programmes = Programme::with(['tags.courseMatch'])->get();
+        $programmes = Programme::with(['tags.courseMatch' => function ($query) {
+            $query->where('status', 1);
+        }])
+            ->where('status', 1)
+            ->get();
 
         return response()->json([
             'success' => true,

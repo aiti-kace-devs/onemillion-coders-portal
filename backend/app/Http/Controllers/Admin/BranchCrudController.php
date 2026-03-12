@@ -60,7 +60,8 @@ class BranchCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        $this->setupListOperation();
+        CRUD::set('show.setFromDb', false);
+        CRUD::set('show.view', 'vendor.backpack.crud.branch_show');
     }
 
     /**
