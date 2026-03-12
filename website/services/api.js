@@ -88,6 +88,21 @@ export const fetchBranchesSummary = async () => {
 };
 
 /**
+ * Check user registration status
+ * @param {string} userId - User UUID
+ * @returns {Promise<Object>} - User status data
+ */
+export const checkUserStatus = async (userId) => {
+  try {
+    const response = await apiRequest(`check-user/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to check user status:', error);
+    throw error;
+  }
+};
+
+/**
  * Fetch course match questions and options
  * @returns {Promise<Object>} - Course match questions data
  */
@@ -103,20 +118,63 @@ export const getCourseMatchQuestions = async () => {
 
 /**
  * Get course recommendations based on selected options
- * @param {number[]} optionIds - Array of selected option IDs
+ * @param {Object} params
+ * @param {number[]} params.optionIds - Array of selected option IDs
+ * @param {string} params.userId - User UUID
+ * @param {number} params.centreId - Centre ID
  * @returns {Promise<Object>} - Course recommendations data
  */
-export const getCourseRecommendations = async (optionIds) => {
+export const getCourseRecommendations = async ({ optionIds, userId, centreId }) => {
   try {
     const response = await apiRequest('course-match/recommend', {
       method: 'POST',
       data: {
-        option_ids: optionIds
+        option_ids: optionIds,
+        userId,
+        centre_id: centreId,
       }
     });
     return response.matches || [];
   } catch (error) {
     console.error('Failed to get course recommendations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch tiered assessment questions for a user
+ * @param {string} userId - User UUID
+ * @returns {Promise<Object>} - Assessment questions data
+ */
+export const fetchAssessmentQuestions = async (userId) => {
+  try {
+    const response = await apiRequest(`tiered-assessment/fetch?user_id=${userId}`);
+    return response;
+  } catch (error) {
+    console.error('Failed to fetch assessment questions:', error);
+    throw error;
+  }
+};
+
+/**
+ * Submit an answer for a tiered assessment question
+ * @param {string} userId - User UUID
+ * @param {number} questionId - Question ID
+ * @param {string} answer - Selected answer
+ * @returns {Promise<Object>} - Submission response
+ */
+export const submitAssessmentAnswer = async (userId, questionId, answer) => {
+  try {
+    const response = await apiRequest(`tiered-assessment/submit?user_id=${userId}`, {
+      method: 'POST',
+      data: {
+        question_id: questionId,
+        answer,
+      }
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to submit assessment answer:', error);
     throw error;
   }
 }; 
