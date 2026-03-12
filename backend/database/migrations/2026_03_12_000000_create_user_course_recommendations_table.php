@@ -17,10 +17,6 @@ return new class extends Migration
             $table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete();
             $table->unsignedSmallInteger('rank')->nullable();
             $table->unsignedSmallInteger('match_percentage')->nullable();
-            $table->unsignedSmallInteger('match_count')->nullable();
-            $table->string('student_level')->nullable();
-            $table->string('mode_of_delivery')->nullable();
-            $table->string('provider')->nullable();
             $table->json('option_ids')->nullable();
             $table->timestamps();
 
