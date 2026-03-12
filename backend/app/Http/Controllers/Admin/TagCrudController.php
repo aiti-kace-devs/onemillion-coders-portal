@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\TagRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use App\Helpers\CrudListHelper;
 
 class TagCrudController extends CrudController
 {
@@ -23,6 +24,8 @@ class TagCrudController extends CrudController
 
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
+
         CRUD::column('name');
         CRUD::column('tag_type_id')->type('select')->entity('tagType')->attribute('name')->model('App\Models\TagType')->label('Tag Type');
     }
