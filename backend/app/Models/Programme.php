@@ -82,6 +82,22 @@ class Programme extends Model
             ->orderBy('rule_assignments.priority', 'asc');
     }
 
+    /**
+     * Get effective rules for admission
+     */
+    public function getEffectiveRules()
+    {
+        return $this->rules()->where('rule_assignments.is_active', true)->get();
+    }
+
+    /**
+     * Get all rules including inactive
+     */
+    public function getAllRules()
+    {
+        return $this->rules()->get();
+    }
+
     protected static function booted()
     {
         static::saving(function ($programme) {

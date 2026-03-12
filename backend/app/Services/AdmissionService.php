@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Course;
+use App\Models\Programme;
 use App\Models\User;
 use App\Models\UserAdmission;
 use App\Models\AdmissionRun;
@@ -19,15 +20,18 @@ class AdmissionService
     /**
      * Preview admission without creating records
      *
-     * @param Course $course
+     * @param Course|Programme $entity
      * @param int $limit
      * @param int|null $batchId
      * @return array
      */
-    public function previewAdmission(Course $course, int $limit, ?int $batchId = null, ?array $activeRulesId = null): array
+    /** Maximum students shown in preview for performance */
+    const PREVIEW_DISPLAY_CAP = 200;
+
+    public function previewAdmission(Course|Programme $entity, int $limit, ?int $batchId = null, ?array $activeRulesId = null): array
     {
         // Get effective rules
-        $rules = $course->getEffectiveRules();
+        $rules = $entity->getEffectiveRules();
 
         // Filter rules if activeRulesId is provided
         if ($activeRulesId !== null) {
@@ -41,20 +45,24 @@ class AdmissionService
         }
 
         // Build base query
-        $query = $this->getBaseQuery($course);
+        $query = $this->getBaseQuery($entity);
 
         // Apply pipeline
         $query = $this->applyPipeline($query, $rules);
 
-        // Get students with exam results
-        $students = $query->with(['examResults', 'formResponse'])
-            ->limit($limit)
-            ->get();
-
+        // Count all eligible students (true total for stats)
         $total = $query->count();
 
-        // Calculate statistics
+        // Cap preview display at 200 for performance regardless of limit
+        $displayLimit = min($limit, self::PREVIEW_DISPLAY_CAP);
+        $students = $query->with(['examResults', 'formResponse'])
+            ->limit($displayLimit)
+            ->get();
+
+        // Calculate statistics — total_selected reflects actual limit, not the display cap
         $stats = $this->calculateStatistics($students, $total);
+        $stats['will_admit'] = min($limit, $total); // how many will actually be admitted
+        $stats['preview_capped'] = $limit > self::PREVIEW_DISPLAY_CAP; // flag for UI
 
         return [
             'students' => $students,
@@ -66,7 +74,7 @@ class AdmissionService
     /**
      * Execute admission and create records
      *
-     * @param Course $course
+     * @param Course|Programme $entity
      * @param int $limit
      * @param int $batchId
      * @param int|null $sessionId
@@ -74,74 +82,98 @@ class AdmissionService
      * @return AdmissionRun
      */
     public function executeAdmission(
-        Course $course,
+        Course|Programme $entity,
         int $limit,
         int $batchId,
         ?int $sessionId = null,
         ?Admin $admin = null,
-        ?array $activeRulesId = null
+        ?array $activeRulesId = null,
+        bool $admitAll = false
     ): AdmissionRun {
         DB::beginTransaction();
 
         try {
-            // Get preview data
-            $preview = $this->previewAdmission($course, $limit, $batchId, $activeRulesId);
-            $students = $preview['students'];
-            $rules = $preview['rules_applied'];
+            // Build rules (mirrors previewAdmission logic)
+            $rules = $entity->getEffectiveRules();
+            if ($activeRulesId !== null) {
+                $rules = $rules->filter(fn($r) => in_array($r->id, $activeRulesId));
+            }
+            if ($activeRulesId == null && $rules->count() > 0) {
+                $rules = collect([]);
+            }
+
+            // Build the filtered query directly — do NOT load all students into memory
+            $query = $this->getBaseQuery($entity);
+            $query = $this->applyPipeline($query, $rules);
+
+            $totalEligible = $query->count();
+            $selectedCount = $admitAll ? $totalEligible : min($limit, $totalEligible);
 
             // Create admission run record
             $admissionRun = AdmissionRun::create([
-                'course_id' => $course->id,
-                'batch_id' => $batchId,
-                'run_by' => $admin?->id ?? backpack_user()?->id,
-                'run_at' => now(),
-                'rules_applied' => $rules->map(function ($rule) {
-                    return [
-                        'id' => $rule->id,
-                        'name' => $rule->name,
-                        'priority' => $rule->pivot->priority,
-                        'value' => $rule->pivot->value,
-                    ];
-                })->toArray(),
-                'selected_count' => $students->count(),
-                'admitted_count' => 0,
-                'emailed_count' => 0,
+                'course_id'     => $entity instanceof Course ? $entity->id : null,
+                'programme_id'  => $entity instanceof Programme ? $entity->id : null,
+                'batch_id'      => $batchId,
+                'run_by'        => $admin?->id ?? backpack_user()?->id,
+                'run_at'        => now(),
+                'rules_applied' => $rules->map(fn($r) => [
+                    'id'       => $r->id,
+                    'name'     => $r->name,
+                    'priority' => $r->pivot->priority,
+                    'value'    => $r->pivot->value,
+                ])->toArray(),
+                'selected_count'  => $selectedCount,
+                'admitted_count'  => 0,
+                'emailed_count'   => 0,
                 'automated_count' => 0,
-                'status' => 'preview',
+                'status'          => 'preview',
             ]);
 
-            // Create admission records
+            // Dispatch jobs in chunks to avoid memory exhaustion
             $admittedCount = 0;
-            $emailedCount = 0;
-
-            foreach ($students as $student) {
-                try {
-                    CreateStudentAdmissionJob::dispatch($student->id, $course->id, $sessionId, 'automated', $admissionRun->id);
-                    $admittedCount++;
-                } catch (\Exception $e) {
-                    Log::error("Failed to dispatch admission email", [
-                        'user_id' => $student->userId,
-                        'error' => $e->getMessage()
-                    ]);
+            $query->chunkById(200, function ($students) use (
+                $entity,
+                $sessionId,
+                $admissionRun,
+                &$admittedCount,
+                $admitAll,
+                $limit
+            ) {
+                foreach ($students as $student) {
+                    if (!$admitAll && $admittedCount >= $limit) {
+                        return false; // stop chunking once limit is reached
+                    }
+                    try {
+                        $studentCourseId = $entity instanceof Course ? $entity->id : $student->registered_course;
+                        CreateStudentAdmissionJob::dispatch($student->id, $studentCourseId, $sessionId, 'automated', $admissionRun->id);
+                        $admittedCount++;
+                    } catch (\Exception $e) {
+                        Log::error("Failed to dispatch admission job", [
+                            'user_id' => $student->userId ?? $student->id,
+                            'error'   => $e->getMessage()
+                        ]);
+                    }
                 }
-            }
+            });
 
             // Update admission run
             $admissionRun->update([
-                'admitted_count' => $admittedCount,
-                'emailed_count' => $emailedCount,
+                'admitted_count'  => $admittedCount,
                 'automated_count' => $admittedCount,
-                'status' => 'completed',
+                'status'          => 'completed',
             ]);
 
             // Invalidate cache
-            app(AdmissionStatisticsService::class)->invalidateCache($course, $course->batch);
+            if ($entity instanceof Course) {
+                app(AdmissionStatisticsService::class)->invalidateCache($entity, $entity->batch ?? \App\Models\Batch::find($batchId));
+            }
 
             DB::commit();
 
             Log::info("Admission executed successfully", [
                 'run_id' => $admissionRun->id,
-                'course_id' => $course->id,
+                'entity_type' => get_class($entity),
+                'entity_id' => $entity->id,
                 'admitted_count' => $admittedCount,
             ]);
 
@@ -150,7 +182,8 @@ class AdmissionService
             DB::rollBack();
 
             Log::error("Admission execution failed", [
-                'course_id' => $course->id,
+                'entity_type' => get_class($entity),
+                'entity_id' => $entity->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -184,22 +217,33 @@ class AdmissionService
     /**
      * Get base query with exclusions
      *
-     * @param Course $course
+     * @param Course|Programme $entity
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    protected function getBaseQuery(Course $course)
+    protected function getBaseQuery(Course|Programme $entity)
     {
-        return User::query()
-            ->where('registered_course', $course->id)
-            ->whereHas('examResults', function ($q) use ($course) {
+        $query = User::query()
+            ->whereHas('examResults', function ($q) {
                 // get the pass percentage
-
                 $q->whereRaw('ROUND ((yes_ans / (no_ans + yes_ans)) * 100, 2) >= CAST(? AS DECIMAL)', config(MINIMUM_EXAM_PASS_PERCENTAGE, 30));
             })
-            ->whereDoesntHave('admission') // Exclude already admitted
-            ->whereDoesntHave('rejectedAdmissions', function ($q) use ($course) {
-                $q->where('course_id', $course->id);
-            });
+            ->whereDoesntHave('admission'); // Exclude already admitted
+
+        if ($entity instanceof Course) {
+            $query->where('registered_course', $entity->id)
+                ->whereDoesntHave('rejectedAdmissions', function ($q) use ($entity) {
+                    $q->where('course_id', $entity->id);
+                });
+        } elseif ($entity instanceof Programme) {
+            // Get all course IDs for the programme
+            $courseIds = $entity->courses()->pluck('id');
+            $query->whereIn('registered_course', $courseIds)
+                ->whereDoesntHave('rejectedAdmissions', function ($q) use ($courseIds) {
+                    $q->whereIn('course_id', $courseIds);
+                });
+        }
+
+        return $query;
     }
 
     /**
@@ -241,6 +285,13 @@ class AdmissionService
             return $student->examResults->first()?->yes_ans ?? 0;
         })->filter();
 
+        // calculate level distribution
+        $levelDistribution = [
+            'beginner' => $students->where('level', 'beginner')->count(),
+            'intermediate' => $students->where('level', 'intermediate')->count(),
+            'advanced' => $students->where('level', 'advanced')->count(),
+        ];
+
         return [
             'total_selected' => $students->count(),
             'gender_breakdown' => $genderBreakdown,
@@ -249,6 +300,7 @@ class AdmissionService
                 'oldest' => $students->min('created_at'),
                 'newest' => $students->max('created_at'),
             ],
+            'level_distribution' => $levelDistribution,
             'total' => $total ?? $students->count(),
         ];
     }

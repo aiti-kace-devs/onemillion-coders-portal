@@ -26,11 +26,14 @@ class AdmissionRunCrudController extends CrudController
     protected function setupListOperation()
     {
         CRUD::addColumn([
-            'name' => 'course_name',
-            'label' => 'Course',
+            'name' => 'entity_name',
+            'label' => 'Course / Programme',
             'type' => 'closure',
             'function' => function ($entry) {
-                return $entry->course->course_name ?? 'N/A';
+                if ($entry->programme_id) {
+                    return '[Programme] ' . ($entry->programme->title ?? 'N/A');
+                }
+                return '[Course] ' . ($entry->course->course_name ?? 'N/A');
             }
         ]);
 
@@ -115,9 +118,10 @@ class AdmissionRunCrudController extends CrudController
     public function runAdmission()
     {
         $courses = Course::with('programme')->get();
+        $programmes = \App\Models\Programme::orderBy('title')->get();
         $batches = Batch::where('status', true)->get();
 
-        return view('admin.admission.run', compact('courses', 'batches'));
+        return view('admin.admission.run', compact('courses', 'programmes', 'batches'));
     }
 
     /**
@@ -126,20 +130,30 @@ class AdmissionRunCrudController extends CrudController
     public function previewAdmission(Request $request)
     {
         $validated = $request->validate([
-            'course_id' => 'required|exists:courses,id',
-            // 'batch_id' => 'required|exists:admission_batches,id',
-            'limit' => 'required|integer|min:1|max:200',
-            'active_rules' => 'nullable|array',
+            'course_id'      => 'nullable|exists:courses,id',
+            'programme_id'   => 'nullable|exists:programmes,id',
+            'limit'          => 'required|integer|min:1',
+            'active_rules'   => 'nullable|array',
             'active_rules.*' => 'integer|exists:rules,id',
         ]);
 
-        $course = Course::findOrFail($validated['course_id']);
+        if (empty($validated['course_id']) && empty($validated['programme_id'])) {
+            return response()->json(['success' => false, 'message' => 'Please select a course or programme'], 422);
+        }
+
+        $entity = !empty($validated['programme_id'])
+            ? \App\Models\Programme::findOrFail($validated['programme_id'])
+            : Course::findOrFail($validated['course_id']);
+
+        $batchId = $entity instanceof Course
+            ? $entity->batch->id
+            : \App\Models\Batch::where('status', true)->latest()->first()?->id;
 
         $admissionService = app(AdmissionService::class);
         $preview = $admissionService->previewAdmission(
-            $course,
+            $entity,
             $validated['limit'],
-            $course->batch->id,
+            $batchId,
             $validated['active_rules'] ?? null
         );
 
@@ -173,27 +187,40 @@ class AdmissionRunCrudController extends CrudController
     public function executeAdmission(Request $request)
     {
         $validated = $request->validate([
-            'course_id' => 'required|exists:courses,id',
-            // 'batch_id' => 'required|exists:admission_batches,id',
-            'limit' => 'required|integer|min:1|max:200',
-            'session_id' => 'nullable|exists:course_sessions,id',
-            'active_rules' => 'nullable|array',
+            'course_id'      => 'nullable|exists:courses,id',
+            'programme_id'   => 'nullable|exists:programmes,id',
+            'limit'          => 'required|integer|min:1',
+            'admit_all'      => 'nullable|boolean',
+            'session_id'     => 'nullable|exists:course_sessions,id',
+            'active_rules'   => 'nullable|array',
             'active_rules.*' => 'integer|exists:rules,id',
         ]);
 
-        $course = Course::findOrFail($validated['course_id']);
+        if (empty($validated['course_id']) && empty($validated['programme_id'])) {
+            return response()->json(['success' => false, 'message' => 'Please select a course or programme'], 422);
+        }
+
+        $entity = !empty($validated['programme_id'])
+            ? \App\Models\Programme::findOrFail($validated['programme_id'])
+            : Course::findOrFail($validated['course_id']);
+
+        $batchId = $entity instanceof Course
+            ? $entity->batch->id
+            : \App\Models\Batch::where('status', true)->latest()->first()?->id;
+
         $admin = backpack_user();
 
         try {
             $admissionService = app(AdmissionService::class);
 
             $admissionRun = $admissionService->executeAdmission(
-                $course,
+                $entity,
                 $validated['limit'],
-                $course->batch->id,
+                $batchId,
                 $validated['session_id'] ?? null,
                 $admin,
-                $validated['active_rules'] ?? null
+                $validated['active_rules'] ?? null,
+                (bool) ($validated['admit_all'] ?? false)
             );
 
             return response()->json([
@@ -215,11 +242,19 @@ class AdmissionRunCrudController extends CrudController
     public function getRules(Request $request)
     {
         $validated = $request->validate([
-            'course_id' => 'required|exists:courses,id',
+            'course_id' => 'nullable|exists:courses,id',
+            'programme_id' => 'nullable|exists:programmes,id',
         ]);
 
-        $course = Course::findOrFail($validated['course_id']);
-        $rules = $course->getAllRules();
+        if (empty($validated['course_id']) && empty($validated['programme_id'])) {
+            return response()->json(['success' => false, 'message' => 'Please select a course or programme'], 422);
+        }
+
+        $entity = !empty($validated['programme_id'])
+            ? \App\Models\Programme::findOrFail($validated['programme_id'])
+            : Course::findOrFail($validated['course_id']);
+
+        $rules = $entity->getAllRules();
 
         return response()->json([
             'success' => true,

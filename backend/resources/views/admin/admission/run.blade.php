@@ -36,14 +36,37 @@
                 <div class="card-body">
                     <form id="admissionForm">
                         @csrf
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <input type="radio" class="btn-check d-none" name="admission_mode" id="mode_course" value="course" autocomplete="off" checked>
+                                    <label class="btn btn-outline-primary" for="mode_course">Admit by Course</label>
+
+                                    <input type="radio" class="btn-check d-none" name="admission_mode" id="mode_programme" value="programme" autocomplete="off">
+                                    <label class="btn btn-outline-warning" for="mode_programme">Admit by Programme</label>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-6" id="course_selection">
                                 <div class="form-group">
                                     <label for="course_id">Course <span class="text-danger">*</span></label>
                                     <select name="course_id" id="course_id" class="form-control select2" required>
                                         <option value="">-- Select Course --</option>
                                         @foreach ($courses as $course)
                                             <option value="{{ $course->id }}">{{ $course->course_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6" id="programme_selection" style="display:none;">
+                                <div class="form-group">
+                                    <label for="programme_id">Programme <span class="text-danger">*</span></label>
+                                    <select name="programme_id" id="programme_id" class="form-control select2">
+                                        <option value="">-- Select Programme --</option>
+                                        @foreach ($programmes as $programme)
+                                            <option value="{{ $programme->id }}">{{ $programme->title }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -63,7 +86,7 @@
                                 <div class="form-group">
                                     <label for="limit">Number of Students <span class="text-danger">*</span></label>
                                     <input type="number" name="limit" id="limit" class="form-control" value="50"
-                                        min="1" max="200" required>
+                                        min="1" required>
                                 </div>
                             </div>
                         </div>
@@ -72,7 +95,7 @@
                             <div class="col-md-12">
                                 <label>Active Rules</label>
                                 <div id="rulesContainer" class="d-flex flex-wrap gap-2">
-                                    <span class="text-muted fst-italic">Select a course to view available rules...</span>
+                                    <span class="text-muted fst-italic">Select a course or programme to view available rules...</span>
                                 </div>
                             </div>
                         </div>
@@ -96,10 +119,22 @@
     <div class="row mt-4" id="previewSection" style="display:none;">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Preview: Selected Students</h3>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">Preview: Selected Students</h3>
+                    <div class="custom-control custom-switch" id="admitAllToggle" style="display:none;">
+                        <input type="checkbox" class="custom-control-input" id="admitAllChk">
+                        <label class="custom-control-label text-warning font-weight-bold" for="admitAllChk">
+                            Admit All eligible students
+                        </label>
+                    </div>
                 </div>
                 <div class="card-body">
+                    <div id="previewCapNotice" class="alert alert-warning d-none">
+                        <i class="la la-info-circle"></i>
+                        <strong>Performance Notice:</strong> Only the first 200 students are displayed in the preview.
+                        The actual number that <strong>will be admitted</strong> based on your limit is shown in the statistics.
+                        To admit <em>all</em> eligible students regardless of the limit, check <strong>"Admit All"</strong> above.
+                    </div>
                     <div id="statsSection" class="mb-3"></div>
                     <div id="rulesSection" class="mb-3"></div>
                     <div class="table-responsive">
@@ -146,26 +181,39 @@
                     console.error('Select2 library not loaded');
                 }
 
-                let previewData = null;
+                let currentMode = 'course';
 
-                $('#course_id').change(function() {
-                    const courseId = $(this).val();
+                $('input[name="admission_mode"]').change(function() {
+                    currentMode = $(this).val();
+                    if (currentMode === 'course') {
+                        $('#course_selection').show();
+                        $('#programme_selection').hide();
+                        $('#course_id').trigger('change');
+                    } else {
+                        $('#course_selection').hide();
+                        $('#programme_selection').show();
+                        $('#programme_id').trigger('change');
+                    }
+                });
+
+                function loadRules(entityType, entityId) {
                     const container = $('#rulesContainer');
                     
-                    if (!courseId) {
-                        container.html('<span class="text-muted fst-italic">Select a course to view available rules...</span>');
+                    if (!entityId) {
+                        container.html('<span class="text-muted fst-italic">Select a ' + entityType + ' to view available rules...</span>');
                         return;
                     }
 
                     container.html('<i class="la la-spinner la-spin"></i> Loading rules...');
 
+                    let requestData = { _token: '{{ csrf_token() }}' };
+                    if (entityType === 'course') requestData.course_id = entityId;
+                    else requestData.programme_id = entityId;
+
                     $.ajax({
                         url: '{{ backpack_url('admission-run/get-rules') }}',
                         method: 'GET',
-                        data: { 
-                            course_id: courseId,
-                            _token: '{{ csrf_token() }}'
-                        },
+                        data: requestData,
                         success: function(response) {
                             if (response.success && response.rules.length > 0) {
                                 let html = '';
@@ -189,13 +237,25 @@
                                 });
                                 container.html(html);
                             } else {
-                                container.html('<span class="text-warning">No active rules found for this course.</span>');
+                                container.html('<span class="text-warning">No active rules found.</span>');
                             }
                         },
                         error: function() {
                             container.html('<span class="text-danger">Error fetching rules.</span>');
                         }
                     });
+                }
+
+                $('#course_id').change(function() {
+                    if (currentMode === 'course') {
+                        loadRules('course', $(this).val());
+                    }
+                });
+
+                $('#programme_id').change(function() {
+                    if (currentMode === 'programme') {
+                        loadRules('programme', $(this).val());
+                    }
                 });
 
                 function getActiveRules() {
@@ -208,9 +268,10 @@
 
                 $('#previewBtn').click(function() {
                     const courseId = $('#course_id').val();
+                    const programmeId = $('#programme_id').val();
                     const limit = $('#limit').val();
 
-                    if (!courseId || !limit) {
+                    if ((currentMode === 'course' && !courseId) || (currentMode === 'programme' && !programmeId) || !limit) {
                         new Noty({
                             type: 'error',
                             text: 'Please fill in all required fields.'
@@ -223,16 +284,18 @@
                     const btn = $(this);
                     btn.prop('disabled', true).html('<i class="la la-spinner la-spin"></i> Loading...');
 
+                    let requestData = {
+                        _token: '{{ csrf_token() }}',
+                        limit: limit,
+                        active_rules: activeRules || [0]
+                    };
+                    if (currentMode === 'course') requestData.course_id = courseId;
+                    else requestData.programme_id = programmeId;
+                    
                     $.ajax({
                         url: '{{ route('admission.preview') }}',
                         method: 'POST',
-                        data: {
-                            _token: '{{ csrf_token() }}',
-                            course_id: courseId,
-                            // batch_id: batchId,
-                            limit: limit,
-                            active_rules: activeRules || [0]
-                        },
+                        data: requestData,
                         success: function(response) {
                             if (response.success) {
                                 previewData = response;
@@ -240,10 +303,23 @@
                                 $('#previewSection').show();
                                 $('#executeBtn').show();
 
-                                new Noty({
-                                    type: 'success',
-                                    text: `Found ${response.students.length} eligible students`
-                                }).show();
+                                // Show/hide performance cap notice and Admit All toggle
+                                if (response.stats.preview_capped) {
+                                    $('#previewCapNotice').removeClass('d-none');
+                                    $('#admitAllToggle').show();
+                                } else {
+                                    $('#previewCapNotice').addClass('d-none');
+                                    $('#admitAllToggle').hide();
+                                    $('#admitAllChk').prop('checked', false);
+                                }
+
+                                const shown = response.students.length;
+                                const willAdmit = response.stats.will_admit ?? shown;
+                                const msg = response.stats.preview_capped
+                                    ? `Showing first ${shown} of ${response.stats.total} eligible — ${willAdmit} will be admitted`
+                                    : `Found ${shown} eligible students`;
+
+                                new Noty({ type: 'success', text: msg }).show();
                             }
                         },
                         error: function(xhr) {
@@ -272,22 +348,29 @@
                     }).then((result) => {
                         if (result.isConfirmed) {
                             const courseId = $('#course_id').val();
+                            const programmeId = $('#programme_id').val();
                             const batchId = $('#batch_id').val();
                             const limit = $('#limit').val();
                             const activeRules = getActiveRules();
+                            const admitAll = $('#admitAllChk').is(':checked') ? 1 : 0;
 
                             const btn = $(this);
                             btn.prop('disabled', true).html('<i class="la la-spinner la-spin"></i> Executing...');
+                            
+                            let requestData = {
+                                _token: '{{ csrf_token() }}',
+                                batch_id: batchId,
+                                limit: limit,
+                                admit_all: admitAll,
+                                active_rules: activeRules
+                            };
+                            if (currentMode === 'course') requestData.course_id = courseId;
+                            else requestData.programme_id = programmeId;
+
                             $.ajax({
                                 url: '{{ route('admission.execute') }}',
                                 method: 'POST',
-                                data: {
-                                    _token: '{{ csrf_token() }}',
-                                    course_id: courseId,
-                                    batch_id: batchId,
-                                    limit: limit,
-                                    active_rules: activeRules
-                                },
+                                data: requestData,
                                 success: function(response) {
                                     if (response.success) {
                                         new Noty({
@@ -326,24 +409,24 @@
                     const stats = data.stats;
                     $('#statsSection').html(`
             <div class="row">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="alert alert-success">
                         <strong>Total Available:</strong> ${stats.total}
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="alert alert-info">
                         <strong>Total Selected:</strong> ${stats.total_selected}
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="alert alert-primary">
                         <strong>Gender:</strong> M: ${stats.gender_breakdown.male} / F: ${stats.gender_breakdown.female}
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-6">
                     <div class="alert alert-success">
-                        <strong>Avg Score:</strong> ${stats.avg_exam_score}
+                        <strong>Level Distribution:</strong> Beginner: ${stats.avg_exam_score} || Intermediate: ${stats.avg_exam_score} || Advanced: ${stats.avg_exam_score}
                     </div>
                 </div>
             </div>
