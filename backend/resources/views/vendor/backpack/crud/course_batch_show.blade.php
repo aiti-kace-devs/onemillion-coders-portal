@@ -81,6 +81,31 @@
     $admissionsPending = max(0, $admissionsTotal - $admissionsConfirmed);
     $admittedStudentsCount = (int) ($admissionsAgg->admitted_students_count ?? 0);
 
+    $userAgg = \Illuminate\Support\Facades\Cache::remember(
+        $metricsCacheKeyPrefix . 'user_agg:v1',
+        $metricsCacheTtl,
+        function () use ($courseId) {
+            return \Illuminate\Support\Facades\DB::table('users')
+                ->where('registered_course', $courseId)
+                ->selectRaw('
+                    COUNT(*) as total_registered,
+                    SUM(CASE WHEN shortlist = 1 OR shortlist = true THEN 1 ELSE 0 END) as total_shortlisted
+                ')
+                ->first();
+        }
+    );
+
+    $totalRegisteredUsers = (int) ($userAgg->total_registered ?? 0);
+    $totalShortlistedUsers = (int) ($userAgg->total_shortlisted ?? 0);
+    $totalAdmittedUsers = $admittedStudentsCount;
+
+    $shortlistRate = $totalRegisteredUsers > 0
+        ? round(($totalShortlistedUsers / $totalRegisteredUsers) * 100, 1)
+        : 0;
+    $admissionRate = $totalRegisteredUsers > 0
+        ? round(($totalAdmittedUsers / $totalRegisteredUsers) * 100, 1)
+        : 0;
+
     // Attendance
     $attendanceBase = \App\Models\Attendance::query()
         ->where('course_id', $courseId);
@@ -281,7 +306,61 @@
             <div class="card metric-card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
-                        <div class="text-muted">Admitted Students</div>
+                        <div class="text-muted">Total Registered Users</div>
+                        <i class="la la-users text-primary"></i>
+                    </div>
+                    <div class="metric-value">{{ number_format($totalRegisteredUsers) }}</div>
+                    <div class="text-muted small">Users registered for this course.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="text-muted">Total Shortlisted Users</div>
+                        <i class="la la-user-check text-info"></i>
+                    </div>
+                    <div class="metric-value">{{ number_format($totalShortlistedUsers) }}</div>
+                    <div class="text-muted small">Shortlist rate: {{ $shortlistRate }}%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="text-muted">Total Admitted Users</div>
+                        <i class="la la-graduation-cap text-success"></i>
+                    </div>
+                    <div class="metric-value">{{ number_format($totalAdmittedUsers) }}</div>
+                    <div class="text-muted small">Admission rate: {{ $admissionRate }}%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="text-muted">Total Attendance Students</div>
+                        <i class="la la-user-friends text-warning"></i>
+                    </div>
+                    <div class="metric-value">{{ number_format($attendanceUniqueStudents) }}</div>
+                    <div class="text-muted small">Attendance records: {{ number_format($attendanceTotal) }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="text-muted">Admissions</div>
                         <i class="la la-users text-primary"></i>
                     </div>
                     <div class="metric-value">{{ number_format($admissionsTotal) }}</div>
