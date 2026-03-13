@@ -100,7 +100,9 @@ class Programme extends Model
         });
 
         static::saved(function ($programme) {
-            $programme->courses->each->save();
+            if ($programme->wasChanged('title')) {
+                $programme->courses()->get()->each->save();
+            }
         });
     }
 }

@@ -71,7 +71,9 @@ class Centre extends Model
     protected static function booted()
     {
         static::saved(function ($centre) {
-            $centre->courses->each->save();
+            if ($centre->wasChanged('title')) {
+                $centre->courses()->get()->each->save();
+            }
         });
     }
 }
