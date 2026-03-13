@@ -40,7 +40,7 @@ class Kernel extends ConsoleKernel
                 ->get();
 
             foreach ($courses as $course) {
-                \Artisan::call('admission:auto-admit', ['course' => $course->id]);
+                \Artisan::call('app:auto-admit', ['course' => $course->id]);
                 \Log::info("Scheduled admission run", ['course_id' => $course->id]);
             }
         })->daily()

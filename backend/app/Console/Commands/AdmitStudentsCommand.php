@@ -23,7 +23,7 @@ class AdmitStudentsCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Admit shortlisted students to a course';
 
     /**
      * Execute the console command.

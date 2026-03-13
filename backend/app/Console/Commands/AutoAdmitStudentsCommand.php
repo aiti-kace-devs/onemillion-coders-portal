@@ -13,12 +13,12 @@ use Illuminate\Support\Facades\Log;
 
 class AutoAdmitStudentsCommand extends Command
 {
-    protected $signature = 'admission:auto-admit 
+    protected $signature = 'app:auto-admit 
                             {course? : Course ID}
                             {--dry-run : Preview without executing}
                             {--limit= : Number of students to admit}
                             {--batch-id= : Specific batch ID}';
-    
+
     protected $description = 'Run automated admission for courses using configured pipeline rules';
 
     public function handle()
@@ -30,9 +30,9 @@ class AutoAdmitStudentsCommand extends Command
             $this->line("\n<fg=cyan>╔════════════════════════════════════════╗</>");
             $this->line("<fg=cyan>║   🎓 Automated Admission System       ║</>");
             $this->line("<fg=cyan>╚════════════════════════════════════════╝</>\n");
-            
+
             $courseId = $this->selectCourseInteractively();
-            
+
             if (!$courseId) {
                 $this->error('No course selected. Aborting.');
                 return 1;
@@ -49,14 +49,15 @@ class AutoAdmitStudentsCommand extends Command
 
         $this->newLine();
         $this->line("📚 <fg=green>Course:</> {$course->course_name}");
-        $this->line("📖 <fg=green>Programme:</> {$course->programme->title ?? 'N/A'}");
+        $programmeName = $course->programme->title ?? 'N/A';
+        $this->line("📖 <fg=green>Programme:</> {$programmeName}");
 
         // Get batch (use active batch as default)
         $batchId = $this->option('batch-id');
-        $batch = $batchId 
-            ? Batch::find($batchId) 
+        $batch = $batchId
+            ? Batch::find($batchId)
             : ($course->batch ?? $course->batches()->where('status', true)->latest()->first());
-        
+
         if (!$batch) {
             $this->error("No active batch found for this course.");
             return 1;
@@ -65,15 +66,15 @@ class AutoAdmitStudentsCommand extends Command
         $this->line("📦 <fg=green>Batch:</> {$batch->title}");
 
         // Get limit
-        $limit = $this->option('limit') 
-            ?? $course->auto_admit_limit 
+        $limit = $this->option('limit')
+            ?? $course->auto_admit_limit
             ?? $this->ask('How many students to admit?', 50);
 
         $this->newLine();
-        
+
         try {
             $admissionService = app(AdmissionService::class);
-            
+
             // Preview mode
             if ($this->option('dry-run')) {
                 return $this->runPreview($admissionService, $course, $batch, (int)$limit);
@@ -87,17 +88,16 @@ class AutoAdmitStudentsCommand extends Command
 
             // Execute admission
             return $this->runAdmission($admissionService, $course, $batch, (int)$limit);
-
         } catch (\Exception $e) {
             $this->newLine();
             $this->error("❌ Error: {$e->getMessage()}");
-            
+
             Log::error("Admission failed via command", [
                 'course_id' => $course->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return 1;
         }
     }
@@ -106,9 +106,9 @@ class AutoAdmitStudentsCommand extends Command
     {
         $this->warn('🔍 DRY RUN MODE - No changes will be made');
         $this->newLine();
-        
+
         $preview = $admissionService->previewAdmission($course, $limit, $batch->id);
-        
+
         $totalSelected = $preview['stats']['total_selected'] ?? 0;
         $genderBreakdown = $preview['stats']['gender_breakdown'] ?? ['male' => 0, 'female' => 0];
         $avgScore = $preview['stats']['avg_exam_score'] ?? 0;
@@ -120,7 +120,7 @@ class AutoAdmitStudentsCommand extends Command
 
         $this->info("✅ Would admit {$totalSelected} student(s)");
         $this->newLine();
-        
+
         $this->table(
             ['Metric', 'Value'],
             [
@@ -135,8 +135,8 @@ class AutoAdmitStudentsCommand extends Command
         if ($preview['students']->isNotEmpty()) {
             $this->newLine();
             $this->line('<fg=cyan>Sample Students (first 10):</>');
-            
-            $sampleData = $preview['students']->take(10)->map(function($student) {
+
+            $sampleData = $preview['students']->take(10)->map(function ($student) {
                 $examScore = $student->examResults->first()->yes_ans ?? 'N/A';
                 return [
                     $student->name,
@@ -164,7 +164,7 @@ class AutoAdmitStudentsCommand extends Command
         $this->line('⏳ Running admission pipeline...');
 
         $admin = Admin::first(); // System admin
-        
+
         $admissionRun = $admissionService->executeAdmission(
             $course,
             $limit,
@@ -182,7 +182,7 @@ class AutoAdmitStudentsCommand extends Command
         $this->info("✅ Successfully admitted {$admissionRun->admitted_count} students");
         $this->line("   📧 Emails queued: {$admissionRun->emailed_count}");
         $this->line("   📊 Run ID: {$admissionRun->id}");
-        
+
         Log::info("Admission completed via command", [
             'course_id' => $course->id,
             'batch_id' => $batch->id,
@@ -193,7 +193,7 @@ class AutoAdmitStudentsCommand extends Command
 
         $this->newLine();
         $this->line('🎉 <fg=green>Admission completed successfully!</>');
-        
+
         return 0;
     }
 
@@ -201,14 +201,14 @@ class AutoAdmitStudentsCommand extends Command
     {
         // Step 1: Select Branch
         $branches = Branch::all();
-        
+
         if ($branches->isEmpty()) {
             $this->error('No branches found in the system.');
             return null;
         }
 
         $branchOptions = $branches->map(fn($b) => [
-            'id' => $b->id, 
+            'id' => $b->id,
             'data' => $b->title
         ])->all();
 
@@ -220,7 +220,7 @@ class AutoAdmitStudentsCommand extends Command
 
         // Step 2: Select Centre
         $centres = Centre::where('branch_id', $selectedBranch)->get();
-        
+
         if ($centres->isEmpty()) {
             $this->error("No centres found for selected branch.");
             return null;
@@ -241,7 +241,7 @@ class AutoAdmitStudentsCommand extends Command
         $courses = Course::where('centre_id', $selectedCentre)
             ->with('programme')
             ->get();
-        
+
         if ($courses->isEmpty()) {
             $this->error("No courses found for selected centre.");
             return null;
@@ -266,12 +266,12 @@ class AutoAdmitStudentsCommand extends Command
         }
 
         $this->line("*****************************************************");
-        
+
         $selection = $this->ask("Type number");
 
         // Validate selection
         $validIds = array_column($options, 'id');
-        
+
         if (!in_array($selection, $validIds)) {
             $this->error("Invalid selection: {$selection}");
             return null;

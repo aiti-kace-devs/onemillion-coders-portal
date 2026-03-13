@@ -106,14 +106,7 @@
 @endif --}}
 
 @if (auth()->user()->can('attendance.read.all') || auth()->user()->can('qr-scanner.read.all'))
-    <x-backpack::menu-dropdown title="Attendance Management" icon="la la-calendar-check">
-        @can('attendance.read.all')
-            <x-backpack::menu-dropdown-item title="Attendances" icon="la la-calendar-check" :link="backpack_url('attendance')" />
-        @endcan
-        @can('qr-scanner.read.all')
-            <x-backpack::menu-dropdown-item title="Scan QR Code" icon="la la-qrcode" :link="backpack_url('qr-scanner')" />
-        @endcan
-    </x-backpack::menu-dropdown>
+    <x-backpack::menu-item title="Scan QR Code" icon="la la-qrcode" :link="backpack_url('qr-scanner')" />
 @endif
 
 <x-backpack::menu-dropdown title="Tags" icon="la la-tags">

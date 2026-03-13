@@ -246,6 +246,6 @@ return [
     'fulldate_format' => 'l, jS F, Y',
     'ignore_csp_policies' => env('IGNORE_POLICY', true),
     'horizon_path' => env('HORI', 'horizon'),
-    'jwt_token' => env('JWT_TOKEN', Str::random(60)),
+    'jwt_token' => env('JWT_TOKEN'),
 
 ];
