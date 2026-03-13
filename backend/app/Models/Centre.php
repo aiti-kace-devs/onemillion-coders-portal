@@ -28,6 +28,7 @@ class Centre extends Model
         'staff_trained_for_pwd',
         'accessibility_rating',
         'pwd_notes',
+        'images',
     ];
 
 
@@ -45,6 +46,7 @@ class Centre extends Model
         'gps_address' => 'string',
         'accessibility_rating' => 'integer',
         'pwd_notes' => 'string',
+        'images' => 'array',
     ];
 
 
