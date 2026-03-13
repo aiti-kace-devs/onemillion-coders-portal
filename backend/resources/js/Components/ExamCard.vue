@@ -12,6 +12,11 @@ const EXAM_DEADLINE_AFTER_REGISTRATION = usePage().props.config?.['EXAM_DEADLINE
 const SHOW_RESULTS_TO_STUDENTS = usePage().props.config?.['SHOW_RESULTS_TO_STUDENTS'] || false;
 const user = usePage().props.auth?.user || {};
 
+const levelDeterminationTestUrl = computed(() => {
+    const baseUrl = usePage().props.quiz_frontend_url;
+    return `${baseUrl}/quiz/${user.userId}`;
+});
+
 
 const getExamStatus = (exam) => {
     const { hoursLeft } = getExamDeadline(exam.exam_date, user.created_at);
@@ -42,10 +47,15 @@ const getExamDeadline = (examDate, registeredAt) => {
 <template>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         <div v-for="(exam, key) in examList" :key="exam.exam_id"
-            class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
-            <Link :href="route('student.join-exam', exam.exam_id)" class="block flex-1">
+            class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50">
+            <component
+                :is="exam.title === 'Aptitude Test' ? 'a' : Link"
+                :href="exam.title === 'Aptitude Test' ? levelDeterminationTestUrl : route('student.join-exam', exam.exam_id)"
+                :target="exam.title === 'Aptitude Test' ? '_blank' : undefined"
+                class="block flex-1"
+            >
                 <!-- Status badge -->
-                <span class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold" :class="{
+                <!-- <span class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold" :class="{
                     'bg-green-100 text-green-700': getExamStatus(exam) === 'completed',
                     'bg-yellow-100 text-yellow-700': getExamStatus(exam) === 'pending',
                     'bg-red-100 text-red-700': getExamStatus(exam) === 'overdue',
@@ -54,23 +64,26 @@ const getExamDeadline = (examDate, registeredAt) => {
                         getExamStatus(exam).charAt(0).toUpperCase() +
                         getExamStatus(exam).slice(1)
                     }}
-                </span>
+                </span> -->
 
                 <!-- Icon and Title -->
                 <div class="flex items-center gap-3 mb-2">
-                    <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100">
-                        <span class="material-symbols-outlined text-gray-600">quiz</span>
+                    <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white">
+                        <span class="material-symbols-outlined">psychology</span>
                     </span>
                     <div class="flex-1 text-left">
-                        <h3 class="text-lg font-bold text-gray-800">{{ exam.title }}</h3>
-                        <p class="text-xs text-gray-500">
+                        <h3 class="text-lg font-bold text-gray-800 leading-tight">
+                            {{ exam.title === 'Aptitude Test' ? 'Level Determination Assessment' : exam.title }}
+                        </h3>
+                        <!-- <p class="text-xs text-gray-500">
                             Category: {{ exam.category_name }}
-                        </p>
+                        </p> -->
+                        <p class="text-sm text-gray-500 mt-1">Discover your standing for the current application.</p>
                     </div>
                 </div>
 
                 <!-- Exam Details -->
-                <div class="mt-2 space-y-1 text-left">
+                <!-- <div class="mt-2 space-y-1 text-left">
                     <p class="text-sm">
                         <strong>Duration:</strong> {{ exam.exam_duration }} mins
                     </p>
@@ -109,11 +122,11 @@ const getExamDeadline = (examDate, registeredAt) => {
                                         hour(s)</span>
                         </p>
                     </div>
-                </div>
-            </Link>
+                </div> -->
+            </component>
 
             <!-- View Results Button -->
-            <div v-if="getExamStatus(exam) === 'completed' && SHOW_RESULTS_TO_STUDENTS"
+            <!-- <div v-if="getExamStatus(exam) === 'completed' && SHOW_RESULTS_TO_STUDENTS"
                 class="mt-4 pt-3 border-t border-gray-100">
 
                 <PrimaryButton>
@@ -122,7 +135,7 @@ const getExamDeadline = (examDate, registeredAt) => {
                     </Link>
                 </PrimaryButton>
 
-            </div>
+            </div> -->
         </div>
     </div>
 </template>

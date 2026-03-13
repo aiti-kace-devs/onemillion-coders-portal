@@ -91,13 +91,13 @@ const user = auth?.user || {};
             <span class="material-symbols-outlined">dashboard</span>
           </SidebarNavLink>
 
-          <SidebarNavLink
+<!--           <SidebarNavLink
             :active="route().current('student.exam.index')"
             :href="route('student.exam.index')"
             :label="'Exam'"
           >
             <span class="material-symbols-outlined">quiz</span>
-          </SidebarNavLink>
+          </SidebarNavLink> -->
 
           <SidebarNavLink
             v-if="user.isAdmitted"

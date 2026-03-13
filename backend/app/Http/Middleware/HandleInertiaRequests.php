@@ -46,20 +46,25 @@ class HandleInertiaRequests extends Middleware
 
         $user = Auth::guard('web')->user();
 
-        $configs = AppConfig::whereIn('key', [
+        $configKeys = [
             SHOW_RESULTS_TO_STUDENTS,
+            SHOW_STUDENT_LEVEL,
             ALLOW_COURSE_CHANGE,
             ALLOW_SESSION_CHANGE,
             EXAM_DEADLINE_AFTER_REGISTRATION
-        ])
-            ->pluck('value', 'key')->all();
+        ];
+
+        $configs = [];
+        foreach ($configKeys as $key) {
+            $configs[$key] = config($key);
+        }
 
         return [
             ...parent::share($request),
             'auth' => [
                 'user' => $user
                     ? array_merge(
-                        $user->only('id', 'name', 'email', 'created_at'),
+                        $user->only('id', 'name', 'email', 'created_at', 'userId'),
                         [
                             'isAdmitted' => $user?->isAdmitted(),
                             'hasAdmission' => $user?->hasAdmission(),
@@ -70,6 +75,7 @@ class HandleInertiaRequests extends Middleware
                 'unreadNotifications' => $user ? $user->notifications()->unread()->count() : 0,
             ],
             'config' => $configs,
+            'quiz_frontend_url' => config('app.quiz_frontend_url'),
             'flash' => [
                 'message' => fn() => $request->session()->get('flash'),
                 'key' => fn() => $request->session()->get('key'),

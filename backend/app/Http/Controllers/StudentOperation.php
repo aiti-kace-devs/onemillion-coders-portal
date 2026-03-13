@@ -38,9 +38,9 @@ class StudentOperation extends Controller
     //student dashboard
     public function dashboard()
     {
-        if (!Auth::user()->isAdmitted()) {
-            return redirect(route('student.profile.edit'));
-        }
+        // if (!Auth::user()->isAdmitted()) {
+        //     return redirect(route('student.dashboard'));
+        // }
 
         // $data['portal_exams'] = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
         //     ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
@@ -98,16 +98,15 @@ class StudentOperation extends Controller
         return view('student.profile', compact('user', 'course', 'rejection'));
     }
 
-    // application status
     public function application_status()
     {
         $user = Auth::guard('web')->user();
 
         $user_exam = user_exam::where('user_id', $user->id)->first();
         $user_admission = UserAdmission::where('user_id', $user->userId)->first();
-        // dd($exam_submitted, $data);
+        $user_assessment = UserAssessment::where('user_id', $user->id)->first();
 
-        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_exam', 'user_admission'));
+        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_exam', 'user_admission', 'user_assessment'));
     }
 
     //Exam page
@@ -647,7 +646,7 @@ class StudentOperation extends Controller
         $user->registered_course = $request->course_id; // Store course_id in exam field
         $user->save();
 
-        return redirect()->route('student.profile.edit');
+        return redirect()->route('student.application-status');
     }
 
     // API function not used

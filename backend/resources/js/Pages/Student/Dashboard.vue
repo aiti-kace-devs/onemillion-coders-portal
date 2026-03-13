@@ -49,12 +49,12 @@ const overallProgress = computed(() =>
                         </p>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             <Link :href="route('student.application-status')" class="block h-full">
-                                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
+                                <div class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50">
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100">
-                                            <span class="material-symbols-outlined text-gray-600">contract</span>
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white">
+                                            <span class="material-symbols-outlined">contract</span>
                                         </span>
                                         <div class="flex-1 text-left">
                                             <h3 class="text-lg font-bold text-gray-800">Application Status</h3>
@@ -71,12 +71,12 @@ const overallProgress = computed(() =>
                             </Link>
 
                             <Link v-if="user.isAdmitted" :href="route('student.results')" class="block h-full">
-                                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
+                                <div class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50">
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100">
-                                            <span class="material-symbols-outlined text-gray-600">task</span>
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white">
+                                            <span class="material-symbols-outlined">task</span>
                                         </span>
                                         <div class="flex-1 text-left">
                                             <h3 class="text-lg font-bold text-gray-800">Results</h3>
@@ -91,12 +91,12 @@ const overallProgress = computed(() =>
                             </Link>
 
                             <Link :href="route('student.assessment.index')" v-if="user.isAdmitted" class="block h-full">
-                                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
+                                <div class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50">
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100">
-                                            <span class="material-symbols-outlined text-gray-600">rate_review</span>
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white">
+                                            <span class="material-symbols-outlined">rate_review</span>
                                         </span>
                                         <div class="flex-1 text-left">
                                             <h3 class="text-lg font-bold text-gray-800">Course Assessment</h3>
@@ -113,12 +113,12 @@ const overallProgress = computed(() =>
                             </Link>
 
                             <Link v-if="user.isAdmitted" :href="route('student.attendance.show')" class="block h-full">
-                                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
+                                <div class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50">
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100">
-                                            <span class="material-symbols-outlined text-gray-600">rule</span>
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white">
+                                            <span class="material-symbols-outlined">rule</span>
                                         </span>
                                         <div class="flex-1 text-left">
                                             <h3 class="text-lg font-bold text-gray-800">Attendance</h3>
@@ -132,12 +132,12 @@ const overallProgress = computed(() =>
                             </Link>
 
                             <Link v-if="!user.isAdmitted" :href="route('student.change-course')" class="block h-full">
-                                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
+                                <div class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50">
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100">
-                                            <span class="material-symbols-outlined text-gray-600">swap_horiz</span>
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white">
+                                            <span class="material-symbols-outlined">swap_horiz</span>
                                         </span>
                                         <div class="flex-1 text-left">
                                             <h3 class="text-lg font-bold text-gray-800">Change Course</h3>
@@ -165,7 +165,7 @@ const overallProgress = computed(() =>
                             <Link v-for="(questionnaire, key) in questionnaires" :key="questionnaire.id"
                                 :href="route('student.assessment.take-questionnaire', questionnaire.code)"
                                 class="block h-full">
-                                <div class="relative group bg-white rounded-xl shadow p-6 flex flex-col h-full">
+                                <div class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50">
                                     <!-- Status badge -->
                                     <span class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
                                         :class="questionnaire.is_submitted
@@ -178,8 +178,8 @@ const overallProgress = computed(() =>
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100">
-                                            <span class="material-symbols-outlined text-gray-600">rate_review</span>
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white">
+                                            <span class="material-symbols-outlined">rate_review</span>
                                         </span>
                                         <div class="flex-1 text-left">
                                             <h3 class="text-lg font-bold text-gray-800">

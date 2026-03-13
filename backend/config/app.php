@@ -247,5 +247,6 @@ return [
     'ignore_csp_policies' => env('IGNORE_POLICY', true),
     'horizon_path' => env('HORI', 'horizon'),
     'jwt_token' => env('JWT_TOKEN', Str::random(60)),
+    'quiz_frontend_url' => env('QUIZ_FRONTEND_URL', 'http://localhost:3000'),
 
 ];
