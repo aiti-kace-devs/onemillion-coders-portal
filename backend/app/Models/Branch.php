@@ -33,9 +33,11 @@ class Branch extends Model
     protected static function booted()
     {
         static::saved(function ($branch) {
-            $branch->centre->each(function ($centre) {
-                $centre->courses->each->save();
-            });
+            if ($branch->wasChanged('title')) {
+                $branch->centre->each(function ($centre) {
+                    $centre->courses()->get()->each->save();
+                });
+            }
         });
     }
 }

@@ -148,10 +148,12 @@ class Course extends Model
         });
 
         static::saved(function ($course) {
-            $course->sessions->each(function ($session) {
-                $session->setSessionName();
-                $session->save();
-            });
+            if ($course->wasChanged(['course_name', 'location'])) {
+                $course->sessions()->get()->each(function ($session) {
+                    $session->setSessionName();
+                    $session->save();
+                });
+            }
         });
     }
 }
