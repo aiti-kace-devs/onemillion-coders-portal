@@ -53,7 +53,7 @@ Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
 Route::post('/api/add-student', [FormResponseController::class, 'store']);      
 Route::get('/api/constituencies/{constituency}/metrics', [ConstituencyCrudController::class, 'metrics']);
 Route::get('/api/check-user/{userID}', [RegistrationFormAPIController::class, 'check_user_by_userID']);
-Route::post('/api/confirm-course', [RegistrationFormAPIController::class, 'check_user_course']);
+Route::post('/api/confirm-course', [RegistrationFormAPIController::class, 'confirmCourse']);
 
 
 // OTP verification routes for registration

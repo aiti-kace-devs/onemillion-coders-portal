@@ -32,6 +32,16 @@
     $coursesWithRegistrations = 0;
     $coursesWithoutRegistrations = 0;
     $courseRegistrationCoverageRate = 0;
+    $onlineCourses = 0;
+    $inPersonCourses = 0;
+    $otherDeliveryCourses = 0;
+    $supportYes = 0;
+    $supportNo = 0;
+    $supportUnknown = 0;
+    $deliveryLabels = collect();
+    $deliveryValues = collect();
+    $supportLabels = collect();
+    $supportValues = collect();
 
     $genderLabels = collect(['Male', 'Female']);
     $genderValues = collect([0, 0]);
@@ -141,11 +151,79 @@
             ->groupBy('registered_course')
             ->pluck('total', 'course_id');
 
+        $shortlistedByCourse = \Illuminate\Support\Facades\DB::table('users')
+            ->whereIn('registered_course', $courseIdsArray)
+            ->where(function ($query) {
+                $query->where('shortlist', 1)->orWhere('shortlist', true);
+            })
+            ->selectRaw('registered_course as course_id, COUNT(id) as total')
+            ->groupBy('registered_course')
+            ->pluck('total', 'course_id');
+
+        $supportByCourse = \Illuminate\Support\Facades\DB::table('user_admission as ua')
+            ->join('users as u', 'u.userId', '=', 'ua.user_id')
+            ->whereIn('ua.course_id', $courseIdsArray)
+            ->whereNotNull('ua.confirmed')
+            ->selectRaw('
+                ua.course_id,
+                COUNT(DISTINCT CASE WHEN u.support = 1 THEN ua.user_id END) as support_yes
+            ')
+            ->groupBy('ua.course_id')
+            ->get()
+            ->keyBy('course_id');
+
         $coursesWithRegistrations = (int) $registeredByCourse->count();
         $coursesWithoutRegistrations = max($totalCourses - $coursesWithRegistrations, 0);
         $courseRegistrationCoverageRate = $totalCourses > 0
             ? round(($coursesWithRegistrations / $totalCourses) * 100, 1)
             : 0;
+
+        $deliveryCounts = \Illuminate\Support\Facades\DB::table('courses as c')
+            ->join('programmes as p', 'c.programme_id', '=', 'p.id')
+            ->whereIn('c.id', $courseIdsArray)
+            ->selectRaw("
+                CASE
+                    WHEN LOWER(TRIM(COALESCE(p.mode_of_delivery, ''))) IN ('online', 'online for all') THEN 'online'
+                    WHEN LOWER(TRIM(COALESCE(p.mode_of_delivery, ''))) IN ('in person', 'in-person', 'in_person') THEN 'in_person'
+                    ELSE 'other'
+                END as delivery_label,
+                COUNT(*) as total
+            ")
+            ->groupBy('delivery_label')
+            ->pluck('total', 'delivery_label');
+
+        $onlineCourses = (int) ($deliveryCounts['online'] ?? 0);
+        $inPersonCourses = (int) ($deliveryCounts['in_person'] ?? 0);
+        $otherDeliveryCourses = (int) ($deliveryCounts['other'] ?? 0);
+
+        $supportCounts = \Illuminate\Support\Facades\DB::table('user_admission as ua')
+            ->join('users as u', 'u.userId', '=', 'ua.user_id')
+            ->whereIn('ua.course_id', $courseIdsArray)
+            ->whereNotNull('ua.confirmed')
+            ->selectRaw('
+                COUNT(DISTINCT CASE WHEN u.support = 1 THEN ua.user_id END) as support_yes,
+                COUNT(DISTINCT CASE WHEN u.support = 0 THEN ua.user_id END) as support_no,
+                COUNT(DISTINCT CASE WHEN u.support IS NULL THEN ua.user_id END) as support_unknown
+            ')
+            ->first();
+
+        $supportYes = (int) ($supportCounts->support_yes ?? 0);
+        $supportNo = (int) ($supportCounts->support_no ?? 0);
+        $supportUnknown = (int) ($supportCounts->support_unknown ?? 0);
+
+        $deliveryLabels = collect(['Online', 'In Person']);
+        $deliveryValues = collect([$onlineCourses, $inPersonCourses]);
+        if ($otherDeliveryCourses > 0) {
+            $deliveryLabels->push('Other/Unspecified');
+            $deliveryValues->push($otherDeliveryCourses);
+        }
+
+        $supportLabels = collect(['Needs Support', 'No Support']);
+        $supportValues = collect([$supportYes, $supportNo]);
+        if ($supportUnknown > 0) {
+            $supportLabels->push('Not Indicated');
+            $supportValues->push($supportUnknown);
+        }
 
         $admittedByCourse = \Illuminate\Support\Facades\DB::table('user_admission')
             ->whereIn('course_id', $courseIdsArray)
@@ -156,16 +234,28 @@
 
         $topCourses = \Illuminate\Support\Facades\DB::table('courses as c')
             ->where('c.centre_id', $centreId)
-            ->select(['c.id', 'c.course_name'])
+            ->leftJoin('programmes as p', 'c.programme_id', '=', 'p.id')
+            ->select(['c.id', 'c.course_name', 'p.mode_of_delivery'])
             ->get()
-            ->map(function ($course) use ($registeredByCourse, $admittedByCourse) {
+            ->map(function ($course) use ($registeredByCourse, $shortlistedByCourse, $admittedByCourse, $supportByCourse) {
                 $courseId = (int) $course->id;
+                $supportRow = $supportByCourse->get($courseId);
+                $admittedCount = (int) ($admittedByCourse[$courseId] ?? 0);
+                $supportYesCount = (int) ($supportRow->support_yes ?? 0);
+                $supportNoCount = max($admittedCount - $supportYesCount, 0);
+                $delivery = strtolower(trim((string) ($course->mode_of_delivery ?? '')));
+                $isOnline = in_array($delivery, ['online', 'online for all'], true);
 
                 return (object) [
                     'id' => $courseId,
                     'course_name' => $course->course_name,
+                    'mode_of_delivery' => $course->mode_of_delivery,
                     'registered_users_count' => (int) ($registeredByCourse[$courseId] ?? 0),
-                    'admitted_users_count' => (int) ($admittedByCourse[$courseId] ?? 0),
+                    'shortlisted_users_count' => (int) ($shortlistedByCourse[$courseId] ?? 0),
+                    'admitted_users_count' => $admittedCount,
+                    'support_yes_count' => $supportYesCount,
+                    'support_no_count' => $supportNoCount,
+                    'is_online_delivery' => $isOnline,
                 ];
             })
             ->sortByDesc('registered_users_count')
@@ -250,41 +340,60 @@
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card metric-card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
-                        <div class="text-muted">Courses Without Registrations</div>
-                        <i class="la la-exclamation-circle text-dark"></i>
+                        <div class="text-muted">Online Delivery Courses</div>
+                        <i class="la la-wifi text-primary"></i>
                     </div>
-                    <div class="metric-value">{{ number_format($coursesWithoutRegistrations) }}</div>
-                    <div class="text-muted small">Coverage: {{ $courseRegistrationCoverageRate }}% of courses have at least one registration.</div>
+                    <div class="metric-value">{{ number_format($onlineCourses) }}</div>
+                    <div class="text-muted small">Courses in this centre with online programmes.</div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card metric-card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
-                        <div class="text-muted">Pending Admissions</div>
-                        <i class="la la-hourglass-half text-danger"></i>
+                        <div class="text-muted">In-Person Delivery Courses</div>
+                        <i class="la la-map-marker text-success"></i>
                     </div>
-                    <div class="metric-value">{{ number_format($admissionsPending) }}</div>
-                    <div class="text-muted small">Admission records not yet confirmed.</div>
+                    <div class="metric-value">{{ number_format($inPersonCourses) }}</div>
+                    <div class="text-muted small">Courses in this centre with in-person programmes.</div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card metric-card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
-                        <div class="text-muted">Assigned Districts</div>
-                        <i class="la la-map text-secondary"></i>
+                        <div class="text-muted">Users Needing Support For Online Course</div>
+                        <i class="la la-hands-helping text-warning"></i>
                     </div>
-                    <div class="metric-value">{{ number_format($totalDistricts) }}</div>
-                    <div class="text-muted small">Districts linked to this centre.</div>
+                    <div class="metric-value">{{ number_format($supportYes) }}</div>
+                    <div class="text-muted small">Registered users marked as needing support.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="text-muted">Users Not Needing Support For Online Course</div>
+                        <i class="la la-user text-secondary"></i>
+                    </div>
+                    <div class="metric-value">{{ number_format($supportUnknown) }}</div>
+                    <div class="text-muted small">
+                        @if($supportUnknown > 0)
+                            Not indicated: {{ number_format($supportUnknown) }}
+                        @else
+                            Registered users marked as not needing support.
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
@@ -336,23 +445,8 @@
         </div>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-12">
-            <div class="card h-100">
-                <div class="card-header">
-                    <strong><i class="la la-signal"></i> Registration Funnel</strong>
-                </div>
-                <div class="card-body">
-                    <div class="chart-wrap">
-                        <canvas id="funnelBarChart"></canvas>
-                    </div>
-                    <div class="text-muted small mt-2">
-                        Suggested KPI: track drop-off from Registered to Shortlisted to Admitted.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+
+
 
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -367,7 +461,10 @@
                                 <tr>
                                     <th>Course</th>
                                     <th>Registered Users</th>
+                                    <th>Shortlisted Users</th>
                                     <th>Admitted Users</th>
+                                    <th>Mode of Delivery</th>
+                                    <th>Support (Yes/No)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -381,11 +478,18 @@
                                             @endif
                                         </td>
                                         <td>{{ number_format((int) ($course->registered_users_count ?? 0)) }}</td>
+                                        <td>{{ number_format((int) ($course->shortlisted_users_count ?? 0)) }}</td>
                                         <td>{{ number_format((int) ($course->admitted_users_count ?? 0)) }}</td>
+                                        <td>{{ $course->mode_of_delivery ?? 'Unspecified' }}</td>
+                                        <td>
+                                            {{ number_format((int) ($course->support_yes_count ?? 0)) }}
+                                            /
+                                            {{ number_format((int) ($course->support_no_count ?? 0)) }}
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="3" class="text-center text-muted">No course data found.</td>
+                                        <td colspan="6" class="text-center text-muted">No course data found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -466,6 +570,11 @@
                     {{ (int) $totalShortlistedUsers }},
                     {{ (int) $totalAdmittedUsers }}
                 ];
+
+                const deliveryLabels = @json($deliveryLabels->values());
+                const deliveryValues = @json($deliveryValues->values());
+                const supportLabels = @json($supportLabels->values());
+                const supportValues = @json($supportValues->values());
 
                 const genderCtx = document.getElementById('genderPieChart');
                 if (genderCtx) {
@@ -600,6 +709,54 @@
                                     }
                                 }]
                             }
+                        }
+                    });
+                }
+
+                const deliveryCtx = document.getElementById('deliveryPieChart');
+                if (deliveryCtx) {
+                    new Chart(deliveryCtx, {
+                        type: 'pie',
+                        data: {
+                            labels: deliveryLabels,
+                            datasets: [{
+                                data: deliveryValues,
+                                backgroundColor: [
+                                    'rgba(13, 110, 253, 0.85)',
+                                    'rgba(25, 135, 84, 0.85)',
+                                    'rgba(108, 117, 125, 0.85)',
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            legend: { position: 'bottom' }
+                        }
+                    });
+                }
+
+                const supportCtx = document.getElementById('supportPieChart');
+                if (supportCtx) {
+                    new Chart(supportCtx, {
+                        type: 'pie',
+                        data: {
+                            labels: supportLabels,
+                            datasets: [{
+                                data: supportValues,
+                                backgroundColor: [
+                                    'rgba(255, 193, 7, 0.85)',
+                                    'rgba(108, 117, 125, 0.85)',
+                                    'rgba(13, 110, 253, 0.85)',
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            legend: { position: 'bottom' }
                         }
                     });
                 }

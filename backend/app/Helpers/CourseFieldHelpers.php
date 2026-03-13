@@ -609,6 +609,14 @@ CRUD::addField([
         ]);
 
         CRUD::addField([
+            'name' => 'order',
+            'label' => 'Order',
+            'type' => 'number',
+            'wrapper' => ['class' => 'form-group col-4'],
+        ]);
+
+
+        CRUD::addField([
             'name' => 'description',
             'label' => 'Description',
             'type' => 'text',
@@ -625,13 +633,7 @@ CRUD::addField([
         // ]);
 
 
-        CRUD::addField([
-            'name' => 'order',
-            'label' => 'Order',
-            'type' => 'number',
-            'wrapper' => ['class' => 'form-group col-4'],
-        ]);
-
+ 
 
         $this->addIsActiveField([true => 'True', false => 'False'], 'Multiple Select', 'is_multiple_select');
         $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');

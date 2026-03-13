@@ -17,6 +17,8 @@
     $centre = $course->centre;
     $branch = $centre?->branch;
     $programme = $course->programme;
+    $programmeDelivery = strtolower(trim((string) ($programme?->mode_of_delivery)));
+    $isOnlineProgramme = in_array($programmeDelivery, ['online', 'online for all'], true);
     $admins = $course->assignedAdmins ?? collect();
     $sessions = $course->sessions ?? collect();
 
@@ -80,6 +82,27 @@
     $admissionsConfirmed = (int) ($admissionsAgg->confirmed_count ?? 0);
     $admissionsPending = max(0, $admissionsTotal - $admissionsConfirmed);
     $admittedStudentsCount = (int) ($admissionsAgg->admitted_students_count ?? 0);
+
+    $supportAgg = \Illuminate\Support\Facades\Cache::remember(
+        $metricsCacheKeyPrefix . 'support_agg:v1',
+        $metricsCacheTtl,
+        function () use ($courseId) {
+            return \Illuminate\Support\Facades\DB::table('user_admission as ua')
+                ->join('users as u', 'u.userId', '=', 'ua.user_id')
+                ->where('ua.course_id', $courseId)
+                ->whereNotNull('ua.confirmed')
+                ->selectRaw('
+                    COUNT(DISTINCT CASE WHEN u.support = 1 THEN ua.user_id END) as support_yes,
+                    COUNT(DISTINCT CASE WHEN u.support = 0 THEN ua.user_id END) as support_no,
+                    COUNT(DISTINCT CASE WHEN u.support IS NULL THEN ua.user_id END) as support_unknown
+                ')
+                ->first();
+        }
+    );
+
+    $supportYes = (int) ($supportAgg->support_yes ?? 0);
+    $supportNo = (int) ($supportAgg->support_no ?? 0);
+    $supportUnknown = (int) ($supportAgg->support_unknown ?? 0);
 
     $userAgg = \Illuminate\Support\Facades\Cache::remember(
         $metricsCacheKeyPrefix . 'user_agg:v1',
@@ -345,21 +368,6 @@
             <div class="card metric-card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
-                        <div class="text-muted">Total Attendance Students</div>
-                        <i class="la la-user-friends text-warning"></i>
-                    </div>
-                    <div class="metric-value">{{ number_format($attendanceUniqueStudents) }}</div>
-                    <div class="text-muted small">Attendance records: {{ number_format($attendanceTotal) }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card metric-card h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between">
                         <div class="text-muted">Admissions</div>
                         <i class="la la-users text-primary"></i>
                     </div>
@@ -370,21 +378,42 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="col-md-3">
-            <div class="card metric-card h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="text-muted">Attendance Records</div>
-                        <i class="la la-calendar-check text-success"></i>
-                    </div>
-                    <div class="metric-value">{{ number_format($attendanceTotal) }}</div>
-                    <div class="text-muted small">
-                        Rate: {{ $attendanceRate }}% • Students: {{ number_format($attendanceUniqueStudents) }}
+    <div class="row g-3 mb-4">
+        @if($isOnlineProgramme)
+            <div class="col-md-3">
+                <div class="card metric-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-muted">Total Users Needing Support</div>
+                            <i class="la la-hands-helping text-warning"></i>
+                        </div>
+                        <div class="metric-value">{{ number_format($supportYes) }}</div>
+                        <div class="text-muted small">
+                            @if($supportUnknown > 0)
+                                Not indicated: {{ number_format($supportUnknown) }}
+                            @else
+                                Admitted users needing support.
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+
+            <div class="col-md-3">
+                <div class="card metric-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-muted">Total Users Not Needing Support</div>
+                            <i class="la la-user text-secondary"></i>
+                        </div>
+                        <div class="metric-value">{{ number_format($supportUnknown) }}</div>
+                        <div class="text-muted small">Admitted users not needing support.</div>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         <div class="col-md-3">
             <div class="card metric-card h-100">

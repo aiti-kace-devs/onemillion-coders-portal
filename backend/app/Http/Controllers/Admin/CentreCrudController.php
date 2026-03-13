@@ -8,6 +8,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Models\Branch;
 use App\Models\Centre;
 use App\Models\Constituency;
+use App\Helpers\CourseFieldHelpers;
 use App\Models\District;
 use App\Helpers\GeneralFieldsAndColumns;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ use App\Helpers\WidgetHelper;
 class CentreCrudController extends CrudController
 {
     use GeneralFieldsAndColumns;
+    use CourseFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation {
         store as traitStore;
@@ -239,6 +241,9 @@ class CentreCrudController extends CrudController
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Staff Trained for PWDs', 'staff_trained_for_pwd');
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+
+        $this->addFieldsToTab('General', true, ['title', 'branch_id', 'constituency_id', 'district_id', 'gps_address', 'pwd_notes']);
+        $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'status']);
 
     }
 
