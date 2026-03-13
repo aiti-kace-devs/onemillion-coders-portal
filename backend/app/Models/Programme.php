@@ -25,7 +25,9 @@ class Programme extends Model
         'job_responsible',
         'cover_image_id',
         'course_category_id',
-        'status'
+        'status',
+        'mode_of_delivery',
+        'provider'
     ];
 
     protected $casts = [
@@ -97,6 +99,12 @@ class Programme extends Model
                 'what_you_will_learn' => $whatYouWillLearn,
                 'why_choose_this_course' => $whyChoose
             ];
+        });
+
+        static::saved(function ($programme) {
+            if ($programme->wasChanged('title')) {
+                $programme->courses()->get()->each->save();
+            }
         });
     }
 }

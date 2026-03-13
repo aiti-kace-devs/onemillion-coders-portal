@@ -3,7 +3,6 @@
 namespace App\Helpers;
 
 use Backpack\CRUD\app\Library\Widget;
-use App\Models\Admin;
 use App\Models\Course;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
@@ -11,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardWidgetHelper
 {
+    
     /**
      * Render a widget with the given type and parameters.
      *
@@ -18,32 +18,6 @@ class DashboardWidgetHelper
      * @param array $params
      * @return string
      */
-
-    /**
-     * Return course IDs visible to the current admin.
-     * `null` means unrestricted visibility (super admin or non-admin context).
-     */
-    public static function currentAdminVisibleCourseIds(): ?array
-    {
-        $admin = backpack_user();
-
-        if (! $admin instanceof Admin) {
-            return null;
-        }
-
-        if (method_exists($admin, 'visibleCourseIds')) {
-            return $admin->visibleCourseIds();
-        }
-
-        if ($admin->isSuper()) {
-            return null;
-        }
-
-        return $admin->assignedCourses()
-            ->pluck('courses.id')
-            ->map(fn($courseId) => (int) $courseId)
-            ->all();
-    }
 
     /**
      * Build a stable cache suffix for course-scoped dashboard data.
@@ -84,7 +58,7 @@ class DashboardWidgetHelper
 
     public static function dashboardCountStatisticsWidget()
     {
-        $visibleCourseIds = self::currentAdminVisibleCourseIds();
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'dashboard_count_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
         $dasboardCountStatistics = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {
@@ -204,7 +178,7 @@ class DashboardWidgetHelper
 
     public static function dashboardBatchStatisticsWidget()
     {
-        $visibleCourseIds = self::currentAdminVisibleCourseIds();
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'dashboard_table_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
         $dashboardTableStatistics = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {

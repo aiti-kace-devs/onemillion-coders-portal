@@ -7,9 +7,14 @@ use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Models\Branch;
 use App\Models\Centre;
+use App\Models\Constituency;
+use App\Helpers\CourseFieldHelpers;
+use App\Models\District;
 use App\Helpers\GeneralFieldsAndColumns;
 use Illuminate\Http\Request;
+use App\Helpers\CrudListHelper;
 use App\Helpers\FilterHelper;
+use App\Helpers\MediaHelper;
 use App\Helpers\WidgetHelper;
 
 /**
@@ -20,9 +25,14 @@ use App\Helpers\WidgetHelper;
 class CentreCrudController extends CrudController
 {
     use GeneralFieldsAndColumns;
+    use CourseFieldHelpers;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation {
+        store as traitStore;
+    }
+    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation {
+        update as traitUpdate;
+    }
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
@@ -46,10 +56,33 @@ class CentreCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
         WidgetHelper::centreStatisticsWidget();
 
+        $this->crud->query->with('districts');
+
         CRUD::column('title')->type('textarea');
-        CRUD::column('branch_id')->label('Branch')->linkTo('branch.show');
+        CRUD::column('branch_id')->label('Region')->linkTo('branch.show');
+        FilterHelper::addGenericRelationshipColumn('constituency', 'Constituency', 'constituency', 'title');
+        CRUD::addColumn([
+            'name' => 'districts',
+            'label' => 'Districts',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $districts = $entry->districts ?? collect();
+                if ($districts->isEmpty()) {
+                    return 'N/A';
+                }
+
+                return $districts
+                    ->map(function ($district) {
+                        $url = backpack_url('district/' . $district->id . '/show');
+                        return '<a href="' . $url . '">' . e($district->title) . '</a>';
+                    })
+                    ->implode(', ');
+            },
+            'escaped' => false,
+        ]);
         CRUD::addColumn([
             'name' => 'is_pwd_friendly',
             'label' => 'Is PWD Friendly',
@@ -64,6 +97,18 @@ class CentreCrudController extends CrudController
             'view' => 'admin.status_toggle.status_column',
         ]);
         CRUD::column('created_at');
+        FilterHelper::addSelectFilter(
+            'branch_id',
+            'Region',
+            Branch::query()->orderBy('title')->pluck('title', 'id')->toArray(),
+            'select2'
+        );
+        FilterHelper::addSelectFilter(
+            'constituency_id',
+            'Constituency',
+            Constituency::query()->orderBy('title')->pluck('title', 'id')->toArray(),
+            'select2'
+        );
         FilterHelper::addBooleanFilter('status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
@@ -72,7 +117,7 @@ class CentreCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        $this->setupListOperation();
+        CRUD::set('show.view', 'vendor.backpack.crud.centre_show');
     }
     /**
      * Define what happens when the Create operation is loaded.
@@ -92,7 +137,7 @@ class CentreCrudController extends CrudController
 
         CRUD::addField([
             'name'        => 'branch_id',
-            'label'       => 'Branch',
+            'label'       => 'Select Region',
             'type'        => 'select',
             'entity'      => 'branch',
             'model'       => Branch::class,
@@ -100,6 +145,69 @@ class CentreCrudController extends CrudController
             'allows_null' => true,
             'default'     => null,
             'wrapper'     => ['class' => 'form-group col-6'],
+        ]);
+
+        CRUD::addField([
+            'name' => 'constituency_id',
+            'label' => 'Select Constituency',
+            'type' => 'select2_from_ajax',
+            'entity' => 'constituency',
+            'model' => Constituency::class,
+            'attribute' => 'title',
+            'data_source' => backpack_url('api/constituency-by-branch'),
+            'dependencies' => ['branch_id'],
+            'include_all_form_fields' => true,
+            'minimum_input_length' => 0,
+            'method' => 'GET',
+            'wrapper' => ['class' => 'form-group col-6'],
+            'attributes' => [
+                'id' => 'constituency_id',
+                'disabled' => 'disabled',
+            ],
+            'hint' => 'Select a region first to load constituencies.',
+        ]);
+
+        CRUD::addField([
+            'name' => 'constituency_dependency_script',
+            'type' => 'custom_html',
+            'value' => view('admin.centre.fields.constituency_dependency_script'),
+            'wrapper' => ['class' => 'd-none'],
+        ]);
+
+        $centre = $this->crud->getCurrentEntry();
+        $selectedDistrictId = null;
+        if ($centre instanceof Centre) {
+            $selectedDistrictId = $centre->districts()->pluck('districts.id')->first();
+        }
+
+        CRUD::addField([
+            'name' => 'district_id',
+            'label' => 'Select District',
+            'type' => 'select2_from_ajax',
+            'entity' => false,
+            'model' => District::class,
+            'attribute' => 'title',
+            'data_source' => backpack_url('api/district-by-branch'),
+            'dependencies' => ['branch_id'],
+            'include_all_form_fields' => true,
+            'minimum_input_length' => 0,
+            'method' => 'GET',
+            'allows_null' => true,
+            'wrapper' => ['class' => 'form-group col-6'],
+            'attributes' => [
+                'id' => 'district_id',
+                'disabled' => 'disabled',
+            ],
+            'value' => $selectedDistrictId,
+            'hint' => 'Select a region first to load districts.',
+            'fake' => true,
+        ]);
+
+        CRUD::addField([
+            'name' => 'district_dependency_script',
+            'type' => 'custom_html',
+            'value' => view('admin.centre.fields.district_dependency_script'),
+            'wrapper' => ['class' => 'd-none'],
         ]);
 
 
@@ -117,6 +225,15 @@ class CentreCrudController extends CrudController
             'type'      => 'textarea',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
+
+        MediaHelper::getMediaSelector(
+            name: 'images',
+            multiple: true,
+            label: 'Centre Images',
+            disk_options: MediaHelper::getArticleImagesDiskOptions(),
+            // wrapper_class: 'form-group col-12',
+            value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->coverImage->file ?? '' : '',
+        );
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Is PWD Friendly', 'is_pwd_friendly');
 
@@ -136,6 +253,9 @@ class CentreCrudController extends CrudController
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
 
+        $this->addFieldsToTab('General', true, ['title', 'branch_id', 'constituency_id', 'district_id', 'gps_address', 'pwd_notes']);
+        $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'status']);
+
     }
 
     /**
@@ -147,6 +267,36 @@ class CentreCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    public function store()
+    {
+        $response = $this->traitStore();
+        $this->syncDistrictSelection();
+        return $response;
+    }
+
+    public function update()
+    {
+        $response = $this->traitUpdate();
+        $this->syncDistrictSelection();
+        return $response;
+    }
+
+    protected function syncDistrictSelection(): void
+    {
+        $centre = $this->crud->getCurrentEntry();
+        if (!$centre) {
+            return;
+        }
+
+        $districtId = $this->crud->getRequest()->input('district_id');
+        if ($districtId === null || $districtId === '') {
+            $centre->districts()->sync([]);
+            return;
+        }
+
+        $centre->districts()->sync([(int) $districtId]);
     }
 
     public function toggleStatus(Request $request, $id)

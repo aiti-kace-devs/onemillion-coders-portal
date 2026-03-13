@@ -12,6 +12,7 @@ use App\Helpers\CourseFieldHelpers;
 use App\Helpers\UserFieldHelpers;
 use App\Models\OexQuestionMaster;
 use Prologue\Alerts\Facades\Alert;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class OexQuestionMasterCrudController
@@ -110,6 +111,8 @@ class OexQuestionMasterCrudController extends CrudController
         FilterHelper::addTagsFilter('tags', 'Tags');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
+        CrudListHelper::editInDropdown();
+        CRUD::denyAccess('show');
     }
 
     protected function setupShowOperation()

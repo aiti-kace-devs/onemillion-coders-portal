@@ -9,6 +9,7 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\Course;
 use App\Helpers\CourseFieldHelpers;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class CourseSessionCrudController
@@ -44,6 +45,7 @@ class CourseSessionCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
         WidgetHelper::courseSessionStatisticsWidget();
 
         CRUD::column('name')->type('textarea');

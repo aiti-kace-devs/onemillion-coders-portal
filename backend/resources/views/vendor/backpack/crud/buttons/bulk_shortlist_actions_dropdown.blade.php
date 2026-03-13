@@ -166,6 +166,9 @@
                     });
 
                     $('#admitModal').modal('show');
+                    $('#admitModal').one('shown.bs.modal', function() {
+                        if (typeof window.initAdmitSelect2 === 'function') window.initAdmitSelect2(this);
+                    });
                 } catch (e) {
                     console.error('Error opening modal:', e);
                 }

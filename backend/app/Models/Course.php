@@ -37,8 +37,7 @@ class Course extends Model
      */
     public function getDisplayNameAttribute()
     {
-        $centreTitle = $this->centre?->title ?? 'Unknown Centre';
-        return $this->course_name ? "{$this->course_name} - {$centreTitle}" : $centreTitle;
+        return $this->course_name ?: ($this->centre?->title ?? 'Unknown Centre');
     }
 
     public function programme()
@@ -130,11 +129,20 @@ class Course extends Model
             $centre = $course->centre()->with('branch')->first();
             $branch = $centre?->branch;
 
-            $course->course_name = $programme && $branch
-                ? "{$programme->title} - ({$branch->title})"
+            $course->course_name = $programme && $centre
+                ? "{$programme->title} - ({$centre->title})"
                 : $course->course_name;
 
             $course->location = $branch?->title;
+        });
+
+        static::saved(function ($course) {
+            if ($course->wasChanged(['course_name', 'location'])) {
+                $course->sessions()->get()->each(function ($session) {
+                    $session->setSessionName();
+                    $session->save();
+                });
+            }
         });
     }
 }

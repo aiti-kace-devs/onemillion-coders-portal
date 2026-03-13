@@ -57,11 +57,11 @@ trait CourseFieldHelpers
         CRUD::addField([
             'name' => 'branch_id',
             'label' => 'Branch',
-            'type' => 'select',
+            'type' => 'select2',
             'model' => Branch::class,
             'attribute' => 'title',
             'allows_null' => true,
-            'wrapper' => ['class' => 'form-group col-6'],
+            'wrapper' => ['class' => 'form-group col-12'],
             'value' => $derivedBranchId,
             'fake' => true,
         ]);
@@ -154,7 +154,7 @@ CRUD::addField([
 
         $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
 
-        $this->addFieldsToTab('Course Info', true, ['branch_id', 'centre_id', 'programme_id', 'status']);
+        $this->addFieldsToTab('Course Info', true, ['branch_id', 'centre_id', 'programme_id','tags', 'status']);
         $this->addFieldsToTab('Course Duration', true, ['duration', 'start_date', 'end_date']);
     }
 
@@ -564,19 +564,55 @@ CRUD::addField([
 
     protected function courseMatchFields()
     {
+        $typeOptions = [
+            'General' => 'General',
+            'Choice' => 'Choice',
+        ];
+
+        $referenceOptions = [
+            'course_categories' => 'Course Categories (auto)',
+            'branches' => 'Branches (auto)',
+            'mode_of_delivery' => 'Mode of Delivery (auto)',
+        ];
 
         CRUD::addField([
             'name' => 'tag',
             'label' => 'Tag',
             'type' => 'text',
-            'wrapper' => ['class' => 'form-group col-6'],
+            'wrapper' => ['class' => 'form-group col-4'],
         ]);
 
         CRUD::addField([
             'name' => 'question',
             'label' => 'Question',
             'type' => 'text',
-            'wrapper' => ['class' => 'form-group col-6'],
+            'wrapper' => ['class' => 'form-group col-8'],
+        ]);
+
+        CRUD::addField([
+            'name' => 'type',
+            'label' => 'Type',
+            'type' => 'select_from_array',
+            'options' => $typeOptions,
+            'allows_null' => false,
+            'wrapper' => ['class' => 'form-group col-4'],
+        ]);
+
+        CRUD::addField([
+            'name' => 'reference_source',
+            'label' => 'Reference Options',
+            'type' => 'select_from_array',
+            'options' => $referenceOptions,
+            'allows_null' => true,
+            'wrapper' => ['class' => 'form-group col-4'],
+            'hint' => 'Leave blank for manual options. When set, options are auto-synced from the reference source.',
+        ]);
+
+        CRUD::addField([
+            'name' => 'order',
+            'label' => 'Order',
+            'type' => 'number',
+            'wrapper' => ['class' => 'form-group col-4'],
         ]);
 
 
@@ -584,7 +620,7 @@ CRUD::addField([
             'name' => 'description',
             'label' => 'Description',
             'type' => 'text',
-            'wrapper' => ['class' => 'form-group col-7'],
+            'wrapper' => ['class' => 'form-group col-12'],
         ]);
 
 
@@ -597,13 +633,9 @@ CRUD::addField([
         // ]);
 
 
-        CRUD::addField([
-            'name' => 'order',
-            'label' => 'Order',
-            'type' => 'number',
-            'wrapper' => ['class' => 'form-group col-5'],
-        ]);
+ 
 
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Multiple Select', 'is_multiple_select');
         $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
 
         CRUD::addField([
@@ -611,6 +643,7 @@ CRUD::addField([
             'label' => 'Options',
             'type' => 'repeatable',
             'new_item_label' => 'Add Option',
+            'hint' => 'Manual options are ignored when Reference Options is set.',
             'fields' => [
                 [
                     'name' => 'id',
@@ -653,7 +686,7 @@ CRUD::addField([
         ]);
 
 
-        $this->addFieldsToTab('Question', true, ['tag', 'question', 'description', 'order', 'status']);
+        $this->addFieldsToTab('Question', true, ['tag', 'question', 'description', 'type', 'reference_source', 'order', 'is_multiple_select', 'status']);
         $this->addFieldsToTab('Options', true, ['course_match_options']);
     }
 }

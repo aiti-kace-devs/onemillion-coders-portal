@@ -45,6 +45,7 @@ class User extends Authenticatable
         'shortlist',
         'student_level',
         'data',
+        'support'
     ];
 
     /**
@@ -70,6 +71,7 @@ class User extends Authenticatable
         'status' => 'boolean',
         'has_disability' => 'boolean',
         'data' => 'array',
+        'support' => 'boolean',
     ];
 
 

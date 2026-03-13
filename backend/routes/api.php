@@ -21,8 +21,10 @@ use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
 */
 Route::post('batch/add-courses/{batch}', [BatchCrudController::class, 'addCourses'])
        ->name('batch.add-courses');
-Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
-Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
+Route::post('/recommend/courses', [CourseMatchAPIController::class, 'recommendCourses']);
+// Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
+// Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
+
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -54,6 +56,9 @@ Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->group(functi
 */
 Route::get('/pages/footer', [StatamicEntryApiController::class, 'footer']);
 Route::get('/pages/{slug}', [StatamicEntryApiController::class, 'showPageBySlug']);
+
+Route::get('/forms/{handle}', [StatamicEntryApiController::class, 'showFormByHandle']);
+Route::post('/forms/{handle}', [StatamicEntryApiController::class, 'saveFormByHandle']);
 
 
 Route::name('custom.')->group(function () {
