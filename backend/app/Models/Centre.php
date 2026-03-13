@@ -15,6 +15,7 @@ class Centre extends Model
     protected $fillable = [
         'title',
         'branch_id',
+        'constituency_id',
         'status',
         'gps_address',
         'is_pwd_friendly',
@@ -31,6 +32,7 @@ class Centre extends Model
 
 
     protected $casts = [
+        'constituency_id' => 'integer',
         'status' => 'boolean',
         'is_pwd_friendly' => 'boolean',
         'wheelchair_accessible' => 'boolean',
@@ -49,6 +51,11 @@ class Centre extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class, 'branch_id', 'id');
+    }
+
+    public function constituency()
+    {
+        return $this->belongsTo(Constituency::class, 'constituency_id', 'id');
     }
 
     public function programme()

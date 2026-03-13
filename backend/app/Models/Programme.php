@@ -25,7 +25,9 @@ class Programme extends Model
         'job_responsible',
         'cover_image_id',
         'course_category_id',
-        'status'
+        'status',
+        'mode_of_delivery',
+        'provider'
     ];
 
     protected $casts = [

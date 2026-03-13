@@ -281,44 +281,159 @@
         clearIfAutoFilled(endInput);
     }
 
+    let batchCoursesCurrentPage = 1;
+    const batchCoursesPageSize = 10;
+
+    function getBatchCoursesFilterState() {
+        const searchInput = document.getElementById('batchCoursesSearch');
+        const centreSelect = document.getElementById('batchCoursesFilterCentre');
+        const programmeSelect = document.getElementById('batchCoursesFilterProgramme');
+        const locationSelect = document.getElementById('batchCoursesFilterLocation');
+        const dateInput = document.getElementById('batchCoursesFilterDate');
+        const statusSelect = document.getElementById('batchCoursesFilterStatus');
+
+        return {
+            query: searchInput ? String(searchInput.value || '').trim().toLowerCase() : '',
+            centreId: centreSelect ? String(centreSelect.value || '') : '',
+            programmeId: programmeSelect ? String(programmeSelect.value || '') : '',
+            location: locationSelect ? String(locationSelect.value || '').trim().toLowerCase() : '',
+            date: dateInput ? String(dateInput.value || '') : '',
+            status: statusSelect ? String(statusSelect.value || '') : '',
+        };
+    }
+
+    function rowMatchesBatchCoursesFilters(row, filters) {
+        if (!row || !filters) return false;
+
+        if (filters.centreId && row.dataset.centreId !== filters.centreId) return false;
+        if (filters.programmeId && row.dataset.programmeId !== filters.programmeId) return false;
+        if (filters.location) {
+            const rowLocation = String(row.dataset.location || '').toLowerCase();
+            if (rowLocation !== filters.location) return false;
+        }
+        if (filters.status && row.dataset.status !== filters.status) return false;
+        if (filters.date) {
+            const startDate = String(row.dataset.startDate || '');
+            const endDate = String(row.dataset.endDate || '');
+            if (startDate && filters.date < startDate) return false;
+            if (endDate && filters.date > endDate) return false;
+            if (!startDate && !endDate) return false;
+        }
+        if (filters.query) {
+            const text = String(row.textContent || '').toLowerCase();
+            if (!text.includes(filters.query)) return false;
+        }
+
+        return true;
+    }
+
     function applyBatchCoursesSearchFilter() {
         const tbody = document.getElementById('batchCoursesTableBody');
         if (!tbody) return;
 
-        const searchInput = document.getElementById('batchCoursesSearch');
-        const query = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
-        const noResultsMsg = document.getElementById('batchCoursesNoResultsMsg');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const totalRows = rows.length;
+        const filters = getBatchCoursesFilterState();
+        const filteredRows = rows.filter((row) => rowMatchesBatchCoursesFilters(row, filters));
 
-        let visibleCount = 0;
-        Array.from(tbody.querySelectorAll('tr')).forEach((row) => {
-            const text = String(row.textContent || '').toLowerCase();
-            const match = !query || text.includes(query);
-            row.style.display = match ? '' : 'none';
-            if (match) visibleCount++;
+        const totalPages = Math.max(1, Math.ceil(filteredRows.length / batchCoursesPageSize));
+        if (batchCoursesCurrentPage > totalPages) {
+            batchCoursesCurrentPage = totalPages;
+        }
+
+        const startIndex = (batchCoursesCurrentPage - 1) * batchCoursesPageSize;
+        const endIndex = startIndex + batchCoursesPageSize;
+
+        rows.forEach((row) => {
+            row.style.display = 'none';
+        });
+        filteredRows.slice(startIndex, endIndex).forEach((row) => {
+            row.style.display = '';
         });
 
+        const noResultsMsg = document.getElementById('batchCoursesNoResultsMsg');
         if (noResultsMsg) {
-            noResultsMsg.style.display = query && visibleCount === 0 ? 'block' : 'none';
+            noResultsMsg.style.display = totalRows > 0 && filteredRows.length === 0 ? 'block' : 'none';
         }
+
+        const pagination = document.getElementById('batchCoursesPagination');
+        const pageInfo = document.getElementById('batchCoursesPageInfo');
+        const prevBtn = document.getElementById('batchCoursesPrevBtn');
+        const nextBtn = document.getElementById('batchCoursesNextBtn');
+
+        if (pagination) {
+            pagination.style.display = totalRows > 0 && filteredRows.length > 0 ? 'flex' : 'none';
+        }
+        if (pageInfo) {
+            pageInfo.textContent = `Page ${totalPages === 0 ? 0 : batchCoursesCurrentPage} of ${totalPages}`;
+        }
+        if (prevBtn) prevBtn.disabled = batchCoursesCurrentPage <= 1;
+        if (nextBtn) nextBtn.disabled = batchCoursesCurrentPage >= totalPages;
     }
 
     function initBatchCoursesSearch() {
         const searchInput = document.getElementById('batchCoursesSearch');
-        if (!searchInput) return;
+        const centreSelect = document.getElementById('batchCoursesFilterCentre');
+        const programmeSelect = document.getElementById('batchCoursesFilterProgramme');
+        const locationSelect = document.getElementById('batchCoursesFilterLocation');
+        const dateInput = document.getElementById('batchCoursesFilterDate');
+        const statusSelect = document.getElementById('batchCoursesFilterStatus');
+        const clearBtn = document.getElementById('batchCoursesClearFilters');
+        const prevBtn = document.getElementById('batchCoursesPrevBtn');
+        const nextBtn = document.getElementById('batchCoursesNextBtn');
 
-        const onChange = function () {
+        const resetToFirstPage = function () {
+            batchCoursesCurrentPage = 1;
+        };
+
+        const onFilterChange = function () {
+            resetToFirstPage();
             applyBatchCoursesSearchFilter();
         };
 
-        searchInput.addEventListener('input', onChange);
-        // Fired when clearing a type="search" input in some browsers.
-        searchInput.addEventListener('search', onChange);
-        searchInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                searchInput.value = '';
-                applyBatchCoursesSearchFilter();
-            }
+        if (searchInput) {
+            searchInput.addEventListener('input', onFilterChange);
+            // Fired when clearing a type="search" input in some browsers.
+            searchInput.addEventListener('search', onFilterChange);
+            searchInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    searchInput.value = '';
+                    onFilterChange();
+                }
+            });
+        }
+
+        [centreSelect, programmeSelect, locationSelect, dateInput, statusSelect].forEach((el) => {
+            if (el) el.addEventListener('change', onFilterChange);
         });
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                if (searchInput) searchInput.value = '';
+                if (centreSelect) centreSelect.value = '';
+                if (programmeSelect) programmeSelect.value = '';
+                if (locationSelect) locationSelect.value = '';
+                if (dateInput) dateInput.value = '';
+                if (statusSelect) statusSelect.value = '';
+                onFilterChange();
+            });
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function () {
+                if (batchCoursesCurrentPage > 1) {
+                    batchCoursesCurrentPage -= 1;
+                    applyBatchCoursesSearchFilter();
+                }
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                batchCoursesCurrentPage += 1;
+                applyBatchCoursesSearchFilter();
+            });
+        }
 
         applyBatchCoursesSearchFilter();
     }

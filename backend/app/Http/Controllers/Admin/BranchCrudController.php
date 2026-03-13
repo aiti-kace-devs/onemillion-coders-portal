@@ -9,6 +9,7 @@ use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\FilterHelper;
 use App\Helpers\WidgetHelper;
 use App\Helpers\CrudListHelper;
+use App\Services\CourseMatchReferenceService;
 
 /**
  * Class BranchCrudController
@@ -21,7 +22,9 @@ class BranchCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation {
+        destroy as traitDestroy;
+    }
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
     /**
@@ -65,7 +68,8 @@ class BranchCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        $this->setupListOperation();
+        CRUD::set('show.setFromDb', false);
+        CRUD::set('show.view', 'vendor.backpack.crud.branch_show');
     }
 
     /**
@@ -109,5 +113,12 @@ class BranchCrudController extends CrudController
             'message' => 'Branch status updated successfully.',
             'value' => $branch->status ? 1 : 0,
         ]);
+    }
+
+    public function destroy($id)
+    {
+        $response = $this->traitDestroy($id);
+        app(CourseMatchReferenceService::class)->syncReferenceSource('branches');
+        return $response;
     }
 }
