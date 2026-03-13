@@ -105,6 +105,15 @@ class RegistrationFormAPIController extends Controller
 
     public function check_user_by_userID($userID)
     {
+
+        if (!config(ALLOW_COURSE_CHANGE, false)) {
+            return response()->json([
+            'success' => false,
+            'message' => 'Students not allowed to change course at this time. Contact the administrators.'
+            ]);
+
+        }
+
         $user = User::where('userId', $userID)->first();
 
         if (!$user) {

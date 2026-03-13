@@ -47,6 +47,71 @@ class CourseMatchAPIController extends Controller
         ]);
     }
 
+    public function checkUserRecommendedCourses(string $userId)
+    {
+        $recommendations = DB::table('user_course_recommendations')
+            ->where('user_id', $userId)
+            ->orderBy('rank')
+            ->get();
+
+        if ($recommendations->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No recommended courses found.',
+            ]);
+        }
+
+        $courseIds = $recommendations
+            ->pluck('course_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $courses = Course::with('programme')
+            ->whereIn('id', $courseIds)
+            ->get()
+            ->keyBy('id');
+
+        $matches = $recommendations
+            ->map(function ($recommendation, $index) use ($courses) {
+                $courseId = $recommendation->course_id;
+                $course = $courseId ? $courses->get($courseId) : null;
+                $programme = $course?->programme;
+
+                if (!$programme) {
+                    return null;
+                }
+
+                $rankValue = $recommendation->rank ?? ($index + 1);
+
+                return [
+                    'rank' => '#' . $rankValue,
+                    'id' => $programme->id,
+                    'title' => $programme->title,
+                    'sub_title' => $programme->sub_title,
+                    'duration' => $programme->duration,
+                    'level' => $programme->level,
+                    'image' => $programme->image,
+                    'job_responsible' => $programme->job_responsible,
+                    'prerequisites' => $programme->prerequisites,
+                    'mode_of_delivery' => $programme->mode_of_delivery,
+                    'provider' => $programme->provider,
+                    'match_percentage' => ((int) $recommendation->match_percentage) . '% Match',
+                    'course_id' => $courseId,
+                    'centre_id' => $recommendation->centre_id ?? $course?->centre_id,
+                ];
+            })
+            ->filter()
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'title' => 'Your Previous Course Matches',
+            'description' => 'Based on your previous preferences, here are recommended courses that best align with your goals',
+            'matches' => $matches,
+        ]);
+    }
+
 
 
 
@@ -741,10 +806,12 @@ class CourseMatchAPIController extends Controller
             $now = now();
             $recommendationRows = $combined->map(function ($programme, $index) use ($centreCourses, $optionIds, $studentLevel, $now, $userId) {
                 $programmeCourses = $centreCourses->where('programme_id', $programme->id);
+                $primaryCourse = $programmeCourses->first();
 
                 return [
                     'user_id' => $userId,
-                    'course_id' => $programmeCourses->first()?->id,
+                    'course_id' => $primaryCourse?->id,
+                    'centre_id' => $primaryCourse?->centre_id,
                     'rank' => $index + 1,
                     'match_percentage' => $programme->match_percentage,
                     'option_ids' => json_encode($optionIds),
