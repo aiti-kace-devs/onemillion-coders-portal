@@ -9,7 +9,7 @@ use Illuminate\Support\ServiceProvider;
 use Statamic\Facades\CP\Nav;
 use Illuminate\Support\Facades\Validator;
 use App\Rules\Recaptcha;
-
+use Illuminate\Support\Facades\Cache;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -113,6 +113,14 @@ class AppServiceProvider extends ServiceProvider
             });
 
             return $passed;
+        });
+
+        Cache::remember('jwt_secret', 60 * 60 * 24 * 365, function () {
+            if (!Cache::has('jwt_secret')) {
+                $secret = config('app.jwt_token') ?? generate_jwt_secret();
+                Cache::put('jwt_secret', $secret);
+            }
+            return Cache::get('jwt_secret');
         });
     }
 }

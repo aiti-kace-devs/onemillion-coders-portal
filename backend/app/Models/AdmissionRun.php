@@ -13,6 +13,7 @@ class AdmissionRun extends Model
     protected $fillable = [
         'course_id',
         'programme_id',
+        'centre_id',
         'batch_id',
         'run_by',
         'run_at',
@@ -52,6 +53,14 @@ class AdmissionRun extends Model
     }
 
     /**
+     * Get the centre for this admission run
+     */
+    public function centre(): BelongsTo
+    {
+        return $this->belongsTo(Centre::class);
+    }
+
+    /**
      * Get the batch for this admission run
      */
     public function batch(): BelongsTo
@@ -88,9 +97,13 @@ class AdmissionRun extends Model
             ->first();
 
         // Cache the results for 10 minutes
-        $cacheKey = $this->course_id
-            ? "admission_stats:{$this->course_id}:{$this->batch_id}"
-            : "admission_stats:programme:{$this->programme_id}:{$this->batch_id}";
+        if ($this->course_id) {
+            $cacheKey = "admission_stats:{$this->course_id}:{$this->batch_id}";
+        } elseif ($this->programme_id) {
+            $cacheKey = "admission_stats:programme:{$this->programme_id}:{$this->batch_id}";
+        } else {
+            $cacheKey = "admission_stats:centre:{$this->centre_id}:{$this->batch_id}";
+        }
         Cache::put($cacheKey, $stats, 600);
 
         // Bulk update all admissions in a single query
@@ -117,6 +130,10 @@ class AdmissionRun extends Model
         if ($this->programme_id) {
             Cache::forget("admission_stats:programme:{$this->programme_id}:{$this->batch_id}");
             Cache::forget("admission_stats:programme:{$this->programme_id}");
+        }
+        if ($this->centre_id) {
+            Cache::forget("admission_stats:centre:{$this->centre_id}:{$this->batch_id}");
+            Cache::forget("admission_stats:centre:{$this->centre_id}");
         }
         Cache::forget("admission_stats:global");
     }

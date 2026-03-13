@@ -33,6 +33,9 @@ class AdmissionRunCrudController extends CrudController
                 if ($entry->programme_id) {
                     return '[Programme] ' . ($entry->programme->title ?? 'N/A');
                 }
+                if ($entry->centre_id) {
+                    return '[Centre] ' . ($entry->centre->title ?? 'N/A');
+                }
                 return '[Course] ' . ($entry->course->course_name ?? 'N/A');
             }
         ]);
@@ -119,9 +122,10 @@ class AdmissionRunCrudController extends CrudController
     {
         $courses = Course::with('programme')->get();
         $programmes = \App\Models\Programme::orderBy('title')->get();
+        $centres = \App\Models\Centre::orderBy('title')->get();
         $batches = Batch::where('status', true)->get();
 
-        return view('admin.admission.run', compact('courses', 'programmes', 'batches'));
+        return view('admin.admission.run', compact('courses', 'programmes', 'centres', 'batches'));
     }
 
     /**
@@ -132,18 +136,23 @@ class AdmissionRunCrudController extends CrudController
         $validated = $request->validate([
             'course_id'      => 'nullable|exists:courses,id',
             'programme_id'   => 'nullable|exists:programmes,id',
+            'centre_id'      => 'nullable|exists:centres,id',
             'limit'          => 'required|integer|min:1',
             'active_rules'   => 'nullable|array',
             'active_rules.*' => 'integer|exists:rules,id',
         ]);
 
-        if (empty($validated['course_id']) && empty($validated['programme_id'])) {
-            return response()->json(['success' => false, 'message' => 'Please select a course or programme'], 422);
+        if (empty($validated['course_id']) && empty($validated['programme_id']) && empty($validated['centre_id'])) {
+            return response()->json(['success' => false, 'message' => 'Please select a course, programme or centre'], 422);
         }
 
-        $entity = !empty($validated['programme_id'])
-            ? \App\Models\Programme::findOrFail($validated['programme_id'])
-            : Course::findOrFail($validated['course_id']);
+        if (!empty($validated['programme_id'])) {
+            $entity = \App\Models\Programme::findOrFail($validated['programme_id']);
+        } elseif (!empty($validated['centre_id'])) {
+            $entity = \App\Models\Centre::findOrFail($validated['centre_id']);
+        } else {
+            $entity = Course::findOrFail($validated['course_id']);
+        }
 
         $batchId = $entity instanceof Course
             ? $entity->batch->id
@@ -166,6 +175,7 @@ class AdmissionRunCrudController extends CrudController
                 'age' => $student->age,
                 'student_level' => $student->student_level ?? 'N/A',
                 'educational_level' => $student->educational_level ?? 'N/A',
+                'programme' => $student->course->programme->title ?? 'N/A',
                 'applied_date' => $student->created_at->format('Y-m-d'),
             ];
         });
@@ -190,6 +200,7 @@ class AdmissionRunCrudController extends CrudController
         $validated = $request->validate([
             'course_id'      => 'nullable|exists:courses,id',
             'programme_id'   => 'nullable|exists:programmes,id',
+            'centre_id'      => 'nullable|exists:centres,id',
             'limit'          => 'required|integer|min:1',
             'admit_all'      => 'nullable|boolean',
             'session_id'     => 'nullable|exists:course_sessions,id',
@@ -197,13 +208,17 @@ class AdmissionRunCrudController extends CrudController
             'active_rules.*' => 'integer|exists:rules,id',
         ]);
 
-        if (empty($validated['course_id']) && empty($validated['programme_id'])) {
-            return response()->json(['success' => false, 'message' => 'Please select a course or programme'], 422);
+        if (empty($validated['course_id']) && empty($validated['programme_id']) && empty($validated['centre_id'])) {
+            return response()->json(['success' => false, 'message' => 'Please select a course, programme or centre'], 422);
         }
 
-        $entity = !empty($validated['programme_id'])
-            ? \App\Models\Programme::findOrFail($validated['programme_id'])
-            : Course::findOrFail($validated['course_id']);
+        if (!empty($validated['programme_id'])) {
+            $entity = \App\Models\Programme::findOrFail($validated['programme_id']);
+        } elseif (!empty($validated['centre_id'])) {
+            $entity = \App\Models\Centre::findOrFail($validated['centre_id']);
+        } else {
+            $entity = Course::findOrFail($validated['course_id']);
+        }
 
         $batchId = $entity instanceof Course
             ? $entity->batch->id
@@ -245,15 +260,20 @@ class AdmissionRunCrudController extends CrudController
         $validated = $request->validate([
             'course_id' => 'nullable|exists:courses,id',
             'programme_id' => 'nullable|exists:programmes,id',
+            'centre_id' => 'nullable|exists:centres,id',
         ]);
 
-        if (empty($validated['course_id']) && empty($validated['programme_id'])) {
-            return response()->json(['success' => false, 'message' => 'Please select a course or programme'], 422);
+        if (empty($validated['course_id']) && empty($validated['programme_id']) && empty($validated['centre_id'])) {
+            return response()->json(['success' => false, 'message' => 'Please select a course, programme or centre'], 422);
         }
 
-        $entity = !empty($validated['programme_id'])
-            ? \App\Models\Programme::findOrFail($validated['programme_id'])
-            : Course::findOrFail($validated['course_id']);
+        if (!empty($validated['programme_id'])) {
+            $entity = \App\Models\Programme::findOrFail($validated['programme_id']);
+        } elseif (!empty($validated['centre_id'])) {
+            $entity = \App\Models\Centre::findOrFail($validated['centre_id']);
+        } else {
+            $entity = Course::findOrFail($validated['course_id']);
+        }
 
         $rules = $entity->getAllRules();
 

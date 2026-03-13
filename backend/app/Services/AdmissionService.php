@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Course;
 use App\Models\Programme;
+use App\Models\Centre;
 use App\Models\User;
 use App\Models\AdmissionRun;
 use App\Models\Admin;
@@ -26,7 +27,7 @@ class AdmissionService
     /** Maximum students shown in preview for performance */
     const PREVIEW_DISPLAY_CAP = 200;
 
-    public function previewAdmission(Course|Programme $entity, int $limit, ?int $batchId = null, ?array $activeRulesId = null): array
+    public function previewAdmission(Course|Programme|Centre $entity, int $limit, ?int $batchId = null, ?array $activeRulesId = null): array
     {
         // Get effective rules
         $rules = $entity->getEffectiveRules();
@@ -61,7 +62,13 @@ class AdmissionService
         $stats = $this->calculateStatistics($students, $total);
         $stats['will_admit'] = min($limit, $total); // how many will actually be admitted
         $stats['preview_capped'] = $limit > self::PREVIEW_DISPLAY_CAP; // flag for UI
-        $level = $entity instanceof Programme ? $entity->level : $entity->programme->level;
+        if ($entity instanceof Programme) {
+            $level = $entity->level;
+        } elseif ($entity instanceof Course) {
+            $level = $entity->programme->level;
+        } else {
+            $level = 'N/A'; // Centres might not have a single level
+        }
 
         return [
             'students' => $students,
@@ -82,7 +89,7 @@ class AdmissionService
      * @return AdmissionRun
      */
     public function executeAdmission(
-        Course|Programme $entity,
+        Course|Programme|Centre $entity,
         int $limit,
         int $batchId,
         ?int $sessionId = null,
@@ -113,6 +120,7 @@ class AdmissionService
             $admissionRun = AdmissionRun::create([
                 'course_id'     => $entity instanceof Course ? $entity->id : null,
                 'programme_id'  => $entity instanceof Programme ? $entity->id : null,
+                'centre_id'     => $entity instanceof Centre ? $entity->id : null,
                 'batch_id'      => $batchId,
                 'run_by'        => $admin?->id ?? backpack_user()?->id,
                 'run_at'        => now(),
@@ -166,6 +174,8 @@ class AdmissionService
             // Invalidate cache
             if ($entity instanceof Course) {
                 app(AdmissionStatisticsService::class)->invalidateCache($entity, $entity->batch ?? \App\Models\Batch::find($batchId));
+            } elseif ($entity instanceof Centre) {
+                $admissionRun->invalidateCache();
             }
 
             DB::commit();
@@ -217,10 +227,10 @@ class AdmissionService
     /**
      * Get base query with exclusions
      *
-     * @param Course|Programme $entity
+     * @param Course|Programme|Centre $entity
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    protected function getBaseQuery(Course|Programme $entity)
+    protected function getBaseQuery(Course|Programme|Centre $entity)
     {
         // based query uses student_level as this is only set after assessment
         $query = User::query()
@@ -235,6 +245,13 @@ class AdmissionService
                 });
         } elseif ($entity instanceof Programme) {
             // Get all course IDs for the programme
+            $courseIds = $entity->courses()->pluck('id');
+            $query->whereIn('registered_course', $courseIds)
+                ->whereDoesntHave('rejectedAdmissions', function ($q) use ($courseIds) {
+                    $q->whereIn('course_id', $courseIds);
+                });
+        } elseif ($entity instanceof Centre) {
+            // Get all course IDs for the centre
             $courseIds = $entity->courses()->pluck('id');
             $query->whereIn('registered_course', $courseIds)
                 ->whereDoesntHave('rejectedAdmissions', function ($q) use ($courseIds) {

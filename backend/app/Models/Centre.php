@@ -68,6 +68,33 @@ class Centre extends Model
             ->withTimestamps();
     }
 
+    /**
+     * Get all rules assigned to this centre
+     */
+    public function rules()
+    {
+        return $this->morphToMany(Rule::class, 'ruleable', 'rule_assignments')
+            ->withPivot(['value', 'priority'])
+            ->withTimestamps()
+            ->orderBy('rule_assignments.priority', 'asc');
+    }
+
+    /**
+     * Get effective rules for admission
+     */
+    public function getEffectiveRules()
+    {
+        return $this->rules()->where('rule_assignments.is_active', true)->get();
+    }
+
+    /**
+     * Get all rules including inactive
+     */
+    public function getAllRules()
+    {
+        return $this->rules()->get();
+    }
+
     protected static function booted()
     {
         static::saved(function ($centre) {

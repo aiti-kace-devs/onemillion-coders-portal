@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Traits;
 
 use App\Models\Course;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use ReallySimpleJWT\Token;
 
 trait AttendanceQRCodeTrait
@@ -12,7 +13,7 @@ trait AttendanceQRCodeTrait
     {
         $date = Carbon::parse($data['date']);
         $course = Course::findOrFail($data['course_id']);
-        $secret = config('app.jwt_token') ?? generate_jwt_secret();
+        $secret = Cache::get('jwt_secret');
 
         $dataToEncode = json_encode([
             'course_id' => $course->id,

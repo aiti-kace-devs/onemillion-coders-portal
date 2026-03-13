@@ -44,6 +44,9 @@
 
                                     <input type="radio" class="btn-check d-none" name="admission_mode" id="mode_programme" value="programme" autocomplete="off">
                                     <label class="btn btn-outline-warning" for="mode_programme">Admit by Programme</label>
+
+                                    <input type="radio" class="btn-check d-none" name="admission_mode" id="mode_centre" value="centre" autocomplete="off">
+                                    <label class="btn btn-outline-info" for="mode_centre">Admit by Centre</label>
                                 </div>
                             </div>
                         </div>
@@ -67,6 +70,17 @@
                                         <option value="">-- Select Programme --</option>
                                         @foreach ($programmes as $programme)
                                             <option value="{{ $programme->id }}">{{ $programme->title }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6" id="centre_selection" style="display:none;">
+                                <div class="form-group">
+                                    <label for="centre_id">Centre <span class="text-danger">*</span></label>
+                                    <select name="centre_id" id="centre_id" class="form-control select2">
+                                        <option value="">-- Select Centre --</option>
+                                        @foreach ($centres as $centre)
+                                            <option value="{{ $centre->id }}">{{ $centre->title }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -149,6 +163,7 @@
                                     <th>Age</th>
                                     <th>Student Level</th>
                                     <th>Education Level</th>
+                                    <th>Programme</th>
                                     <th>Applied Date</th>
                                 </tr>
                             </thead>
@@ -190,11 +205,18 @@
                     if (currentMode === 'course') {
                         $('#course_selection').show();
                         $('#programme_selection').hide();
+                        $('#centre_selection').hide();
                         $('#course_id').trigger('change');
-                    } else {
+                    } else if (currentMode === 'programme') {
                         $('#course_selection').hide();
                         $('#programme_selection').show();
+                        $('#centre_selection').hide();
                         $('#programme_id').trigger('change');
+                    } else {
+                        $('#course_selection').hide();
+                        $('#programme_selection').hide();
+                        $('#centre_selection').show();
+                        $('#centre_id').trigger('change');
                     }
                 });
 
@@ -210,7 +232,8 @@
 
                     let requestData = { _token: '{{ csrf_token() }}' };
                     if (entityType === 'course') requestData.course_id = entityId;
-                    else requestData.programme_id = entityId;
+                    else if (entityType === 'programme') requestData.programme_id = entityId;
+                    else requestData.centre_id = entityId;
 
                     $.ajax({
                         url: '{{ backpack_url('admission-run/get-rules') }}',
@@ -260,6 +283,12 @@
                     }
                 });
 
+                $('#centre_id').change(function() {
+                    if (currentMode === 'centre') {
+                        loadRules('centre', $(this).val());
+                    }
+                });
+
                 function getActiveRules() {
                     const rules = [];
                     $('.rule-toggle:checked').each(function() {
@@ -271,9 +300,15 @@
                 $('#previewBtn').click(function() {
                     const courseId = $('#course_id').val();
                     const programmeId = $('#programme_id').val();
+                    const centreId = $('#centre_id').val();
                     const limit = $('#limit').val();
 
-                    if ((currentMode === 'course' && !courseId) || (currentMode === 'programme' && !programmeId) || !limit) {
+                    if (
+                        (currentMode === 'course' && !courseId) || 
+                        (currentMode === 'programme' && !programmeId) || 
+                        (currentMode === 'centre' && !centreId) || 
+                        !limit
+                    ) {
                         new Noty({
                             type: 'error',
                             text: 'Please fill in all required fields.'
@@ -292,7 +327,8 @@
                         active_rules: activeRules || [0]
                     };
                     if (currentMode === 'course') requestData.course_id = courseId;
-                    else requestData.programme_id = programmeId;
+                    else if (currentMode === 'programme') requestData.programme_id = programmeId;
+                    else requestData.centre_id = centreId;
                     
                     $.ajax({
                         url: '{{ route('admission.preview') }}',
@@ -351,6 +387,7 @@
                         if (result.isConfirmed) {
                             const courseId = $('#course_id').val();
                             const programmeId = $('#programme_id').val();
+                            const centreId = $('#centre_id').val();
                             const batchId = $('#batch_id').val();
                             const limit = $('#limit').val();
                             const activeRules = getActiveRules();
@@ -367,7 +404,8 @@
                                 active_rules: activeRules
                             };
                             if (currentMode === 'course') requestData.course_id = courseId;
-                            else requestData.programme_id = programmeId;
+                            else if (currentMode === 'programme') requestData.programme_id = programmeId;
+                            else requestData.centre_id = centreId;
 
                             $.ajax({
                                 url: '{{ route('admission.execute') }}',
@@ -452,8 +490,9 @@
                     <td>${student.email}</td>
                     <td>${student.gender}</td>
                     <td>${student.age}</td>
-                    <td>${data.course_programme_level ? displayLevel(student.student_level, data.course_programme_level) : displayLevel(student.student_level)}</td>
+                    <td>${student.student_level ? (data.course_programme_level ? displayLevel(student.student_level, data.course_programme_level) : displayLevel(student.student_level)) : 'N/A'}</td>
                     <td>${student.educational_level}</td>
+                    <td>${student.programme}</td>
                     <td>${student.applied_date}</td>
                 </tr>
             `);
