@@ -9,6 +9,7 @@ use App\Helpers\CourseFieldHelpers;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
+use App\Services\CourseMatchReferenceService;
 
 /**
  * Class CourseMatchCrudController
@@ -119,6 +120,15 @@ class CourseMatchCrudController extends CrudController
 
     protected function handleCourseMatchOptions($courseMatch, $options)
     {
+        $referenceSource = request()->input('reference_source') ?? $courseMatch->reference_source;
+        $referenceService = app(CourseMatchReferenceService::class);
+        $referenceOptions = $referenceService->getReferenceOptions($referenceSource);
+
+        if ($referenceSource && $referenceOptions !== null) {
+            $referenceService->syncCourseMatchOptions($courseMatch, $referenceOptions);
+            return;
+        }
+
         $existingOptionIds = $courseMatch->courseMatchOptions()->pluck('id')->toArray();
         $incomingOptionIds = collect($options)->pluck('id')->filter()->toArray();
 

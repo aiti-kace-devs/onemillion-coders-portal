@@ -3,68 +3,275 @@
 import { motion } from "framer-motion";
 import {
   FiGlobe,
-  FiUsers,
-  FiMapPin,
   FiZap,
   FiSearch,
-  FiBook,
 } from "react-icons/fi";
 import Button from "./Button";
-import Image from "next/image";
-import { GhanaGradientBar, GhanaGradientText } from "@/components/GhanaGradients";
+import {
+  GhanaGradientBar,
+  GhanaGradientText,
+} from "@/components/GhanaGradients";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { fetchBranchesSummary } from "@/services/api";
+
+// Map SVG element IDs to display names
+const REGION_MAP = {
+  GHAA: "Greater Accra",
+  GHAF: "Ahafo",
+  GHAH: "Ashanti",
+  GHBE: "Bono East",
+  GHBO: "Bono",
+  GHCP: "Central",
+  GHEP: "Eastern",
+  GHNE: "North East",
+  GHNP: "Northern",
+  GHOT: "Oti",
+  GHSV: "Savannah",
+  GHTV: "Volta",
+  GHUE: "Upper East",
+  GHUW: "Upper West",
+  GHWN: "Western North",
+  GHWP: "Western",
+};
+
+
+// Region center coordinates (% of viewBox) for tooltip positioning during auto-cycle
+const REGION_CENTERS = {
+  GHAA: { x: 62.73, y: 81.13 },
+  GHAF: { x: 33.0, y: 61.83 },
+  GHAH: { x: 43.26, y: 66.51 },
+  GHBE: { x: 47.69, y: 51.46 },
+  GHBO: { x: 31.68, y: 51.72 },
+  GHCP: { x: 44.99, y: 83.43 },
+  GHEP: { x: 56.61, y: 71.77 },
+  GHNE: { x: 54.89, y: 16.22 },
+  GHNP: { x: 59.5, y: 24.87 },
+  GHOT: { x: 68.2, y: 50.74 },
+  GHSV: { x: 38.69, y: 32.02 },
+  GHTV: { x: 71.31, y: 73.38 },
+  GHUE: { x: 50.15, y: 10.31 },
+  GHUW: { x: 33.68, y: 15.43 },
+  GHWN: { x: 25.3, y: 74.63 },
+  GHWP: { x: 34.18, y: 87.01 },
+};
+
+// Region IDs ordered top to bottom by geographic position
+const REGION_ORDER = [
+  "GHUE", "GHUW", "GHNE", "GHNP", "GHSV", "GHOT",
+  "GHBE", "GHBO", "GHAF", "GHAH", "GHEP", "GHTV",
+  "GHWN", "GHAA", "GHCP", "GHWP",
+];
 
 const TechGhanaSection = () => {
   const router = useRouter();
-  const [activeTooltip, setActiveTooltip] = useState(null);
+  const [hoveredRegion, setHoveredRegion] = useState(null);
   const [branchesData, setBranchesData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [svgContent, setSvgContent] = useState("");
+  const mapRef = useRef(null);
+  const tooltipRef = useRef(null);
+  const userInteracting = useRef(false);
+  const autoIndexRef = useRef(0);
+  const autoRegionRef = useRef(null);
+  const [mapInView, setMapInView] = useState(true);
 
-  // Region position mapping for regions with active programs
-  const regionPositions = {
-    "Greater Accra Region": "top-[83%] left-[63%]", // Southeast coastal area
-    "Ashanti Region": "top-[70%] left-[42%]", // Central-south area where Kumasi is located
-    "Bono Region": "top-[47%] left-[50%]", // West-central area
-    "Upper East Region": "top-[12%] left-[60%]", // Northeast area
+  // Clamp tooltip position within viewport bounds
+  const positionTooltip = (x, y) => {
+    if (!tooltipRef.current) return;
+    const tooltip = tooltipRef.current;
+    const tooltipWidth = tooltip.offsetWidth || 256;
+    const tooltipHeight = tooltip.offsetHeight || 120;
+    const padding = 8;
+
+    const clampedX = Math.min(Math.max(padding, x), window.innerWidth - tooltipWidth - padding);
+    const clampedY = Math.max(padding + tooltipHeight, y);
+
+    tooltip.style.left = `${clampedX}px`;
+    tooltip.style.top = `${clampedY}px`;
   };
 
-  // Fetch branches data on component mount
+  // Fetch and process SVG map
+  useEffect(() => {
+    fetch("/images/gh.svg")
+      .then((res) => res.text())
+      .then((raw) => {
+        let processed = raw
+          // Remove XML declaration
+          .replace(/<\?xml[^?]*\?>/g, "")
+          // Remove comments
+          .replace(/<!--[\s\S]*?-->/g, "")
+          // Fix viewbox -> viewBox (case-sensitive SVG attribute)
+          .replace(/viewbox=/gi, "viewBox=")
+          // Remove fixed width/height so CSS can control sizing
+          .replace(/\s+width="1000"/, "")
+          .replace(/\s+height="1000"/, "")
+          // Deeper green for map regions
+          .replace(/fill="#6f9c76"/, 'fill="#2D6A4F"');
+
+        // Inject hover styles inside the SVG element
+        const styleTag = `<style>
+          #features path {
+            transition: fill 0.6s ease-in-out, filter 0.6s ease-in-out;
+            cursor: pointer;
+          }
+          #features path:hover {
+            fill: #d4a017 !important;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+          }
+        </style>`;
+        // Insert style tag right after the opening <svg ...> tag
+        processed = processed.replace(/(xmlns="[^"]*">)/, "$1\n" + styleTag);
+
+        setSvgContent(processed);
+      })
+      .catch(console.error);
+  }, []);
+
+  // Fetch branches data
   useEffect(() => {
     const loadBranchesData = async () => {
       try {
         setLoading(true);
         const response = await fetchBranchesSummary();
         if (response?.success && response?.data) {
-          setBranchesData(response.data);
+setBranchesData(response.data);
         }
       } catch (error) {
-        console.error('Failed to load branches data:', error);
-        // Component will fall back to default data
+        console.error("Failed to load branches data:", error);
       } finally {
         setLoading(false);
       }
     };
-
     loadBranchesData();
   }, []);
 
-  // Create regions array from API data only
-  const regions = branchesData
-    .filter(branch => regionPositions[branch.branch_title]) // Only include regions we have positions for
-    .map(apiData => {
-      const courseTitles = apiData.courses?.map(course => course.title).join(', ') || 'Various Programs';
-      return {
-        name: apiData.branch_title,
-        position: regionPositions[apiData.branch_title],
-        coders: `${apiData.total_trained_coders.toLocaleString()}+`,
-        programs: courseTitles,
-        centers: `${apiData.total_centres} Training Center${apiData.total_centres !== 1 ? 's' : ''}`,
-        hasApiData: true,
-        courses: apiData.courses || []
-      };
+  // Hide circles/labels once SVG is loaded
+  useEffect(() => {
+    if (!mapRef.current || !svgContent) return;
+    const svg = mapRef.current.querySelector("svg");
+    if (!svg) return;
+
+    const circlesGroup = svg.querySelector("#circles");
+    if (circlesGroup) circlesGroup.style.display = "none";
+    const labelsGroup = svg.querySelector("#labels");
+    if (labelsGroup) labelsGroup.style.display = "none";
+  }, [svgContent]);
+
+  // Use event delegation on container for reliable hover tracking
+  useEffect(() => {
+    const container = mapRef.current;
+    if (!container) return;
+
+    const handleMouseOver = (e) => {
+      const path = e.target.closest("#features path");
+      if (path && path.id) {
+        userInteracting.current = true;
+        setHoveredRegion(path.id);
+      }
+    };
+
+    const handleMouseMove = (e) => {
+      positionTooltip(e.clientX + 16, e.clientY - 16);
+    };
+
+    const handleMouseLeave = () => {
+      userInteracting.current = false;
+      setHoveredRegion(null);
+    };
+
+    container.addEventListener("mouseover", handleMouseOver);
+    container.addEventListener("mousemove", handleMouseMove);
+    container.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      container.removeEventListener("mouseover", handleMouseOver);
+      container.removeEventListener("mousemove", handleMouseMove);
+      container.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, [svgContent]);
+
+  // Track if map is in viewport
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setMapInView(entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+    observer.observe(mapRef.current);
+    return () => observer.disconnect();
+  }, [svgContent]);
+
+  // Reposition tooltip on scroll during auto-cycle
+  useEffect(() => {
+    const handleScroll = () => {
+      if (userInteracting.current || !autoRegionRef.current) return;
+      const center = REGION_CENTERS[autoRegionRef.current];
+      if (center && mapRef.current) {
+        const rect = mapRef.current.getBoundingClientRect();
+        positionTooltip(
+          rect.left + (center.x / 100) * rect.width + 16,
+          rect.top + (center.y / 100) * rect.height - 16
+        );
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Auto-cycle through regions top to bottom
+  useEffect(() => {
+    if (!mapRef.current || !svgContent) return;
+
+    const interval = setInterval(() => {
+      if (userInteracting.current || !mapInView) return;
+
+      const regionId = REGION_ORDER[autoIndexRef.current];
+      autoRegionRef.current = regionId;
+
+      // Position tooltip near the region center
+      const center = REGION_CENTERS[regionId];
+      if (center && mapRef.current) {
+        const rect = mapRef.current.getBoundingClientRect();
+        positionTooltip(
+          rect.left + (center.x / 100) * rect.width + 16,
+          rect.top + (center.y / 100) * rect.height - 16
+        );
+      }
+
+      setHoveredRegion(regionId);
+      autoIndexRef.current = (autoIndexRef.current + 1) % REGION_ORDER.length;
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [svgContent, mapInView]);
+
+  // Find branch data for a hovered region
+  // Normalizes names to handle variations like "Greater Accra" vs "Greater Accra Region",
+  // "North East" vs "Northern East", etc.
+  const getBranchData = (regionId) => {
+    const regionName = REGION_MAP[regionId];
+    if (!regionName) return null;
+
+    const normalize = (str) =>
+      str
+        .toLowerCase()
+        .replace(/\s*region\s*/g, "")
+        .replace(/northern\s+east/, "north east")
+        .trim();
+
+    const normalizedRegion = normalize(regionName);
+
+    const match = branchesData.find((b) => {
+      return normalize(b.branch_title) === normalizedRegion;
     });
+
+    return match;
+  };
+
+  const hoveredBranchData = hoveredRegion
+    ? getBranchData(hoveredRegion)
+    : null;
 
   return (
     <section className="relative section-spacing bg-white overflow-visible py-20">
@@ -75,35 +282,6 @@ const TechGhanaSection = () => {
       <GhanaGradientBar height="3px" position="top" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        {/* <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
-          <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center space-x-2">
-              <FiMapPin className="w-6 h-6 text-red-600" />
-              <span className="text-red-600 font-semibold text-sm uppercase tracking-wide">
-                One Million Coders Ghana
-              </span>
-            </div>
-          </div>
-          <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-            Empowering Ghana&apos;s
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-yellow-500 to-green-600">
-              Digital Transformation
-            </span>
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Building world-class tech talent across Ghana&apos;s regions with
-            comprehensive training programs and industry-recognized
-            certifications.
-          </p>
-        </motion.div> */}
-
         {/* Two-Column Layout: Text + Map */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -132,130 +310,96 @@ const TechGhanaSection = () => {
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
                   <p className="text-sm text-gray-500">
-                    Click on any active region to explore training programs, enrollment data, and available courses
+                    Hover over any region on the map to explore training
+                    programs and available courses
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Right Column - Ghana Map */}
+            {/* Right Column - Interactive SVG Map */}
             <div className="relative">
-              <div className="relative h-96 lg:h-[500px] overflow-visible">
-                {/* Map Background */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Image
-                    src="/images/ghana/map-pattern.png"
-                    alt="Ghana Map"
-                    fill
-                    className="object-contain opacity-60"
-                  />
-                </div>
-
+              <div className="relative h-96 lg:h-[500px]">
                 {/* Loading Overlay */}
                 {loading && (
                   <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="flex items-center space-x-3 bg-white rounded-lg px-4 py-3 shadow-lg">
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600"></div>
-                      <span className="text-sm text-gray-700 font-medium">Loading branch data...</span>
+                      <span className="text-sm text-gray-700 font-medium">
+                        Loading branch data...
+                      </span>
                     </div>
                   </div>
                 )}
 
-                {/* Regional Markers */}
-                {regions.length === 0 && !loading && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="bg-white rounded-lg px-6 py-4 shadow-lg border border-gray-200">
-                      <p className="text-gray-600 text-center">
-                        No active training regions available at the moment
-                      </p>
-                    </div>
-                  </div>
+                {/* Dynamic highlight style — React-controlled, survives re-renders */}
+                {hoveredRegion && (
+                  <style>{`
+                    #features path#${hoveredRegion} {
+                      fill: #d4a017 !important;
+                      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+                    }
+                  `}</style>
                 )}
-                {regions.map((region, index) => (
-                  <motion.div
-                    key={region.name}
-                    initial={{ opacity: 0, scale: 0 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className={`absolute ${region.position} transform -translate-x-1/2 -translate-y-1/2`}
-                    style={{ zIndex: activeTooltip === index ? 1000 : 10 }}
-                  >
-                    <div
-                      className="group relative cursor-pointer"
-                      onClick={() =>
-                        setActiveTooltip(activeTooltip === index ? null : index)
-                      }
-                      onMouseEnter={() => setActiveTooltip(index)}
-                      onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                      {/* Clean Simple Marker */}
-                      <div className="w-4 h-4 bg-red-600 rounded-full border border-white hover:scale-125 transition-transform duration-200 shadow-sm"></div>
-                      <div className="absolute w-6 h-6 bg-red-600/20 rounded-full -top-1 -left-1 animate-pulse"></div>
 
-                      {/* Enhanced Tooltip with smart positioning */}
-                      <div
-                        className={`absolute ${
-                          // Upper regions (top of map) show tooltips below, lower regions show tooltips above
-                          region.position.includes('top-[12%]') || region.position.includes('top-[47%]')
-                            ? 'top-8' // Upper regions: tooltip below marker
-                            : 'bottom-8' // Lower regions: tooltip above marker  
-                        } left-1/2 transform -translate-x-1/2 transition-all duration-300 z-[1001] ${
-                          activeTooltip === index
-                            ? "opacity-100 pointer-events-auto"
-                            : "opacity-0 pointer-events-none"
-                        }`}
-                      >
-                        <div className="bg-white rounded-lg p-4 shadow-2xl border border-gray-200 min-w-56 max-w-72 relative">
-                          <div className="flex items-center justify-between mb-3">
-                            <h4 className="font-semibold text-gray-900 text-base">
-                              {region.name}
-                            </h4>
-                          </div>
-                          <div className="space-y-2">
-                            {/* <p className="text-sm text-gray-700 flex items-center">
-                              <FiUsers className="w-4 h-4 mr-2 text-blue-600" />
-                              <span className="font-medium">
-                                {region.coders}
-                              </span>{" "}
-                              coders trained
-                            </p> */}
-                            <p className="text-sm text-gray-700 flex items-center">
-                              <FiMapPin className="w-4 h-4 mr-2 text-green-600" />
-                              {region.centers}
-                            </p>
-                            <p className="text-sm text-gray-700 flex items-center">
-                              <FiBook className="w-4 h-4 mr-2 text-orange-600" />
-                              {region.courses.length} Active Course{region.courses.length !== 1 ? 's' : ''}
-                            </p>
-                            <div className="pt-2 border-t border-gray-200 mt-3">
-                              <p className="text-sm text-gray-800 font-medium">
-                                Programs:
-                              </p>
-                              <p className="text-sm text-gray-600 mt-1 leading-relaxed">
-                                {region.programs.length > 50 
-                                  ? region.programs.substring(0, 50) + '...'
-                                  : region.programs}
-                              </p>
+                {/* SVG Map */}
+                <div
+                  ref={mapRef}
+                  className="absolute inset-0 [&_svg]:w-full [&_svg]:h-full"
+                  dangerouslySetInnerHTML={{ __html: svgContent }}
+                />
+
+                {/* Region Tooltip - always rendered, visibility toggled */}
+                <div
+                  ref={tooltipRef}
+                  className={`fixed z-[1001] pointer-events-none transition-all duration-500 ease-in-out ${
+                    hoveredRegion && mapInView ? "opacity-100 scale-100" : "opacity-0 scale-95"
+                  }`}
+                  style={{ transform: "translate(0, -100%)" }}
+                >
+                    <div className="bg-white rounded-xl px-4 py-3 shadow-2xl border border-gray-100 w-64">
+                      <h4 className="font-semibold text-gray-900 text-sm mb-2">
+                        {REGION_MAP[hoveredRegion]} Region
+                      </h4>
+
+                      {hoveredBranchData ? (
+                        <>
+                          {/* Stats row */}
+                          <div className="mb-2">
+                            <div className="bg-gray-50 rounded-md px-2 py-1.5 text-center">
+                              <span className="text-sm font-bold text-gray-900">
+                                {hoveredBranchData.total_centres}
+                              </span>
+                              <span className="text-[11px] text-gray-500 ml-1">
+                                center{hoveredBranchData.total_centres !== 1 ? "s" : ""}
+                              </span>
                             </div>
                           </div>
-                        </div>
-                        {/* Tooltip arrow with correct direction */}
-                        <div className={`absolute left-1/2 transform -translate-x-1/2 ${
-                          region.position.includes('top-[12%]') || region.position.includes('top-[47%]')
-                            ? 'bottom-full -mb-1' // Upper regions: arrow points up (tooltip below marker)
-                            : 'top-full -mt-1' // Lower regions: arrow points down (tooltip above marker)
-                        }`}>
-                          <div className={`w-3 h-3 bg-white rotate-45 border-gray-200 ${
-                            region.position.includes('top-[12%]') || region.position.includes('top-[47%]')
-                              ? 'border-l border-t' // Upper regions: arrow pointing up
-                              : 'border-r border-b' // Lower regions: arrow pointing down
-                          }`}></div>
-                        </div>
-                      </div>
+
+                          {/* Course tags */}
+                          {hoveredBranchData.courses?.length > 0 && (
+                            <div className="grid grid-cols-2 gap-1">
+                              {hoveredBranchData.courses.slice(0, 4).map((course, i) => (
+                                <span
+                                  key={i}
+                                  className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium text-center truncate"
+                                >
+                                  {course.title}
+                                </span>
+                              ))}
+                              {hoveredBranchData.courses.length > 4 && (
+                                <span className="text-[11px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-center">
+                                  +{hoveredBranchData.courses.length - 4} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-xs text-gray-400">No active programs</p>
+                      )}
                     </div>
-                  </motion.div>
-                ))}
+                </div>
               </div>
             </div>
           </div>

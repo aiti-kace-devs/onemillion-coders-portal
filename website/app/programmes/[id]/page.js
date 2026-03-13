@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { 
   FiArrowLeft, 
@@ -26,6 +26,10 @@ import { getCourseImage } from '../../../utils/courseImages';
 export default function CourseDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const userId = searchParams.get('user_id');
+  const courseId = searchParams.get('course_id');
+  const centreId = searchParams.get('centre_id');
   const [activeTab, setActiveTab] = useState('overview');
   const [programme, setProgramme] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -196,13 +200,19 @@ export default function CourseDetailsPage() {
               {/* CTA Button */}
               <div className="flex">
                 <Button
-                  onClick={() => isAvailable && setShowRegistrationDialog(true)}
+                  onClick={() => {
+                    if (userId) {
+                      isAvailable && setShowRegistrationDialog(true);
+                    } else {
+                      router.push('/register');
+                    }
+                  }}
                   variant="primary"
                   icon={FiPlay}
                   disabled={!isAvailable}
                   className="!bg-white !text-gray-900 hover:!bg-gray-100"
                 >
-                  {isAvailable ? 'Register Now' : 'Notify When Available'}
+                  {isAvailable ? (userId ? 'Enroll Now' : 'Register Now') : 'Notify When Available'}
                 </Button>
               </div>
             </motion.div>
@@ -476,6 +486,9 @@ export default function CourseDetailsPage() {
         isOpen={showRegistrationDialog}
         onClose={() => setShowRegistrationDialog(false)}
         programme={programme}
+        userId={userId}
+        courseId={courseId}
+        centreId={centreId}
       />
     </div>
   );

@@ -239,15 +239,82 @@ trait BatchFieldHelpers
      */
     protected function getCoursesActionsHtml($batch)
     {
+        $batch->loadMissing(['courses.centre', 'courses.programme']);
         $isEmpty = $batch->courses->isEmpty();
+
+        $centres = $batch->courses
+            ->filter(fn ($course) => $course->centre_id && $course->centre)
+            ->map(fn ($course) => ['id' => $course->centre_id, 'title' => $course->centre->title])
+            ->unique('id')
+            ->sortBy('title')
+            ->values();
+
+        $programmes = $batch->courses
+            ->filter(fn ($course) => $course->programme_id && $course->programme)
+            ->map(fn ($course) => ['id' => $course->programme_id, 'title' => $course->programme->title])
+            ->unique('id')
+            ->sortBy('title')
+            ->values();
+
+        $locations = $batch->courses
+            ->map(fn ($course) => trim((string) $course->location))
+            ->filter(fn ($location) => $location !== '')
+            ->unique()
+            ->sort()
+            ->values();
 
         $html = '<button type="button" class="btn btn-primary mb-3" onclick="openAddCourseModal()">
             <i class="la la-plus"></i> Add Course
         </button>';
 
         if (!$isEmpty) {
-            $html .= '<div class="mb-3">
-                <input type="search" id="batchCoursesSearch" class="form-control" placeholder="Search assigned courses..." autocomplete="off">
+            $html .= '<div class="d-flex flex-wrap gap-2 mb-3 align-items-end" id="batchCoursesFilters">
+                <div class="flex-grow-1" style="min-width:220px">
+                    <label class="form-label small text-muted" for="batchCoursesSearch">Search</label>
+                    <input type="search" id="batchCoursesSearch" class="form-control" placeholder="Search assigned courses..." autocomplete="off">
+                </div>
+                <div style="min-width:180px">
+                    <label class="form-label small text-muted" for="batchCoursesFilterCentre">Centre</label>
+                    <select id="batchCoursesFilterCentre" class="form-control">
+                        <option value="">All Centres</option>';
+            foreach ($centres as $centre) {
+                $html .= '<option value="' . e($centre['id']) . '">' . e($centre['title']) . '</option>';
+            }
+            $html .= '</select>
+                </div>
+                <div style="min-width:180px">
+                    <label class="form-label small text-muted" for="batchCoursesFilterProgramme">Programme</label>
+                    <select id="batchCoursesFilterProgramme" class="form-control">
+                        <option value="">All Programmes</option>';
+            foreach ($programmes as $programme) {
+                $html .= '<option value="' . e($programme['id']) . '">' . e($programme['title']) . '</option>';
+            }
+            $html .= '</select>
+                </div>
+                <div style="min-width:160px">
+                    <label class="form-label small text-muted" for="batchCoursesFilterLocation">Location</label>
+                    <select id="batchCoursesFilterLocation" class="form-control">
+                        <option value="">All Locations</option>';
+            foreach ($locations as $location) {
+                $html .= '<option value="' . e($location) . '">' . e($location) . '</option>';
+            }
+            $html .= '</select>
+                </div>
+                <div style="min-width:160px">
+                    <label class="form-label small text-muted" for="batchCoursesFilterDate">Date</label>
+                    <input type="date" id="batchCoursesFilterDate" class="form-control">
+                </div>
+                <div style="min-width:140px">
+                    <label class="form-label small text-muted" for="batchCoursesFilterStatus">Status</label>
+                    <select id="batchCoursesFilterStatus" class="form-control">
+                        <option value="">All Status</option>
+                        <option value="1">Active</option>
+                        <option value="0">Inactive</option>
+                    </select>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-outline-secondary" id="batchCoursesClearFilters">Clear</button>
+                </div>
             </div>';
         }
 
@@ -298,8 +365,22 @@ trait BatchFieldHelpers
                 ],
             ])->render();
             
-            $html .= '<tr>
-                <td>' . e($course->course_name) . '</td>
+            $dataCentreId = $course->centre_id ?? '';
+            $dataProgrammeId = $course->programme_id ?? '';
+            $dataLocation = strtolower(trim((string) $course->location));
+            $dataStartDate = $course->start_date ?? '';
+            $dataEndDate = $course->end_date ?? '';
+            $dataStatus = $course->status ? '1' : '0';
+
+            $html .= '<tr
+                data-centre-id="' . e($dataCentreId) . '"
+                data-programme-id="' . e($dataProgrammeId) . '"
+                data-location="' . e($dataLocation) . '"
+                data-start-date="' . e($dataStartDate) . '"
+                data-end-date="' . e($dataEndDate) . '"
+                data-status="' . e($dataStatus) . '"
+            >
+                <td>' . e($course->centre?->title . ' - ' . $course->programme?->title ?? '-') . '</td>
                 <td>' . e($course->centre?->title ?? '-') . '</td>
                 <td>' . e($course->programme?->title ?? '-') . '</td>
                 <td>' . e($course->location ?? '-') . '</td>
@@ -365,6 +446,14 @@ trait BatchFieldHelpers
         }
         
         $html .= '<p id="batchCoursesEmptyMsg" class="text-muted text-center py-4" style="display:' . ($isEmpty ? 'block' : 'none') . ';">No courses assigned to this batch yet.</p>';
+
+        if (!$isEmpty) {
+            $html .= '<div id="batchCoursesPagination" class="d-flex justify-content-between align-items-center mt-3">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="batchCoursesPrevBtn">Previous</button>
+                <span id="batchCoursesPageInfo" class="text-muted small"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="batchCoursesNextBtn">Next</button>
+            </div>';
+        }
 
         return $html;
     }

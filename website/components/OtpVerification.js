@@ -603,27 +603,42 @@ const OtpVerification = ({ email, phone, formUuid, onVerified, recaptchaToken, e
           transition={{ duration: 0.3 }}
           className="mt-3"
         >
-          <div className="flex items-start gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl mb-3">
-            <FiAlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700">{errorMessage}</p>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <FiAlertCircle className="w-5 h-5 text-red-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-red-800">
+                  Unable to send verification code
+                </p>
+                <p className="text-sm text-red-600 mt-0.5">{errorMessage}</p>
+                {countdown > 0 && (
+                  <p className="text-xs text-red-500 mt-2">
+                    You can try again in{" "}
+                    <span className="font-semibold">{formatTime(countdown)}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleSendOtp}
+              disabled={countdown > 0 || !emailIsValid}
+              className={`
+                mt-3 w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+                transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1
+                ${
+                  countdown > 0 || !emailIsValid
+                    ? "bg-red-100 text-red-400 cursor-not-allowed"
+                    : "bg-yellow-400 text-gray-900 hover:bg-yellow-500 focus:ring-yellow-400 shadow-sm hover:shadow-md cursor-pointer"
+                }
+              `}
+            >
+              <FiRefreshCw className="w-4 h-4" />
+              {countdown > 0 ? `Retry in ${formatTime(countdown)}` : "Retry Send OTP"}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleSendOtp}
-            disabled={countdown > 0 || !emailIsValid}
-            className={`
-              inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
-              transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1
-              ${
-                countdown > 0 || !emailIsValid
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-yellow-400 text-gray-900 hover:bg-yellow-500 focus:ring-yellow-400 shadow-sm hover:shadow-md cursor-pointer"
-              }
-            `}
-          >
-            <FiMail className="w-4 h-4" />
-            {countdown > 0 ? `Retry in ${countdown}s` : "Retry Send OTP"}
-          </button>
         </motion.div>
       )}
     </AnimatePresence>

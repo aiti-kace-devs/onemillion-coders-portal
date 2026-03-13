@@ -37,47 +37,52 @@
 @endcan
 
 @can('branch.read.all')
-    <x-backpack::menu-item title="Manage Branches" icon="la la-code-branch" :link="backpack_url('branch')" />
+    <x-backpack::menu-item title="Manage Regions" icon="la la-code-branch" :link="backpack_url('branch')" />
 @endcan
 
 
 @can('centre.read.all')
 <x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
 <x-backpack::menu-item title="Manage Districts" icon="la la-question" :link="backpack_url('district')" />
+<x-backpack::menu-item title="Constituencies" icon="la la-question" :link="backpack_url('constituency')" />
 @endcan
 
 @can('programme.read.all')
     <x-backpack::menu-item title="Programmes" icon="la la-graduation-cap" :link="backpack_url('programme')" />
 @endcan
 
-<!-- @can('course.read.all') -->
+<!-- @can('course.read.all')
+    -->
     <x-backpack::menu-dropdown title="Course Moderation" icon="la la-book-reader">
-<!-- @endcan -->
-        <!-- @can('course.read.all') -->
-            <x-backpack::menu-dropdown-item title="Courses" icon="la la-book" :link="backpack_url('course')" />
-        <!-- @endcan -->
-        <!-- @can('course.read.all')
-            <x-backpack::menu-dropdown-item title="Manage Course batches" icon="la la-question" :link="backpack_url('course-batch')" />
-        @endcan -->
-        @can('course-session.read.all')
-            <x-backpack::menu-dropdown-item title="Course Sessions" icon="la la-clock" :link="backpack_url('course-session')" />
-        @endcan
-        @can('course-category.read.all')
-            <x-backpack::menu-dropdown-item title="Course Categories" icon="la la-layer-group" :link="backpack_url('course-category')" />
-        @endcan
-        @can('course-module.read.all')
-            <x-backpack::menu-dropdown-item title="Course Modules" icon="la la-puzzle-piece" :link="backpack_url('course-module')" />
-        @endcan
-        @can('course-certification.read.all')
-            <x-backpack::menu-dropdown-item title="Course Certifications" icon="la la-certificate" :link="backpack_url('course-certification')" />
-        @endcan
-        @can('course-match.read.all')
-            <x-backpack::menu-dropdown-item title="Course Matches" icon="la la-link" :link="backpack_url('course-match')" />
-        @endcan
-        @can('course-match-option.read.all')
-            <x-backpack::menu-dropdown-item title="Course Match Options" icon="la la-list-ul" :link="backpack_url('course-match-option')" />
-        @endcan
-    </x-backpack::menu-dropdown>
+        <!--
+@endcan -->
+    <!-- @can('course.read.all')
+    -->
+        <x-backpack::menu-dropdown-item title="Courses" icon="la la-book" :link="backpack_url('course')" />
+        <!--
+@endcan -->
+    <!-- @can('course.read.all')
+    <x-backpack::menu-dropdown-item title="Manage Course batches" icon="la la-question" :link="backpack_url('course-batch')" />
+@endcan -->
+    @can('course-session.read.all')
+        <x-backpack::menu-dropdown-item title="Course Sessions" icon="la la-clock" :link="backpack_url('course-session')" />
+    @endcan
+    @can('course-category.read.all')
+        <x-backpack::menu-dropdown-item title="Course Categories" icon="la la-layer-group" :link="backpack_url('course-category')" />
+    @endcan
+    @can('course-module.read.all')
+        <x-backpack::menu-dropdown-item title="Course Modules" icon="la la-puzzle-piece" :link="backpack_url('course-module')" />
+    @endcan
+    @can('course-certification.read.all')
+        <x-backpack::menu-dropdown-item title="Course Certifications" icon="la la-certificate" :link="backpack_url('course-certification')" />
+    @endcan
+    @can('course-match.read.all')
+        <x-backpack::menu-dropdown-item title="Course Matches" icon="la la-link" :link="backpack_url('course-match')" />
+    @endcan
+    @can('course-match-option.read.all')
+        <x-backpack::menu-dropdown-item title="Course Match Options" icon="la la-list-ul" :link="backpack_url('course-match-option')" />
+    @endcan
+</x-backpack::menu-dropdown>
 
 @if (auth()->user()->can('category.read.all') || auth()->user()->can('manage-exam.read.all'))
     <x-backpack::menu-dropdown title="Exam Management" icon="la la-file-signature">
@@ -92,16 +97,19 @@
     </x-backpack::menu-dropdown>
 @endif
 
-@if (auth()->user()->can('attendance.read.all') || auth()->user()->can('qr-scanner.read.all'))
+{{-- @if (auth()->user()->can('attendance.read.all') || auth()->user()->can('qr-scanner.read.all'))
     <x-backpack::menu-dropdown title="Attendance Management" icon="la la-calendar-check">
         @can('attendance.read.all')
             <x-backpack::menu-dropdown-item title="Attendances" icon="la la-calendar-check" :link="backpack_url('attendance')" />
         @endcan
-        @can('qr-scanner.read.all')
-            <x-backpack::menu-dropdown-item title="Scan QR Code" icon="la la-qrcode" :link="backpack_url('qr-scanner')" />
-        @endcan
+
     </x-backpack::menu-dropdown>
-@endif
+@endif --}}
+
+@can('qr-scanner.read.all')
+    <x-backpack::menu-item title="Scan QR Code" icon="la la-qrcode" :link="backpack_url('qr-scanner')" />
+@endcan
+
 
 <x-backpack::menu-dropdown title="Tags" icon="la la-tags">
     <x-backpack::menu-dropdown-item title="Tags" icon="la la-tag" :link="backpack_url('tag')" />
@@ -112,13 +120,13 @@
     <x-backpack::menu-item title="Admission Batches" icon="la la-users" :link="backpack_url('batch')" />
 @endcan
 
-@can('branch.read.all')
+{{-- @can('branch.read.all')
     <x-backpack::menu-item title="Branches" icon="la la-code-branch" :link="backpack_url('branch')" />
-@endcan
+@endcan --}}
 
-@can('centre.read.all')
+{{-- @can('centre.read.all')
     <x-backpack::menu-item title="Centres" icon="la la-building" :link="backpack_url('centre')" />
-@endcan
+@endcan --}}
 
 @if (auth()->user()->can('email-template.read.all') || auth()->user()->can('sms-template.read.all'))
     <x-backpack::menu-dropdown title="Messaging" icon="la la-paper-plane">
@@ -145,12 +153,12 @@
     </x-backpack::menu-dropdown>
 @endif
 
-@can('filemanager.read.all')
+{{-- @can('filemanager.read.all')
     <x-backpack::menu-item :title="trans('backpack::crud.file_manager')" icon="la la-folder-open" :link="backpack_url('elfinder')" />
-@endcan
+@endcan --}}
 
 
-    <!-- <x-backpack::menu-item title="Form responses" icon="la la-reply" :link="backpack_url('form-response')" /> -->
+<!-- <x-backpack::menu-item title="Form responses" icon="la la-reply" :link="backpack_url('form-response')" /> -->
 
 {{-- <x-backpack::menu-item title="Results" icon="la la-chart-bar" :link="backpack_url('oex-result')" /> --}}
 <!-- <x-backpack::menu-item title="Periods" icon="la la-calendar" :link="backpack_url('period')" /> -->
@@ -166,7 +174,7 @@
 <!-- <x-backpack::menu-item title="Admission rejections" icon="la la-times-circle" :link="backpack_url('admission-rejection')" /> -->
 
 {{-- Only show dropdown if user has at least one permission for the dropdown items --}}
-    <!-- <x-backpack::menu-dropdown title="Add-ons" icon="la la-puzzle-piece">
+<!-- <x-backpack::menu-dropdown title="Add-ons" icon="la la-puzzle-piece">
     <x-backpack::menu-dropdown-header title="Authentication" />
     <x-backpack::menu-dropdown-item title="Students" icon="la la-user-graduate" :link="backpack_url('user')" />
     <x-backpack::menu-dropdown-item title="Roles" icon="la la-user-tag" :link="backpack_url('role')" />

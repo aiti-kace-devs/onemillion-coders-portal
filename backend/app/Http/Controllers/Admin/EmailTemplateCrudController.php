@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\EmailTemplateRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class EmailTemplateCrudController
@@ -39,6 +40,8 @@ class EmailTemplateCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
+
         CRUD::column('name')->type('textarea');
         CRUD::addColumn([
             'name' => 'content',
@@ -62,7 +65,8 @@ class EmailTemplateCrudController extends CrudController
         CRUD::addField([
             'name' => 'content',
             'label' => 'Content',
-            'type'      => 'tinymce',
+            'type'  => 'view',
+            'view' => 'vendor.backpack.crud.fields.emailbody'
         ]);
     }
 

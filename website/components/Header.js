@@ -186,19 +186,27 @@ export default function Header() {
               Pathways
             </Link>
             <Link
+              href="/centers"
+              className={`nav-pill ${
+                isActiveLink("/centers") ? "active" : ""
+              }`}
+            >
+              Centers
+            </Link>
+            <Link
               href="/gallery"
               className={`nav-pill ${isActiveLink("/gallery") ? "active" : ""}`}
             >
               Gallery
             </Link>
-            <Link
+            {/* <Link
               href="/community"
               className={`nav-pill ${
                 isActiveLink("/community") ? "active" : ""
               }`}
             >
               Testimonials
-            </Link>
+            </Link> */}
             <Link
               href="/faqs"
               className={`nav-pill ${isActiveLink("/faqs") ? "active" : ""}`}
@@ -274,6 +282,17 @@ export default function Header() {
                   Home
                 </Link>
                 <Link
+                  href="/about"
+                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
+                    isActiveLink("/about")
+                      ? "text-yellow-600 bg-yellow-50 font-semibold"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  About
+                </Link>
+                <Link
                   href="/programmes"
                   className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
                     isActiveLink("/programmes")
@@ -296,37 +315,15 @@ export default function Header() {
                   Pathways
                 </Link>
                 <Link
-                  href="/community"
+                  href="/centers"
                   className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
-                    isActiveLink("/community")
+                    isActiveLink("/centers")
                       ? "text-yellow-600 bg-yellow-50 font-semibold"
                       : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Community
-                </Link>
-                <Link
-                  href="/about"
-                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
-                    isActiveLink("/about")
-                      ? "text-yellow-600 bg-yellow-50 font-semibold"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  About
-                </Link>
-                <Link
-                  href="/faqs"
-                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
-                    isActiveLink("/faqs")
-                      ? "text-yellow-600 bg-yellow-50 font-semibold"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  FAQs
+                  Centers
                 </Link>
                 <Link
                   href="/gallery"
@@ -338,6 +335,28 @@ export default function Header() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Gallery
+                </Link>
+                {/* <Link
+                  href="/community"
+                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
+                    isActiveLink("/community")
+                      ? "text-yellow-600 bg-yellow-50 font-semibold"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Community
+                </Link> */}
+                <Link
+                  href="/faqs"
+                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
+                    isActiveLink("/faqs")
+                      ? "text-yellow-600 bg-yellow-50 font-semibold"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  FAQs
                 </Link>
 
                 {/* Mobile CTA Button */}

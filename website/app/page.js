@@ -6,7 +6,7 @@ import ImpactSection from "../components/ImpactSection";
 import PartnersSection from "../components/PartnersSection";
 import TechGhanaSection from "../components/TechGhanaSection";
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export default async function Home() {
   let homepageData = null;

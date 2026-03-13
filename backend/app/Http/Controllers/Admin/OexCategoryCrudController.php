@@ -8,6 +8,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\FilterHelper;
 use App\Helpers\WidgetHelper;
 use App\Helpers\GeneralFieldsAndColumns;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class OexCategoryCrudController
@@ -44,6 +45,7 @@ class OexCategoryCrudController extends CrudController
     protected function setupListOperation()
     {
         WidgetHelper::categorytatisticsWidget();
+        CrudListHelper::editInDropdown();
 
         CRUD::column('name')->type('text');
         CRUD::addColumn([
@@ -56,6 +58,7 @@ class OexCategoryCrudController extends CrudController
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
+        CRUD::denyAccess('show');
     }
 
     protected function setupShowOperation()

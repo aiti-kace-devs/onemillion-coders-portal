@@ -2,7 +2,7 @@ import { getFaqsData } from "../../services";
 import FaqsClient from "./FaqsClient";
 
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export default async function FAQPage() {
   let faqsData = null;

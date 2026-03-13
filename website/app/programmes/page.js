@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import ProgrammesClient from "./ProgrammesClient";
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export const metadata = {
   title: "Programmes | One Million Coders",

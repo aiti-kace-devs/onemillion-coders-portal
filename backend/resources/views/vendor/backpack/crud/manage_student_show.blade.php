@@ -8,22 +8,22 @@
     $hasExamResults = $entry->examResults && $entry->examResults->count() > 0;
     $latestResult = $hasExamResults ? $entry->examResults()->latest()->first() : null;
     $examId = $latestResult ? $latestResult->exam_id : null;
-    
+
     $currentAdmission = $entry->admissions()->latest()->first();
     $currentCourseId = $currentAdmission?->course_id;
     $currentSessionId = $currentAdmission?->session;
-    
+
     $course = null;
     $courseStartDate = null;
     $courseEndDate = null;
     $courseId = $currentAdmission?->course_id;
-    
+
     if ($courseId) {
         $course = \App\Models\Course::with(['batch'])->find($courseId);
-        
+
         $courseStartDate = $course?->start_date;
         $courseEndDate = $course?->end_date;
-        
+
         if (empty($courseStartDate) && $course?->batch?->start_date) {
             $courseStartDate = $course->batch->start_date;
         }
@@ -31,7 +31,7 @@
             $courseEndDate = $course->batch->end_date;
         }
     }
-    
+
     $attendanceRecords = \collect();
     $totalCourseDays = 0;
     $presentCount = 0;
@@ -39,22 +39,24 @@
     $totalSessions = 0;
     $lateCount = 0;
     $excusedCount = 0;
-    
+
     $startDateValid = !empty($courseStartDate) && $courseStartDate !== 'NULL';
     $endDateValid = !empty($courseEndDate) && $courseEndDate !== 'NULL';
-    
+
     if ($startDateValid && $endDateValid) {
         $startDateCarbon = null;
         $endDateCarbon = null;
 
         try {
-            $startDateCarbon = $courseStartDate instanceof \Carbon\Carbon ? $courseStartDate : \Carbon\Carbon::parse($courseStartDate);
+            $startDateCarbon =
+                $courseStartDate instanceof \Carbon\Carbon ? $courseStartDate : \Carbon\Carbon::parse($courseStartDate);
         } catch (\Throwable $e) {
             $startDateCarbon = null;
         }
 
         try {
-            $endDateCarbon = $courseEndDate instanceof \Carbon\Carbon ? $courseEndDate : \Carbon\Carbon::parse($courseEndDate);
+            $endDateCarbon =
+                $courseEndDate instanceof \Carbon\Carbon ? $courseEndDate : \Carbon\Carbon::parse($courseEndDate);
         } catch (\Throwable $e) {
             $endDateCarbon = null;
         }
@@ -69,9 +71,10 @@
             $startDateStr = $startDateCarbon->format('Y-m-d');
             $endDateStr = $endDateCarbon->format('Y-m-d');
 
-            $attendanceQuery = $entry->attendances()
-                ->whereRaw("DATE(date) >= ?", [$startDateStr])
-                ->whereRaw("DATE(date) <= ?", [$endDateStr])
+            $attendanceQuery = $entry
+                ->attendances()
+                ->whereRaw('DATE(date) >= ?', [$startDateStr])
+                ->whereRaw('DATE(date) <= ?', [$endDateStr])
                 ->with('course');
 
             if (!empty($courseId)) {
@@ -83,8 +86,12 @@
             $attendanceDates = $attendanceRecords
                 ->pluck('date')
                 ->map(function ($item) {
-                    if ($item instanceof \Carbon\Carbon) return $item->format('Y-m-d');
-                    if (is_string($item)) return substr($item, 0, 10);
+                    if ($item instanceof \Carbon\Carbon) {
+                        return $item->format('Y-m-d');
+                    }
+                    if (is_string($item)) {
+                        return substr($item, 0, 10);
+                    }
                     return $item;
                 })
                 ->filter()
@@ -108,7 +115,7 @@
     }
 
     $attendanceRate = $totalCourseDays > 0 ? round(($totalSessions / $totalCourseDays) * 100, 1) : 0;
-    
+
     $passFailStatus = 'N/A';
     $passFailClass = 'bg-secondary';
     if ($hasExamResults && $latestResult) {
@@ -117,7 +124,7 @@
         $passFailStatus = $percentage >= 50 ? 'Pass' : 'Fail';
         $passFailClass = $percentage >= 50 ? 'bg-success' : 'bg-danger';
     }
-    
+
     $overallPerformance = 0;
     if ($hasExamResults && $entry->examResults->count() > 0) {
         $totalPercentage = 0;
@@ -127,7 +134,7 @@
         }
         $overallPerformance = round($totalPercentage / $entry->examResults->count(), 1);
     }
-    
+
     $correctAnswers = $latestResult ? $latestResult->yes_ans : 0;
     $wrongAnswers = $latestResult ? $latestResult->no_ans : 0;
     $totalAnswers = $correctAnswers + $wrongAnswers;
@@ -137,36 +144,36 @@
 @endphp
 
 @section('content')
-    @parent
-    
+    {{-- @parent --}}
+
     <div class="mb-3 d-flex align-items-start justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-start gap-2">
-            <a href="{{ backpack_url('manage-student') }}" class="btn btn-sm btn-outline-secondary" title="Back to Students">
+            {{-- <a href="{{ backpack_url('manage-student') }}" class="btn btn-sm btn-outline-secondary" title="Back to Students">
                 <i class="la la-arrow-left"></i>
-            </a>
+            </a> --}}
             <div>
-                <h4 class="mb-0">Student Metrics</h4>
+                {{-- <h4 class="mb-0">Student Metrics</h4> --}}
                 <div class="text-muted">
                     {{ $entry->name ?? 'Student' }}
-                    @if(!empty($entry->email))
+                    @if (!empty($entry->email))
                         • {{ $entry->email }}
                     @endif
                 </div>
                 <!-- <div class="text-muted small">
-                    User ID: {{ $entry->userId ?? 'N/A' }}
-                </div> -->
+                                                                User ID: {{ $entry->userId ?? 'N/A' }}
+                                                            </div> -->
             </div>
         </div>
 
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            @if(!empty($courseId))
+            @if (!empty($courseId))
                 <a href="{{ backpack_url('course-batch/' . $courseId . '/show') }}" class="btn btn-sm btn-outline-secondary">
                     <i class="la la-chart-bar"></i> Course Batch Metrics
                 </a>
             @endif
             <!-- <a href="{{ backpack_url('user/' . $userId . '/edit') }}" class="btn btn-sm btn-outline-primary">
-                <i class="la la-edit"></i> Edit Student
-            </a> -->
+                                                            <i class="la la-edit"></i> Edit Student
+                                                        </a> -->
         </div>
     </div>
 
@@ -213,7 +220,7 @@
                         <tr>
                             <td class="text-muted">Shortlisted</td>
                             <td>
-                                @if($entry->shortlist)
+                                @if ($entry->shortlist)
                                     <span class="badge bg-success">Yes</span>
                                 @else
                                     <span class="badge text-dark">No</span>
@@ -228,7 +235,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-4">
             <div class="card h-100">
                 <div class="card-header">
@@ -239,59 +246,66 @@
                         <tr>
                             <td class="text-muted">Status</td>
                             <td>
-                                @if($hasAnyAdmission)
+                                @if ($hasAnyAdmission)
                                     <span class="badge bg-success">Admitted</span>
                                 @else
                                     <span class="badge text-dark">Not Admitted</span>
                                 @endif
                             </td>
                         </tr>
-                        @if($hasAnyAdmission)
-                        <tr>
-                            <td class="text-muted">Pass/Fail</td>
-                            <td><span class="badge bg-warning {{ $passFailClass }}">{{ $passFailStatus }}</span></td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Course</td>
-                            <td>{{ $course?->course_name ?? $currentAdmission?->course?->course_name ?? $currentAdmission?->course?->name ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Session</td>
-                            <td>{{ $currentAdmission->courseSession->name ?? 'Not Set' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Location</td>
-                            <td>{{ $currentAdmission->location ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Batch</td>
-                            <td>{{ $course?->batch?->title ?? $currentAdmission?->batch?->title ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Email Sent</td>
-                            <td>{{ $currentAdmission->email_sent ? $currentAdmission->email_sent->format('Y-m-d') : 'Pending' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Admitted On</td>
-                            <td>{{ $currentAdmission->confirmed ? $currentAdmission->confirmed->format('Y-m-d') : 'Pending' }}</td>
-                        </tr>
+                        @if ($hasAnyAdmission)
+                            <tr>
+                                <td class="text-muted">Pass/Fail</td>
+                                <td><span class="badge bg-warning {{ $passFailClass }}">{{ $passFailStatus }}</span></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Course</td>
+                                <td>{{ $course?->course_name ?? ($currentAdmission?->course?->course_name ?? ($currentAdmission?->course?->name ?? 'N/A')) }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Session</td>
+                                <td>{{ $currentAdmission->courseSession->name ?? 'Not Set' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Location</td>
+                                <td>{{ $currentAdmission->location ?? 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Batch</td>
+                                <td>{{ $course?->batch?->title ?? ($currentAdmission?->batch?->title ?? 'N/A') }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Email Sent</td>
+                                <td>{{ $currentAdmission->email_sent ? $currentAdmission->email_sent->format('Y-m-d') : 'Pending' }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Admitted On</td>
+                                <td>{{ $currentAdmission->confirmed ? $currentAdmission->confirmed->format('Y-m-d') : 'Pending' }}
+                                </td>
+                            </tr>
                         @endif
                     </table>
-                    
-                    @if($isSuperAdmin)
+
+                    @if ($isSuperAdmin)
                         @if (!$hasAnyAdmission)
-                            <button type="button" class="btn btn-sm btn-primary" onclick="if (window.openAdmitStudentModal) window.openAdmitStudentModal({ change: false })">
+                            <button type="button" class="btn btn-sm btn-primary"
+                                onclick="if (window.openAdmitStudentModal) window.openAdmitStudentModal({ change: false })">
                                 <i class="la la-user-plus"></i> Admit
                             </button>
                         @else
                             <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="if (window.openAdmitStudentModal) window.openAdmitStudentModal({ change: true })">
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                    onclick="if (window.openAdmitStudentModal) window.openAdmitStudentModal({ change: true })">
                                     <i class="la la-user-edit"></i> Change Admission
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick="if (window.openChooseSessionModal) window.openChooseSessionModal()">
+                                <button type="button" class="btn btn-sm btn-outline-success"
+                                    onclick="if (window.openChooseSessionModal) window.openChooseSessionModal()">
                                     <i class="la la-calendar"></i> Change Session
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="if (window.deleteStudentAdmission) window.deleteStudentAdmission()">
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                    onclick="if (window.deleteStudentAdmission) window.deleteStudentAdmission()">
                                     <i class="la la-trash"></i> Delete Admission
                                 </button>
                             </div>
@@ -300,7 +314,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-4">
             <div class="card h-100">
                 <div class="card-header">
@@ -311,58 +325,63 @@
                         <tr>
                             <td class="text-muted">Status</td>
                             <td>
-                                @if($hasExamResults)
+                                @if ($hasExamResults)
                                     <span class="badge bg-success">Completed</span>
                                 @else
                                     <span class="badge text-dark">Not Taken</span>
                                 @endif
                             </td>
                         </tr>
-                        @if($hasExamResults)
-                        <tr>
-                            <td class="text-muted">Total Exams</td>
-                            <td>{{ $entry->examResults->count() }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Latest Exam</td>
-                            <td>{{ $latestResult->exam->title ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Score</td>
-                            <td>
-                                @php
-                                    $total = $latestResult->yes_ans + $latestResult->no_ans;
-                                    $percentage = $total > 0 ? round(($latestResult->yes_ans / $total) * 100, 1) : 0;
-                                @endphp
-                                <span class="badge {{ $percentage >= 50 ? 'bg-success' : 'bg-danger' }}">{{ $percentage }}%</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Correct Answers</td>
-                            <td>{{ $correctAnswers }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Wrong Answers</td>
-                            <td>{{ $wrongAnswers }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Overall Performance</td>
-                            <td>
-                                <span class="badge {{ $overallPerformance >= 50 ? 'bg-success' : 'bg-danger' }}">
-                                    {{ $overallPerformance }}%
-                                </span>
-                            </td>
-                        </tr>
+                        @if ($hasExamResults)
+                            <tr>
+                                <td class="text-muted">Total Exams</td>
+                                <td>{{ $entry->examResults->count() }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Latest Exam</td>
+                                <td>{{ $latestResult->exam->title ?? 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Score</td>
+                                <td>
+                                    @php
+                                        $total = $latestResult->yes_ans + $latestResult->no_ans;
+                                        $percentage =
+                                            $total > 0 ? round(($latestResult->yes_ans / $total) * 100, 1) : 0;
+                                    @endphp
+                                    <span
+                                        class="badge {{ $percentage >= 50 ? 'bg-success' : 'bg-danger' }}">{{ $percentage }}%</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Correct Answers</td>
+                                <td>{{ $correctAnswers }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Wrong Answers</td>
+                                <td>{{ $wrongAnswers }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Overall Performance</td>
+                                <td>
+                                    <span class="badge {{ $overallPerformance >= 50 ? 'bg-success' : 'bg-danger' }}">
+                                        {{ $overallPerformance }}%
+                                    </span>
+                                </td>
+                            </tr>
                         @endif
                     </table>
-                    
-                    @if($hasExamResults)
+
+                    @if ($hasExamResults)
                         <div class="d-flex gap-2 flex-wrap">
-                            <a href="{{ url('admin/admin_view_result/' . $userId) }}" class="btn btn-sm btn-outline-info js-view-result-modal" data-url="{{ url('admin/admin_view_result/' . $userId) }}">
+                            {{-- <a href="{{ url('admin/admin_view_result/' . $userId) }}"
+                                class="btn btn-sm btn-outline-info js-view-result-modal"
+                                data-url="{{ url('admin/admin_view_result/' . $userId) }}">
                                 <i class="la la-poll"></i> View Results
-                            </a>
-                            @if($examId && $isSuperAdmin)
-                                <a href="{{ route('results.reset', [$examId, $userId]) }}" class="btn btn-sm btn-outline-warning js-reset-results">
+                            </a> --}}
+                            @if ($examId && $isSuperAdmin)
+                                <a href="{{ route('results.reset', [$examId, $userId]) }}"
+                                    class="btn btn-sm btn-outline-warning js-reset-results">
                                     <i class="la la-redo"></i> Reset Results
                                 </a>
                             @endif
@@ -381,10 +400,20 @@
                         <div class="text-muted">Course Days</div>
                         <i class="la la-clock text-primary"></i>
                     </div>
-                    @if($startDateValid && $endDateValid)
+                    @if ($startDateValid && $endDateValid)
                         @php
-                            $displayStartDate = $courseStartDate instanceof \Carbon\Carbon ? $courseStartDate->format('Y-m-d') : (is_string($courseStartDate) ? $courseStartDate : 'N/A');
-                            $displayEndDate = $courseEndDate instanceof \Carbon\Carbon ? $courseEndDate->format('Y-m-d') : (is_string($courseEndDate) ? $courseEndDate : 'N/A');
+                            $displayStartDate =
+                                $courseStartDate instanceof \Carbon\Carbon
+                                    ? $courseStartDate->format('Y-m-d')
+                                    : (is_string($courseStartDate)
+                                        ? $courseStartDate
+                                        : 'N/A');
+                            $displayEndDate =
+                                $courseEndDate instanceof \Carbon\Carbon
+                                    ? $courseEndDate->format('Y-m-d')
+                                    : (is_string($courseEndDate)
+                                        ? $courseEndDate
+                                        : 'N/A');
                         @endphp
                         <div class="text-muted small mt-1">{{ $displayStartDate }} to {{ $displayEndDate }}</div>
                     @endif
@@ -428,7 +457,8 @@
                         <i class="la la-percentage text-info"></i>
                     </div>
                     <div class="metric-value">{{ $attendanceRate }}%</div>
-                    <div class="text-muted small">Present: {{ number_format($presentCount) }} / {{ number_format($totalCourseDays) }} days</div>
+                    <div class="text-muted small">Present: {{ number_format($presentCount) }} /
+                        {{ number_format($totalCourseDays) }} days</div>
                 </div>
             </div>
         </div>
@@ -460,7 +490,7 @@
                     <strong><i class="la la-chart-line"></i> Performance Trend</strong>
                 </div>
                 <div class="card-body">
-                    @if($hasExamResults && $entry->examResults->count() > 1)
+                    @if ($hasExamResults && $entry->examResults->count() > 1)
                         <div class="chart-wrap">
                             <canvas id="performanceTrendChart"></canvas>
                         </div>
@@ -468,7 +498,7 @@
                         <div class="text-center text-muted py-5">
                             <i class="la la-chart-line fa-3x mb-3"></i>
                             <p class="mb-1">Need multiple exams for trend analysis</p>
-                            @if($hasExamResults && $entry->examResults->count() == 1)
+                            @if ($hasExamResults && $entry->examResults->count() == 1)
                                 <p class="small mb-0">Latest score: {{ $overallPerformance }}%</p>
                             @endif
                         </div>
@@ -496,24 +526,29 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($attendanceRecords->sortByDesc('date') as $record)
+                                @foreach ($attendanceRecords->sortByDesc('date') as $record)
                                     <tr>
-                                        <td>{{ $record->date ? \Carbon\Carbon::parse($record->date)->format('Y-m-d') : '-' }}</td>
+                                        <td>{{ $record->date ? \Carbon\Carbon::parse($record->date)->format('Y-m-d') : '-' }}
+                                        </td>
                                         <td>{{ $record->course->course_name ?? 'N/A' }}</td>
                                         <td>
                                             @switch($record->status)
                                                 @case('present')
                                                     <span class="badge bg-success">Present</span>
-                                                    @break
+                                                @break
+
                                                 @case('absent')
                                                     <span class="badge bg-danger">Absent</span>
-                                                    @break
+                                                @break
+
                                                 @case('late')
                                                     <span class="badge bg-warning text-dark">Late</span>
-                                                    @break
+                                                @break
+
                                                 @case('excused')
                                                     <span class="badge bg-info">Excused</span>
-                                                    @break
+                                                @break
+
                                                 @default
                                                     <span class="badge bg-success">{{ $record->status ?? 'N/A' }}</span>
                                             @endswitch
@@ -524,14 +559,68 @@
                             </tbody>
                         </table>
                     </div>
-                    @if($attendanceRecords->isEmpty())
+                    @if ($attendanceRecords->isEmpty())
                         <div class="text-center text-muted py-2">No attendance records</div>
                     @endif
                 </div>
             </div>
         </div>
-        
         <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <strong><i class="la la-users"></i> Batch Information</strong>
+                </div>
+                <div class="card-body">
+                    @if ($course && $course->batch)
+                        <div class="table-responsive">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr>
+                                    <td class="text-muted">Batch</td>
+                                    <td>
+                                        @if (!empty($course->batch->id))
+                                            <a
+                                                href="{{ backpack_url('batch/' . $course->batch->id . '/edit') }}">{{ $course->batch->title ?? 'N/A' }}</a>
+                                        @else
+                                            {{ $course->batch->title ?? 'N/A' }}
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Year</td>
+                                    <td>{{ $course->batch->year ?? 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Start Date</td>
+                                    <td>{{ $course->batch->start_date ? ($course->batch->start_date instanceof \Carbon\Carbon ? $course->batch->start_date->format('Y-m-d') : \Carbon\Carbon::parse($course->batch->start_date)->format('Y-m-d')) : 'N/A' }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">End Date</td>
+                                    <td>{{ $course->batch->end_date ? ($course->batch->end_date instanceof \Carbon\Carbon ? $course->batch->end_date->format('Y-m-d') : \Carbon\Carbon::parse($course->batch->end_date)->format('Y-m-d')) : 'N/A' }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Status</td>
+                                    <td>
+                                        @if ($course->batch->completed)
+                                            <span class="badge bg-success">Completed</span>
+                                        @else
+                                            <span class="badge bg-warning text-dark">Ongoing</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    @else
+                        <div class="text-center text-muted py-3">
+                            <p>No batch information available</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        {{-- <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
                     <strong><i class="la la-poll"></i> Exam Results</strong>
@@ -549,16 +638,19 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($entry->examResults->sortByDesc('created_at') as $result)
+                                @foreach ($entry->examResults->sortByDesc('created_at') as $result)
                                     <tr>
                                         <td>{{ $result->exam->title ?? 'N/A' }}</td>
                                         @php
                                             $totalAns = $result->yes_ans + $result->no_ans;
-                                            $percentage = $totalAns > 0 ? round(($result->yes_ans / $totalAns) * 100, 1) : 0;
+                                            $percentage =
+                                                $totalAns > 0 ? round(($result->yes_ans / $totalAns) * 100, 1) : 0;
                                         @endphp
-                                        <td>{{ $percentage }}% <small class="text-muted">({{ $result->yes_ans }}/{{ $totalAns }})</small></td>
+                                        <td>{{ $percentage }}% <small
+                                                class="text-muted">({{ $result->yes_ans }}/{{ $totalAns }})</small>
+                                        </td>
                                         <td>
-                                            @if($percentage >= 50)
+                                            @if ($percentage >= 50)
                                                 <span class="badge bg-success">Pass</span>
                                             @else
                                                 <span class="badge bg-danger">Fail</span>
@@ -566,8 +658,10 @@
                                         </td>
                                         <td>{{ $result->created_at ? $result->created_at->format('Y-m-d') : 'N/A' }}</td>
                                         <td>
-                                            @if($result->exam)
-                                                <a href="{{ url('admin/admin_view_result/' . $userId) }}" class="btn btn-sm btn-outline-primary js-view-result-modal" data-url="{{ url('admin/admin_view_result/' . $userId) }}">
+                                            @if ($result->exam)
+                                                <a href="{{ url('admin/admin_view_result/' . $userId) }}"
+                                                    class="btn btn-sm btn-outline-primary js-view-result-modal"
+                                                    data-url="{{ url('admin/admin_view_result/' . $userId) }}">
                                                     <i class="la la-eye"></i> View
                                                 </a>
                                             @endif
@@ -577,67 +671,19 @@
                             </tbody>
                         </table>
                     </div>
-                    @if($entry->examResults->isEmpty())
+                    @if ($entry->examResults->isEmpty())
                         <div class="text-center text-muted py-2">No exam results available</div>
                     @endif
                 </div>
             </div>
-        </div>
+        </div> --}}
     </div>
-    
-    <div class="row mb-4">
+
+    {{-- <div class="row mb-4">
         <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <strong><i class="la la-users"></i> Batch Information</strong>
-                </div>
-                <div class="card-body">
-                    @if($course && $course->batch)
-                        <div class="table-responsive">
-                            <table class="table table-sm table-borderless mb-0">
-                                <tr>
-                                    <td class="text-muted">Batch</td>
-                                    <td>
-                                        @if(!empty($course->batch->id))
-                                            <a href="{{ backpack_url('batch/' . $course->batch->id . '/edit') }}">{{ $course->batch->title ?? 'N/A' }}</a>
-                                        @else
-                                            {{ $course->batch->title ?? 'N/A' }}
-                                        @endif
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="text-muted">Year</td>
-                                    <td>{{ $course->batch->year ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="text-muted">Start Date</td>
-                                    <td>{{ $course->batch->start_date ? (($course->batch->start_date instanceof \Carbon\Carbon) ? $course->batch->start_date->format('Y-m-d') : \Carbon\Carbon::parse($course->batch->start_date)->format('Y-m-d')) : 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="text-muted">End Date</td>
-                                    <td>{{ $course->batch->end_date ? (($course->batch->end_date instanceof \Carbon\Carbon) ? $course->batch->end_date->format('Y-m-d') : \Carbon\Carbon::parse($course->batch->end_date)->format('Y-m-d')) : 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="text-muted">Status</td>
-                                    <td>
-                                        @if($course->batch->completed)
-                                            <span class="badge bg-success">Completed</span>
-                                        @else
-                                            <span class="badge bg-warning text-dark">Ongoing</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-                    @else
-                        <div class="text-center text-muted py-3">
-                            <p>No batch information available</p>
-                        </div>
-                    @endif
-                </div>
-            </div>
+
         </div>
-    </div>
+    </div> --}}
 
     @push('after_styles')
         <link rel="stylesheet" href="{{ asset('assets/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
@@ -649,17 +695,21 @@
                 line-height: 1.1;
                 margin-top: 0.35rem;
             }
+
             .chart-wrap {
                 position: relative;
                 height: 320px;
             }
+
             .chart-wrap-sm {
                 position: relative;
                 height: 220px;
             }
+
             .dataTables_wrapper .dataTables_filter input {
                 margin-left: .5rem;
             }
+
             .dataTables_wrapper .dataTables_length select {
                 margin: 0 .25rem;
             }
@@ -674,7 +724,7 @@
         <script src="{{ asset('assets/plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
 
         <script>
-            (function () {
+            (function() {
                 "use strict";
 
                 const USER_ID = {{ (int) $userId }};
@@ -705,9 +755,9 @@
                     const cancelText = opts.cancelText || 'Cancel';
 
                     const swal2 =
-                        (window.Swal && typeof window.Swal.fire === 'function') ? window.Swal
-                        : (window.swal && typeof window.swal.fire === 'function') ? window.swal
-                        : null;
+                        (window.Swal && typeof window.Swal.fire === 'function') ? window.Swal :
+                        (window.swal && typeof window.swal.fire === 'function') ? window.swal :
+                        null;
 
                     if (swal2) {
                         return swal2.fire({
@@ -746,7 +796,10 @@
                         document.body.appendChild(el);
                     }
                     if (window.bootstrap && window.bootstrap.Modal) {
-                        window.bootstrap.Modal.getOrCreateInstance(el, { backdrop: true, keyboard: true }).show();
+                        window.bootstrap.Modal.getOrCreateInstance(el, {
+                            backdrop: true,
+                            keyboard: true
+                        }).show();
                         return;
                     }
                     const jq = window.jQuery;
@@ -789,7 +842,8 @@
                     });
 
                     // If current selection becomes invalid, reset it.
-                    const selected = selectEl.selectedOptions && selectEl.selectedOptions.length ? selectEl.selectedOptions[0] : null;
+                    const selected = selectEl.selectedOptions && selectEl.selectedOptions.length ? selectEl.selectedOptions[
+                        0] : null;
                     if (selected && (selected.disabled || selected.hidden)) {
                         selectEl.value = '';
                     }
@@ -806,9 +860,9 @@
                     // Guard against invalid table markup (eg. colspan rows) that can crash DataTables.
                     try {
                         const tableEl = $el[0];
-                        const expectedCols = tableEl && tableEl.tHead && tableEl.tHead.rows && tableEl.tHead.rows.length
-                            ? tableEl.tHead.rows[0].cells.length
-                            : 0;
+                        const expectedCols = tableEl && tableEl.tHead && tableEl.tHead.rows && tableEl.tHead.rows.length ?
+                            tableEl.tHead.rows[0].cells.length :
+                            0;
 
                         if (expectedCols && tableEl.tBodies && tableEl.tBodies.length) {
                             Array.from(tableEl.tBodies[0].rows || []).forEach((row) => {
@@ -834,12 +888,18 @@
                     try {
                         $el.DataTable(Object.assign({
                             pageLength: 10,
-                            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                            lengthMenu: [
+                                [10, 25, 50, 100],
+                                [10, 25, 50, 100]
+                            ],
                             // Responsive extension is optional and can throw on some DOM edge-cases.
                             // We keep tables simple here (search + pagination).
                             responsive: false,
                             deferRender: true,
-                            language: { search: "", searchPlaceholder: "Search..." },
+                            language: {
+                                search: "",
+                                searchPlaceholder: "Search..."
+                            },
                         }, options || {}));
                     } catch (e) {
                         console.warn('Failed to initialize DataTable for', selector, e);
@@ -855,7 +915,7 @@
                         el.__cleanupBound = true;
 
                         try {
-                            el.addEventListener('hidden.bs.modal', function () {
+                            el.addEventListener('hidden.bs.modal', function() {
                                 if (id === 'examResultModal') {
                                     const frame = document.getElementById('examResultFrame');
                                     if (frame) frame.setAttribute('src', 'about:blank');
@@ -868,7 +928,7 @@
 
                         const jq = window.jQuery;
                         if (jq && jq.fn && typeof jq.fn.on === 'function') {
-                            jq(el).on('hidden.bs.modal', function () {
+                            jq(el).on('hidden.bs.modal', function() {
                                 if (id === 'examResultModal') {
                                     const frame = document.getElementById('examResultFrame');
                                     if (frame) frame.setAttribute('src', 'about:blank');
@@ -879,7 +939,7 @@
                     });
                 })();
 
-                window.openAdmitStudentModal = function (opts) {
+                window.openAdmitStudentModal = function(opts) {
                     const change = Boolean(opts && opts.change);
 
                     const userInput = document.getElementById('admit_user_id');
@@ -912,7 +972,7 @@
                     showModal('admitModal');
                 };
 
-                window.openChooseSessionModal = function () {
+                window.openChooseSessionModal = function() {
                     const title = document.getElementById('chooseSessionModalLabel');
                     if (title) title.textContent = 'Choose Session';
 
@@ -928,8 +988,8 @@
                     showModal('chooseSessionModal');
                 };
 
-                window.deleteStudentAdmission = function () {
-                    const doDelete = function () {
+                window.deleteStudentAdmission = function() {
+                    const doDelete = function() {
                         const jq = window.jQuery;
                         const csrf = getCsrfToken();
 
@@ -937,18 +997,30 @@
                             jq.ajax({
                                 url: DELETE_ADMISSION_URL,
                                 type: 'DELETE',
-                                headers: Object.assign(
-                                    { 'Accept': 'application/json' },
-                                    csrf ? { 'X-CSRF-TOKEN': csrf } : {}
+                                headers: Object.assign({
+                                        'Accept': 'application/json'
+                                    },
+                                    csrf ? {
+                                        'X-CSRF-TOKEN': csrf
+                                    } : {}
                                 ),
-                                success: function (resp) {
-                                    const message = resp && resp.message ? resp.message : 'Admission deleted successfully.';
-                                    if (window.Noty) new Noty({ type: "success", text: message }).show();
+                                success: function(resp) {
+                                    const message = resp && resp.message ? resp.message :
+                                        'Admission deleted successfully.';
+                                    if (window.Noty) new Noty({
+                                        type: "success",
+                                        text: message
+                                    }).show();
                                     window.location.reload();
                                 },
-                                error: function (xhr) {
-                                    const message = (xhr && xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to delete admission.';
-                                    if (window.Noty) new Noty({ type: "error", text: message }).show();
+                                error: function(xhr) {
+                                    const message = (xhr && xhr.responseJSON && xhr.responseJSON
+                                            .message) ? xhr.responseJSON.message :
+                                        'Failed to delete admission.';
+                                    if (window.Noty) new Noty({
+                                        type: "error",
+                                        text: message
+                                    }).show();
                                 }
                             });
                             return;
@@ -957,9 +1029,14 @@
                         if (window.fetch) {
                             fetch(DELETE_ADMISSION_URL, {
                                 method: 'DELETE',
-                                headers: Object.assign({ 'Accept': 'application/json' }, csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
+                                headers: Object.assign({
+                                    'Accept': 'application/json'
+                                }, csrf ? {
+                                    'X-CSRF-TOKEN': csrf
+                                } : {}),
                             }).then((r) => r.json()).then((resp) => {
-                                const message = resp && resp.message ? resp.message : 'Admission deleted successfully.';
+                                const message = resp && resp.message ? resp.message :
+                                    'Admission deleted successfully.';
                                 alert(message);
                                 window.location.reload();
                             }).catch(() => alert('Failed to delete admission.'));
@@ -972,12 +1049,14 @@
                         icon: "warning",
                         confirmText: "Yes, delete it!",
                         cancelText: "Cancel",
-                    }).then((ok) => { if (ok) doDelete(); });
+                    }).then((ok) => {
+                        if (ok) doDelete();
+                    });
                 };
 
-                document.addEventListener('DOMContentLoaded', function () {
+                document.addEventListener('DOMContentLoaded', function() {
                     // Open exam result in modal (works for static rows and future dynamic buttons).
-                    document.addEventListener('click', function (e) {
+                    document.addEventListener('click', function(e) {
                         const trigger = e.target.closest('.js-view-result-modal');
                         if (!trigger) return;
                         e.preventDefault();
@@ -986,12 +1065,20 @@
                     });
 
                     // Datatables
-                    safeInitDataTable('#dtAttendanceHistory', { order: [[0, 'desc']] });
-                    safeInitDataTable('#dtExamResults', { order: [[3, 'desc']] });
+                    safeInitDataTable('#dtAttendanceHistory', {
+                        order: [
+                            [0, 'desc']
+                        ]
+                    });
+                    safeInitDataTable('#dtExamResults', {
+                        order: [
+                            [3, 'desc']
+                        ]
+                    });
 
                     // Reset results confirm (SweetAlert)
                     document.querySelectorAll('.js-reset-results').forEach((btn) => {
-                        btn.addEventListener('click', function (e) {
+                        btn.addEventListener('click', function(e) {
                             e.preventDefault();
                             const url = this.getAttribute('href');
                             if (!url) return;
@@ -1011,14 +1098,15 @@
 
                     const jq = window.jQuery;
                     if (jq && jq.fn && jq.fn.modal) {
-                        jq('#admitModal, #chooseSessionModal, #examResultModal').on('hidden.bs.modal', cleanupModalBackdrops);
+                        jq('#admitModal, #chooseSessionModal, #examResultModal').on('hidden.bs.modal',
+                            cleanupModalBackdrops);
                     }
 
                     // Admit modal: filter sessions by selected course
                     const courseSelect = document.getElementById('course_id');
                     const sessionSelect = document.getElementById('session_id');
                     if (courseSelect && sessionSelect) {
-                        courseSelect.addEventListener('change', function () {
+                        courseSelect.addEventListener('change', function() {
                             filterSessionsByCourse(sessionSelect, this.value || '');
                         });
                     }
@@ -1026,19 +1114,28 @@
                     // Admit / Change Admission submit via AJAX
                     const admitForm = document.getElementById('admitForm');
                     if (admitForm) {
-                        admitForm.addEventListener('submit', function (e) {
+                        admitForm.addEventListener('submit', function(e) {
                             e.preventDefault();
 
-                            const courseId = document.getElementById('course_id') ? document.getElementById('course_id').value : '';
-                            const sessionId = document.getElementById('session_id') ? document.getElementById('session_id').value : '';
-                            const change = document.getElementById('admit_change') ? document.getElementById('admit_change').value === 'true' : false;
+                            const courseId = document.getElementById('course_id') ? document.getElementById(
+                                'course_id').value : '';
+                            const sessionId = document.getElementById('session_id') ? document
+                                .getElementById('session_id').value : '';
+                            const change = document.getElementById('admit_change') ? document
+                                .getElementById('admit_change').value === 'true' : false;
 
                             if (!courseId) {
-                                if (window.Noty) new Noty({ type: "error", text: "Please select a course." }).show();
+                                if (window.Noty) new Noty({
+                                    type: "error",
+                                    text: "Please select a course."
+                                }).show();
                                 return;
                             }
                             if (!sessionId) {
-                                if (window.Noty) new Noty({ type: "error", text: "Please choose a session." }).show();
+                                if (window.Noty) new Noty({
+                                    type: "error",
+                                    text: "Please choose a session."
+                                }).show();
                                 return;
                             }
 
@@ -1047,9 +1144,9 @@
 
                             confirmWithSweetAlert({
                                 title: change ? "Change Admission?" : "Admit Student?",
-                                text: change
-                                    ? "This will update this student’s admission details. Continue?"
-                                    : "This will admit this student and assign a session. Continue?",
+                                text: change ?
+                                    "This will update this student’s admission details. Continue?" :
+                                    "This will admit this student and assign a session. Continue?",
                                 icon: "warning",
                                 confirmText: change ? "Yes, change it!" : "Yes, admit!",
                                 cancelText: "Cancel",
@@ -1061,37 +1158,60 @@
 
                                 const jq = window.jQuery;
                                 const csrf = getCsrfToken();
-                                const url = admitForm.getAttribute('action') || CHANGE_ADMISSION_URL;
+                                const url = admitForm.getAttribute('action') ||
+                                    CHANGE_ADMISSION_URL;
 
                                 if (jq && typeof jq.ajax === 'function') {
                                     jq.ajax({
                                         url: url,
                                         type: 'POST',
-                                        data: { course_id: courseId, session_id: sessionId },
-                                        headers: Object.assign(
-                                            { 'Accept': 'application/json' },
-                                            csrf ? { 'X-CSRF-TOKEN': csrf } : {}
+                                        data: {
+                                            course_id: courseId,
+                                            session_id: sessionId
+                                        },
+                                        headers: Object.assign({
+                                                'Accept': 'application/json'
+                                            },
+                                            csrf ? {
+                                                'X-CSRF-TOKEN': csrf
+                                            } : {}
                                         ),
-                                        success: function (resp) {
-                                            const message = resp && resp.message ? resp.message : (change ? 'Admission updated successfully.' : 'Student admitted successfully.');
-                                            if (window.Noty) new Noty({ type: "success", text: message }).show();
+                                        success: function(resp) {
+                                            const message = resp && resp.message ? resp
+                                                .message : (change ?
+                                                    'Admission updated successfully.' :
+                                                    'Student admitted successfully.');
+                                            if (window.Noty) new Noty({
+                                                type: "success",
+                                                text: message
+                                            }).show();
                                             hideModal('admitModal');
                                             window.location.reload();
                                         },
-                                        error: function (xhr) {
+                                        error: function(xhr) {
                                             let message = 'Failed to save admission.';
                                             if (xhr && xhr.responseJSON) {
-                                                if (xhr.responseJSON.message) message = xhr.responseJSON.message;
+                                                if (xhr.responseJSON.message) message =
+                                                    xhr.responseJSON.message;
                                                 if (xhr.responseJSON.errors) {
-                                                    const firstKey = Object.keys(xhr.responseJSON.errors)[0];
-                                                    if (firstKey && xhr.responseJSON.errors[firstKey] && xhr.responseJSON.errors[firstKey][0]) {
-                                                        message = xhr.responseJSON.errors[firstKey][0];
+                                                    const firstKey = Object.keys(xhr
+                                                        .responseJSON.errors)[0];
+                                                    if (firstKey && xhr.responseJSON
+                                                        .errors[firstKey] && xhr
+                                                        .responseJSON.errors[firstKey][
+                                                            0
+                                                        ]) {
+                                                        message = xhr.responseJSON
+                                                            .errors[firstKey][0];
                                                     }
                                                 }
                                             }
-                                            if (window.Noty) new Noty({ type: "error", text: message }).show();
+                                            if (window.Noty) new Noty({
+                                                type: "error",
+                                                text: message
+                                            }).show();
                                         },
-                                        complete: function () {
+                                        complete: function() {
                                             if (submitBtn) submitBtn.disabled = false;
                                         }
                                     });
@@ -1101,18 +1221,34 @@
                                 if (window.fetch) {
                                     fetch(url, {
                                         method: 'POST',
-                                        headers: Object.assign(
-                                            { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                                            csrf ? { 'X-CSRF-TOKEN': csrf } : {}
+                                        headers: Object.assign({
+                                                'Accept': 'application/json',
+                                                'Content-Type': 'application/json'
+                                            },
+                                            csrf ? {
+                                                'X-CSRF-TOKEN': csrf
+                                            } : {}
                                         ),
-                                        body: JSON.stringify({ course_id: courseId, session_id: sessionId }),
+                                        body: JSON.stringify({
+                                            course_id: courseId,
+                                            session_id: sessionId
+                                        }),
                                     }).then((r) => r.json()).then((resp) => {
-                                        const message = resp && resp.message ? resp.message : (change ? 'Admission updated successfully.' : 'Student admitted successfully.');
-                                        if (window.Noty) new Noty({ type: "success", text: message }).show();
+                                        const message = resp && resp.message ? resp
+                                            .message : (change ?
+                                                'Admission updated successfully.' :
+                                                'Student admitted successfully.');
+                                        if (window.Noty) new Noty({
+                                            type: "success",
+                                            text: message
+                                        }).show();
                                         hideModal('admitModal');
                                         window.location.reload();
                                     }).catch(() => {
-                                        if (window.Noty) new Noty({ type: "error", text: "Failed to save admission." }).show();
+                                        if (window.Noty) new Noty({
+                                            type: "error",
+                                            text: "Failed to save admission."
+                                        }).show();
                                     }).finally(() => {
                                         if (submitBtn) submitBtn.disabled = false;
                                     });
@@ -1124,10 +1260,11 @@
                     // Choose session modal submit via AJAX (controller returns JSON)
                     const chooseForm = document.getElementById('chooseSessionForm');
                     if (chooseForm) {
-                        chooseForm.addEventListener('submit', function (e) {
+                        chooseForm.addEventListener('submit', function(e) {
                             e.preventDefault();
 
-                            const sessionId = document.getElementById('choose_session_id') ? document.getElementById('choose_session_id').value : '';
+                            const sessionId = document.getElementById('choose_session_id') ? document
+                                .getElementById('choose_session_id').value : '';
                             if (!sessionId) {
                                 alert('Please choose a session.');
                                 return;
@@ -1140,42 +1277,65 @@
                             const csrf = getCsrfToken();
                             const url = chooseForm.getAttribute('action') || CHOOSE_SESSION_URL;
 
-                            const doUpdate = function () {
-                            if (jq && typeof jq.ajax === 'function') {
-                                jq.ajax({
-                                    url: url,
-                                    type: 'POST',
-                                    data: { session_id: sessionId },
-                                    headers: Object.assign(
-                                        { 'Accept': 'application/json' },
-                                        csrf ? { 'X-CSRF-TOKEN': csrf } : {}
-                                    ),
-                                    success: function (resp) {
-                                        const message = resp && resp.message ? resp.message : 'Session updated successfully.';
-                                        if (window.Noty) new Noty({ type: "success", text: message }).show();
+                            const doUpdate = function() {
+                                if (jq && typeof jq.ajax === 'function') {
+                                    jq.ajax({
+                                        url: url,
+                                        type: 'POST',
+                                        data: {
+                                            session_id: sessionId
+                                        },
+                                        headers: Object.assign({
+                                                'Accept': 'application/json'
+                                            },
+                                            csrf ? {
+                                                'X-CSRF-TOKEN': csrf
+                                            } : {}
+                                        ),
+                                        success: function(resp) {
+                                            const message = resp && resp.message ? resp
+                                                .message : 'Session updated successfully.';
+                                            if (window.Noty) new Noty({
+                                                type: "success",
+                                                text: message
+                                            }).show();
+                                            hideModal('chooseSessionModal');
+                                            window.location.reload();
+                                        },
+                                        error: function(xhr) {
+                                            const message = (xhr && xhr.responseJSON && xhr
+                                                    .responseJSON.message) ? xhr
+                                                .responseJSON.message :
+                                                'Failed to update session.';
+                                            if (window.Noty) new Noty({
+                                                type: "error",
+                                                text: message
+                                            }).show();
+                                        }
+                                    });
+                                    return;
+                                }
+
+                                if (window.fetch) {
+                                    fetch(url, {
+                                        method: 'POST',
+                                        headers: Object.assign({
+                                            'Accept': 'application/json',
+                                            'Content-Type': 'application/json'
+                                        }, csrf ? {
+                                            'X-CSRF-TOKEN': csrf
+                                        } : {}),
+                                        body: JSON.stringify({
+                                            session_id: sessionId
+                                        }),
+                                    }).then((r) => r.json()).then((resp) => {
+                                        const message = resp && resp.message ? resp.message :
+                                            'Session updated successfully.';
+                                        alert(message);
                                         hideModal('chooseSessionModal');
                                         window.location.reload();
-                                    },
-                                    error: function (xhr) {
-                                        const message = (xhr && xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to update session.';
-                                        if (window.Noty) new Noty({ type: "error", text: message }).show();
-                                    }
-                                });
-                                return;
-                            }
-
-                            if (window.fetch) {
-                                fetch(url, {
-                                    method: 'POST',
-                                    headers: Object.assign({ 'Accept': 'application/json', 'Content-Type': 'application/json' }, csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
-                                    body: JSON.stringify({ session_id: sessionId }),
-                                }).then((r) => r.json()).then((resp) => {
-                                    const message = resp && resp.message ? resp.message : 'Session updated successfully.';
-                                    alert(message);
-                                    hideModal('chooseSessionModal');
-                                    window.location.reload();
-                                }).catch(() => alert('Failed to update session.'));
-                            }
+                                    }).catch(() => alert('Failed to update session.'));
+                                }
                             };
 
                             confirmWithSweetAlert({
@@ -1184,7 +1344,9 @@
                                 icon: "warning",
                                 confirmText: "Yes, change it!",
                                 cancelText: "Cancel",
-                            }).then((ok) => { if (ok) doUpdate(); });
+                            }).then((ok) => {
+                                if (ok) doUpdate();
+                            });
                         });
                     }
 
@@ -1200,7 +1362,7 @@
                         new Chart(attendanceCtx, {
                             type: 'bar',
                             data: {
-                                labels: ['Total Days','Present', 'Absent'],
+                                labels: ['Total Days', 'Present', 'Absent'],
                                 datasets: [{
                                     label: 'Days',
                                     data: [totalDays, presentDays, absentDays],
@@ -1208,7 +1370,7 @@
                                         'rgba(13, 110, 253, 0.35)',
                                         'rgba(25, 135, 84, 0.8)',
                                         'rgba(218, 149, 22, 0.91)'
-                                    
+
                                     ],
                                     borderWidth: 1
                                 }]
@@ -1216,10 +1378,15 @@
                             options: {
                                 responsive: true,
                                 maintainAspectRatio: false,
-                                legend: { display: false },
+                                legend: {
+                                    display: false
+                                },
                                 scales: {
                                     yAxes: [{
-                                        ticks: { beginAtZero: true, stepSize: 1 }
+                                        ticks: {
+                                            beginAtZero: true,
+                                            stepSize: 1
+                                        }
                                     }]
                                 }
                             }
@@ -1256,14 +1423,19 @@
                             options: {
                                 responsive: true,
                                 maintainAspectRatio: false,
-                                legend: { display: true, position: 'top' },
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                },
                                 scales: {
                                     yAxes: [{
                                         ticks: {
                                             beginAtZero: true,
                                             max: 100,
                                             stepSize: 10,
-                                            callback: function (value) { return value + '%'; }
+                                            callback: function(value) {
+                                                return value + '%';
+                                            }
                                         }
                                     }]
                                 }
@@ -1274,74 +1446,38 @@
             })();
         </script>
     @endpush
-    
-    <div class="modal fade" id="admitModal" tabindex="-1" aria-labelledby="admitModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header d-flex align-items-center">
-                    <h5 class="modal-title" id="admitModalLabel">Admit Student</h5>
-                    <button type="button" class="close ms-auto ml-auto" style="margin-left:auto" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="admitForm" action="{{ route('manage-student.change-admission', ['user' => $userId]) }}" name="admit_form" method="POST">
-                        {{ csrf_field() }}
-                        <input id="admit_user_id" name="user_id" type="hidden" class="form-control" required>
-                        <input id="admit_change" name="change" value="false" type="hidden" class="form-control" required>
-                        <div class="mb-3">
-                            <label for="course_id" class="form-label">Select Course</label>
-                            <select id="course_id" name="course_id" class="form-select" required>
-                                <option value="">Choose One Course</option>
-                                @foreach ($courses ?? [] as $id => $name)
-                                    <option value="{{ $id }}">{{ $name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="session_id" class="form-label">Choose Session</label>
-                            <select id="session_id" name="session_id" class="form-select" @if(empty($sessions ?? null)) disabled @endif>
-                                @if(empty($sessions ?? null))
-                                    <option value="">No sessions available</option>
-                                @else
-                                    <option value="">Choose One Session</option>
-                                    @foreach ($sessions ?? [] as $session)
-                                        <option data-course="{{ $session->course_id }}" value="{{ $session->id }}">
-                                            {{ $session->name }}
-                                        </option>
-                                    @endforeach
-                                @endif
-                            </select>
-                            @if(empty($sessions ?? null))
-                                <small class="text-muted">Sessions are not configured. Please contact support.</small>
-                            @endif
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-secondary flex-grow-1" data-dismiss="modal" data-bs-dismiss="modal">Cancel</button>
-                            <button id="admitSubmitBtn" class="btn btn-primary flex-grow-1" type="submit" @if(empty($sessions ?? null)) disabled @endif>Save Admission</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="modal fade" id="chooseSessionModal" tabindex="-1" aria-labelledby="chooseSessionModalLabel" aria-hidden="true">
+
+    @include('vendor.backpack.crud.modals.admit', [
+        'form_action' => route('manage-student.change-admission', ['user' => $userId]),
+        'form_id' => 'admitForm',
+        'user_id_input_id' => 'admit_user_id',
+        'change_input_id' => 'admit_change',
+        'submit_btn_id' => 'admitSubmitBtn',
+        'submit_text' => __('Admit Student'),
+        'show_cancel' => true,
+    ])
+
+    <div class="modal fade" id="chooseSessionModal" tabindex="-1" aria-labelledby="chooseSessionModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header d-flex align-items-center">
                     <h5 class="modal-title" id="chooseSessionModalLabel">Choose Session</h5>
-                    <button type="button" class="close ms-auto ml-auto" style="margin-left:auto" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close ms-auto ml-auto" style="margin-left:auto" data-dismiss="modal"
+                        data-bs-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <form id="chooseSessionForm" action="{{ route('manage-student.choose-session', ['user' => $userId]) }}" name="choose_session_form" method="POST">
+                    <form id="chooseSessionForm"
+                        action="{{ route('manage-student.choose-session', ['user' => $userId]) }}"
+                        name="choose_session_form" method="POST">
                         {{ csrf_field() }}
                         <div class="mb-3">
                             <label for="choose_session_id" class="form-label">Choose Session</label>
-                            <select id="choose_session_id" name="session_id" class="form-select" @if(empty($sessions ?? null)) disabled @endif>
-                                @if(empty($sessions ?? null))
+                            <select id="choose_session_id" name="session_id" class="form-select"
+                                @if (empty($sessions ?? null)) disabled @endif>
+                                @if (empty($sessions ?? null))
                                     <option value="">No sessions available</option>
                                 @else
                                     <option value="">Choose One Session</option>
@@ -1354,8 +1490,10 @@
                             </select>
                         </div>
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-secondary flex-grow-1" data-dismiss="modal" data-bs-dismiss="modal">Cancel</button>
-                            <button class="btn btn-success flex-grow-1" type="submit" @if(empty($sessions ?? null)) disabled @endif>Save Session</button>
+                            <button type="button" class="btn btn-outline-secondary flex-grow-1" data-dismiss="modal"
+                                data-bs-dismiss="modal">Cancel</button>
+                            <button class="btn btn-success flex-grow-1" type="submit"
+                                @if (empty($sessions ?? null)) disabled @endif>Save Session</button>
                         </div>
                     </form>
                 </div>
@@ -1363,17 +1501,20 @@
         </div>
     </div>
 
-    <div class="modal fade" id="examResultModal" tabindex="-1" aria-labelledby="examResultModalLabel" aria-hidden="true">
+    <div class="modal fade" id="examResultModal" tabindex="-1" aria-labelledby="examResultModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header d-flex align-items-center">
                     <h5 class="modal-title" id="examResultModalLabel">Exam Result</h5>
-                    <button type="button" class="close ms-auto ml-auto" style="margin-left:auto" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close ms-auto ml-auto" style="margin-left:auto" data-dismiss="modal"
+                        data-bs-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body p-0">
-                    <iframe id="examResultFrame" src="about:blank" style="width:100%;height:75vh;border:0;" loading="lazy"></iframe>
+                    <iframe id="examResultFrame" src="about:blank" style="width:100%;height:75vh;border:0;"
+                        loading="lazy"></iframe>
                 </div>
             </div>
         </div>
