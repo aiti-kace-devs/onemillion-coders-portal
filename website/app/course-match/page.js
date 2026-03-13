@@ -54,7 +54,7 @@ export default function CourseMatchPage() {
       try {
         setLoading(true);
         setError(null);
-        const questionsData = await getCourseMatchQuestions();
+        const questionsData = await getCourseMatchQuestions("General");
         setQuestions(questionsData || []);
       } catch (err) {
         console.error("Error fetching questions:", err);

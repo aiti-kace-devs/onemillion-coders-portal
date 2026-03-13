@@ -106,9 +106,10 @@ export const checkUserStatus = async (userId) => {
  * Fetch course match questions and options
  * @returns {Promise<Object>} - Course match questions data
  */
-export const getCourseMatchQuestions = async () => {
+export const getCourseMatchQuestions = async (type) => {
   try {
-    const response = await apiRequest('course-match');
+    const params = type ? `?type=${type}` : '';
+    const response = await apiRequest(`course-match${params}`);
     return response.data;
   } catch (error) {
     console.error('Failed to fetch course match questions:', error);
