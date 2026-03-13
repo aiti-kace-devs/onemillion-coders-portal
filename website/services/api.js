@@ -95,7 +95,7 @@ export const fetchBranchesSummary = async () => {
 export const checkUserStatus = async (userId) => {
   try {
     const response = await apiRequest(`check-user/${userId}`);
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Failed to check user status:', error);
     throw error;
@@ -124,14 +124,14 @@ export const getCourseMatchQuestions = async () => {
  * @param {number} params.centreId - Centre ID
  * @returns {Promise<Object>} - Course recommendations data
  */
-export const getCourseRecommendations = async ({ optionIds, userId, centreId }) => {
+export const getCourseRecommendations = async ({ optionIds, userId, regionId }) => {
   try {
-    const response = await apiRequest('course-match/recommend', {
+    const response = await apiRequest('recommend/courses', {
       method: 'POST',
       data: {
         option_ids: optionIds,
         userId,
-        centre_id: centreId,
+        branch_id: regionId,
       }
     });
     return response.matches || [];
