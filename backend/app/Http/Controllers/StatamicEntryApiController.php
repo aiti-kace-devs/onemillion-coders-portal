@@ -9,6 +9,7 @@ use Statamic\Facades\Collection;
 use Statamic\Facades\Asset;
 use Statamic\Facades\Term;
 use Statamic\Facades\GlobalSet;
+use Statamic\Facades\Form;
 
 class StatamicEntryApiController extends Controller
 {
@@ -525,5 +526,41 @@ class StatamicEntryApiController extends Controller
         ];
 
         return response()->json(['data' => $footer]);
+    }
+
+    public function showFormByHandle(Request $request, $handle): JsonResponse
+    {
+        $form = Form::find($handle);
+
+        if (!$form) {
+            return response()->json(['message' => 'Form not found'], 404);
+        }
+
+        $data = [
+            'form' => $form->toArray(),
+            'contact_us' => GlobalSet::findByHandle('contact')->in('default')->toArray(),
+        ];
+        return response()->json(['data' => $data]);
+    }
+
+    public function saveFormByHandle(Request $request, $handle): JsonResponse
+    {
+        $form = Form::find($handle);
+
+        if (!$form) {
+            return response()->json(['message' => 'Form not found'], 404);
+        }
+
+        $rules = $form->blueprint()->fields()->all()->mapWithKeys(function ($field) {
+            return [$field->handle() => $field->config()['validate'] ?? []];
+        })->toArray();
+
+        $validated = $request->validate($rules);
+
+        $submission = $form->makeSubmission();
+        $submission->data($validated);
+        $submission->save();
+
+        return response()->json(['message' => 'Form submitted successfully']);
     }
 }
