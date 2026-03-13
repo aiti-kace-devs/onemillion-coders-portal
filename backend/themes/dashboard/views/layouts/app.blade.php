@@ -569,6 +569,7 @@
         // });
     </script>
     @stack('scripts')
+    @stack('after_scripts')
 </body>
 
 </html>

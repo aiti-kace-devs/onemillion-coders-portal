@@ -14,6 +14,7 @@ use App\Helpers\GeneralFieldsAndColumns;
 use Illuminate\Http\Request;
 use App\Helpers\CrudListHelper;
 use App\Helpers\FilterHelper;
+use App\Helpers\MediaHelper;
 use App\Helpers\WidgetHelper;
 
 /**
@@ -283,6 +284,15 @@ class CentreCrudController extends CrudController
             'type'      => 'textarea',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
+
+        MediaHelper::getMediaSelector(
+            name: 'images',
+            multiple: true,
+            label: 'Centre Images',
+            disk_options: MediaHelper::getArticleImagesDiskOptions(),
+            // wrapper_class: 'form-group col-12',
+            value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->coverImage->file ?? '' : '',
+        );
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Is PWD Friendly', 'is_pwd_friendly');
 
