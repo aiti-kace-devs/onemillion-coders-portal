@@ -117,66 +117,7 @@ class CentreCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        CRUD::column('title')->type('textarea');
-        CRUD::column('branch_id')->label('Branch')->linkTo('branch.show');
-        CRUD::column('gps_address');
-        CRUD::column('pwd_notes');
-        CRUD::addColumn([
-            'name' => 'is_pwd_friendly',
-            'label' => 'Is PWD Friendly',
-            'type' => 'view',
-            'view' => 'admin.status_toggle.status_column',
-        ]);
-        CRUD::addColumn([
-            'name' => 'wheelchair_accessible',
-            'label' => 'Wheelchair Accessible',
-            'type' => 'view',
-            'view' => 'admin.status_toggle.status_column',
-        ]);
-        CRUD::addColumn([
-            'name' => 'has_access_ramp',
-            'label' => 'Has Access Ramp',
-            'type' => 'view',
-            'view' => 'admin.status_toggle.status_column',
-        ]);
-        CRUD::addColumn([
-            'name' => 'has_accessible_toilet',
-            'label' => 'Has Accessible Toilet',
-            'type' => 'view',
-            'view' => 'admin.status_toggle.status_column',
-        ]);
-        CRUD::addColumn([
-            'name' => 'has_elevator',
-            'label' => 'Has Elevator',
-            'type' => 'view',
-            'view' => 'admin.status_toggle.status_column',
-        ]);
-        CRUD::addColumn([
-            'name' => 'supports_hearing_impaired',
-            'label' => 'Supports Hearing Impaired',
-            'type' => 'view',
-            'view' => 'admin.status_toggle.status_column',
-        ]);
-        CRUD::addColumn([
-            'name' => 'supports_visually_impaired',
-            'label' => 'Supports Visually Impaired',
-            'type' => 'view',
-            'view' => 'admin.status_toggle.status_column',
-        ]);
-        CRUD::addColumn([
-            'name' => 'staff_trained_for_pwd',
-            'label' => 'Staff Trained for PWDs',
-            'type' => 'view',
-            'view' => 'admin.status_toggle.status_column',
-        ]);
-        CRUD::addColumn([
-            'name' => 'status',
-            'label' => 'Status',
-            'type' => 'view',
-            'view' => 'admin.status_toggle.status_column',
-        ]);
-        CRUD::column('created_at');
-        CRUD::column('updated_at');
+        CRUD::set('show.view', 'vendor.backpack.crud.centre_show');
     }
     /**
      * Define what happens when the Create operation is loaded.
