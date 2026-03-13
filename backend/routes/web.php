@@ -9,16 +9,11 @@ use App\Http\Controllers\Admin\Api\FormPreviewController;
 use App\Http\Controllers\Admin\Api\CourseProgrammeController;
 use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
 use App\Http\Controllers\Admin\Api\RegistrationFormAPIController;
+use App\Http\Controllers\Admin\ConstituencyCrudController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ProgrammeController;
-use App\Http\Controllers\SmsTemplateController;
-use App\Http\Controllers\EmailTemplateController;
-use App\Http\Controllers\QuestionnaireController;
 use App\Http\Controllers\Api\OtpController;
-use Illuminate\Support\Str;
-
-
+use App\Http\Controllers\FormResponseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,7 +29,9 @@ use Illuminate\Support\Str;
 
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
 Route::post('/api/add-student', [FormResponseController::class, 'store']);
+Route::get('/api/constituencies/{constituency}/metrics', [ConstituencyCrudController::class, 'metrics']);
 Route::get('/api/check-user/{userID}', [RegistrationFormAPIController::class, 'check_user_by_userID']);
+Route::post('/api/confirm-course', [RegistrationFormAPIController::class, 'confirmCourse']);
 
 
 // OTP verification routes for registration
@@ -50,8 +47,7 @@ Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
 
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
 Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
-Route::get('/api/programmes-with-course-match', action: [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
-Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+Route::get('/api/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
 Route::get('/api/programmes-with-batches', [CourseProgrammeController::class, 'programmeWithBatch']);
 Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
 Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
@@ -65,6 +61,7 @@ Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview
 Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
 Route::get('/api/districts-by-branch', [CourseProgrammeController::class, 'districtsByBranch']);
 Route::get('/api/centres-by-district', [CourseProgrammeController::class, 'centresByDistrict']);
+Route::get('/api/constituencies-by-branch', [CourseProgrammeController::class, 'constituencyByRegion']);
 
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');

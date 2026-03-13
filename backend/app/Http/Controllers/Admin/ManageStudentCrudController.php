@@ -17,6 +17,7 @@ use App\Models\UserAdmission;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
+use App\Helpers\CourseVisibilityHelper;
 use Illuminate\Support\Facades\View;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\GetsFilteredQuery;
@@ -136,8 +137,8 @@ class ManageStudentCrudController extends CrudController
 
         // CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
 
-        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
-
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
+        
         $coursesQuery = Course::query()
             ->with('centre')
             ->whereHas('batch', function ($query) {
@@ -531,7 +532,7 @@ class ManageStudentCrudController extends CrudController
             })
             ->orderBy('course_name');
 
-        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         if (is_array($visibleCourseIds)) {
             if (empty($visibleCourseIds)) {
                 return response()->json([]);
@@ -558,7 +559,7 @@ class ManageStudentCrudController extends CrudController
     {
         $courseId = $request->input('course_id');
 
-        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         if (is_array($visibleCourseIds) && ! in_array((int) $courseId, $visibleCourseIds, true)) {
             return response()->json([]);
         }

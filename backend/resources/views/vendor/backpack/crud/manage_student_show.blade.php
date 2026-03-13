@@ -1437,62 +1437,16 @@
             })();
         </script>
     @endpush
-    <div class="modal fade" id="admitModal" tabindex="-1" aria-labelledby="admitModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header d-flex align-items-center">
-                    <h5 class="modal-title" id="admitModalLabel">Admit Student</h5>
-                    <button type="button" class="close ms-auto ml-auto" style="margin-left:auto" data-dismiss="modal"
-                        data-bs-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="admitForm" action="{{ route('manage-student.change-admission', ['user' => $userId]) }}"
-                        name="admit_form" method="POST">
-                        {{ csrf_field() }}
-                        <input id="admit_user_id" name="user_id" type="hidden" class="form-control" required>
-                        <input id="admit_change" name="change" value="false" type="hidden" class="form-control"
-                            required>
-                        <div class="mb-3">
-                            <label for="course_id" class="form-label">Select Course</label>
-                            <select id="course_id" name="course_id" class="form-select" required>
-                                <option value="">Choose One Course</option>
-                                @foreach ($courses ?? [] as $id => $name)
-                                    <option value="{{ $id }}">{{ $name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="session_id" class="form-label">Choose Session</label>
-                            <select id="session_id" name="session_id" class="form-select"
-                                @if (empty($sessions ?? null)) disabled @endif>
-                                @if (empty($sessions ?? null))
-                                    <option value="">No sessions available</option>
-                                @else
-                                    <option value="">Choose One Session</option>
-                                    @foreach ($sessions ?? [] as $session)
-                                        <option data-course="{{ $session->course_id }}" value="{{ $session->id }}">
-                                            {{ $session->name }}
-                                        </option>
-                                    @endforeach
-                                @endif
-                            </select>
-                            @if (empty($sessions ?? null))
-                                <small class="text-muted">Sessions are not configured. Please contact support.</small>
-                            @endif
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-secondary flex-grow-1" data-dismiss="modal"
-                                data-bs-dismiss="modal">Cancel</button>
-                            <button id="admitSubmitBtn" class="btn btn-primary flex-grow-1" type="submit"
-                                @if (empty($sessions ?? null)) disabled @endif>Save Admission</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+
+    @include('vendor.backpack.crud.modals.admit', [
+        'form_action' => route('manage-student.change-admission', ['user' => $userId]),
+        'form_id' => 'admitForm',
+        'user_id_input_id' => 'admit_user_id',
+        'change_input_id' => 'admit_change',
+        'submit_btn_id' => 'admitSubmitBtn',
+        'submit_text' => __('Admit Student'),
+        'show_cancel' => true,
+    ])
 
     <div class="modal fade" id="chooseSessionModal" tabindex="-1" aria-labelledby="chooseSessionModalLabel"
         aria-hidden="true">

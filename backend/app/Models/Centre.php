@@ -15,8 +15,8 @@ class Centre extends Model
     protected $fillable = [
         'title',
         'branch_id',
+        'constituency_id',
         'status',
-
         'gps_address',
         'is_pwd_friendly',
         'wheelchair_accessible',
@@ -28,10 +28,12 @@ class Centre extends Model
         'staff_trained_for_pwd',
         'accessibility_rating',
         'pwd_notes',
+        'images',
     ];
 
 
     protected $casts = [
+        'constituency_id' => 'integer',
         'status' => 'boolean',
         'is_pwd_friendly' => 'boolean',
         'wheelchair_accessible' => 'boolean',
@@ -44,12 +46,18 @@ class Centre extends Model
         'gps_address' => 'string',
         'accessibility_rating' => 'integer',
         'pwd_notes' => 'string',
+        'images' => 'array',
     ];
 
 
     public function branch()
     {
         return $this->belongsTo(Branch::class, 'branch_id', 'id');
+    }
+
+    public function constituency()
+    {
+        return $this->belongsTo(Constituency::class, 'constituency_id', 'id');
     }
 
     public function programme()
@@ -98,7 +106,9 @@ class Centre extends Model
     protected static function booted()
     {
         static::saved(function ($centre) {
-            $centre->courses->each->save();
+            if ($centre->wasChanged('title')) {
+                $centre->courses()->get()->each->save();
+            }
         });
     }
 }

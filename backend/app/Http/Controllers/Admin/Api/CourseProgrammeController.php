@@ -11,6 +11,7 @@ use App\Models\Centre;
 use App\Models\District;
 use App\Models\Course;
 use App\Models\Batch;
+use App\Models\Constituency;
 use App\Models\CourseBatch;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -408,15 +409,25 @@ class CourseProgrammeController extends Controller
 
     public function getBranchSummary()
     {
+        $today = Carbon::today()->toDateString();
         $branches = Branch::withCount('centre')
             ->with(['centre'])
             ->get()
-            ->map(function ($branch) {
+            ->map(function ($branch) use ($today) {
 
-                $centreIds = $branch->centre->pluck('id');
-                $courses = Course::whereIn('centre_id', $centreIds)->get();
-                $ProgrammeIds = $courses->pluck('programme_id');
-                $programmes = Programme::whereIn('id', $ProgrammeIds)->get();
+                $courses = Course::join('centres', 'courses.centre_id', '=', 'centres.id')
+                    ->join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
+                    ->where('centres.branch_id', $branch->id)
+                    ->whereNotNull('courses.programme_id')
+                    ->where('courses.status', 1)
+                    ->where('admission_batches.start_date', '<=', $today)
+                    ->where('admission_batches.end_date', '>=', $today)
+                    ->where('admission_batches.completed', false)
+                    ->where('admission_batches.status', true)
+                    ->get(['courses.id', 'courses.programme_id', 'courses.centre_id']);
+
+                $programmeIds = $courses->pluck('programme_id')->unique()->values();
+                $programmes = Programme::whereIn('id', $programmeIds)->get();
                 $courseIds = $courses->pluck('id');
                 $admittedUsersCount = UserAdmission::whereIn('course_id', $courseIds)
                     ->whereNotNull('confirmed')
@@ -426,7 +437,14 @@ class CourseProgrammeController extends Controller
                     'branch_id' => $branch->id,
                     'branch_title' => $branch->title,
                     'total_centres' => $branch->centre_count,
+                    'total_courses' => $courses->count(),
                     'total_trained_coders' => $admittedUsersCount,
+                    'centres' => $branch->centre
+                        ->map(fn ($centre) => [
+                            'id' => $centre->id,
+                            'title' => $centre->title,
+                        ])
+                        ->values(),
                     'courses' => $programmes,
                 ];
             });
@@ -534,6 +552,29 @@ class CourseProgrammeController extends Controller
             'branch_id' => $branch->id,
             'branch' => $branch->title,
             'districts' => $districts,
+        ]);
+    }
+
+
+
+    public function constituencyByRegion(Request $request)
+    {
+        $data = $request->validate([
+            'branch_id' => 'required|integer|exists:branches,id',
+        ]);
+
+        $branch = Branch::query()->findOrFail($data['branch_id']);
+
+        $constituencies = Constituency::query()
+            ->where('branch_id', $branch->id)
+            ->orderBy('title')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'branch_id' => $branch->id,
+            'branch' => $branch->title,
+            'constituencies' => $constituencies,
         ]);
     }
 

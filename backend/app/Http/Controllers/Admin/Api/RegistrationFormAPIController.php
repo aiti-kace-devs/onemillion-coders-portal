@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use App\Models\UserAdmission;
+use Illuminate\Support\Facades\Validator;
 
 class RegistrationFormAPIController extends Controller
 {
@@ -116,6 +117,56 @@ class RegistrationFormAPIController extends Controller
         return response()->json([
             'success' => true,
             'data' => $user
+        ]);
+    }
+
+    public function confirmCourse(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'userId' => 'required|exists:users,userId',
+            'course_id' => 'required|integer|exists:courses,id',
+            'support' => 'required|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
+        $user = User::where('userId', $data['userId'])->first();
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ]);
+        }
+        
+        $course = Course::with('programme')->find($data['course_id']);
+        if (!$course) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Course not found'
+            ], 404);
+        }
+
+        $user->registered_course = $course->id;
+        $user->support = filter_var($data['support'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                // 'user' => $user->fresh(),
+                // 'course' => $course,
+                // 'already_registered' => (int) $user->registered_course === (int) $course->id,
+                'message' => 'Course registration confirmed successfully.'
+            ],
         ]);
     }
 

@@ -233,6 +233,8 @@ class StudentOperation extends Controller
         if ($user_exam && !$user_exam->started) {
             $user_exam->update(['started' => Carbon::now()->toDateTimeString()]);
         }
+        $data = ['status' => 'true', 'message' => 'started successfully'];
+        $data['questions'] = $questions;
 
         $data = ['status' => 'true', 'message' => 'started successfully'];
         $data['questions'] = $questions;
