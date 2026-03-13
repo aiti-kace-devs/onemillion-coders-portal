@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Header from "./Header";
 import Footer from "./Footer";
 
@@ -9,9 +9,12 @@ const STANDALONE_ROUTES = ["/courses", "/quiz"];
 
 export default function LayoutShell({ children, footerData }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isStandalone = STANDALONE_ROUTES.some((route) => pathname.startsWith(route));
+  // Hide header/footer on programmes page when user_id is present (enrollment flow)
+  const isProgrammesEnrollFlow = pathname.startsWith("/programmes") && searchParams.get("user_id");
 
-  if (isStandalone) {
+  if (isStandalone || isProgrammesEnrollFlow) {
     return <>{children}</>;
   }
 

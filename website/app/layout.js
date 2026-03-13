@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Lato } from "next/font/google";
 import "./globals.css";
 import LayoutShell from "../components/LayoutShell";
@@ -31,9 +32,11 @@ export default async function RootLayout({ children }) {
     <html lang="en">
       <body className={`${lato.variable} antialiased`}>
         <ClientWrapper>
-          <LayoutShell footerData={footerData}>
-            {children}
-          </LayoutShell>
+          <Suspense>
+            <LayoutShell footerData={footerData}>
+              {children}
+            </LayoutShell>
+          </Suspense>
         </ClientWrapper>
       </body>
     </html>

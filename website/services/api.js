@@ -125,7 +125,7 @@ export const getCourseMatchQuestions = async (type) => {
  * @param {number} params.centreId - Centre ID
  * @returns {Promise<Object>} - Course recommendations data
  */
-export const getCourseRecommendations = async ({ optionIds, userId, regionId }) => {
+export const getCourseRecommendations = async ({ optionIds, userId, regionId, centreId }) => {
   try {
     const response = await apiRequest('recommend/courses', {
       method: 'POST',
@@ -133,6 +133,7 @@ export const getCourseRecommendations = async ({ optionIds, userId, regionId }) 
         option_ids: optionIds,
         userId,
         branch_id: regionId,
+        centre_id: centreId,
       }
     });
     return response.matches || [];

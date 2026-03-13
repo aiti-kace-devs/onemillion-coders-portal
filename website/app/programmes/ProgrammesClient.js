@@ -104,44 +104,46 @@ export default function ProgrammesClient({ initialCategory }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header Section */}
-      <section className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center"
-          >
-            <h1 className="text-4xl lg:text-6xl font-bold mb-6">
-              Training <span className="text-yellow-400">Programmes</span>
-            </h1>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
-              Empowering the next generation of digital talent with comprehensive coding and technology programmes.
-            </p>
+      {/* Header Section - hidden during enrollment flow */}
+      {!userId && (
+        <section className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-center"
+            >
+              <h1 className="text-4xl lg:text-6xl font-bold mb-6">
+                Training <span className="text-yellow-400">Programmes</span>
+              </h1>
+              <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
+                Empowering the next generation of digital talent with comprehensive coding and technology programmes.
+              </p>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-yellow-400">
-                  {isLoading ? "-" : programmes.length}
+              {/* Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-yellow-400">
+                    {isLoading ? "-" : programmes.length}
+                  </div>
+                  <div className="text-gray-300">Training Programs</div>
                 </div>
-                <div className="text-gray-300">Training Programs</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-yellow-400">1M+</div>
-                <div className="text-gray-300">Target Trainees</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-yellow-400">
-                  {isLoading ? "-" : categories.length - 1}
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-yellow-400">1M+</div>
+                  <div className="text-gray-300">Target Trainees</div>
                 </div>
-                <div className="text-gray-300">Categories</div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-yellow-400">
+                    {isLoading ? "-" : categories.length - 1}
+                  </div>
+                  <div className="text-gray-300">Categories</div>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* Search and Filters */}
       <section className="py-8 bg-gradient-to-r from-gray-50 to-gray-100 border-b">
