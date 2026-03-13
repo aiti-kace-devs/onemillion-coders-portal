@@ -27,7 +27,19 @@ const TechGhanaSection = () => {
     "Greater Accra Region": "top-[83%] left-[63%]", // Southeast coastal area
     "Ashanti Region": "top-[70%] left-[42%]", // Central-south area where Kumasi is located
     "Bono Region": "top-[47%] left-[50%]", // West-central area
+    "Bono East Region": "top-[47%] left-[58%]", // East of Bono Region
+    "Ahafo Region": "top-[55%] left-[45%]", // South of Bono Region
+    "Western Region": "top-[82%] left-[28%]", // Southwest coastal area
+    "Western North Region": "top-[70%] left-[28%]", // North of Western Region
+    "Central Region": "top-[85%] left-[48%]", // South-central coastal area
+    "Eastern Region": "top-[75%] left-[58%]", // East of Ashanti, north of Greater Accra
+    "Volta Region": "top-[78%] left-[75%]", // Southeast, east of Eastern Region
+    "Oti Region": "top-[55%] left-[75%]", // North of Volta Region
+    "Northern Region": "top-[30%] left-[55%]", // Northern area around Tamale
+    "Savannah Region": "top-[32%] left-[38%]", // West of Northern Region
+    "North East Region": "top-[20%] left-[58%]", // Between Northern and Upper East
     "Upper East Region": "top-[12%] left-[60%]", // Northeast area
+    "Upper West Region": "top-[15%] left-[38%]", // Northwest area
   };
 
   // Fetch branches data on component mount
@@ -49,6 +61,12 @@ const TechGhanaSection = () => {
 
     loadBranchesData();
   }, []);
+
+  // Helper to check if a region is in the upper half of the map
+  const isUpperRegion = (position) => {
+    const match = position.match(/top-\[(\d+)%\]/);
+    return match ? parseInt(match[1]) < 55 : false;
+  };
 
   // Create regions array from API data only
   const regions = branchesData
@@ -197,7 +215,7 @@ const TechGhanaSection = () => {
                       <div
                         className={`absolute ${
                           // Upper regions (top of map) show tooltips below, lower regions show tooltips above
-                          region.position.includes('top-[12%]') || region.position.includes('top-[47%]')
+                          isUpperRegion(region.position)
                             ? 'top-8' // Upper regions: tooltip below marker
                             : 'bottom-8' // Lower regions: tooltip above marker  
                         } left-1/2 transform -translate-x-1/2 transition-all duration-300 z-[1001] ${
@@ -242,12 +260,12 @@ const TechGhanaSection = () => {
                         </div>
                         {/* Tooltip arrow with correct direction */}
                         <div className={`absolute left-1/2 transform -translate-x-1/2 ${
-                          region.position.includes('top-[12%]') || region.position.includes('top-[47%]')
+                          isUpperRegion(region.position)
                             ? 'bottom-full -mb-1' // Upper regions: arrow points up (tooltip below marker)
                             : 'top-full -mt-1' // Lower regions: arrow points down (tooltip above marker)
                         }`}>
                           <div className={`w-3 h-3 bg-white rotate-45 border-gray-200 ${
-                            region.position.includes('top-[12%]') || region.position.includes('top-[47%]')
+                            isUpperRegion(region.position)
                               ? 'border-l border-t' // Upper regions: arrow pointing up
                               : 'border-r border-b' // Lower regions: arrow pointing down
                           }`}></div>

@@ -28,3 +28,4 @@ storage/google-cloud-key.json
 !resources/views/vendor/
 !resources/views/vendor/**
 *.backup
+storage/google-cloud-key.json

@@ -71,6 +71,13 @@ class Programme extends Model
         return $this->belongsToMany(CourseMatchOption::class, 'programme_course_match_options', 'programme_id', 'course_match_option_id');
     }
 
+    public function programmeTags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+
+
+
     /**
      * Get all rules assigned to this programme
      */
@@ -80,11 +87,6 @@ class Programme extends Model
             ->withPivot(['value', 'priority'])
             ->withTimestamps()
             ->orderBy('rule_assignments.priority', 'asc');
-    }
-
-    public function programmeTags()
-    {
-        return $this->morphToMany(Tag::class, 'taggable');
     }
 
     /**
@@ -120,6 +122,10 @@ class Programme extends Model
                 'what_you_will_learn' => $whatYouWillLearn,
                 'why_choose_this_course' => $whyChoose
             ];
+        });
+
+        static::saved(function ($programme) {
+            $programme->courses->each->save();
         });
     }
 }

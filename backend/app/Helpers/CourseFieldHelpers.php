@@ -57,11 +57,11 @@ trait CourseFieldHelpers
         CRUD::addField([
             'name' => 'branch_id',
             'label' => 'Branch',
-            'type' => 'select',
+            'type' => 'select2',
             'model' => Branch::class,
             'attribute' => 'title',
             'allows_null' => true,
-            'wrapper' => ['class' => 'form-group col-6'],
+            'wrapper' => ['class' => 'form-group col-12'],
             'value' => $derivedBranchId,
             'fake' => true,
         ]);
@@ -69,21 +69,21 @@ trait CourseFieldHelpers
 
 
 
-CRUD::addField([
-    'name' => 'centre_id',
-    'label' => 'Centre',
-    'type' => 'select2_from_ajax',
-    'attribute' => 'title',
-    'data_source' => backpack_url('api/centre-by-branch'),
-    'dependencies' => ['branch_id'],
-    'method' => 'GET',
-    'include_all_form_fields' => true,
-    'placeholder' => 'Select a branch first',
-    'minimum_input_length' => 0,
-    'wrapper' => ['class' => 'form-group col-6'],
-    'model' => Centre::class,
-    'value' => optional($this->crud->getCurrentEntry())->centre_id ?? null,
-]);
+        CRUD::addField([
+            'name' => 'centre_id',
+            'label' => 'Centre',
+            'type' => 'select2_from_ajax',
+            'attribute' => 'title',
+            'data_source' => backpack_url('api/centre-by-branch'),
+            'dependencies' => ['branch_id'],
+            'method' => 'GET',
+            'include_all_form_fields' => true,
+            'placeholder' => 'Select a branch first',
+            'minimum_input_length' => 0,
+            'wrapper' => ['class' => 'form-group col-6'],
+            'model' => Centre::class,
+            'value' => optional($this->crud->getCurrentEntry())->centre_id ?? null,
+        ]);
 
 
 
@@ -154,7 +154,7 @@ CRUD::addField([
 
         $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
 
-        $this->addFieldsToTab('Course Info', true, ['branch_id', 'centre_id', 'programme_id', 'status']);
+        $this->addFieldsToTab('Course Info', true, ['branch_id', 'centre_id', 'programme_id', 'tags', 'status']);
         $this->addFieldsToTab('Course Duration', true, ['duration', 'start_date', 'end_date']);
     }
 

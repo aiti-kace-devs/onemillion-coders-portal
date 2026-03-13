@@ -34,8 +34,8 @@ export default function ClientWrapper({ children }) {
         }
       }}
       scriptProps={{
-        async: false,
-        defer: false,
+        async: true,
+        defer: true,
         appendTo: 'head',
         nonce: undefined,
       }}>{children}</GoogleReCaptchaProvider>);

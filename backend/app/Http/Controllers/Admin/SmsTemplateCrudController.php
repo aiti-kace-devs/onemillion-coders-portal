@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\SmsTemplateRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class SmsTemplateCrudController
@@ -39,6 +40,7 @@ class SmsTemplateCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
         // CRUD::setFromDb(); // set columns from db columns.
 
         CRUD::column('name')->type('textarea');

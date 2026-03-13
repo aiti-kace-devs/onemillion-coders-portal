@@ -23,7 +23,6 @@ class SendSmsJob implements ShouldQueue
     {
         $this->phone = is_array($phone) ? $phone : [$phone];
         $this->message = $message;
-        $this->logger = app('SMSLogger');
     }
 
     public function handle(): void

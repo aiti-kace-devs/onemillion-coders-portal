@@ -9,6 +9,7 @@ use App\Models\Branch;
 use App\Models\Centre;
 use App\Helpers\GeneralFieldsAndColumns;
 use Illuminate\Http\Request;
+use App\Helpers\CrudListHelper;
 use App\Helpers\FilterHelper;
 use App\Helpers\WidgetHelper;
 
@@ -46,6 +47,7 @@ class CentreCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
         WidgetHelper::centreStatisticsWidget();
 
         CRUD::column('title')->type('textarea');
@@ -93,7 +95,7 @@ class CentreCrudController extends CrudController
         CRUD::addField([
             'name'        => 'branch_id',
             'label'       => 'Branch',
-            'type'        => 'select',
+            'type'        => 'select2',
             'entity'      => 'branch',
             'model'       => Branch::class,
             'attribute'   => 'title',
