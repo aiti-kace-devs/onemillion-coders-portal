@@ -16,7 +16,6 @@ class Centre extends Model
         'title',
         'branch_id',
         'status',
-
         'gps_address',
         'is_pwd_friendly',
         'wheelchair_accessible',
@@ -71,7 +70,9 @@ class Centre extends Model
     protected static function booted()
     {
         static::saved(function ($centre) {
-            $centre->courses->each->save();
+            if ($centre->wasChanged('title')) {
+                $centre->courses()->get()->each->save();
+            }
         });
     }
 }
