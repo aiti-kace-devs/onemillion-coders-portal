@@ -6,7 +6,7 @@ import { FiClock, FiUsers, FiArrowRight } from "react-icons/fi";
 import Button from "./Button";
 import { getCourseImage } from "../utils/courseImages";
 
-const ProgrammeCard = ({ programme }) => {
+const ProgrammeCard = ({ programme, userId, centreId }) => {
   const router = useRouter();
 
   // TEMPORARY: Use static image instead of API image for consistency
@@ -86,7 +86,7 @@ const ProgrammeCard = ({ programme }) => {
           className="w-full justify-center group-hover:shadow-lg transition-all duration-200"
           onClick={(e) => {
             e.stopPropagation();
-            router.push(`/programmes/${programme.id}`);
+            router.push(`/programmes/${programme.id}${userId ? `?user_id=${userId}&course_id=${programme.course_id || programme.id}${centreId ? `&centre_id=${centreId}` : ''}` : ''}`);
           }}
         >
           Learn More

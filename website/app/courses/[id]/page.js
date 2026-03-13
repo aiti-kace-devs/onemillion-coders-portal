@@ -73,6 +73,14 @@ export default function CoursesPage({ params }) {
         setVerifying(true);
         setVerificationError(null);
         const data = await checkUserStatus(id);
+        if (data?.success === false) {
+          setVerificationError(data.message || "User not found. Please register first.");
+          return;
+        }
+        if (data?.data?.registered_course) {
+          setVerificationError("already_enrolled");
+          return;
+        }
         setUserStatus(data);
         fetchAllRegions();
       } catch (err) {
@@ -191,16 +199,37 @@ export default function CoursesPage({ params }) {
   };
 
   const handleAnswer = (questionId, optionId) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
-    // Auto-advance after a brief delay so user sees their selection
-    setTimeout(() => {
-      if (currentQuestion < questions.length - 1) {
-        setCurrentQuestion((prev) => prev + 1);
-      } else {
-        generateRecommendations();
-      }
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 300);
+    const question = questions.find((q) => q.id === questionId);
+    if (question?.is_multiple_select) {
+      // Toggle option in array
+      setAnswers((prev) => {
+        const current = prev[questionId] || [];
+        const updated = current.includes(optionId)
+          ? current.filter((id) => id !== optionId)
+          : [...current, optionId];
+        return { ...prev, [questionId]: updated };
+      });
+    } else {
+      setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
+      // Auto-advance after a brief delay so user sees their selection
+      setTimeout(() => {
+        if (currentQuestion < questions.length - 1) {
+          setCurrentQuestion((prev) => prev + 1);
+        } else {
+          generateRecommendations();
+        }
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 300);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion((prev) => prev + 1);
+    } else {
+      generateRecommendations();
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const prevQuestion = () => {
@@ -213,11 +242,11 @@ export default function CoursesPage({ params }) {
     try {
       setSubmitting(true);
       setError(null);
-      const optionIds = Object.values(answers);
+      const optionIds = Object.values(answers).flat();
       const data = await getCourseRecommendations({
         optionIds,
         userId: id,
-        centreId: selectedCentre?.id,
+        regionId: selectedRegion?.id,
       });
       setRecommendations(data || []);
       setShowResults(true);
@@ -237,12 +266,7 @@ export default function CoursesPage({ params }) {
   };
 
   const handleCourseSelect = (course) => {
-    const params = new URLSearchParams({
-      region_id: selectedRegion.id,
-      centre_id: selectedCentre.id,
-      programme_id: course.id,
-    });
-    router.push(`/register?${params.toString()}`);
+    router.push(`/programmes/${course.id}?user_id=${id}${course.course_id ? `&course_id=${course.course_id}` : ''}${selectedCentre ? `&centre_id=${selectedCentre.id}` : ''}`);
   };
 
   const goToStep = (targetStep) => {
@@ -285,20 +309,63 @@ export default function CoursesPage({ params }) {
     );
   }
 
-  if (verificationError) {
+  if (verificationError === "already_enrolled") {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-        <div className="h-1.5 w-full bg-gradient-to-r from-red-600 via-yellow-400 to-green-600" />
-        <div className="flex items-center justify-center min-h-[calc(100vh-6px)] px-4">
+        <div className="flex items-center justify-center min-h-screen px-4">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="w-full max-w-md"
           >
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              {/* Top accent strip */}
-              <div className="h-1 bg-gradient-to-r from-red-400 via-orange-400 to-red-400" />
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <div className="px-6 py-8 sm:px-8 sm:py-10 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-5">
+                  <FiCheckCircle className="w-7 h-7 text-green-500" />
+                </div>
+
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                  You&apos;re already enrolled
+                </h2>
+
+                <p className="text-gray-500 text-sm sm:text-base leading-relaxed mb-8 max-w-xs mx-auto">
+                  You have already been enrolled in a course. You cannot enroll in another course at this time.
+                </p>
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => router.push("/")}
+                    className="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
+                  >
+                    Go to Home
+                  </button>
+                  <button
+                    onClick={() => router.push("/programmes")}
+                    className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium text-sm rounded-xl transition-colors"
+                  >
+                    Browse Programmes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  if (verificationError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="w-full max-w-md"
+          >
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
 
               <div className="px-6 py-8 sm:px-8 sm:py-10 text-center">
                 {/* Icon */}
@@ -334,10 +401,6 @@ export default function CoursesPage({ params }) {
               </div>
             </div>
 
-            {/* Help text */}
-            <p className="text-center text-xs text-gray-400 mt-4">
-              Already registered? Make sure you&apos;re using the correct link from your email.
-            </p>
           </motion.div>
         </div>
       </div>
@@ -992,12 +1055,21 @@ export default function CoursesPage({ params }) {
                             {activeQuestion.description}
                           </p>
                         )}
+                        {activeQuestion.is_multiple_select && (
+                          <p className="text-yellow-600 text-[11px] sm:text-sm font-medium mt-2">
+                            Select all that apply
+                          </p>
+                        )}
                       </div>
 
                       {/* Options */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4 max-w-3xl mx-auto">
                         {activeQuestion.course_match_options?.map(
-                          (option, index) => (
+                          (option, index) => {
+                            const isSelected = activeQuestion.is_multiple_select
+                              ? (answers[activeQuestion.id] || []).includes(option.id)
+                              : answers[activeQuestion.id] === option.id;
+                            return (
                             <motion.button
                               key={option.id}
                               initial={{ opacity: 0 }}
@@ -1007,12 +1079,40 @@ export default function CoursesPage({ params }) {
                                 handleAnswer(activeQuestion.id, option.id)
                               }
                               className={`relative p-4 sm:p-6 rounded-xl text-left transition-all duration-200 border-2 ${
-                                answers[activeQuestion.id] === option.id
+                                isSelected
                                   ? "bg-gray-900 text-white border-gray-900"
                                   : "bg-white border-gray-200 hover:border-yellow-400 active:scale-[0.98]"
                               }`}
                             >
-                              <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-3">
+                                {/* Checkbox / Radio indicator */}
+                                <div className="flex-shrink-0 mt-0.5">
+                                  {activeQuestion.is_multiple_select ? (
+                                    <div
+                                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
+                                        isSelected
+                                          ? "bg-white border-white"
+                                          : "border-gray-300"
+                                      }`}
+                                    >
+                                      {isSelected && (
+                                        <FiCheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-900" />
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div
+                                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                                        isSelected
+                                          ? "border-white"
+                                          : "border-gray-300"
+                                      }`}
+                                    >
+                                      {isSelected && (
+                                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white" />
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                                 <div className="flex-1 min-w-0">
                                   <h3 className="font-semibold text-sm sm:text-base mb-1">
                                     {option.answer}
@@ -1020,7 +1120,7 @@ export default function CoursesPage({ params }) {
                                   {option.description && (
                                     <p
                                       className={`text-xs sm:text-sm leading-relaxed ${
-                                        answers[activeQuestion.id] === option.id
+                                        isSelected
                                           ? "text-gray-300"
                                           : "text-gray-500"
                                       }`}
@@ -1029,18 +1129,10 @@ export default function CoursesPage({ params }) {
                                     </p>
                                   )}
                                 </div>
-                                <div
-                                  className={`flex-shrink-0 transition-all duration-200 ${
-                                    answers[activeQuestion.id] === option.id
-                                      ? "opacity-100 scale-100"
-                                      : "opacity-0 scale-75"
-                                  }`}
-                                >
-                                  <FiCheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                                </div>
                               </div>
                             </motion.button>
-                          )
+                            );
+                          }
                         )}
                       </div>
                     </motion.div>
@@ -1059,12 +1151,25 @@ export default function CoursesPage({ params }) {
                     ) : (
                       <div />
                     )}
-                    {submitting && (
+                    {submitting ? (
                       <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
                         <FiLoader className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
                         Getting results...
                       </div>
-                    )}
+                    ) : activeQuestion.is_multiple_select ? (
+                      <button
+                        onClick={handleNextQuestion}
+                        disabled={(answers[activeQuestion.id] || []).length === 0}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                          (answers[activeQuestion.id] || []).length > 0
+                            ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        {currentQuestion < questions.length - 1 ? "Next" : "Get Results"}
+                        <FiChevronRight className="w-4 h-4" />
+                      </button>
+                    ) : null}
                   </div>
                 </>
               ) : (
@@ -1202,17 +1307,15 @@ export default function CoursesPage({ params }) {
                 </div>
               )}
 
-              {/* Actions - only show retake when there are results */}
-              {recommendations.length > 0 && (
-                <div className="mt-6 sm:mt-8 flex justify-end">
-                  <button
-                    onClick={resetQuiz}
-                    className="flex items-center gap-2 text-xs sm:text-sm text-yellow-600 hover:text-yellow-700 font-medium transition-colors py-2"
-                  >
-                    Retake Quiz
-                  </button>
-                </div>
-              )}
+              {/* Actions */}
+              <div className="mt-8 sm:mt-10 flex justify-center">
+                <Button
+                  onClick={() => router.push(`/programmes?user_id=${id}${selectedCentre ? `&centre_id=${selectedCentre.id}` : ''}`)}
+                  className="min-h-[44px]"
+                >
+                  View All Courses
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

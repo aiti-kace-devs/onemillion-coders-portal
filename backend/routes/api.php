@@ -57,6 +57,9 @@ Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->group(functi
 Route::get('/pages/footer', [StatamicEntryApiController::class, 'footer']);
 Route::get('/pages/{slug}', [StatamicEntryApiController::class, 'showPageBySlug']);
 
+Route::get('/forms/{handle}', [StatamicEntryApiController::class, 'showFormByHandle']);
+Route::post('/forms/{handle}', [StatamicEntryApiController::class, 'saveFormByHandle']);
+
 
 Route::name('custom.')->group(function () {
     // Get all entries with optional filtering and related entries

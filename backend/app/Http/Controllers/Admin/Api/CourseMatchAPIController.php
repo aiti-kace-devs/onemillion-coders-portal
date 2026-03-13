@@ -27,11 +27,19 @@ class CourseMatchAPIController extends Controller
 
     public function index(Request $request)
     {
-        $courseMatch = CourseMatch::with(['courseMatchOptions' => function ($query) {
+        $query = CourseMatch::with(['courseMatchOptions' => function ($query) {
             $query->where('status', 1);
         }])
-            ->where('status', 1)
-            ->get();
+            ->where('status', 1);
+
+        if ($request->has('type')) {
+            $type = trim((string) $request->query('type'));
+            if ($type !== '') {
+                $query->where('type', $type);
+            }
+        }
+
+        $courseMatch = $query->get();
 
         return response()->json([
             'success' => true,

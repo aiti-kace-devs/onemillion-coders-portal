@@ -322,6 +322,24 @@ export const getCentresByDistrict = async (districtId) => {
   }
 };
 
+/**
+ * Confirm course enrollment for a user
+ * @param {{ userId: string, course_id: number, support: boolean }} data
+ * @returns {Promise<Object>} - Confirmation response
+ */
+export const confirmCourse = async (data) => {
+  try {
+    const response = await apiRequest("/confirm-course", {
+      method: "POST",
+      data,
+    });
+    return response;
+  } catch (error) {
+    console.error("Error confirming course:", error);
+    throw error;
+  }
+};
+
 // ──────────────────────────────────────────────
 // OTP Verification API
 // ──────────────────────────────────────────────
