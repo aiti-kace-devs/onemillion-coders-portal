@@ -569,6 +569,12 @@ CRUD::addField([
             'Choice' => 'Choice',
         ];
 
+        $referenceOptions = [
+            'course_categories' => 'Course Categories (auto)',
+            'branches' => 'Branches (auto)',
+            'mode_of_delivery' => 'Mode of Delivery (auto)',
+        ];
+
         CRUD::addField([
             'name' => 'tag',
             'label' => 'Tag',
@@ -590,6 +596,16 @@ CRUD::addField([
             'options' => $typeOptions,
             'allows_null' => false,
             'wrapper' => ['class' => 'form-group col-4'],
+        ]);
+
+        CRUD::addField([
+            'name' => 'reference_source',
+            'label' => 'Reference Options',
+            'type' => 'select_from_array',
+            'options' => $referenceOptions,
+            'allows_null' => true,
+            'wrapper' => ['class' => 'form-group col-4'],
+            'hint' => 'Leave blank for manual options. When set, options are auto-synced from the reference source.',
         ]);
 
         CRUD::addField([
@@ -625,6 +641,7 @@ CRUD::addField([
             'label' => 'Options',
             'type' => 'repeatable',
             'new_item_label' => 'Add Option',
+            'hint' => 'Manual options are ignored when Reference Options is set.',
             'fields' => [
                 [
                     'name' => 'id',
@@ -667,7 +684,7 @@ CRUD::addField([
         ]);
 
 
-        $this->addFieldsToTab('Question', true, ['tag', 'question', 'description', 'type',  'order', 'is_multiple_select', 'status']);
+        $this->addFieldsToTab('Question', true, ['tag', 'question', 'description', 'type', 'reference_source', 'order', 'is_multiple_select', 'status']);
         $this->addFieldsToTab('Options', true, ['course_match_options']);
     }
 }

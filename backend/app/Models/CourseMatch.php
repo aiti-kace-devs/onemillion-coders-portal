@@ -20,7 +20,8 @@ class CourseMatch extends Model
         'order',
         'status',
         'is_multiple_select',
-        'type'
+        'type',
+        'reference_source'
        
     ];
     use CrudTrait;
@@ -30,6 +31,7 @@ class CourseMatch extends Model
         'course_match_options' => 'array',
         'is_multiple_select' => 'boolean',
         'type' => 'string',
+        'reference_source' => 'string',
         'order' => 'integer'
     ];
 

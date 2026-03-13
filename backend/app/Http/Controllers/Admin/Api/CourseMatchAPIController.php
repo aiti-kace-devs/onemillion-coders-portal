@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CourseMatchAPIController extends Controller
 {
@@ -97,7 +98,8 @@ class CourseMatchAPIController extends Controller
                 'option_ids' => 'required|array',
                 'option_ids.*' => 'integer|exists:course_match_options,id',
                 'userId' => 'required|exists:users,userId',
-                'centre_id' => 'required|integer|exists:centres,id',
+                'branch_id' => 'required|integer|exists:branches,id',
+                'debug' => 'sometimes|boolean',
             ]);
 
             $user = User::where('userId', $data['userId'])->first();
@@ -109,56 +111,48 @@ class CourseMatchAPIController extends Controller
             }
 
             $optionIds = array_values($data['option_ids']);
-            $centreId = (int) $data['centre_id'];
+            $branchId = (int) $data['branch_id'];
+            $includeDebug = filter_var($request->input('debug', false), FILTER_VALIDATE_BOOLEAN);
 
             $studentLevel = strtolower(trim((string) $user?->student_level));
             // Log::info('Student level: ' . $studentLevel);
 
-            $centreCourses = $this->getCentreCourses($centreId);
-            $programmeIds = $centreCourses->pluck('programme_id')->unique()->values()->all();
+            $branchCourses = $this->getBranchCourses($branchId);
+            $programmeIds = $branchCourses->pluck('programme_id')->unique()->values()->all();
 
             [$preferredDelivery, $deliveryOptionIds] = $this->detectPreferredDelivery($optionIds);
-            $scoringOptionIds = array_values(array_diff($optionIds, $deliveryOptionIds));
+            [, $categoryOptionIds] = $this->detectCategorySelections($optionIds);
 
             $programmes = $this->getProgrammesForLevel($programmeIds, $studentLevel, $preferredDelivery);
-            $scored = $this->scoreProgrammes($programmes, $scoringOptionIds);
 
-            $hasScoringOptions = count($scoringOptionIds) > 0;
-            if (!$hasScoringOptions) {
-                $scored = $scored->map(function ($programme) {
-                    $programme->setAttribute('match_percentage', 100);
-                    $programme->setAttribute('match_count', 0);
-                    return $programme;
-                });
-            }
+            $matchGroups = $this->buildMatchGroups($optionIds, $deliveryOptionIds, $categoryOptionIds);
 
-            // Filter and sort top 5 matches
-            $top = $hasScoringOptions
-                ? $scored->filter(fn ($p) => $p->match_count > 0)
-                    ->sortByDesc('match_percentage')
-                    ->take(5)
-                    ->values()
-                : $scored->sortBy('title')->take(5)->values();
+            $scored = $this->scoreProgrammesByTags(
+                $programmes,
+                $optionIds,
+                $matchGroups,
+                $includeDebug
+            );
 
-            $combined = $top;
-            $limit = 5;
-            if ($top->count() < $limit) {
-                $topProgrammeIds = $top->pluck('id')->all();
+            $top = $scored
+                ->filter(fn ($programme) => $programme->match_count > 0)
+                ->sort(function ($a, $b) {
+                    $percentageCompare = $b->match_percentage <=> $a->match_percentage;
+                    if ($percentageCompare !== 0) {
+                        return $percentageCompare;
+                    }
 
-                $extras = $scored
-                    ->reject(fn ($programme) => in_array($programme->id, $topProgrammeIds, true))
-                    ->sortByDesc('match_percentage')
-                    ->take($limit - $top->count())
-                    ->values();
+                    return strcasecmp((string) $a->title, (string) $b->title);
+                })
+                ->take(4)
+                ->values();
 
-                $combined = $top->concat($extras)->values();
-            }
+            $centresByProgramme = $this->buildCentresByProgramme($branchCourses);
 
-            // Format response with ranking number and the selected centre
-            $result = $combined->map(function ($programme, $index) use ($centreCourses, $centreId) {
-                $programmeCourses = $centreCourses->where('programme_id', $programme->id);
+            $result = $top->map(function ($programme, $index) use ($branchCourses, $centresByProgramme, $includeDebug) {
+                $programmeCourses = $branchCourses->where('programme_id', $programme->id);
 
-                return [
+                $payload = [
                     'rank' => '#' . ($index + 1),
                     'id' => $programme->id,
                     'title' => $programme->title,
@@ -172,11 +166,17 @@ class CourseMatchAPIController extends Controller
                     'provider' => $programme->provider,
                     'match_percentage' => $programme->match_percentage . '% Match',
                     'course_id' => $programmeCourses->first()?->id,
-                    'centre_id' => $centreId,
+                    'centres' => $centresByProgramme->get($programme->id, collect())->values()
                 ];
+
+                if ($includeDebug) {
+                    $payload['match_breakdown'] = $programme->match_breakdown ?? [];
+                }
+
+                return $payload;
             });
 
-            $this->storeRecommendations($combined, $centreCourses, $optionIds, $studentLevel, $data['userId']);
+            $this->storeRecommendations($top, $branchCourses, $optionIds, $studentLevel, $data['userId']);
 
             return response()->json([
                 'success' => true,
@@ -189,12 +189,13 @@ class CourseMatchAPIController extends Controller
         /**
          * @return \Illuminate\Support\Collection<int, \App\Models\Course>
          */
-        protected function getCentreCourses(int $centreId)
+        protected function getBranchCourses(int $branchId)
         {
             $today = Carbon::today()->toDateString();
 
-            return Course::join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
-                ->where('courses.centre_id', $centreId)
+            return Course::join('centres', 'courses.centre_id', '=', 'centres.id')
+                ->join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
+                ->where('centres.branch_id', $branchId)
                 ->whereNotNull('courses.programme_id')
                 ->where('courses.status', 1)
                 ->where('admission_batches.start_date', '<=', $today)
@@ -210,7 +211,7 @@ class CourseMatchAPIController extends Controller
          */
         protected function getProgrammesForLevel(array $programmeIds, string $studentLevel, ?string $preferredDelivery = null)
         {
-            $query = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'image', 'prerequisites', 'mode_of_delivery', 'provider')
+            $query = Programme::select('id', 'title', 'sub_title', 'duration', 'level', 'job_responsible', 'image', 'prerequisites', 'mode_of_delivery', 'provider', 'course_category_id')
                 ->with('tags')
                 ->whereIn('id', $programmeIds)
                 ->where('status', true);
@@ -278,6 +279,405 @@ class CourseMatchAPIController extends Controller
             $value = preg_replace('/\s+/', ' ', $value);
 
             return trim($value);
+        }
+
+        /**
+         * @param  array<int>  $optionIds
+         * @return array{0: array<int>, 1: array<int>, 2: array<int,int>}
+         */
+        protected function detectCategorySelections(array $optionIds): array
+        {
+            $options = CourseMatchOption::with(['courseMatch:id,type'])
+                ->whereIn('id', $optionIds)
+                ->get(['id', 'answer', 'value', 'course_match_id']);
+
+            $categories = CourseCategory::query()
+                ->select('id', 'title')
+                ->get();
+
+            $categoriesById = $categories->keyBy('id');
+            $categoriesByTitle = $categories->mapWithKeys(function ($category) {
+                $normalized = $this->normalizeOptionValue($category->title);
+                return $normalized !== '' ? [$normalized => $category->id] : [];
+            })->all();
+            $categoriesBySlug = $categories->mapWithKeys(function ($category) {
+                $slug = Str::slug($category->title);
+                return $slug !== '' ? [$slug => $category->id] : [];
+            })->all();
+
+            $categoryIds = [];
+            $categoryOptionIds = [];
+            $categoryOptionMap = [];
+
+            foreach ($options as $option) {
+                $raw = $option->value ?: $option->answer;
+                $raw = trim((string) $raw);
+                $normalized = $this->normalizeOptionValue($raw);
+                $type = $this->normalizeOptionValue($option->courseMatch?->type ?? '');
+
+                $isCategoryType = $this->isCategoryType($type);
+                $matchedCategoryId = null;
+
+                if ($raw !== '' && ctype_digit($raw)) {
+                    $candidateId = (int) $raw;
+                    if ($categoriesById->has($candidateId)) {
+                        $matchedCategoryId = $candidateId;
+                    }
+                } elseif ($normalized !== '' && isset($categoriesByTitle[$normalized])) {
+                    $matchedCategoryId = $categoriesByTitle[$normalized];
+                } else {
+                    $slug = Str::slug($raw);
+                    if ($slug !== '' && isset($categoriesBySlug[$slug])) {
+                        $matchedCategoryId = $categoriesBySlug[$slug];
+                    }
+                }
+
+                if ($matchedCategoryId !== null || $isCategoryType) {
+                    $categoryOptionIds[] = $option->id;
+                    if ($matchedCategoryId !== null) {
+                        $categoryIds[] = $matchedCategoryId;
+                        $categoryOptionMap[$option->id] = $matchedCategoryId;
+                    }
+                }
+            }
+
+            return [
+                array_values(array_unique($categoryIds)),
+                array_values(array_unique($categoryOptionIds)),
+                $categoryOptionMap,
+            ];
+        }
+
+        protected function isCategoryType(string $type): bool
+        {
+            if ($type === '') {
+                return false;
+            }
+
+            return str_contains($type, 'category')
+                || str_contains($type, 'area')
+                || str_contains($type, 'interest');
+        }
+
+        /**
+         * @param  array<int>  $optionIds
+         * @param  array<int>  $deliveryOptionIds
+         * @param  array<int>  $categoryOptionIds
+         * @return array<int, array<string, mixed>>
+         */
+        protected function buildMatchGroups(array $optionIds, array $deliveryOptionIds, array $categoryOptionIds): array
+        {
+            $options = CourseMatchOption::with(['courseMatch:id,type,reference_source,question'])
+                ->whereIn('id', $optionIds)
+                ->get(['id', 'answer', 'value', 'course_match_id']);
+
+            return $options
+                ->groupBy('course_match_id')
+                ->map(function ($groupOptions) use ($deliveryOptionIds, $categoryOptionIds) {
+                    $courseMatch = $groupOptions->first()->courseMatch;
+                    $referenceSource = $this->normalizeOptionValue($courseMatch?->reference_source ?? '');
+                    $type = $this->normalizeOptionValue($courseMatch?->type ?? '');
+                    $groupOptionIds = $groupOptions->pluck('id')->all();
+                    $groupOptionValues = $groupOptions
+                        ->map(fn ($option) => trim((string) ($option->value ?: $option->answer)))
+                        ->filter(fn ($value) => $value !== '')
+                        ->values()
+                        ->all();
+
+                    $groupType = 'tag';
+
+                    if ($this->isBranchReference($referenceSource)) {
+                        $groupType = 'branch';
+                    } elseif ($this->isCategoryReference($referenceSource)) {
+                        $groupType = 'category';
+                    } elseif ($this->isDeliveryReference($referenceSource)) {
+                        $groupType = 'delivery';
+                    } elseif (!empty(array_intersect($groupOptionIds, $deliveryOptionIds))) {
+                        $groupType = 'delivery';
+                    } elseif (!empty(array_intersect($groupOptionIds, $categoryOptionIds)) || $this->isCategoryType($type)) {
+                        $groupType = 'category';
+                    }
+
+                    return [
+                        'course_match_id' => $courseMatch?->id,
+                        'question' => $courseMatch?->question,
+                        'reference_source' => $courseMatch?->reference_source,
+                        'type' => $groupType,
+                        'option_ids' => $groupOptionIds,
+                        'option_values' => $groupOptionValues,
+                    ];
+                })
+                ->values()
+                ->all();
+        }
+
+        protected function isBranchReference(string $referenceSource): bool
+        {
+            if ($referenceSource === '') {
+                return false;
+            }
+
+            return str_contains($referenceSource, 'branch')
+                || str_contains($referenceSource, 'region');
+        }
+
+        protected function isCategoryReference(string $referenceSource): bool
+        {
+            if ($referenceSource === '') {
+                return false;
+            }
+
+            return str_contains($referenceSource, 'category')
+                || str_contains($referenceSource, 'course_categories')
+                || str_contains($referenceSource, 'course category');
+        }
+
+        protected function isDeliveryReference(string $referenceSource): bool
+        {
+            if ($referenceSource === '') {
+                return false;
+            }
+
+            return str_contains($referenceSource, 'mode')
+                || str_contains($referenceSource, 'delivery');
+        }
+
+        /**
+         * @param  \Illuminate\Support\Collection<int, \App\Models\Programme>  $programmes
+         * @param  array<int>  $categoryIds
+         * @param  array<int>  $categoryOptionIds
+         * @return \Illuminate\Support\Collection<int, \App\Models\Programme>
+         */
+        protected function filterProgrammesByCategory($programmes, array $categoryOptionIds)
+        {
+            if (empty($categoryOptionIds)) {
+                return $programmes;
+            }
+
+            return $programmes->filter(function ($programme) use ($categoryOptionIds) {
+                $programmeOptionIds = $programme->tags->pluck('id')->toArray();
+                return count(array_intersect($categoryOptionIds, $programmeOptionIds)) > 0;
+            })->values();
+        }
+
+        /**
+         * @param  \Illuminate\Support\Collection<int, \App\Models\Programme>  $programmes
+         * @param  array<int, array<string, mixed>>  $groups
+         * @return \Illuminate\Support\Collection<int, \App\Models\Programme>
+         */
+        protected function scoreProgrammesByGroups($programmes, array $groups, ?string $preferredDelivery, array $categoryOptionIds, int $branchId, ?string $branchTitle, bool $includeBreakdown = false, bool $hasCategoryGroup = false)
+        {
+            $totalGroups = count($groups);
+
+            return $programmes->map(function ($programme) use ($groups, $preferredDelivery, $categoryOptionIds, $branchId, $branchTitle, $totalGroups, $includeBreakdown, $hasCategoryGroup) {
+                $programmeOptionIds = $programme->tags->pluck('id')->toArray();
+
+                $matches = 0;
+                $breakdown = [];
+                $categoryMatched = null;
+                foreach ($groups as $group) {
+                    $matched = false;
+                    switch ($group['type']) {
+                        case 'delivery':
+                            if ($preferredDelivery !== null
+                                && strtolower((string) $programme->mode_of_delivery) === strtolower($preferredDelivery)) {
+                                $matches++;
+                                $matched = true;
+                            }
+                            break;
+                        case 'category':
+                            $matched = $this->programmeMatchesCategory(
+                                $programme,
+                                $categoryOptionIds,
+                                $programmeOptionIds
+                            );
+                            $categoryMatched = $categoryMatched === null ? $matched : ($categoryMatched || $matched);
+                            if ($matched) {
+                                $matches++;
+                            }
+                            break;
+                        case 'branch':
+                            if ($this->branchSelectionMatches($branchId, $branchTitle, $group['option_values'] ?? [])) {
+                                $matches++;
+                                $matched = true;
+                            }
+                            break;
+                        default:
+                            if (count(array_intersect($group['option_ids'] ?? [], $programmeOptionIds)) > 0) {
+                                $matches++;
+                                $matched = true;
+                            }
+                            break;
+                    }
+
+                    if ($includeBreakdown) {
+                        $breakdown[] = [
+                            'course_match_id' => $group['course_match_id'] ?? null,
+                            'question' => $group['question'] ?? null,
+                            'reference_source' => $group['reference_source'] ?? null,
+                            'type' => $group['type'] ?? null,
+                            'option_ids' => $group['option_ids'] ?? [],
+                            'option_values' => $group['option_values'] ?? [],
+                            'matched' => $matched,
+                        ];
+                    }
+                }
+
+                $percentage = $totalGroups > 0 ? round(($matches / $totalGroups) * 100) : 100;
+
+                $programme->setAttribute('match_percentage', $percentage);
+                $programme->setAttribute('match_count', $matches);
+                if ($hasCategoryGroup) {
+                    $programme->setAttribute('category_matched', (bool) $categoryMatched);
+                }
+                if ($includeBreakdown) {
+                    $programme->setAttribute('match_breakdown', $breakdown);
+                }
+                return $programme;
+            });
+        }
+
+        /**
+         * @param  \Illuminate\Support\Collection<int, \App\Models\Programme>  $programmes
+         * @param  array<int>  $optionIds
+         * @param  array<int, array<string, mixed>>  $groups
+         * @return \Illuminate\Support\Collection<int, \App\Models\Programme>
+         */
+        protected function scoreProgrammesByTags($programmes, array $optionIds, array $groups, bool $includeBreakdown = false)
+        {
+            $totalOptions = count($optionIds);
+
+            return $programmes->map(function ($programme) use ($optionIds, $groups, $includeBreakdown, $totalOptions) {
+                $programmeOptionIds = $programme->tags->pluck('id')->toArray();
+                $matchedOptionIds = array_values(array_intersect($optionIds, $programmeOptionIds));
+                $matches = count($matchedOptionIds);
+                $percentage = $totalOptions > 0 ? round(($matches / $totalOptions) * 100) : 100;
+
+                $programme->setAttribute('match_percentage', $percentage);
+                $programme->setAttribute('match_count', $matches);
+
+                if ($includeBreakdown) {
+                    $breakdown = [];
+
+                    foreach ($groups as $group) {
+                        $groupOptionIds = $group['option_ids'] ?? [];
+                        $groupMatchedOptionIds = array_values(array_intersect($groupOptionIds, $programmeOptionIds));
+
+                        $breakdown[] = [
+                            'course_match_id' => $group['course_match_id'] ?? null,
+                            'question' => $group['question'] ?? null,
+                            'reference_source' => $group['reference_source'] ?? null,
+                            'type' => $group['type'] ?? null,
+                            'option_ids' => $groupOptionIds,
+                            'option_values' => $group['option_values'] ?? [],
+                            'matched' => count($groupMatchedOptionIds) > 0,
+                            'matched_option_ids' => $groupMatchedOptionIds,
+                        ];
+                    }
+
+                    $programme->setAttribute('match_breakdown', $breakdown);
+                }
+
+                return $programme;
+            });
+        }
+
+        /**
+         * @param  \App\Models\Programme  $programme
+         * @param  array<int>  $categoryIds
+         * @param  array<int>  $categoryOptionIds
+         * @param  array<int,int>  $categoryOptionMap
+         * @param  array<int>  $programmeOptionIds
+         */
+        protected function programmeMatchesCategory($programme, array $categoryOptionIds, array $programmeOptionIds): bool
+        {
+            if (empty($categoryOptionIds)) {
+                return false;
+            }
+
+            return count(array_intersect($categoryOptionIds, $programmeOptionIds)) > 0;
+        }
+
+        /**
+         * @param  array<int, string>  $values
+         */
+        protected function branchSelectionMatches(int $branchId, ?string $branchTitle, array $values): bool
+        {
+            if (empty($values)) {
+                return true;
+            }
+
+            $normalizedTitle = $branchTitle ? $this->normalizeOptionValue($branchTitle) : '';
+            $slugTitle = $branchTitle ? Str::slug($branchTitle) : '';
+
+            foreach ($values as $value) {
+                $value = trim((string) $value);
+                if ($value === '') {
+                    continue;
+                }
+
+                if (ctype_digit($value) && (int) $value === $branchId) {
+                    return true;
+                }
+
+                $normalizedValue = $this->normalizeOptionValue($value);
+                if ($normalizedValue !== '' && $normalizedValue === $normalizedTitle) {
+                    return true;
+                }
+
+                $slugValue = Str::slug($value);
+                if ($slugValue !== '' && $slugValue === $slugTitle) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * @param  \Illuminate\Support\Collection<int, \App\Models\Course>  $branchCourses
+         * @return \Illuminate\Support\Collection<int, mixed>
+         */
+        protected function buildCentresByProgramme($branchCourses)
+        {
+            $centreIds = $branchCourses->pluck('centre_id')->unique()->values()->all();
+
+            if (empty($centreIds)) {
+                return collect();
+            }
+
+            $centresById = Centre::with(['constituency:id,title', 'districts:id,title'])
+                ->whereIn('id', $centreIds)
+                ->get()
+                ->keyBy('id');
+
+            return $branchCourses
+                ->groupBy('programme_id')
+                ->map(function ($courses) use ($centresById) {
+                    $courseCentreIds = $courses->pluck('centre_id')->unique()->values();
+
+                    return $courseCentreIds->map(function ($centreId) use ($centresById) {
+                        $centre = $centresById->get($centreId);
+                        if (!$centre) {
+                            return null;
+                        }
+
+                        $district = $centre->districts->first();
+
+                        return [
+                            'id' => $centre->id,
+                            'title' => $centre->title,
+                            'gps_address' => $centre->gps_address,
+                            'is_pwd_friendly' => $centre->is_pwd_friendly,
+                            'wheelchair_accessible' => $centre->wheelchair_accessible,
+                            'has_access_ramp' => $centre->has_access_ramp,
+                            'has_accessible_toilet' => $centre->has_accessible_toilet,
+                            'has_elevator' => $centre->has_elevator,
+                            'constituency' => $centre->constituency ? ['title' => $centre->constituency->title] : null,
+                            'district' => $district ? ['title' => $district->title] : null,
+                        ];
+                    })->filter()->values();
+                });
         }
 
         /**
@@ -356,15 +756,6 @@ class CourseMatchAPIController extends Controller
             DB::transaction(function () use ($userId, $courseIds, $hasNullCourse, $recommendationRows) {
                 DB::table('user_course_recommendations')
                     ->where('user_id', $userId)
-                    ->where(function ($query) use ($courseIds, $hasNullCourse) {
-                        if ($courseIds->isNotEmpty()) {
-                            $query->whereIn('course_id', $courseIds->all());
-                        }
-
-                        if ($hasNullCourse) {
-                            $query->orWhereNull('course_id');
-                        }
-                    })
                     ->delete();
 
                 DB::table('user_course_recommendations')->insert($recommendationRows);
