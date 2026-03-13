@@ -238,7 +238,7 @@
 @endphp
 
 @section('content')
-    @parent
+    {{-- @parent --}}
 
     <div class="mb-3 d-flex align-items-start justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-start gap-2">
@@ -281,8 +281,8 @@
             </div>
 
             <!-- <a href="{{ backpack_url('course/' . $courseId . '/edit') }}" class="btn btn-sm btn-primary">
-                        <i class="la la-edit"></i> Edit Course
-                    </a> -->
+                            <i class="la la-edit"></i> Edit Course
+                        </a> -->
         </div>
     </div>
 
@@ -467,21 +467,21 @@
         </div>
 
         <!-- <div class="col-lg-4">
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <strong><i class="la la-pie-chart"></i> Attendance Status</strong>
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-wrap-sm">
-                                <canvas id="attendanceStatusDoughnut"></canvas>
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <strong><i class="la la-pie-chart"></i> Attendance Status</strong>
                             </div>
-                            <div class="mt-3 d-flex flex-wrap gap-2">
-                                <span class="badge bg-success text-dark">Present: {{ number_format($presentCount) }}</span>
-                                <span class="badge bg-info text-dark">Absent: {{ number_format($absentCount) }}</span>
+                            <div class="card-body">
+                                <div class="chart-wrap-sm">
+                                    <canvas id="attendanceStatusDoughnut"></canvas>
+                                </div>
+                                <div class="mt-3 d-flex flex-wrap gap-2">
+                                    <span class="badge bg-success text-dark">Present: {{ number_format($presentCount) }}</span>
+                                    <span class="badge bg-info text-dark">Absent: {{ number_format($absentCount) }}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div> -->
+                    </div> -->
 
         <div class="col-lg-6">
             <div class="card h-100">
