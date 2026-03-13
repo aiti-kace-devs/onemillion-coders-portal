@@ -1156,6 +1156,17 @@ class StudentOperation extends Controller
             }
             $user->save();
 
+            activity('assessment')
+                ->causedBy($user)
+                ->performedOn($assessment)
+                ->withProperties([
+                    'level' => $user->student_level,
+                    'correct_answers' => $assessment->correct_answers,
+                    'wrong_answers' => $assessment->wrong_answers,
+                ])
+                ->event('Assessment Completed')
+                ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Time limit exceeded! You have failed this level.',
@@ -1244,6 +1255,17 @@ class StudentOperation extends Controller
                 $user->student_level = 'intermediate';
             }
             $user->save();
+
+            activity('assessment')
+                ->causedBy($user)
+                ->performedOn($assessment)
+                ->withProperties([
+                    'level' => $user->student_level,
+                    'correct_answers' => $assessment->correct_answers,
+                    'wrong_answers' => $assessment->wrong_answers,
+                ])
+                ->event('Assessment Completed')
+                ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
 
             return response()->json([
                 'status' => 'error',
@@ -1335,6 +1357,19 @@ class StudentOperation extends Controller
         }
 
         $assessment->save();
+
+        if ($assessment->completed) {
+            activity('assessment')
+                ->causedBy($user)
+                ->performedOn($assessment)
+                ->withProperties([
+                    'level' => $user->student_level,
+                    'correct_answers' => $assessment->correct_answers,
+                    'wrong_answers' => $assessment->wrong_answers,
+                ])
+                ->event('Assessment Completed')
+                ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
+        }
 
         $new_question = $this->fetch_assessment_question($request);
 
