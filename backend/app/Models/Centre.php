@@ -16,7 +16,6 @@ class Centre extends Model
         'title',
         'branch_id',
         'status',
-
         'gps_address',
         'is_pwd_friendly',
         'wheelchair_accessible',
