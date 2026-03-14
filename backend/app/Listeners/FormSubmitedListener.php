@@ -34,7 +34,7 @@ class FormSubmitedListener implements ShouldQueue
         $fullName = preg_replace('/\s+/', ' ', $fullName); // remove extra spaces
 
         $student = [];
-        $student['name'] = $fullName; 
+        $student['name'] = $fullName;
         $student['first_name'] = $firstName;
         $student['middle_name'] = $middleName;
         $student['last_name'] = $lastName;
@@ -52,7 +52,7 @@ class FormSubmitedListener implements ShouldQueue
         $student['age'] = $this->getField($event->submissionData, 'age');
         $student['gender'] = $this->getField($event->submissionData, 'gender');
         $student['ghcard'] = $this->getField($event->submissionData, 'ghana_card_number', 'ghana-card-number', 'ghcard');
-        $student['has_disability'] = $this->extractDisabilityFlag($event->submissionData);
+        $student['pwd'] = $this->extractDisabilityFlag($event->submissionData);
         $student['exam_name'] = 'random';
         $student['form_response_id'] = $event->formResponseId;
 
@@ -124,7 +124,7 @@ class FormSubmitedListener implements ShouldQueue
             'ghcard' => 'ghcard',
             'course' => 'registered_course',
             'course_id' => 'registered_course',
-            'has_disability' => 'has_disability',
+            'pwd' => 'pwd',
         ];
 
         foreach ($payload as $key => $value) {
@@ -137,7 +137,7 @@ class FormSubmitedListener implements ShouldQueue
 
             $alias = $aliasMap[$normalizedKey] ?? $normalizedKey;
             if (stripos($normalizedKey, 'disability') !== false) {
-                $alias = 'has_disability';
+                $alias = 'pwd';
             }
 
             if (isset($userColumns[$alias])) {

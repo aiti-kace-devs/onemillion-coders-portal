@@ -503,10 +503,11 @@ CRUD::addField([
 
     protected static function getAdmissionLocations(): array
     {
-        return UserAdmission::query()
-            ->whereNotNull('location')
-            ->distinct()
-            ->pluck('location', 'location')
+        return Branch::all()
+            ->pluck('location')
+            ->unique()
+            ->sort()
+            ->values()
             ->toArray();
     }
 
@@ -633,7 +634,7 @@ CRUD::addField([
         // ]);
 
 
- 
+
 
         $this->addIsActiveField([true => 'True', false => 'False'], 'Multiple Select', 'is_multiple_select');
         $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');

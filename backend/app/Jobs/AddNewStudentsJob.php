@@ -53,7 +53,7 @@ class AddNewStudentsJob implements ShouldQueue
                 'ghcard' => 'nullable',
                 'form_response_id' => 'required',
                 'data' => 'nullable|array',
-                'has_disability' => 'sometimes|boolean',
+                'pwd' => 'sometimes|boolean',
             ]);
 
             if ($validator->fails()) {
@@ -98,7 +98,7 @@ class AddNewStudentsJob implements ShouldQueue
                 $std->data = $student['data'] ?? null;
                 $std->age  = $student['age'];
                 $std->gender = $student['gender'];
-                $std->has_disability = (bool) ($student['has_disability'] ?? false);
+                $std->pwd = (bool) ($student['pwd'] ?? false);
                 $std->status = 1;
                 $std->ghcard = $student['ghcard'] ?? null;
                 $std->form_response_id = $student['form_response_id'];

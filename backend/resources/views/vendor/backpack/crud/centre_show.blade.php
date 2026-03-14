@@ -16,7 +16,7 @@
     $courseIdsArray = \Illuminate\Support\Facades\DB::table('courses')
         ->where('centre_id', $centreId)
         ->pluck('id')
-        ->map(fn ($id) => (int) $id)
+        ->map(fn($id) => (int) $id)
         ->all();
 
     $totalCourses = count($courseIdsArray);
@@ -72,12 +72,14 @@
 
         $admissionsAgg = \Illuminate\Support\Facades\DB::table('user_admission')
             ->whereIn('course_id', $courseIdsArray)
-            ->selectRaw('
+            ->selectRaw(
+                '
                 COUNT(*) as total_count,
                 SUM(CASE WHEN confirmed IS NOT NULL THEN 1 ELSE 0 END) as confirmed_count,
                 SUM(CASE WHEN confirmed IS NULL THEN 1 ELSE 0 END) as pending_count,
                 COUNT(DISTINCT CASE WHEN confirmed IS NOT NULL THEN user_id END) as admitted_students_count
-            ')
+            ',
+            )
             ->first();
 
         $admissionsTotal = (int) ($admissionsAgg->total_count ?? 0);
@@ -85,17 +87,15 @@
         $admissionsPending = (int) ($admissionsAgg->pending_count ?? 0);
         $totalAdmittedUsers = (int) ($admissionsAgg->admitted_students_count ?? 0);
 
-        $admissionRate = $totalRegisteredUsers > 0
-            ? round(($totalAdmittedUsers / $totalRegisteredUsers) * 100, 1)
-            : 0;
+        $admissionRate = $totalRegisteredUsers > 0 ? round(($totalAdmittedUsers / $totalRegisteredUsers) * 100, 1) : 0;
 
-        $shortlistRate = $totalRegisteredUsers > 0
-            ? round(($totalShortlistedUsers / $totalRegisteredUsers) * 100, 1)
-            : 0;
+        $shortlistRate =
+            $totalRegisteredUsers > 0 ? round(($totalShortlistedUsers / $totalRegisteredUsers) * 100, 1) : 0;
 
         $genderCounts = \Illuminate\Support\Facades\DB::table('users as u')
             ->whereIn('u.registered_course', $courseIdsArray)
-            ->selectRaw("
+            ->selectRaw(
+                "
                 CASE
                     WHEN LOWER(TRIM(COALESCE(u.gender, ''))) IN ('male', 'm') THEN 'Male'
                     WHEN LOWER(TRIM(COALESCE(u.gender, ''))) IN ('female', 'f') THEN 'Female'
@@ -103,17 +103,17 @@
                     ELSE 'Other'
                 END as gender_label,
                 COUNT(*) as total
-            ")
+            ",
+            )
             ->groupBy('gender_label')
             ->pluck('total', 'gender_label');
 
-        $genderValues = $genderLabels
-            ->map(fn ($label) => (int) ($genderCounts[$label] ?? 0))
-            ->values();
+        $genderValues = $genderLabels->map(fn($label) => (int) ($genderCounts[$label] ?? 0))->values();
 
         $ageCounts = \Illuminate\Support\Facades\DB::table('users as u')
             ->whereIn('u.registered_course', $courseIdsArray)
-            ->selectRaw("
+            ->selectRaw(
+                "
                 CASE
                     WHEN u.age IS NULL OR u.age = '' THEN 'Unknown'
                     WHEN u.age LIKE '%-%' OR u.age LIKE '%–%' OR u.age LIKE '%—%' THEN u.age
@@ -137,13 +137,14 @@
                         FLOOR(CAST(u.age AS UNSIGNED) / 10)
                     ELSE 9999
                 END AS bucket_order
-            ")
+            ",
+            )
             ->groupBy('age_range', 'bucket_order')
             ->orderBy('bucket_order')
             ->get();
 
         $ageLabels = $ageCounts->pluck('age_range')->values();
-        $ageValues = $ageCounts->pluck('total')->map(fn ($v) => (int) $v)->values();
+        $ageValues = $ageCounts->pluck('total')->map(fn($v) => (int) $v)->values();
 
         $registeredByCourse = \Illuminate\Support\Facades\DB::table('users')
             ->whereIn('registered_course', $courseIdsArray)
@@ -164,31 +165,34 @@
             ->join('users as u', 'u.userId', '=', 'ua.user_id')
             ->whereIn('ua.course_id', $courseIdsArray)
             ->whereNotNull('ua.confirmed')
-            ->selectRaw('
+            ->selectRaw(
+                '
                 ua.course_id,
                 COUNT(DISTINCT CASE WHEN u.support = 1 THEN ua.user_id END) as support_yes
-            ')
+            ',
+            )
             ->groupBy('ua.course_id')
             ->get()
             ->keyBy('course_id');
 
         $coursesWithRegistrations = (int) $registeredByCourse->count();
         $coursesWithoutRegistrations = max($totalCourses - $coursesWithRegistrations, 0);
-        $courseRegistrationCoverageRate = $totalCourses > 0
-            ? round(($coursesWithRegistrations / $totalCourses) * 100, 1)
-            : 0;
+        $courseRegistrationCoverageRate =
+            $totalCourses > 0 ? round(($coursesWithRegistrations / $totalCourses) * 100, 1) : 0;
 
         $deliveryCounts = \Illuminate\Support\Facades\DB::table('courses as c')
             ->join('programmes as p', 'c.programme_id', '=', 'p.id')
             ->whereIn('c.id', $courseIdsArray)
-            ->selectRaw("
+            ->selectRaw(
+                "
                 CASE
                     WHEN LOWER(TRIM(COALESCE(p.mode_of_delivery, ''))) IN ('online', 'online for all') THEN 'online'
                     WHEN LOWER(TRIM(COALESCE(p.mode_of_delivery, ''))) IN ('in person', 'in-person', 'in_person') THEN 'in_person'
                     ELSE 'other'
                 END as delivery_label,
                 COUNT(*) as total
-            ")
+            ",
+            )
             ->groupBy('delivery_label')
             ->pluck('total', 'delivery_label');
 
@@ -200,11 +204,13 @@
             ->join('users as u', 'u.userId', '=', 'ua.user_id')
             ->whereIn('ua.course_id', $courseIdsArray)
             ->whereNotNull('ua.confirmed')
-            ->selectRaw('
+            ->selectRaw(
+                '
                 COUNT(DISTINCT CASE WHEN u.support = 1 THEN ua.user_id END) as support_yes,
                 COUNT(DISTINCT CASE WHEN u.support = 0 THEN ua.user_id END) as support_no,
                 COUNT(DISTINCT CASE WHEN u.support IS NULL THEN ua.user_id END) as support_unknown
-            ')
+            ',
+            )
             ->first();
 
         $supportYes = (int) ($supportCounts->support_yes ?? 0);
@@ -237,7 +243,12 @@
             ->leftJoin('programmes as p', 'c.programme_id', '=', 'p.id')
             ->select(['c.id', 'c.course_name', 'p.mode_of_delivery'])
             ->get()
-            ->map(function ($course) use ($registeredByCourse, $shortlistedByCourse, $admittedByCourse, $supportByCourse) {
+            ->map(function ($course) use (
+                $registeredByCourse,
+                $shortlistedByCourse,
+                $admittedByCourse,
+                $supportByCourse,
+            ) {
                 $courseId = (int) $course->id;
                 $supportRow = $supportByCourse->get($courseId);
                 $admittedCount = (int) ($admittedByCourse[$courseId] ?? 0);
@@ -264,21 +275,21 @@
 @endphp
 
 @section('content')
-    @parent
+    {{-- @parent --}}
 
     <div>
         <div class="text-muted text-center" style="font-size: 44px; color: black">
             {{ $centre->title ?? 'Centre' }}
         </div>
         <div class="text-muted text-center">
-            @if($constituency?->title)
+            @if ($constituency?->title)
                 {{ $constituency->title }}
             @endif
-            @if($branch?->title)
+            @if ($branch?->title)
                 - {{ $branch->title }}
             @endif
         </div>
-        @if($districtTitles->isNotEmpty())
+        @if ($districtTitles->isNotEmpty())
             <div class="text-muted text-center small">
                 Districts: {{ $districtTitles->implode(', ') }}
             </div>
@@ -388,7 +399,7 @@
                     </div>
                     <div class="metric-value">{{ number_format($supportUnknown) }}</div>
                     <div class="text-muted small">
-                        @if($supportUnknown > 0)
+                        @if ($supportUnknown > 0)
                             Not indicated: {{ number_format($supportUnknown) }}
                         @else
                             Registered users marked as not needing support.
@@ -437,7 +448,8 @@
                     </div>
                     <div class="mt-3 d-flex flex-wrap gap-2">
                         <span class="badge bg-info text-dark">Total: {{ number_format($admissionsTotal) }}</span>
-                        <span class="badge bg-success text-dark">Confirmed: {{ number_format($admissionsConfirmed) }}</span>
+                        <span class="badge bg-success text-dark">Confirmed:
+                            {{ number_format($admissionsConfirmed) }}</span>
                         <span class="badge bg-warning text-dark">Pending: {{ number_format($admissionsPending) }}</span>
                     </div>
                 </div>
@@ -471,8 +483,9 @@
                                 @forelse($topCourses as $course)
                                     <tr>
                                         <td>
-                                            @if(!empty($course->id))
-                                                <a href="{{ backpack_url('course-batch/' . $course->id . '/show') }}">{{ $course->course_name ?? ('Course #' . $course->id) }}</a>
+                                            @if (!empty($course->id))
+                                                <a
+                                                    href="{{ backpack_url('course-batch/' . $course->id . '/show') }}">{{ $course->course_name ?? 'Course #' . $course->id }}</a>
                                             @else
                                                 {{ $course->course_name ?? 'N/A' }}
                                             @endif
@@ -511,17 +524,21 @@
             line-height: 1.1;
             margin-top: 0.35rem;
         }
+
         .chart-wrap {
             position: relative;
             height: 320px;
         }
+
         .chart-wrap-sm {
             position: relative;
             height: 240px;
         }
+
         .dataTables_wrapper .dataTables_filter input {
             margin-left: .5rem;
         }
+
         .dataTables_wrapper .dataTables_length select {
             margin: 0 .25rem;
         }
@@ -535,7 +552,7 @@
     <script src="{{ asset('assets/plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
     <script src="{{ asset('assets/plugins/chart.js/Chart.min.js') }}"></script>
     <script>
-        (function () {
+        (function() {
             "use strict";
 
             function safeInitDataTable(selector, options) {
@@ -548,15 +565,21 @@
 
                 $el.DataTable(Object.assign({
                     pageLength: 10,
-                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    lengthMenu: [
+                        [10, 25, 50, 100],
+                        [10, 25, 50, 100]
+                    ],
                     responsive: true,
                     deferRender: true,
                     ordering: false,
-                    language: { search: "", searchPlaceholder: "Search..." },
+                    language: {
+                        search: "",
+                        searchPlaceholder: "Search..."
+                    },
                 }, options || {}));
             }
 
-            document.addEventListener('DOMContentLoaded', function () {
+            document.addEventListener('DOMContentLoaded', function() {
                 safeInitDataTable('#dtTopCourses');
                 if (typeof Chart !== 'function') return;
 
@@ -596,7 +619,9 @@
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            legend: { position: 'bottom' }
+                            legend: {
+                                position: 'bottom'
+                            }
                         }
                     });
                 }
@@ -618,7 +643,9 @@
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            legend: { display: false },
+                            legend: {
+                                display: false
+                            },
                             scales: {
                                 yAxes: [{
                                     ticks: {
@@ -634,7 +661,7 @@
                 const admissionsCtx = document.getElementById('admissionsDoughnutChart');
                 if (admissionsCtx) {
                     const centerTextPlugin = {
-                        beforeDraw: function (chart) {
+                        beforeDraw: function(chart) {
                             const opts = chart?.config?.options?.centerText;
                             if (!opts) return;
 
@@ -647,11 +674,13 @@
                             ctx.textBaseline = 'middle';
 
                             ctx.fillStyle = '#6c757d';
-                            ctx.font = '500 12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+                            ctx.font =
+                                '500 12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
                             ctx.fillText(opts.line1 || '', width / 2, height / 2 - 12);
 
                             ctx.fillStyle = '#111';
-                            ctx.font = '600 20px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+                            ctx.font =
+                                '600 20px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
                             ctx.fillText(opts.line2 || '', width / 2, height / 2 + 6);
                             ctx.restore();
                         }
@@ -662,15 +691,21 @@
                         data: {
                             labels: ['Confirmed', 'Pending'],
                             datasets: [{
-                                data: [{{ (int) $admissionsConfirmed }}, {{ (int) $admissionsPending }}],
-                                backgroundColor: ['rgba(25, 135, 84, 0.85)', 'rgba(255, 193, 7, 0.85)'],
+                                data: [{{ (int) $admissionsConfirmed }},
+                                    {{ (int) $admissionsPending }}
+                                ],
+                                backgroundColor: ['rgba(25, 135, 84, 0.85)',
+                                    'rgba(255, 193, 7, 0.85)'
+                                ],
                                 borderWidth: 1
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            legend: { position: 'bottom' },
+                            legend: {
+                                position: 'bottom'
+                            },
                             centerText: {
                                 line1: 'Total',
                                 line2: ({{ (int) $admissionsTotal }}).toLocaleString()
@@ -700,7 +735,9 @@
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            legend: { display: false },
+                            legend: {
+                                display: false
+                            },
                             scales: {
                                 yAxes: [{
                                     ticks: {
@@ -732,7 +769,9 @@
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            legend: { position: 'bottom' }
+                            legend: {
+                                position: 'bottom'
+                            }
                         }
                     });
                 }
@@ -756,7 +795,9 @@
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            legend: { position: 'bottom' }
+                            legend: {
+                                position: 'bottom'
+                            }
                         }
                     });
                 }

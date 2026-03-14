@@ -40,7 +40,7 @@ class User extends Authenticatable
         'ghcard',
         'gender',
         'network_type',
-        'has_disability',
+        'pwd',
         'registered_course',
         'shortlist',
         'student_level',
@@ -64,12 +64,12 @@ class User extends Authenticatable
      * @var array
      */
     protected $casts = [
-        'email_verified_at' => 'datetime',
         'shortlist' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'status' => 'boolean',
-        'has_disability' => 'boolean',
+        'pwd' => 'boolean',
+        'password_changed_at' => 'datetime',
         'data' => 'array',
         'support' => 'boolean',
     ];
@@ -94,7 +94,13 @@ class User extends Authenticatable
         }
     }
 
-
+    /**
+     * Set the email attribute - always store lowercase.
+     */
+    public function setEmailAttribute($value): void
+    {
+        $this->attributes['email'] = is_string($value) ? strtolower($value) : $value;
+    }
 
     public function course()
     {
