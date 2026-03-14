@@ -163,7 +163,7 @@
                                     <th>Age</th>
                                     <th>Student Level</th>
                                     <th>Education Level</th>
-                                    <th>Programme</th>
+                                    <th id="categoryTableHeader">Programme</th>
                                     <th>Applied Date</th>
                                 </tr>
                             </thead>
@@ -179,7 +179,6 @@
 @section('after_scripts')
     {{-- Select2 JS --}}
     @basset("https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js")
-    // basset for sweet alert 
     @basset("https://cdn.jsdelivr.net/npm/sweetalert2@11.22.2/dist/sweetalert2.all.min.js")
     @bassetBlock('/admission-run.js')
         <script>
@@ -248,17 +247,17 @@
                                         paramsHtml += `<small class="text-muted">(${key.replace('_', ' ').toUpperCase()}: ${value})</small> `;
                                     }
                                     html += `
-                                        <div class="custom-control custom-switch mr-3 mb-2">
-                                            <input type="checkbox" class="custom-control-input rule-toggle" 
-                                                id="rule_${rule.id}" 
-                                                value="${rule.id}" 
-                                                ${rule.is_active ? 'checked' : ''}>
-                                            <label class="custom-control-label" for="rule_${rule.id}">
-                                                ${rule.name} <small class="text-muted">(Priority: ${rule.priority})</small><br>
-                                                ${paramsHtml}
-                                            </label>
-                                        </div>
-                                    `;
+                                            <div class="custom-control custom-switch mr-3 mb-2">
+                                                <input type="checkbox" class="custom-control-input rule-toggle" 
+                                                    id="rule_${rule.id}" 
+                                                    value="${rule.id}" 
+                                                    ${rule.is_active ? 'checked' : ''}>
+                                                <label class="custom-control-label" for="rule_${rule.id}">
+                                                    ${rule.name} <small class="text-muted">(Priority: ${rule.priority})</small><br>
+                                                    ${paramsHtml}
+                                                </label>
+                                            </div>
+                                        `;
                                 });
                                 container.html(html);
                             } else {
@@ -440,33 +439,29 @@
                     });
           
 
-                  
-
-                 
-
-                function displayPreview(data) {
+                   function displayPreview(data) {
                     // Display statistics
                     const stats = data.stats;
                     $('#statsSection').html(`
             <div class="row">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="alert alert-success">
-                        <strong>Total Available:</strong> ${stats.total}
+                        <strong>Available:</strong> ${stats.total}
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class="alert alert-info">
-                        <strong>Total Selected:</strong> ${stats.total_selected}
+                        <strong>Selected:</strong> ${stats.total_selected}
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <div class="alert alert-primary">
                         <strong>Gender:</strong> M: ${stats.gender_breakdown.male} / F: ${stats.gender_breakdown.female}
                     </div>
                 </div>
                 <div class="col-md-5">
                     <div class="alert alert-success">
-                        <strong>Level Distribution:</strong> Beginner: ${stats.level_distribution.beginner} / Intermediate: ${stats.level_distribution.intermediate} / Advanced: ${stats.level_distribution.advanced}
+                        <strong>Levels:</strong> Beginner: ${stats.level_distribution.beginner} / Intermediate: ${stats.level_distribution.intermediate} / Advanced: ${stats.level_distribution.advanced}
                     </div>
                 </div>
             </div>
@@ -480,10 +475,20 @@
                     });
                     $('#rulesSection').html(rulesHtml);
 
+                    // Update table header based on current mode
+                    const categoryHeader = $('#categoryTableHeader');
+                    if (currentMode === 'centre') {
+                        categoryHeader.text('Programme');
+                    } else {
+                        categoryHeader.text('Branch');
+                    }
+
                     // Display students
                     const tbody = $('#studentsTable tbody');
                     tbody.empty();
                     data.students.forEach(function(student) {
+                        const categoryVal = currentMode === 'centre' ? student.programme : student.branch_name;
+                        
                         tbody.append(`
                 <tr>
                     <td>${student.name}</td>
@@ -492,7 +497,7 @@
                     <td>${student.age}</td>
                     <td>${student.student_level ? (data.course_programme_level ? displayLevel(student.student_level, data.course_programme_level) : displayLevel(student.student_level)) : 'N/A'}</td>
                     <td>${student.educational_level}</td>
-                    <td>${student.programme}</td>
+                    <td>${categoryVal}</td>
                     <td>${student.applied_date}</td>
                 </tr>
             `);
@@ -508,7 +513,9 @@
 
                     const spanClass = level === 'intermediate' ? 'bg-warning' : 'bg-danger';
                     return "<span class='badge " + spanClass + " text-white'>" + level.toUpperCase() + "</span>"
-                }    
+                }  
+
+
         </script>
     @endBassetBlock
 @endsection

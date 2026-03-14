@@ -176,6 +176,7 @@ class AdmissionRunCrudController extends CrudController
                 'student_level' => $student->student_level ?? 'N/A',
                 'educational_level' => $student->educational_level ?? 'N/A',
                 'programme' => $student->course->programme->title ?? 'N/A',
+                'branch_name' => $student->course->location ?? ($student->course->centre->branch->title ?? 'N/A'),
                 'applied_date' => $student->created_at->format('Y-m-d'),
             ];
         });

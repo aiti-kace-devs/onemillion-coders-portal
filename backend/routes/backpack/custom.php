@@ -177,6 +177,12 @@ Route::group([
     Route::delete('district/{districtId}/remove-centre/{centreId}', [DistrictCrudController::class, 'removeCentre'])->name('district.remove-centre');
     Route::crud('district', 'DistrictCrudController');
     Route::crud('constituency', 'ConstituencyCrudController');
+    Route::get('admission-dashboard', 'AdmissionDashboardController@index')->name('admission.dashboard');
+    Route::get('admission-dashboard/centre/{id}', 'AdmissionDashboardController@getCentreDetails')->name('admission.dashboard.centre-details');
+    Route::get('admission-dashboard/branch/{id}', 'AdmissionDashboardController@getBranchDetails')->name('admission.dashboard.branch-details');
+    Route::get('admission-dashboard/district/{id}', 'AdmissionDashboardController@getDistrictDetails')->name('admission.dashboard.district-details');
+    Route::get('admission-dashboard/constituency/{id}', 'AdmissionDashboardController@getConstituencyDetails')->name('admission.dashboard.constituency-details');
+    Route::get('admission-dashboard/programme/{title}', 'AdmissionDashboardController@getProgrammeDetails')->name('admission.dashboard.programme-details');
 }); // this should be the absolute last line of this file
 
 /**
