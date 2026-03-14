@@ -14,6 +14,7 @@ use App\Models\Batch;
 use App\Models\Constituency;
 use App\Models\CourseBatch;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 
 class CourseProgrammeController extends Controller
@@ -443,6 +444,7 @@ class CourseProgrammeController extends Controller
                         ->map(fn ($centre) => [
                             'id' => $centre->id,
                             'title' => $centre->title,
+                            'gps_location' => $this->resolveGpsLocation($centre->gps_address),
                         ])
                         ->values(),
                     'courses' => $programmes,
@@ -468,8 +470,10 @@ class CourseProgrammeController extends Controller
             $branch = $centres->first()->branch;
 
             $cleanCentres = $centres->map(function ($centre) {
-                unset($centre->branch);
-                return $centre;
+                $centreData = $centre->toArray();
+                unset($centreData['branch']);
+                $centreData['gps_location'] = $this->resolveGpsLocation($centre->gps_address);
+                return $centreData;
             })->values();
 
             return [
@@ -519,6 +523,7 @@ class CourseProgrammeController extends Controller
         return response()->json([
             'centre_id' => $centre->id,
             'centre' => $centre->title,
+            'gps_location' => $this->resolveGpsLocation($centre->gps_address),
             'programmes' => $programmes,
         ]);
     }
@@ -526,7 +531,14 @@ class CourseProgrammeController extends Controller
 
     public function centresByBranch(Branch $branch)
     {
-        $centres = $branch->centre()->get();
+        $centres = $branch->centre()
+            ->get()
+            ->map(function ($centre) {
+                $centreData = $centre->toArray();
+                $centreData['gps_location'] = $this->resolveGpsLocation($centre->gps_address);
+                return $centreData;
+            })
+            ->values();
 
         return response()->json([
             'region' => $branch->title,
@@ -594,9 +606,48 @@ class CourseProgrammeController extends Controller
             'success' => true,
             'district_id' => $district->id,
             'district' => $district->title,
-            'centres' => $district->centres->values(),
+            'centres' => $district->centres
+                ->map(function ($centre) {
+                    $centreData = $centre->toArray();
+                    $centreData['gps_location'] = $this->resolveGpsLocation($centre->gps_address);
+                    return $centreData;
+                })
+                ->values(),
         ]);
     }
 
+    protected function resolveGpsLocation(?string $gpsAddress): array
+    {
+        $address = trim((string) $gpsAddress);
+        if ($address === '') {
+            return [];
+        }
+
+        static $cache = [];
+        if (array_key_exists($address, $cache)) {
+            return $cache[$address];
+        }
+
+        try {
+            $response = Http::asForm()
+                ->timeout(10)
+                ->post('https://ghanapostgps.sperixlabs.org/get-location', [
+                    'address' => $address,
+                ]);
+
+            if (! $response->successful()) {
+                return $cache[$address] = [];
+            }
+
+            $payload = $response->json();
+            if (! ($payload['found'] ?? false)) {
+                return $cache[$address] = [];
+            }
+
+            return $cache[$address] = $payload['data']['Table'] ?? [];
+        } catch (\Throwable $e) {
+            return $cache[$address] = [];
+        }
+    }
 
 }
