@@ -192,8 +192,18 @@ export default function CentersPage() {
     c.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const getFirstImage = (centre) => {
+    if (Array.isArray(centre.images) && centre.images.length > 0) {
+      return centre.images[0];
+    }
+    if (centre.image && centre.image.trim() !== "") {
+      return centre.image;
+    }
+    return null;
+  };
+
   const hasValidImage = (centre) =>
-    centre.image && centre.image.trim() !== "" && !imageErrors[centre.id];
+    getFirstImage(centre) && !imageErrors[centre.id];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -423,7 +433,7 @@ export default function CentersPage() {
                           <div className="relative h-36 bg-gray-100 overflow-hidden">
                             {hasValidImage(centre) ? (
                               <Image
-                                src={centre.image}
+                                src={getFirstImage(centre)}
                                 alt={centre.title}
                                 fill
                                 className="object-cover group-hover:scale-105 transition-transform duration-500"

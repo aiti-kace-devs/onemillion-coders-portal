@@ -68,6 +68,7 @@ Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
 });
 
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
+Route::get('/api/check-user-recommended-courses/{userId}', [CourseMatchAPIController::class, 'checkUserRecommendedCourses']);
 Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
 Route::get('/api/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
 Route::get('/api/programmes-with-batches', [CourseProgrammeController::class, 'programmeWithBatch']);
