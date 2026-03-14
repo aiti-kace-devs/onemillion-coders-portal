@@ -2,7 +2,7 @@
 
 return [
 
-    'connection' => env('STATAMIC_ELOQUENT_CONNECTION', 'eloquent'),
+    'connection' => env('STATAMIC_ELOQUENT_CONNECTION', ''),
     'table_prefix' => env('STATAMIC_ELOQUENT_PREFIX', 'cms_'),
 
     'asset_containers' => [
