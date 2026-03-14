@@ -8,7 +8,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000, // 15 seconds timeout
+  timeout: 30000,
 });
 
 // Request interceptor for logging
@@ -95,7 +95,7 @@ export const fetchBranchesSummary = async () => {
 export const checkUserStatus = async (userId) => {
   try {
     const response = await apiRequest(`check-user/${userId}`);
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Failed to check user status:', error);
     throw error;
@@ -106,9 +106,10 @@ export const checkUserStatus = async (userId) => {
  * Fetch course match questions and options
  * @returns {Promise<Object>} - Course match questions data
  */
-export const getCourseMatchQuestions = async () => {
+export const getCourseMatchQuestions = async (type) => {
   try {
-    const response = await apiRequest('course-match');
+    const params = type ? `?type=${type}` : '';
+    const response = await apiRequest(`course-match${params}`);
     return response.data;
   } catch (error) {
     console.error('Failed to fetch course match questions:', error);
@@ -124,13 +125,14 @@ export const getCourseMatchQuestions = async () => {
  * @param {number} params.centreId - Centre ID
  * @returns {Promise<Object>} - Course recommendations data
  */
-export const getCourseRecommendations = async ({ optionIds, userId, centreId }) => {
+export const getCourseRecommendations = async ({ optionIds, userId, regionId, centreId }) => {
   try {
-    const response = await apiRequest('course-match/recommend', {
+    const response = await apiRequest('recommend/courses', {
       method: 'POST',
       data: {
         option_ids: optionIds,
         userId,
+        branch_id: regionId,
         centre_id: centreId,
       }
     });

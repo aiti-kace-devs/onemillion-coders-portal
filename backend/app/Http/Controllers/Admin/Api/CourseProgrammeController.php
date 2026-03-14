@@ -443,6 +443,7 @@ class CourseProgrammeController extends Controller
                         ->map(fn ($centre) => [
                             'id' => $centre->id,
                             'title' => $centre->title,
+                            'gps_location' => $centre->gps_location ?? [],
                         ])
                         ->values(),
                     'courses' => $programmes,
@@ -468,8 +469,10 @@ class CourseProgrammeController extends Controller
             $branch = $centres->first()->branch;
 
             $cleanCentres = $centres->map(function ($centre) {
-                unset($centre->branch);
-                return $centre;
+                $centreData = $centre->toArray();
+                unset($centreData['branch']);
+                $centreData['gps_location'] = $centre->gps_location ?? [];
+                return $centreData;
             })->values();
 
             return [
@@ -519,14 +522,33 @@ class CourseProgrammeController extends Controller
         return response()->json([
             'centre_id' => $centre->id,
             'centre' => $centre->title,
+            'gps_location' => $centre->gps_location ?? [],
             'programmes' => $programmes,
+        ]);
+    }
+
+    public function centreById(Centre $centre)
+    {
+        $centreData = $centre->toArray();
+        $centreData['gps_location'] = $centre->gps_location ?? [];
+
+        return response()->json([
+            'success' => true,
+            'data' => $centreData,
         ]);
     }
 
 
     public function centresByBranch(Branch $branch)
     {
-        $centres = $branch->centre()->get();
+        $centres = $branch->centre()
+            ->get()
+            ->map(function ($centre) {
+                $centreData = $centre->toArray();
+                $centreData['gps_location'] = $centre->gps_location ?? [];
+                return $centreData;
+            })
+            ->values();
 
         return response()->json([
             'region' => $branch->title,
@@ -594,9 +616,14 @@ class CourseProgrammeController extends Controller
             'success' => true,
             'district_id' => $district->id,
             'district' => $district->title,
-            'centres' => $district->centres->values(),
+            'centres' => $district->centres
+                ->map(function ($centre) {
+                    $centreData = $centre->toArray();
+                    $centreData['gps_location'] = $centre->gps_location ?? [];
+                    return $centreData;
+                })
+                ->values(),
         ]);
     }
-
 
 }

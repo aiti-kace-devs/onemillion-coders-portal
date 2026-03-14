@@ -46,6 +46,7 @@ Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
 });
 
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
+Route::get('/api/check-user-recommended-courses/{userId}', [CourseMatchAPIController::class, 'checkUserRecommendedCourses']);
 Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
 Route::get('/api/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
 Route::get('/api/programmes-with-batches', [CourseProgrammeController::class, 'programmeWithBatch']);
@@ -54,6 +55,7 @@ Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::
 
 Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
 Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
+Route::get('/api/centres-by-id/{centre}', [CourseProgrammeController::class, 'centreById']);
 Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
 Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
 Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
