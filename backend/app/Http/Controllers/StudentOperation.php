@@ -1340,14 +1340,10 @@ class StudentOperation extends Controller
 
     public function record_assessment_violation(Request $request)
     {
-        $user = $request->user('sanctum');
-
-        if (!$user && $request->has('user_id')) {
-            $user = User::where('userId', $request->user_id)->first();
-        }
+        $user = $this->userFromToken($request);
 
         if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized or missing user_id.'], 401);
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized or invalid token.'], 401);
         }
 
         $assessment = UserAssessment::where('user_id', $user->id)
