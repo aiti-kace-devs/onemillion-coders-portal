@@ -1239,7 +1239,7 @@ class StudentOperation extends Controller
                 'passed_level' => false,
                 'user_overall_level' => $user->student_level,
                 'assessment_completed' => true,
-            ], 403);
+            ], 400);
         }
 
         $question = OexQuestionMaster::find($request->question_id);
