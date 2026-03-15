@@ -22,6 +22,13 @@ const toggleSidebar = () => {
 // Get the current route name for active link highlighting
 const { auth, component } = usePage().props;
 
+const props = defineProps({
+    fullHeight: {
+        type: Boolean,
+        default: false
+    }
+});
+
 const user = auth?.user || {};
 </script>
 
@@ -228,7 +235,7 @@ const user = auth?.user || {};
       </header>
 
       <!-- Page content -->
-      <main class="py-6 px-4 lg:px-8">
+      <main :class="props.fullHeight ? '' : 'py-6 px-4 lg:px-8'">
         <slot />
       </main>
     </div>
