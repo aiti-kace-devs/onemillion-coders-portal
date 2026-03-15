@@ -32,29 +32,34 @@ use App\Models\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\UserAssessment;
+use App\Services\JwtService;
 
 class StudentOperation extends Controller
 {
+    /**
+     * Resolve user from JWT token (Bearer header or token input). Returns null if invalid/missing.
+     */
+    private function userFromToken(Request $request): ?User
+    {
+        $token = $request->bearerToken()
+            ?? $request->input('token')
+            ?? $request->input('user_id');
+
+        if (empty($token)) {
+            return null;
+        }
+
+        $userId = app(JwtService::class)->validate($token);
+        if ($userId === null) {
+            return null;
+        }
+
+        return User::find($userId);
+    }
+
     //student dashboard
     public function dashboard()
     {
-        if (!Auth::user()->isAdmitted()) {
-            return redirect(route('student.profile.edit'));
-        }
-
-        // $data['portal_exams'] = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
-        //     ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
-        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
-        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-        //     ->orderBy('user_exams.exam_id', 'desc')
-        //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-        //     ->where('user_exams.user_id', Auth::user()->id)
-        //     ->where('user_exams.std_status', '1')
-        //     ->get()
-        //     ->toArray();
-
-        //     return view('student.dashboard', $data);
-
         $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
             ->join('users', 'users.id', '=', 'user_exams.user_id')
@@ -73,13 +78,14 @@ class StudentOperation extends Controller
 
             return $questionnaire;
         });
-        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires'));
+        $registeredCourse = null;
+        if (Auth::user()->registered_course) {
+            $registeredCourse = Course::find(Auth::user()->registered_course);
+        }
 
-        // $data['portal_exams'] = Oex_exam_master::select(['oex_exam_masters.*', 'oex_categories.name as cat_name'])
-        //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-        //     ->orderBy('id', 'desc')->where('oex_exam_masters.status', '1')->get()->toArray();
-
+        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires', 'registeredCourse'));
     }
+
     public function profile()
     {
         // Get the current authenticated user
@@ -98,34 +104,20 @@ class StudentOperation extends Controller
         return view('student.profile', compact('user', 'course', 'rejection'));
     }
 
-    // application status
     public function application_status()
     {
         $user = Auth::guard('web')->user();
 
         $user_exam = user_exam::where('user_id', $user->id)->first();
         $user_admission = UserAdmission::where('user_id', $user->userId)->first();
-        // dd($exam_submitted, $data);
+        $user_assessment = UserAssessment::where('user_id', $user->id)->first();
 
-        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_exam', 'user_admission'));
+        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_exam', 'user_admission', 'user_assessment'));
     }
 
     //Exam page
     public function exam()
     {
-        // Admission check removed - students can view/take exams before admission
-
-        // $student_info = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.title', 'oex_exam_masters.exam_date', 'users.created_at as registered'])
-        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
-        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-        //     ->orderBy('user_exams.exam_id', 'desc')
-        //     ->where('user_exams.user_id', Auth::user()->id)
-        //     ->where('user_exams.std_status', '1')
-        //     ->get()
-        //     ->toArray();
-
-        // return view('student.exam', ['student_info' => $student_info]);
-
         $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
             ->join('users', 'users.id', '=', 'user_exams.user_id')
@@ -647,7 +639,7 @@ class StudentOperation extends Controller
         $user->registered_course = $request->course_id; // Store course_id in exam field
         $user->save();
 
-        return redirect()->route('student.profile.edit');
+        return redirect()->route('student.application-status');
     }
 
     // API function not used
@@ -1100,14 +1092,10 @@ class StudentOperation extends Controller
 
     public function fetch_assessment_question(Request $request)
     {
-        $user = $request->user('sanctum');
-
-        if (!$user && $request->has('user_id')) {
-            $user = User::where('userId', $request->user_id)->first();
-        }
+        $user = $this->userFromToken($request);
 
         if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized or missing user_id.'], 401);
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized or invalid token.'], 401);
         }
 
         if (!is_null($user->student_level)) {
@@ -1199,14 +1187,10 @@ class StudentOperation extends Controller
 
     public function submit_assessment_answer(Request $request)
     {
-        $user = $request->user('sanctum');
-
-        if (!$user && $request->has('user_id')) {
-            $user = User::where('userId', $request->user_id)->first();
-        }
+        $user = $this->userFromToken($request);
 
         if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized or missing user_id.'], 401);
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized or invalid token.'], 401);
         }
 
         $request->validate([
