@@ -1188,6 +1188,7 @@ class StudentOperation extends Controller
         $request->validate([
             'question_id' => 'required|exists:oex_question_masters,id',
             'answer' => 'required|string',
+            'is_violation' => 'sometimes|boolean'
         ]);
 
         $assessment = UserAssessment::where('user_id', $user->id)
@@ -1210,7 +1211,7 @@ class StudentOperation extends Controller
         $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
         $timeRemainingSeconds = $timeoutSeconds - $timeElapsedSeconds;
 
-        if ($timeRemainingSeconds <= 0) {
+        if ($timeRemainingSeconds <= 0 || $request->is_violation) {
             $assessment->completed = true;
             $assessment->save();
 
@@ -1225,11 +1226,12 @@ class StudentOperation extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Time limit exceeded! You have failed this level.',
+                'message' => $request->is_violation ? 'Maximum violations reached! Assessment auto-submitted.' : 'Time limit exceeded! You have failed this level.',
                 'level_complete' => true,
                 'passed_level' => false,
-                'user_overall_level' => $user->student_level
-            ], 403);
+                'user_overall_level' => $user->student_level,
+                'assessment_completed' => true,
+            ], $request->is_violation ? 200 : 403);
         }
 
         $question = OexQuestionMaster::find($request->question_id);
