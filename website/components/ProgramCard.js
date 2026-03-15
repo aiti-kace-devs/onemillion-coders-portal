@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { FiUsers, FiClock, FiAward, FiBookOpen, FiChevronRight, FiMapPin } from 'react-icons/fi';
+import { FiUsers, FiClock, FiAward, FiBookOpen, FiChevronRight, FiMapPin, FiGlobe } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Button from './Button';
@@ -60,13 +60,21 @@ const ProgramCard = ({ program }) => {
           </div>
         )}
 
-        {/* Training Duration */}
-        {program.training_duration && (
-          <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center space-x-1">
-            <FiClock className="w-3 h-3 text-gray-600" />
-            <span className="text-xs font-medium text-gray-700">{program.training_duration}</span>
-          </div>
-        )}
+        {/* Training Duration & Mode */}
+        <div className="absolute top-4 right-4 flex flex-col gap-1.5 items-end">
+          {program.training_duration && (
+            <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center space-x-1">
+              <FiClock className="w-3 h-3 text-gray-600" />
+              <span className="text-xs font-medium text-gray-700">{program.training_duration}</span>
+            </div>
+          )}
+          {program.mode_of_delivery && (
+            <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center space-x-1">
+              <FiGlobe className="w-3 h-3 text-blue-600" />
+              <span className="text-xs font-medium text-blue-700">{program.mode_of_delivery}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Card Content */}

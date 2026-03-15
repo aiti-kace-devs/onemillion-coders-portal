@@ -350,6 +350,15 @@ export default function CourseDetailsPage() {
                         <span className="text-gray-600 text-sm md:text-base">Level</span>
                         <span className="font-semibold text-gray-900 text-sm md:text-base text-right">{programme.level || 'Professional'}</span>
                       </div>
+                      {programme.mode_of_delivery && (
+                        <div className="flex justify-between items-start">
+                          <span className="text-gray-600 text-sm md:text-base">Mode</span>
+                          <span className="inline-flex items-center gap-1.5 font-semibold text-blue-700 text-sm md:text-base text-right">
+                            <FiGlobe className="w-4 h-4" />
+                            {programme.mode_of_delivery}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

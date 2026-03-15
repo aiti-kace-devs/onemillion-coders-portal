@@ -267,6 +267,15 @@ function RegisterForm() {
             errors[field.field_name] = "Please enter a valid Ghana phone number";
           }
         }
+
+        if (field.type === "file" && value instanceof File && field.options) {
+          const allowedExtensions = field.options.split(",").map((ext) => ext.trim().toLowerCase());
+          const fileName = value.name || "";
+          const fileExtension = fileName.split(".").pop()?.toLowerCase();
+          if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+            errors[field.field_name] = `Only ${allowedExtensions.map((e) => e.toUpperCase()).join(", ")} files are allowed`;
+          }
+        }
       });
 
     return errors;
@@ -502,7 +511,13 @@ function RegisterForm() {
             id={`file-${field.field_name}`}
             type="file"
             className="hidden"
-            accept={field.type === "image" ? "image/*" : undefined}
+            accept={
+              field.type === "image"
+                ? "image/*"
+                : field.options
+                ? field.options.split(",").map((ext) => `.${ext.trim().toLowerCase()}`).join(",")
+                : undefined
+            }
             onChange={(e) => {
               const file = e.target.files[0];
               if (file) {
@@ -519,7 +534,11 @@ function RegisterForm() {
                 Drag & drop or click to upload
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                {field.type === "image" ? "PNG, JPG, GIF up to 5MB" : "PDF, DOC up to 10MB"}
+                {field.type === "image"
+                  ? "PNG, JPG, GIF up to 5MB"
+                  : field.options
+                  ? `${field.options.split(",").map((e) => e.trim().toUpperCase()).join(", ")} up to 10MB`
+                  : "PDF, DOC up to 10MB"}
               </p>
             </>
           )}
