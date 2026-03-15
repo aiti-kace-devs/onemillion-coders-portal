@@ -38,23 +38,6 @@ class StudentOperation extends Controller
     //student dashboard
     public function dashboard()
     {
-        // if (!Auth::user()->isAdmitted()) {
-        //     return redirect(route('student.dashboard'));
-        // }
-
-        // $data['portal_exams'] = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
-        //     ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
-        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
-        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-        //     ->orderBy('user_exams.exam_id', 'desc')
-        //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-        //     ->where('user_exams.user_id', Auth::user()->id)
-        //     ->where('user_exams.std_status', '1')
-        //     ->get()
-        //     ->toArray();
-
-        //     return view('student.dashboard', $data);
-
         $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
             ->join('users', 'users.id', '=', 'user_exams.user_id')
@@ -73,13 +56,14 @@ class StudentOperation extends Controller
 
             return $questionnaire;
         });
-        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires'));
+        $registeredCourse = null;
+        if (Auth::user()->registered_course) {
+            $registeredCourse = Course::find(Auth::user()->registered_course);
+        }
 
-        // $data['portal_exams'] = Oex_exam_master::select(['oex_exam_masters.*', 'oex_categories.name as cat_name'])
-        //     ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-        //     ->orderBy('id', 'desc')->where('oex_exam_masters.status', '1')->get()->toArray();
-
+        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires', 'registeredCourse'));
     }
+
     public function profile()
     {
         // Get the current authenticated user
@@ -112,19 +96,6 @@ class StudentOperation extends Controller
     //Exam page
     public function exam()
     {
-        // Admission check removed - students can view/take exams before admission
-
-        // $student_info = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.title', 'oex_exam_masters.exam_date', 'users.created_at as registered'])
-        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
-        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-        //     ->orderBy('user_exams.exam_id', 'desc')
-        //     ->where('user_exams.user_id', Auth::user()->id)
-        //     ->where('user_exams.std_status', '1')
-        //     ->get()
-        //     ->toArray();
-
-        // return view('student.exam', ['student_info' => $student_info]);
-
         $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
             ->join('users', 'users.id', '=', 'user_exams.user_id')

@@ -7,9 +7,12 @@ import ExamCard from "../../Components/ExamCard.vue";
 const props = defineProps({
     exams: Object,
     questionnaires: Object,
+    registeredCourse: Object,
 });
 
 const user = computed(() => usePage().props.auth?.user || {});
+
+const hasRegisteredCourse = computed(() => !!props.registeredCourse);
 
 const examList = computed(() => props.exams || []);
 const totalExams = computed(() => examList.value.length);
@@ -40,6 +43,21 @@ const overallProgress = computed(() =>
                     <h2 class="font-bold text-2xl text-gray-800 leading-tight">
                         Welcome, {{ user.name }}!
                     </h2>
+                </div>
+
+                <!-- Chosen Course Section -->
+                <div v-if="hasRegisteredCourse" class="mt-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-orange-100 p-6 transition-all duration-300">
+                        <div class="flex items-center gap-4">
+                            <div class="p-3 bg-orange-50 rounded-lg text-orange-600">
+                                <span class="material-symbols-outlined text-3xl">school</span>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">Your Chosen Course</p>
+                                <h3 class="text-xl font-bold text-gray-800">{{ registeredCourse.course_name }}</h3>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mt-6 space-y-10">
@@ -131,7 +149,7 @@ const overallProgress = computed(() =>
                                 </div>
                             </Link>
 
-                            <Link v-if="!user.isAdmitted" :href="route('student.change-course')" class="block h-full">
+                            <Link v-if="!user.isAdmitted && !user.shortlist" :href="route('student.change-course')" class="block h-full">
                                 <div class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50">
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
@@ -140,12 +158,14 @@ const overallProgress = computed(() =>
                                             <span class="material-symbols-outlined">swap_horiz</span>
                                         </span>
                                         <div class="flex-1 text-left">
-                                            <h3 class="text-lg font-bold text-gray-800">Change Course</h3>
+                                            <h3 class="text-lg font-bold text-gray-800">{{ user.registered_course ? 'Change Course' : 'Choose Course' }}</h3>
                                         </div>
                                     </div>
                                     <!-- Exam Details -->
                                     <div class="mt-2 space-y-1 text-left">
-                                        <p class="text-sm">Change your course to a different one.</p>
+                                        <p class="text-sm">
+                                            {{ user.registered_course ? 'Change your course to a different one.' : 'Select a course to get started.' }}
+                                        </p>
                                     </div>
                                 </div>
                             </Link>
