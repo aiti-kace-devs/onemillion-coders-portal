@@ -1,56 +1,68 @@
 <script setup>
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
 import PrimaryButton from "./PrimaryButton.vue";
-
 
 const props = defineProps({
     examList: Array,
 });
 
-const EXAM_DEADLINE_AFTER_REGISTRATION = usePage().props.config?.['EXAM_DEADLINE_AFTER_REGISTRATION'] || 14;
-const SHOW_RESULTS_TO_STUDENTS = usePage().props.config?.['SHOW_RESULTS_TO_STUDENTS'] || false;
+const EXAM_DEADLINE_AFTER_REGISTRATION =
+    usePage().props.config?.["EXAM_DEADLINE_AFTER_REGISTRATION"] || 14;
+const SHOW_RESULTS_TO_STUDENTS =
+    usePage().props.config?.["SHOW_RESULTS_TO_STUDENTS"] || false;
 const user = usePage().props.auth?.user || {};
 
 const levelDeterminationTestUrl = computed(() => {
     const baseUrl = usePage().props.quiz_frontend_url;
-    return `${baseUrl}/quiz/${user.userId}`;
+    const token = usePage().props.quiz_jwt_token;
+    if (!token) return `${baseUrl}/quiz`;
+    return `${baseUrl}/quiz/${token}`;
 });
-
 
 const getExamStatus = (exam) => {
     const { hoursLeft } = getExamDeadline(exam.exam_date, user.created_at);
     if (exam.submitted) return "completed";
     if (hoursLeft < 0) return "overdue";
     return "pending";
-}
+};
 
 const getExamDeadline = (examDate, registeredAt) => {
     const now = new Date();
     const examDeadline = new Date(examDate);
     const registered = registeredAt ? new Date(registeredAt) : now;
     const studentDeadline = new Date(registered);
-    studentDeadline.setDate(studentDeadline.getDate() + EXAM_DEADLINE_AFTER_REGISTRATION);
+    studentDeadline.setDate(
+        studentDeadline.getDate() + EXAM_DEADLINE_AFTER_REGISTRATION,
+    );
     let deadline = examDeadline;
     let hoursLeft = Math.round((deadline - now) / (1000 * 60 * 60));
-    const studentHoursLeft = Math.round((studentDeadline - now) / (1000 * 60 * 60));
+    const studentHoursLeft = Math.round(
+        (studentDeadline - now) / (1000 * 60 * 60),
+    );
 
     if (studentHoursLeft < hoursLeft) {
         deadline = studentDeadline;
         hoursLeft = studentHoursLeft;
     }
     return { deadline, hoursLeft };
-}
-
+};
 </script>
 
 <template>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        <div v-for="(exam, key) in examList" :key="exam.exam_id"
-            class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50">
+        <div
+            v-for="(exam, key) in examList"
+            :key="exam.exam_id"
+            class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50"
+        >
             <component
                 :is="exam.title === 'Aptitude Test' ? 'a' : Link"
-                :href="exam.title === 'Aptitude Test' ? levelDeterminationTestUrl : route('student.join-exam', exam.exam_id)"
+                :href="
+                    exam.title === 'Aptitude Test'
+                        ? levelDeterminationTestUrl
+                        : route('student.join-exam', exam.exam_id)
+                "
                 :target="exam.title === 'Aptitude Test' ? '_blank' : undefined"
                 class="block flex-1"
             >
@@ -68,17 +80,29 @@ const getExamDeadline = (examDate, registeredAt) => {
 
                 <!-- Icon and Title -->
                 <div class="flex items-center gap-3 mb-2">
-                    <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white">
-                        <span class="material-symbols-outlined">psychology</span>
+                    <span
+                        class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white"
+                    >
+                        <span class="material-symbols-outlined"
+                            >psychology</span
+                        >
                     </span>
                     <div class="flex-1 text-left">
-                        <h3 class="text-lg font-bold text-gray-800 leading-tight">
-                            {{ exam.title === 'Aptitude Test' ? 'Level Determination Assessment' : exam.title }}
+                        <h3
+                            class="text-lg font-bold text-gray-800 leading-tight"
+                        >
+                            {{
+                                exam.title === "Aptitude Test"
+                                    ? "Level Determination Assessment"
+                                    : exam.title
+                            }}
                         </h3>
                         <!-- <p class="text-xs text-gray-500">
                             Category: {{ exam.category_name }}
                         </p> -->
-                        <p class="text-sm text-gray-500 mt-1">Discover your standing for the current application.</p>
+                        <p class="text-sm text-gray-500 mt-1">
+                            Discover your standing for the current application.
+                        </p>
                     </div>
                 </div>
 

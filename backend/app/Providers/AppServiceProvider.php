@@ -9,6 +9,7 @@ use Illuminate\Support\ServiceProvider;
 use Statamic\Facades\CP\Nav;
 use Illuminate\Support\Facades\Validator;
 use App\Rules\Recaptcha;
+use App\Services\JwtService;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -37,6 +38,8 @@ class AppServiceProvider extends ServiceProvider
             \Statamic\Eloquent\Commands\ExportAssets::class,
             \App\Console\Commands\ExportAssetsCommand::class
         );
+
+        $this->app->singleton(JwtService::class, fn () => JwtService::fromConfig());
     }
 
     /**

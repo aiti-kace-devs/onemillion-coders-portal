@@ -32,9 +32,31 @@ use App\Models\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\UserAssessment;
+use App\Services\JwtService;
 
 class StudentOperation extends Controller
 {
+    /**
+     * Resolve user from JWT token (Bearer header or token input). Returns null if invalid/missing.
+     */
+    private function userFromToken(Request $request): ?User
+    {
+        $token = $request->bearerToken()
+            ?? $request->input('token')
+            ?? $request->input('user_id');
+
+        if (empty($token)) {
+            return null;
+        }
+
+        $userId = app(JwtService::class)->validate($token);
+        if ($userId === null) {
+            return null;
+        }
+
+        return User::find($userId);
+    }
+
     //student dashboard
     public function dashboard()
     {
@@ -1070,14 +1092,10 @@ class StudentOperation extends Controller
 
     public function fetch_assessment_question(Request $request)
     {
-        $user = $request->user('sanctum');
-
-        if (!$user && $request->has('user_id')) {
-            $user = User::where('userId', $request->user_id)->first();
-        }
+        $user = $this->userFromToken($request);
 
         if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized or missing user_id.'], 401);
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized or invalid token.'], 401);
         }
 
         $assessment = UserAssessment::firstOrCreate(
@@ -1161,20 +1179,15 @@ class StudentOperation extends Controller
 
     public function submit_assessment_answer(Request $request)
     {
-        $user = $request->user('sanctum');
-
-        if (!$user && $request->has('user_id')) {
-            $user = User::where('userId', $request->user_id)->first();
-        }
+        $user = $this->userFromToken($request);
 
         if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized or missing user_id.'], 401);
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized or invalid token.'], 401);
         }
 
         $request->validate([
             'question_id' => 'required|exists:oex_question_masters,id',
             'answer' => 'required|string',
-            'user_id' => 'sometimes|exists:users,userId'
         ]);
 
         $assessment = UserAssessment::where('user_id', $user->id)

@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\AppConfig;
+use App\Services\JwtService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -59,6 +60,11 @@ class HandleInertiaRequests extends Middleware
             $configs[$key] = config($key);
         }
 
+        $quizJwtToken = null;
+        if ($user) {
+            $quizJwtToken = app(JwtService::class)->generate($user->id);
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -76,6 +82,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'config' => $configs,
             'quiz_frontend_url' => config('app.quiz_frontend_url'),
+            'quiz_jwt_token' => $quizJwtToken,
             'flash' => [
                 'message' => fn() => $request->session()->get('flash'),
                 'key' => fn() => $request->session()->get('key'),
