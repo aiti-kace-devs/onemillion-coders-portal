@@ -108,11 +108,10 @@ class StudentOperation extends Controller
     {
         $user = Auth::guard('web')->user();
 
-        $user_exam = user_exam::where('user_id', $user->id)->first();
         $user_admission = UserAdmission::where('user_id', $user->userId)->first();
         $user_assessment = UserAssessment::where('user_id', $user->id)->first();
 
-        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_exam', 'user_admission', 'user_assessment'));
+        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_admission', 'user_assessment'));
     }
 
     //Exam page
