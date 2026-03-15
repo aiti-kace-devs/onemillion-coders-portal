@@ -18,6 +18,7 @@ import {
   FiStar,
   FiLoader,
   FiAlertCircle,
+  FiGlobe,
 } from "react-icons/fi";
 import Button from "../../components/Button";
 import {
@@ -418,6 +419,14 @@ export default function CourseMatchPage() {
                                     {course.duration}
                                   </span>
                                 </div>
+                                {course.mode_of_delivery && (
+                                  <div className="flex items-center gap-2 bg-blue-50 rounded-full px-4 py-2">
+                                    <FiGlobe className="w-4 h-4 text-blue-600" />
+                                    <span className="text-sm font-medium text-blue-700">
+                                      {course.mode_of_delivery}
+                                    </span>
+                                  </div>
+                                )}
                                 <div className="flex items-center gap-2 bg-blue-50 rounded-full px-4 py-2">
                                   <FiCheckCircle className="w-4 h-4 text-blue-600" />
                                   <span className="text-sm font-medium text-blue-700">

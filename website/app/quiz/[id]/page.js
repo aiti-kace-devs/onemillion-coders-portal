@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiArrowRight,
@@ -21,6 +21,7 @@ import {
 import {
   fetchAssessmentQuestions,
   submitAssessmentAnswer,
+  recordViolation,
 } from "../../../services/api";
 
 // ─── Constants ─────────────────────────────────────────────
@@ -229,6 +230,8 @@ function LevelTransition({ currentLevel, nextLevel, score, total, onComplete }) 
 export default function QuizPage({ params }) {
   const { id } = React.use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
 
   // Quiz flow state
   const [started, setStarted] = useState(false);
@@ -239,6 +242,8 @@ export default function QuizPage({ params }) {
   const [violations, setViolations] = useState(0);
   const [showViolation, setShowViolation] = useState(false);
   const violationsRef = useRef(0);
+
+  const violationCooldownRef = useRef(false); // debounce to prevent double-counting
 
   // Current question from API
   const [question, setQuestion] = useState(null);
@@ -263,7 +268,7 @@ export default function QuizPage({ params }) {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetchAssessmentQuestions(id);
+      const response = await fetchAssessmentQuestions(id, token);
 
       if (response?.status === "success" && response?.question) {
         const q = response.question;
@@ -313,19 +318,47 @@ export default function QuizPage({ params }) {
     return () => clearInterval(timerRef.current);
   }, [started, showLevelEnd, loading, assessmentComplete, question, currentLevel, score]);
 
+  // Use refs to avoid stale closures in event handlers
+  const currentLevelRef = useRef(currentLevel);
+  const scoreRef = useRef(score);
+  const assessmentCompleteRef = useRef(assessmentComplete);
+  const startedRef = useRef(started);
+  const questionRef = useRef(question);
+
+  useEffect(() => { currentLevelRef.current = currentLevel; }, [currentLevel]);
+  useEffect(() => { scoreRef.current = score; }, [score]);
+  useEffect(() => { assessmentCompleteRef.current = assessmentComplete; }, [assessmentComplete]);
+  useEffect(() => { startedRef.current = started; }, [started]);
+  useEffect(() => { questionRef.current = question; }, [question]);
+
   // ── Proctoring: detect tab switches & fullscreen exits ──
   useEffect(() => {
     if (!started || assessmentComplete) return;
 
     const addViolation = () => {
+      // Debounce: prevent double-counting when Escape triggers both
+      // fullscreenchange and visibilitychange in quick succession
+      if (violationCooldownRef.current) return;
+      violationCooldownRef.current = true;
+      setTimeout(() => { violationCooldownRef.current = false; }, 500);
+
       violationsRef.current += 1;
       const count = violationsRef.current;
       setViolations(count);
       setShowViolation(true);
 
+      // Record violation to server
+      recordViolation(id, count, token)
+        .then((result) => {
+          if (count >= MAX_VIOLATIONS) {
+            setOverallLevel(result?.user_overall_level || null);
+          }
+        })
+        .catch(() => {});
+
       if (count >= MAX_VIOLATIONS) {
-        // Auto-submit: mark assessment as complete
-        setLevelScores((p) => ({ ...p, [currentLevel]: score }));
+        // Auto-submit: mark assessment as complete on client
+        setLevelScores((p) => ({ ...p, [currentLevelRef.current]: scoreRef.current }));
         setAssessmentComplete(true);
         setShowLevelEnd(true);
         setShowViolation(false);
@@ -334,27 +367,50 @@ export default function QuizPage({ params }) {
     };
 
     const handleVisibilityChange = () => {
-      if (document.hidden) {
+      if (document.hidden && startedRef.current && !assessmentCompleteRef.current) {
         addViolation();
       }
     };
 
     const handleFullscreenChange = () => {
-      if (!isFullscreen() && started && !assessmentComplete) {
+      if (!isFullscreen() && startedRef.current && !assessmentCompleteRef.current) {
         addViolation();
+      }
+    };
+
+    // Prevent right-click context menu during quiz
+    const handleContextMenu = (e) => { e.preventDefault(); };
+
+    // Prevent common keyboard shortcuts for switching/devtools
+    const handleKeyDown = (e) => {
+      // Block F11 (fullscreen toggle), F12 (devtools)
+      if (e.key === "F11" || e.key === "F12") {
+        e.preventDefault();
+      }
+      // Block Ctrl/Cmd+Shift+I (devtools), Ctrl/Cmd+Shift+J (console)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "I" || e.key === "J" || e.key === "C")) {
+        e.preventDefault();
+      }
+      // Block Ctrl/Cmd+U (view source)
+      if ((e.ctrlKey || e.metaKey) && e.key === "u") {
+        e.preventDefault();
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [started, assessmentComplete, currentLevel, score]);
+  }, [started, assessmentComplete]);
 
   // ── Exit fullscreen when assessment completes ──
   useEffect(() => {
@@ -403,7 +459,7 @@ export default function QuizPage({ params }) {
       const questionProgress = question.progress || 0;
 
       try {
-        const result = await submitAssessmentAnswer(id, question.id, answerValue);
+        const result = await submitAssessmentAnswer(id, question.id, answerValue, token);
         const correct = result?.is_correct === true;
 
         setLastResult(result);
@@ -552,8 +608,16 @@ export default function QuizPage({ params }) {
             onClick={async () => {
               const success = await loadFirstQuestion();
               if (success) {
-                requestFullscreen();
                 setStarted(true);
+                // Request fullscreen after starting — if it fails, quiz still works
+                // but proctoring will only rely on visibility change detection
+                try {
+                  const el = document.documentElement;
+                  const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+                  if (rfs) await rfs.call(el);
+                } catch {
+                  // Fullscreen denied — quiz continues without fullscreen enforcement
+                }
               }
             }}
             disabled={loading}
