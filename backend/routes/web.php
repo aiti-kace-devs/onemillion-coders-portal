@@ -76,6 +76,7 @@ Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::
 
 Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
 Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
+Route::get('/api/centres-by-id/{centre}', [CourseProgrammeController::class, 'centreById']);
 Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
 Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
 Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);

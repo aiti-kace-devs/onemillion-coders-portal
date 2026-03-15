@@ -96,13 +96,13 @@ const user = auth?.user || {};
                         <span class="material-symbols-outlined">dashboard</span>
                     </SidebarNavLink>
 
-                    <SidebarNavLink
-                        :active="route().current('student.exam.index')"
-                        :href="route('student.exam.index')"
-                        :label="'Exam'"
-                    >
-                        <span class="material-symbols-outlined">quiz</span>
-                    </SidebarNavLink>
+                    <!--           <SidebarNavLink
+            :active="route().current('student.exam.index')"
+            :href="route('student.exam.index')"
+            :label="'Exam'"
+          >
+            <span class="material-symbols-outlined">quiz</span>
+          </SidebarNavLink> -->
 
                     <SidebarNavLink
                         v-if="user.isAdmitted"
@@ -135,13 +135,17 @@ const user = auth?.user || {};
                     </SidebarNavLink>
 
                     <SidebarNavLink
-                        v-if="user.hasAdmission"
-                        :href="route('student.course.index')"
-                        :active="route().current('student.course.*')"
-                        :label="'Change Course'"
+                        v-if="!user.isAdmitted && !user.shortlist"
+                        :href="route('student.change-course')"
+                        :active="route().current('student.change-course')"
+                        :label="
+                            user.registered_course
+                                ? 'Change Course'
+                                : 'Choose Course'
+                        "
                     >
                         <span class="material-symbols-outlined">
-                            change_circle
+                            swap_horiz
                         </span>
                     </SidebarNavLink>
 

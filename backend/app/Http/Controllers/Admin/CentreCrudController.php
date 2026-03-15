@@ -16,6 +16,7 @@ use App\Helpers\CrudListHelper;
 use App\Helpers\FilterHelper;
 use App\Helpers\MediaHelper;
 use App\Helpers\WidgetHelper;
+use Illuminate\Support\Facades\Http;
 
 /**
  * Class CentreCrudController
@@ -269,14 +270,78 @@ class CentreCrudController extends CrudController
             'wrapper' => ['class' => 'd-none'],
         ]);
 
+        $centreEntry = $this->crud->getCurrentEntry();
+        $gpsAddressValue = $this->getExistingGpsAddress();
 
         CRUD::addField([
             'name' => 'gps_address',
             'label' => 'GPS Address',
             'type'      => 'textarea',
+            'value' => $gpsAddressValue,
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
+        CRUD::addField([
+            'name' => 'gps_location',
+            'label' => 'GPS Location',
+            'type' => 'repeatable',
+            'new_item_label' => 'Add location',
+            'init_rows' => 1,
+            'min_rows' => 0,
+            'fields' => [
+                [
+                    'name' => 'Area',
+                    'label' => 'Area',
+                    'type' => 'text',
+                    'wrapper' => ['class' => 'form-group col-6'],
+                ],
+                [
+                    'name' => 'District',
+                    'label' => 'District',
+                    'type' => 'text',
+                    'wrapper' => ['class' => 'form-group col-6'],
+                ],
+                [
+                    'name' => 'AddressV1',
+                    'label' => 'Address V1',
+                    'type' => 'text',
+                    'wrapper' => ['class' => 'form-group col-6'],
+                ],
+                [
+                    'name' => 'GPSName',
+                    'label' => 'GPS Name',
+                    'type' => 'text',
+                    'wrapper' => ['class' => 'form-group col-6'],
+                ],
+                [
+                    'name' => 'PostCode',
+                    'label' => 'Post Code',
+                    'type' => 'text',
+                    'wrapper' => ['class' => 'form-group col-6'],
+                ],
+                [
+                    'name' => 'Street',
+                    'label' => 'Street',
+                    'type' => 'text',
+                    'wrapper' => ['class' => 'form-group col-6'],
+                ],
+                [
+                    'name' => 'Latitude',
+                    'label' => 'Latitude',
+                    'type' => 'number',
+                    'attributes' => ['step' => 'any'],
+                    'wrapper' => ['class' => 'form-group col-6'],
+                ],
+                [
+                    'name' => 'Longitude',
+                    'label' => 'Longitude',
+                    'type' => 'number',
+                    'attributes' => ['step' => 'any'],
+                    'wrapper' => ['class' => 'form-group col-6'],
+                ],
+            ],
+            'wrapper' => ['class' => 'form-group col-12'],
+        ]);
 
         CRUD::addField([
             'name' => 'pwd_notes',
@@ -314,6 +379,7 @@ class CentreCrudController extends CrudController
 
         $this->addFieldsToTab('General', true, ['title', 'branch_id', 'constituency_id', 'district_id', 'gps_address', 'pwd_notes']);
         $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'status']);
+        $this->addFieldsToTab('GPS Location', true, ['gps_location']);
 
     }
 
@@ -330,6 +396,7 @@ class CentreCrudController extends CrudController
 
     public function store()
     {
+        $this->prepareGpsFields();
         $response = $this->traitStore();
         $this->syncDistrictSelection();
         return $response;
@@ -337,9 +404,193 @@ class CentreCrudController extends CrudController
 
     public function update()
     {
+        $this->prepareGpsFields();
         $response = $this->traitUpdate();
         $this->syncDistrictSelection();
         return $response;
+    }
+
+    protected function prepareGpsFields(): void
+    {
+        $request = $this->crud->getRequest();
+        $gpsAddressInput = trim((string) $request->input('gps_address'));
+        $gpsLocationInput = $this->normalizeGpsLocationInput($request->input('gps_location'));
+        $currentAddress = $this->getExistingGpsAddress();
+        $normalizedNew = $this->normalizeGpsAddressForCompare($gpsAddressInput);
+        $normalizedCurrent = $this->normalizeGpsAddressForCompare($currentAddress);
+        $addressChanged = $normalizedNew !== '' && $normalizedNew !== $normalizedCurrent;
+
+        $gpsLocation = $gpsLocationInput;
+        if ($gpsAddressInput !== '' && $addressChanged) {
+            $apiLocation = $this->fetchGpsLocationFromApi($gpsAddressInput);
+            $gpsLocation = $apiLocation ? $this->buildGpsLocationPayload($apiLocation) : [];
+        }
+
+        if ($gpsAddressInput !== '') {
+            $request->request->set('gps_address', $gpsAddressInput);
+        }
+
+        if (! empty($gpsLocation)) {
+            $request->request->set('gps_location', $gpsLocation);
+        }
+    }
+
+    protected function getExistingGpsAddress(): string
+    {
+        $centre = $this->crud->getCurrentEntry();
+        if (! $centre) {
+            return '';
+        }
+
+        $gpsAddress = $centre->gps_address;
+
+        if (is_array($gpsAddress)) {
+            return (string) ($gpsAddress['address'] ?? '');
+        }
+
+        if (is_string($gpsAddress)) {
+            $decoded = json_decode($gpsAddress, true);
+            if (is_array($decoded)) {
+                return (string) ($decoded['address'] ?? '');
+            }
+            if (is_string($decoded)) {
+                return $decoded;
+            }
+        }
+
+        return (string) ($gpsAddress ?? '');
+    }
+
+    protected function normalizeGpsAddressForCompare(string $address): string
+    {
+        $normalized = strtoupper(trim($address));
+        return $normalized;
+    }
+
+    protected function normalizeGpsLocationInput($input): array
+    {
+        if (is_string($input)) {
+            $decoded = json_decode($input, true);
+            $input = is_array($decoded) ? $decoded : [];
+        }
+
+        if (! is_array($input)) {
+            return [];
+        }
+
+        $rows = array_values(array_filter($input, function ($row) {
+            if (! is_array($row)) {
+                return false;
+            }
+
+            foreach ($row as $value) {
+                if ($value !== null && $value !== '') {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
+
+        return $rows;
+    }
+
+    protected function fetchGpsLocationFromApi(string $gpsAddress): ?array
+    {
+        try {
+            $response = Http::asForm()
+                ->timeout(10)
+                ->post('https://ghanapostgps.sperixlabs.org/get-location', [
+                    'address' => $gpsAddress,
+                ]);
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $payload = $response->json();
+            if (! ($payload['found'] ?? false)) {
+                return null;
+            }
+
+            $table = $payload['data']['Table'] ?? [];
+            if (! is_array($table) || empty($table)) {
+                return null;
+            }
+
+            return is_array($table[0] ?? null) ? $table[0] : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    protected function buildGpsLocationPayload(array $location): array
+    {
+        $coordinates = $this->deriveCoordinatesFromLocation($location);
+
+        return [[
+            'Area' => $location['Area'] ?? null,
+            'District' => $location['District'] ?? null,
+            'AddressV1' => $location['AddressV1'] ?? null,
+            'GPSName' => $location['GPSName'] ?? null,
+            'PostCode' => $location['PostCode'] ?? null,
+            'Street' => $location['Street'] ?? null,
+            'Latitude' => $coordinates['latitude'],
+            'Longitude' => $coordinates['longitude'],
+        ]];
+    }
+
+    protected function deriveCoordinatesFromLocation(array $location): array
+    {
+        $latitude = $this->averageCoordinates(
+            $this->toFloat($location['NorthLat'] ?? null),
+            $this->toFloat($location['SouthLat'] ?? null)
+        );
+
+        $longitude = $this->averageCoordinates(
+            $this->toFloat($location['EastLong'] ?? null),
+            $this->toFloat($location['WestLong'] ?? null)
+        );
+
+        if ($latitude === null) {
+            $latitude = $this->toFloat($location['CenterLatitude'] ?? null);
+        }
+
+        if ($longitude === null) {
+            $longitude = $this->toFloat($location['CenterLongitude'] ?? null);
+        }
+
+        return ['latitude' => $latitude, 'longitude' => $longitude];
+    }
+
+    protected function averageCoordinates(?float $first, ?float $second): ?float
+    {
+        if ($first === null && $second === null) {
+            return null;
+        }
+
+        if ($first === null) {
+            return $second;
+        }
+
+        if ($second === null) {
+            return $first;
+        }
+
+        return ($first + $second) / 2;
+    }
+
+    protected function toFloat($value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        return (float) $value;
     }
 
     protected function syncDistrictSelection(): void
