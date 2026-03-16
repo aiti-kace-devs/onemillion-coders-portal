@@ -421,7 +421,7 @@ class CourseProgrammeController extends Controller
     {
         $branch = Branch::where('status', 1)
             ->orderBy('title')
-            ->get(['id', 'title']);
+            ->get(['id', 'title', 'status']);
 
         return response()->json([
             'success' => true,
@@ -647,9 +647,21 @@ class CourseProgrammeController extends Controller
                         'id' => $centre->id,
                         'title' => $centre->title,
                         'is_pwd_friendly' => $centre->is_pwd_friendly,
+                        'status' => $centre->status,
+                        'gps_location' => $centre->gps_location ?? [],
+                        'gps_address' => $centre->gps_address,
+                        'wheelchair_accessible' => $centre->wheelchair_accessible,
+                        'has_access_ramp' => $centre->has_access_ramp,
+                        'has_accessible_toilet' => $centre->has_accessible_toilet,
+                        'has_elevator' => $centre->has_elevator,
+                        'supports_hearing_impaired' => $centre->supports_hearing_impaired,
+                        'supports_visually_impaired' => $centre->supports_visually_impaired,
+                        'staff_trained_for_pwd' => $centre->staff_trained_for_pwd,
+                        'accessibility_rating' => $centre->accessibility_rating,
+                        'pwd_notes' => $centre->pwd_notes,
+                        'images' => $centre->images ?? []
                     ];
                 })
-                ->sortBy('title')
                 ->values(),
         ]);
     }
