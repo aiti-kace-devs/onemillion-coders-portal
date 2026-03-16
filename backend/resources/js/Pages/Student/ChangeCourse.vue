@@ -28,7 +28,9 @@ function submit() {
 const courseSelectionUrl = computed(() => {
     const baseUrl = usePage().props.quiz_frontend_url || '';
     const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    return `${base}/courses/${props.user.userId}`;
+    const token = usePage().props.quiz_jwt_token;
+    const path = `${base}/courses/${props.user.userId}`;
+    return token ? `${path}?token=${token}` : path;
 });
 </script>
 

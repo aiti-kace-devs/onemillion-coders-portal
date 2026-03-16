@@ -72,6 +72,7 @@ class HandleInertiaRequests extends Middleware
                     ? array_merge(
                         $user->only('id', 'name', 'email', 'created_at', 'userId', 'registered_course', 'shortlist'),
                         [
+                            'student_level' => $user->student_level,
                             'isAdmitted' => $user?->isAdmitted(),
                             'hasAdmission' => $user?->hasAdmission(),
                             'hasAttendance' => $user?->hasAttendance(),
