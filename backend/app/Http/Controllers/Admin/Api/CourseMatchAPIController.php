@@ -106,8 +106,8 @@ class CourseMatchAPIController extends Controller
 
         return response()->json([
             'success' => true,
-            'title' => 'This is Recommended Courses',
-            'description' => 'Based on your preferences, here are recommended courses that best align with your goals',
+            'title' => 'These are Your Recommended Courses',
+            'description' => 'Based on your preferences, here are the recommended courses that best align with your goals',
             'matches' => $matches,
         ]);
     }
@@ -156,8 +156,8 @@ class CourseMatchAPIController extends Controller
 
         return response()->json([
             'success' => true,
-            'ttile' => 'Your Course Matches',
-            'description' => 'Based on your preferences, here are recommended courses that align best with your goals',
+            'title' => 'These are Your Recommended Courses',
+            'description' => 'Based on your preferences, here are the recommended courses that align best with your goals',
             'matches' => $result,
         ]);
     }
@@ -170,27 +170,32 @@ class CourseMatchAPIController extends Controller
             $data = $request->validate([
                 'option_ids' => 'required|array',
                 'option_ids.*' => 'integer|exists:course_match_options,id',
-                'userId' => 'required|exists:users,userId',
-                'branch_id' => 'required|integer|exists:branches,id',
+                'userId' => 'nullable|exists:users,userId',
+                'branch_id' => 'nullable|integer|exists:branches,id',
                 'debug' => 'sometimes|boolean',
             ]);
 
-            $user = User::where('userId', $data['userId'])->first();
-            if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User not found'
-                ]);
+            $userId = $data['userId'] ?? null;
+            $branchId = $data['branch_id'] ?? null;
+
+            $user = null;
+            if ($userId) {
+                $user = User::where('userId', $userId)->first();
+                if (!$user) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'User not found'
+                    ]);
+                }
             }
 
             $optionIds = array_values($data['option_ids']);
-            $branchId = (int) $data['branch_id'];
             $includeDebug = filter_var($request->input('debug', false), FILTER_VALIDATE_BOOLEAN);
 
-            $studentLevel = strtolower(trim((string) $user?->student_level));
+            $studentLevel = $user ? strtolower(trim((string) $user->student_level)) : '';
             // Log::info('Student level: ' . $studentLevel);
 
-            $branchCourses = $this->getBranchCourses($branchId);
+            $branchCourses = $this->getBranchCourses($branchId !== null ? (int) $branchId : null);
             $programmeIds = $branchCourses->pluck('programme_id')->unique()->values()->all();
 
             [$preferredDelivery, $deliveryOptionIds] = $this->detectPreferredDelivery($optionIds);
@@ -249,12 +254,14 @@ class CourseMatchAPIController extends Controller
                 return $payload;
             });
 
-            $this->storeRecommendations($top, $branchCourses, $optionIds, $studentLevel, $data['userId']);
+            if ($userId) {
+                $this->storeRecommendations($top, $branchCourses, $optionIds, $studentLevel, $userId);
+            }
 
             return response()->json([
                 'success' => true,
-                'title' => 'Your Course Matches',
-                'description' => 'Based on your preferences, here are recommended courses that align best with your goals',
+                'title' => 'These are Your Recommended Courses',
+                'description' => 'Based on your preferences, here are the recommended courses that align best with your goals',
                 'matches' => $result,
             ]);
         }
@@ -262,20 +269,24 @@ class CourseMatchAPIController extends Controller
         /**
          * @return \Illuminate\Support\Collection<int, \App\Models\Course>
          */
-        protected function getBranchCourses(int $branchId)
+        protected function getBranchCourses(?int $branchId = null)
         {
             $today = Carbon::today()->toDateString();
 
-            return Course::join('centres', 'courses.centre_id', '=', 'centres.id')
+            $query = Course::join('centres', 'courses.centre_id', '=', 'centres.id')
                 ->join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
-                ->where('centres.branch_id', $branchId)
                 ->whereNotNull('courses.programme_id')
                 ->where('courses.status', 1)
                 ->where('admission_batches.start_date', '<=', $today)
                 ->where('admission_batches.end_date', '>=', $today)
                 ->where('admission_batches.completed', false)
-                ->where('admission_batches.status', true)
-                ->get(['courses.id', 'courses.programme_id', 'courses.centre_id']);
+                ->where('admission_batches.status', true);
+
+            if ($branchId !== null) {
+                $query->where('centres.branch_id', $branchId);
+            }
+
+            return $query->get(['courses.id', 'courses.programme_id', 'courses.centre_id']);
         }
 
         /**
@@ -899,8 +910,8 @@ class CourseMatchAPIController extends Controller
 
         return response()->json([
             'success' => true,
-            'title' => 'Your Course Matches',
-            'description' => 'Based on your preferences, here recommended courses that align best with your goals',
+            'title' => 'These are Your Recommended Courses',
+            'description' => 'Based on your preferences, here are the recommended courses that align best with your goals',
             'matches' => $result,
         ]);
     }

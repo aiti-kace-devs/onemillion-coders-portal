@@ -419,7 +419,9 @@ class CourseProgrammeController extends Controller
 
     public function getBranch()
     {
-        $branch = Branch::where('status', 1)->get();
+        $branch = Branch::where('status', 1)
+            ->orderBy('title')
+            ->get(['id', 'title']);
 
         return response()->json([
             'success' => true,
@@ -450,7 +452,7 @@ class CourseProgrammeController extends Controller
                     ->get(['courses.id', 'courses.programme_id', 'courses.centre_id']);
 
                 $programmeIds = $courses->pluck('programme_id')->unique()->values();
-                $programmes = Programme::whereIn('id', $programmeIds)->get();
+                $programmes = Programme::whereIn('id', $programmeIds)->get(['title', 'sub_title']);
                 $courseIds = $courses->pluck('id');
                 $admittedUsersCount = UserAdmission::whereIn('course_id', $courseIds)
                     ->whereNotNull('confirmed')
@@ -590,7 +592,7 @@ class CourseProgrammeController extends Controller
         $districts = District::query()
             ->where('branch_id', $branch->id)
             ->orderBy('title')
-            ->get();
+            ->get(['id', 'title']);
 
         return response()->json([
             'success' => true,
@@ -641,10 +643,13 @@ class CourseProgrammeController extends Controller
             'district' => $district->title,
             'centres' => $district->centres
                 ->map(function ($centre) {
-                    $centreData = $centre->toArray();
-                    $centreData['gps_location'] = $centre->gps_location ?? [];
-                    return $centreData;
+                    return [
+                        'id' => $centre->id,
+                        'title' => $centre->title,
+                        'is_pwd_friendly' => $centre->is_pwd_friendly,
+                    ];
                 })
+                ->sortBy('title')
                 ->values(),
         ]);
     }
