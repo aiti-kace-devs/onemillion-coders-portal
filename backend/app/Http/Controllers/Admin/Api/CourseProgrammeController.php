@@ -411,7 +411,8 @@ class CourseProgrammeController extends Controller
     public function getCourseCategory()
     {
         $courseCategory = Cache::remember('course_categories', 600, function () {
-            return CourseCategory::orderBy('title', 'asc')->get();
+            return CourseCategory::orderBy('title')
+                ->get(['id', 'title', 'description', 'status', 'icon']);
         });
 
         return response()->json([
@@ -419,7 +420,6 @@ class CourseProgrammeController extends Controller
             'data' => $courseCategory
         ]);
     }
-
 
 
     public function getBranch(Request $request)
