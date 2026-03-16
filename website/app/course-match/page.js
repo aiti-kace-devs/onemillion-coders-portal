@@ -95,7 +95,7 @@ export default function CourseMatchPage() {
       const optionIds = Object.values(answers);
 
       // Call the recommendation API
-      const recommendationsData = await getCourseRecommendations(optionIds);
+      const recommendationsData = await getCourseRecommendations({ optionIds });
       setRecommendations(recommendationsData || []);
       setCurrentStep(questions.length + 1); // Results step
     } catch (err) {
