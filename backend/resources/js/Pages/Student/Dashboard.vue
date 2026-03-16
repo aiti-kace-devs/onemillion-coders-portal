@@ -61,8 +61,9 @@ const tieredTestTaken = computed(() => {
                 <!-- Chosen Course Section -->
                 <div v-if="hasRegisteredCourse" class="mt-6">
                     <div
-                        class="bg-white rounded-xl shadow-sm border border-orange-100 p-6 transition-all duration-300"
+                        class="bg-white rounded-2xl shadow-sm border border-orange-100/50 p-6 transition-all duration-300 relative overflow-hidden group shadow-orange-500/5"
                     >
+                        <div class="absolute top-0 left-0 w-1.5 h-full bg-[#f9a825]"></div>
                         <div class="flex items-center gap-4">
                             <div
                                 class="p-3 bg-[#f9a825]/10 rounded-lg text-[#f9a825]"
@@ -93,7 +94,7 @@ const tieredTestTaken = computed(() => {
                             Quick Access
                         </p>
                         <div
-                            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
                         >
                             <Link
                                 :href="route('student.application-status')"
@@ -301,12 +302,12 @@ const tieredTestTaken = computed(() => {
                     </div>
                     <div v-if="!tieredTestTaken">
                         <p
-                            class="mb-2 text-sm font-medium text-gray-800 leading-tight"
+                            class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest"
                         >
-                            Test
+                            Assessment
                         </p>
                         <div
-                            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8"
                         >
                             <ExamCard />
                         </div>
@@ -314,7 +315,7 @@ const tieredTestTaken = computed(() => {
 
                     <div v-if="user.isAdmitted">
                         <p
-                            class="mb-2 text-sm font-medium text-gray-800 leading-tight"
+                            class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest"
                         >
                             Course Assessment
                         </p>
