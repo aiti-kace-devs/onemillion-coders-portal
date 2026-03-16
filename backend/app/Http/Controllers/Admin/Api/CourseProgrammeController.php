@@ -425,7 +425,7 @@ class CourseProgrammeController extends Controller
 
     public function getBranch(Request $request)
     {
-        $addCentreCount = filter_var($request->query('add_course_count', false), FILTER_VALIDATE_BOOLEAN);
+        $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
         $cacheKey = 'branches:' . ($addCentreCount ? 'with_centres' : 'basic');
 
         $branch = Cache::remember($cacheKey, 600, function () use ($addCentreCount) {
@@ -617,7 +617,7 @@ class CourseProgrammeController extends Controller
 
         $branch = Branch::query()->findOrFail($data['branch_id']);
 
-        $addCentreCount = filter_var($request->query('add_course_count', false), FILTER_VALIDATE_BOOLEAN);
+        $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
         $cacheKey = 'districts_by_branch:' . $branch->id . ':' . ($addCentreCount ? 'with_centres' : 'basic');
 
         $districts = Cache::remember($cacheKey, 600, function () use ($branch, $addCentreCount) {
@@ -663,7 +663,7 @@ class CourseProgrammeController extends Controller
 
         $branch = Branch::query()->findOrFail($data['branch_id']);
 
-        $addCentreCount = filter_var($request->query('add_course_count', false), FILTER_VALIDATE_BOOLEAN);
+        $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
         $cacheKey = 'constituencies_by_branch:' . $branch->id . ':' . ($addCentreCount ? 'with_centres' : 'basic');
 
         $constituencies = Cache::remember($cacheKey, 600, function () use ($branch, $addCentreCount) {
