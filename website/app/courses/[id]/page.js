@@ -92,6 +92,7 @@ export default function CoursesPage({ params }) {
         const data = await checkUserStatus(id, token);
         if (data?.success === false) {
           setVerificationError(data.message || "User not found. Please register first.");
+          setCheckingRecommendations(false);
           return;
         }
         setUserStatus(data);
@@ -119,6 +120,7 @@ export default function CoursesPage({ params }) {
             ? "User not found. Please register first."
             : "Unable to verify your account. Please try again."
         );
+        setCheckingRecommendations(false);
       } finally {
         setVerifying(false);
       }
@@ -436,12 +438,6 @@ export default function CoursesPage({ params }) {
 
                 {/* Actions */}
                 <div className="flex flex-col gap-3">
-                  <button
-                    onClick={() => router.push("/register")}
-                    className="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
-                  >
-                    Create an Account
-                  </button>
                   <button
                     onClick={() => window.location.reload()}
                     className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium text-sm rounded-xl transition-colors"
