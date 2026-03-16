@@ -1082,7 +1082,7 @@ class StudentOperation extends Controller
         $assessment = UserAssessment::firstOrCreate(
             ['user_id' => $user->id],
             [
-                'current_level' => 'beginner',
+                'current_level' => 'Beginner',
                 'questions_answered' => 0,
                 'correct_answers' => 0,
                 'wrong_answers' => 0,
@@ -1111,12 +1111,12 @@ class StudentOperation extends Controller
             $assessment->completed = true;
             $assessment->save();
 
-            if ($assessment->current_level === 'beginner') {
-                $user->student_level = 'beginner';
-            } elseif ($assessment->current_level === 'intermediate') {
-                $user->student_level = 'beginner';
-            } elseif ($assessment->current_level === 'advanced') {
-                $user->student_level = 'intermediate';
+            if ($assessment->current_level === 'Beginner') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Intermediate') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Advanced') {
+                $user->student_level = 'Intermediate';
             }
             $user->save();
 
@@ -1132,7 +1132,7 @@ class StudentOperation extends Controller
         $answeredIds = $assessment->answered_question_ids ?? [];
 
         $question = OexQuestionMaster::whereHas('tags', function ($query) use ($level) {
-            $query->where('name', 'LIKE', $level);
+            $query->where('name', $level);
         })
             ->whereNotIn('id', $answeredIds)
             ->inRandomOrder()
@@ -1192,12 +1192,12 @@ class StudentOperation extends Controller
             $assessment->completed = true;
             $assessment->save();
 
-            if ($assessment->current_level === 'beginner') {
-                $user->student_level = 'beginner';
-            } elseif ($assessment->current_level === 'intermediate') {
-                $user->student_level = 'beginner';
-            } elseif ($assessment->current_level === 'advanced') {
-                $user->student_level = 'intermediate';
+            if ($assessment->current_level === 'Beginner') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Intermediate') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Advanced') {
+                $user->student_level = 'Intermediate';
             }
             $user->save();
 
@@ -1255,36 +1255,36 @@ class StudentOperation extends Controller
 
         if ($levelComplete) {
             if ($passedLevel) {
-                if ($assessment->current_level === 'beginner') {
-                    $user->student_level = 'beginner';
+                if ($assessment->current_level === 'Beginner') {
+                    $user->student_level = 'Beginner';
                     $user->save();
 
-                    $assessment->current_level = 'intermediate';
+                    $assessment->current_level = 'Intermediate';
                     $assessment->level_started_at = null;
                     $assessment->questions_answered = 0;
                     $assessment->correct_answers = 0;
                     $assessment->wrong_answers = 0;
-                } elseif ($assessment->current_level === 'intermediate') {
-                    $user->student_level = 'intermediate';
+                } elseif ($assessment->current_level === 'Intermediate') {
+                    $user->student_level = 'Intermediate';
                     $user->save();
 
-                    $assessment->current_level = 'advanced';
+                    $assessment->current_level = 'Advanced';
                     $assessment->level_started_at = null;
                     $assessment->questions_answered = 0;
                     $assessment->correct_answers = 0;
                     $assessment->wrong_answers = 0;
-                } elseif ($assessment->current_level === 'advanced') {
-                    $user->student_level = 'advanced';
+                } elseif ($assessment->current_level === 'Advanced') {
+                    $user->student_level = 'Advanced';
                     $user->save();
                     $assessment->completed = true;
                 }
             } else {
-                if ($assessment->current_level === 'beginner') {
-                    $user->student_level = 'beginner';
-                } elseif ($assessment->current_level === 'intermediate') {
-                    $user->student_level = 'beginner';
-                } elseif ($assessment->current_level === 'advanced') {
-                    $user->student_level = 'intermediate';
+                if ($assessment->current_level === 'Beginner') {
+                    $user->student_level = 'Beginner';
+                } elseif ($assessment->current_level === 'Intermediate') {
+                    $user->student_level = 'Beginner';
+                } elseif ($assessment->current_level === 'Advanced') {
+                    $user->student_level = 'Intermediate';
                 }
                 $user->save();
                 $assessment->completed = true;
@@ -1329,12 +1329,12 @@ class StudentOperation extends Controller
             $assessment->completed = true;
             $assessment->save();
 
-            if ($assessment->current_level === 'beginner') {
-                $user->student_level = 'beginner';
-            } elseif ($assessment->current_level === 'intermediate') {
-                $user->student_level = 'beginner';
-            } elseif ($assessment->current_level === 'advanced') {
-                $user->student_level = 'intermediate';
+            if ($assessment->current_level === 'Beginner') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Intermediate') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Advanced') {
+                $user->student_level = 'Intermediate';
             }
             $user->save();
 
