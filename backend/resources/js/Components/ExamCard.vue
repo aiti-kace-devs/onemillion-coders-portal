@@ -26,7 +26,7 @@ const levelDeterminationTestUrl = computed(() => {
             <!-- Icon and Title -->
             <div class="flex items-center gap-3 mb-2">
                 <span
-                    class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white"
+                    class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
                 >
                     <span class="material-symbols-outlined">psychology</span>
                 </span>

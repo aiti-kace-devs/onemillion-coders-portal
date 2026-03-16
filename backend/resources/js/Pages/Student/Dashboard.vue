@@ -51,10 +51,11 @@ const tieredTestTaken = computed(() => {
 
         <div class="pt-3">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div>
-                    <h2 class="font-bold text-2xl text-gray-800 leading-tight">
-                        Welcome, {{ user.name }}!
+                <div class="mb-8">
+                    <h2 class="text-4xl font-black text-gray-900 tracking-tighter leading-tight">
+                        Hi, {{ user.name }} <span class="inline-block origin-bottom animate-wave">👋</span>
                     </h2>
+                    <p class="text-gray-500 mt-1 font-medium text-lg">It's great to see you again. Here's what's happening today.</p>
                 </div>
 
                 <!-- Chosen Course Section -->
@@ -64,7 +65,7 @@ const tieredTestTaken = computed(() => {
                     >
                         <div class="flex items-center gap-4">
                             <div
-                                class="p-3 bg-orange-50 rounded-lg text-orange-600"
+                                class="p-3 bg-[#f9a825]/10 rounded-lg text-[#f9a825]"
                             >
                                 <span class="material-symbols-outlined text-3xl"
                                     >school</span
@@ -87,7 +88,7 @@ const tieredTestTaken = computed(() => {
                 <div class="mt-6 space-y-10">
                     <div>
                         <p
-                            class="mb-2 text-sm font-medium text-gray-800 leading-tight"
+                            class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest"
                         >
                             Quick Access
                         </p>
@@ -99,12 +100,14 @@ const tieredTestTaken = computed(() => {
                                 class="block h-full"
                             >
                                 <div
-                                    class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50"
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                                 >
+                                    <!-- Hover Accent Line -->
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white"
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
                                         >
                                             <span
                                                 class="material-symbols-outlined"
@@ -136,12 +139,14 @@ const tieredTestTaken = computed(() => {
                                 class="block h-full"
                             >
                                 <div
-                                    class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50"
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                                 >
+                                    <!-- Hover Accent Line -->
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white"
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
                                         >
                                             <span
                                                 class="material-symbols-outlined"
@@ -173,12 +178,14 @@ const tieredTestTaken = computed(() => {
                                 class="block h-full"
                             >
                                 <div
-                                    class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50"
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                                 >
+                                    <!-- Hover Accent Line -->
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white"
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
                                         >
                                             <span
                                                 class="material-symbols-outlined"
@@ -210,12 +217,14 @@ const tieredTestTaken = computed(() => {
                                 class="block h-full"
                             >
                                 <div
-                                    class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50"
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                                 >
+                                    <!-- Hover Accent Line -->
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white"
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
                                         >
                                             <span
                                                 class="material-symbols-outlined"
@@ -250,12 +259,14 @@ const tieredTestTaken = computed(() => {
                                 class="block h-full"
                             >
                                 <div
-                                    class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50"
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                                 >
+                                    <!-- Hover Accent Line -->
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white"
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
                                         >
                                             <span
                                                 class="material-symbols-outlined"
@@ -323,8 +334,10 @@ const tieredTestTaken = computed(() => {
                                 class="block h-full"
                             >
                                 <div
-                                    class="relative group bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col h-full border border-gray-100/50"
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                                 >
+                                    <!-- Hover Accent Line -->
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                                     <!-- Status badge -->
                                     <span
                                         class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
@@ -344,7 +357,7 @@ const tieredTestTaken = computed(() => {
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-600 group-hover:text-white"
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
                                         >
                                             <span
                                                 class="material-symbols-outlined"
@@ -376,3 +389,20 @@ const tieredTestTaken = computed(() => {
         </div>
     </AuthenticatedLayout>
 </template>
+
+<style scoped>
+@keyframes wave {
+    0% { transform: rotate(0deg); }
+    10% { transform: rotate(14deg); }
+    20% { transform: rotate(-8deg); }
+    30% { transform: rotate(14deg); }
+    40% { transform: rotate(-4deg); }
+    50% { transform: rotate(10deg); }
+    60% { transform: rotate(0deg); }
+    100% { transform: rotate(0deg); }
+}
+
+.animate-wave {
+    animation: wave 2.5s infinite;
+}
+</style>

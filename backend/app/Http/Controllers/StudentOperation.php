@@ -1071,14 +1071,6 @@ class StudentOperation extends Controller
     {
         $user = $request->user();
 
-        if (!is_null($user->student_level)) {
-            return response()->json([
-                'status' => 'completed',
-                'message' => 'Assessment already completed.',
-                'user_level' => $user->student_level
-            ]);
-        }
-
         $assessment = UserAssessment::firstOrCreate(
             ['user_id' => $user->id],
             [
