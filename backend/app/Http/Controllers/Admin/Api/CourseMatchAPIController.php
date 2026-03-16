@@ -106,8 +106,8 @@ class CourseMatchAPIController extends Controller
 
         return response()->json([
             'success' => true,
-            'title' => 'Your Previous Course Matches',
-            'description' => 'Based on your previous preferences, here are recommended courses that best align with your goals',
+            'title' => 'This is Recommended Courses',
+            'description' => 'Based on your preferences, here are recommended courses that best align with your goals',
             'matches' => $matches,
         ]);
     }

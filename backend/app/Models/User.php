@@ -40,7 +40,7 @@ class User extends Authenticatable
         'ghcard',
         'gender',
         'network_type',
-        'has_disability',
+        'pwd',
         'registered_course',
         'shortlist',
         'student_level',
@@ -69,7 +69,7 @@ class User extends Authenticatable
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'status' => 'boolean',
-        'has_disability' => 'boolean',
+        'pwd' => 'boolean',
         'data' => 'array',
         'support' => 'boolean',
     ];

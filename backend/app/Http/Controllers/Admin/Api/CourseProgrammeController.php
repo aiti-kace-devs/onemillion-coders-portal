@@ -179,14 +179,37 @@ class CourseProgrammeController extends Controller
             $programmes = $courses->map(function ($course) {
                 $programme = $course->programme;
                 if ($programme) {
-                    $programmeData = $programme->toArray();
-                    $programmeData['course_id'] = $course->id;
-                    $programmeData['centre_id'] = $course->centre_id;
-                    $programmeData['duration'] = $course->duration;
-                    $programmeData['start_date'] = $course->start_date;
-                    $programmeData['end_date'] = $course->end_date;
-                    $programmeData['status'] = $course->status ?? true;
-                    return $programmeData;
+                    return [
+                        'id' => $programme->id,
+                        'title' => $programme->title,
+                        'duration' => $course->duration ?? $programme->duration,
+                        'status' => $course->status ?? $programme->status ?? true,
+                        'description' => $programme->description,
+                        'sub_title' => $programme->sub_title,
+                        'level' => $programme->level,
+                        'mode_of_delivery' => $programme->mode_of_delivery,
+                        'provider' => $programme->provider,
+                        'job_responsible' => $programme->job_responsible,
+                        'image' => $programme->image,
+                        'category' => $programme->category
+                            ? [
+                                'id' => $programme->category->id,
+                                'title' => $programme->category->title,
+                            ]
+                            : null,
+                        'course_certification' => $programme->courseCertification
+                            ? $programme->courseCertification
+                                ->map(fn ($cert) => [
+                                    'title' => $cert->title,
+                                    'description' => $cert->description,
+                                    'type' => $cert->type,
+                                    'status' => $cert->status,
+                                ])
+                                ->values()
+                            : [],
+                        'course_id' => $course->id,
+                        'centre_id' => $course->centre_id,
+                    ];
                 }
                 return null;
             })->filter()->unique(function ($item) {

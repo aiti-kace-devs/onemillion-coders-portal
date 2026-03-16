@@ -24,21 +24,28 @@ class RegistrationFormAPIController extends Controller
     public function index(Request $request)
     {
         $groupConfig = [
-            'Personal Information' => [
+
+            'Basic Information' => [
                 'first_name',
                 'last_name',
                 'middle_name',
                 'age',
                 'gender',
+                'do_you_require_any_special_support_for_your_training'
+            ],
+
+            'Verification and Identification' => [
                 'email',
                 'phone',
-                'do_you_have_any_disability'
+                'ghana_card_number'
             ],
+
             'Educational Information' => [
                 'highest_level_of_education',
                 'certificate',
             ],
         ];
+
 
         $form = Form::all()->map(function (Form $form) use ($groupConfig) {
             $schema = collect($form->schema ?? [])->map(function ($field) {
@@ -125,7 +132,11 @@ class RegistrationFormAPIController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $user
+            'data' => [
+                'registered_course' => $user->registered_course,
+                'student_level' => $user->student_level,
+                'userId' => $user->userId,
+            ]
         ]);
     }
 
