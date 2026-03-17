@@ -286,25 +286,29 @@ export default function PathwayDetailPage() {
                 <div className="space-y-4 md:space-y-6 lg:mt-0">
                   <div className="bg-white rounded-2xl p-4 md:p-6 shadow-lg border border-gray-200">
                     <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Pathway Details</h3>
-                    <div className="space-y-3 md:space-y-4">
-                      <div className="flex justify-between items-start">
-                        <span className="text-gray-600 text-sm md:text-base">Duration</span>
-                        <span className="font-semibold text-gray-900 text-sm md:text-base text-right">{pathway.duration}</span>
-                      </div>
-                      <div className="flex justify-between items-start">
-                        <span className="text-gray-600 text-sm md:text-base">Focus</span>
-                        <span className="font-semibold text-gray-900 text-sm md:text-base text-right">{pathway.focus}</span>
-                      </div>
+                    <div className="space-y-3">
+                      {pathway.duration && (
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-sm text-gray-500">Duration</span>
+                          <span className="text-sm font-medium text-gray-900">{pathway.duration}</span>
+                        </div>
+                      )}
+                      {pathway.focus && (
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-sm text-gray-500">Focus</span>
+                          <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">{pathway.focus}</span>
+                        </div>
+                      )}
                       {pathway.support?.mentorship && (
-                        <div className="flex justify-between items-start">
-                          <span className="text-gray-600 text-sm md:text-base">Mentorship</span>
-                          <span className="font-semibold text-gray-900 text-xs md:text-sm text-right max-w-[60%]">{pathway.support.mentorship}</span>
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-sm text-gray-500">Mentorship</span>
+                          <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">{pathway.support.mentorship}</span>
                         </div>
                       )}
                       {pathway.support?.community && (
-                        <div className="flex justify-between items-start">
-                          <span className="text-gray-600 text-sm md:text-base">Community</span>
-                          <span className="font-semibold text-gray-900 text-xs md:text-sm text-right max-w-[60%]">{pathway.support.community}</span>
+                        <div className="flex justify-between items-center py-2">
+                          <span className="text-sm text-gray-500">Community</span>
+                          <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">{pathway.support.community}</span>
                         </div>
                       )}
                     </div>

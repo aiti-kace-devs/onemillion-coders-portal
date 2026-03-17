@@ -24,7 +24,6 @@ import {
 } from "../services/pages";
 import Button from "./Button";
 import OtpVerification from "./OtpVerification";
-import { getCourseImage } from "../utils/courseImages";
 import GhanaGradientText from "./GhanaGradients/GhanaGradientText";
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 
@@ -37,6 +36,7 @@ const RegistrationDialog = ({ isOpen, onClose, programme, userId, courseId, cent
   const [supportDetails, setSupportDetails] = useState('');
   const [enrollSubmitting, setEnrollSubmitting] = useState(false);
   const [enrollSuccess, setEnrollSuccess] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // State management
   const [step, setStep] = useState(1); // 1: location, 2: form, 3: success
@@ -516,13 +516,26 @@ const RegistrationDialog = ({ isOpen, onClose, programme, userId, courseId, cent
 
             <div className="flex max-h-[90vh]">
               {/* Left Side - Course Image */}
-              <div className="hidden md:block w-1/2 relative">
-                <Image
-                  src={getCourseImage(programme?.id)}
-                  alt={programme?.title}
-                  fill
-                  className="object-cover"
-                />
+              <div className="hidden md:block w-1/2 relative bg-gray-100">
+                {programme?.image && !imageError ? (
+                  <Image
+                    src={programme?.image}
+                    alt={programme?.title}
+                    fill
+                    className="object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                    <Image
+                      src="/images/one-million-coders-logo.png"
+                      alt="One Million Coders"
+                      width={120}
+                      height={40}
+                      className="opacity-15"
+                    />
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-transparent" />
 
                 {/* Course Info Overlay */}
@@ -706,18 +719,26 @@ const RegistrationDialog = ({ isOpen, onClose, programme, userId, courseId, cent
 
           <div className="flex max-h-[90vh]">
             {/* Left Side - Course Image (Half of dialog) */}
-            <div className="hidden md:block w-1/2 relative">
-              <Image
-                // TEMPORARY: Commented out API image, using static image for consistency
-                // src={
-                //   programme?.image ||
-                //   "/images/hero/Certified-Data-Protection-Manager.jpg"
-                // }
-                src={getCourseImage(programme?.id)}
-                alt={programme?.title}
-                fill
-                className="object-cover"
-              />
+            <div className="hidden md:block w-1/2 relative bg-gray-100">
+              {programme?.image && !imageError ? (
+                <Image
+                  src={programme?.image}
+                  alt={programme?.title}
+                  fill
+                  className="object-cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                  <Image
+                    src="/images/one-million-coders-logo.png"
+                    alt="One Million Coders"
+                    width={120}
+                    height={40}
+                    className="opacity-15"
+                  />
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-transparent" />
 
               {/* Course Info Overlay */}

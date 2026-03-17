@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import {
@@ -120,6 +121,15 @@ function SearchableSelect({
 }
 
 export default function CentersPage() {
+  return (
+    <Suspense>
+      <CentersPageContent />
+    </Suspense>
+  );
+}
+
+function CentersPageContent() {
+  const searchParams = useSearchParams();
   const [regions, setRegions] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [centers, setCenters] = useState([]);
@@ -168,6 +178,20 @@ export default function CentersPage() {
       setLoadingDistricts(false);
     }
   }, []);
+
+  // Auto-select region from query param (e.g., /centers?region=Ashanti)
+  useEffect(() => {
+    const regionParam = searchParams.get("region");
+    if (!regionParam || regions.length === 0 || selectedRegion) return;
+
+    const normalize = (str) =>
+      str.toLowerCase().replace(/\s*region\s*/g, "").trim();
+
+    const match = regions.find(
+      (r) => normalize(r.title) === normalize(regionParam)
+    );
+    if (match) handleRegionSelect(match);
+  }, [regions, searchParams, selectedRegion, handleRegionSelect]);
 
   const handleDistrictSelect = useCallback(async (district) => {
     setSelectedDistrict(district);

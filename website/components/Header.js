@@ -18,7 +18,9 @@ export default function Header() {
   const [isProgramsMenuOpen, setIsProgramsMenuOpen] = useState(false);
   const [isPathwayMenuOpen, setIsPathwayMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileCoursesOpen, setIsMobileCoursesOpen] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
 
   const programsRef = useRef(null);
   const pathwayRef = useRef(null);
@@ -26,11 +28,14 @@ export default function Header() {
   // Fetch categories for the programs menu
   useEffect(() => {
     const fetchCategories = async () => {
+      setIsCategoriesLoading(true);
       try {
         const categoriesData = await getCategoriesData();
         setCategories(categoriesData || []);
       } catch (error) {
         console.error("Failed to fetch categories for header:", error);
+      } finally {
+        setIsCategoriesLoading(false);
       }
     };
 
@@ -69,7 +74,14 @@ export default function Header() {
     return pathname === path;
   };
 
-  // Close menus when clicking outside
+  // Close menus on route change
+  useEffect(() => {
+    setIsProgramsMenuOpen(false);
+    setIsPathwayMenuOpen(false);
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Close menus when clicking outside or pressing Escape
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (programsRef.current && !programsRef.current.contains(event.target)) {
@@ -80,9 +92,18 @@ export default function Header() {
       }
     };
 
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsProgramsMenuOpen(false);
+        setIsPathwayMenuOpen(false);
+      }
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 
@@ -158,6 +179,7 @@ export default function Header() {
                 isOpen={isProgramsMenuOpen}
                 onClose={closeProgramsMenu}
                 categories={categories}
+                isLoading={isCategoriesLoading}
               />
             </div>
             {/* <div ref={pathwayRef} className="relative">
@@ -292,17 +314,67 @@ export default function Header() {
                 >
                   About
                 </Link>
-                <Link
-                  href="/programmes"
-                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
-                    isActiveLink("/programmes")
-                      ? "text-yellow-600 bg-yellow-50 font-semibold"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Programmes
-                </Link>
+                {/* Mobile Courses Accordion */}
+                <div>
+                  <button
+                    onClick={() => setIsMobileCoursesOpen(!isMobileCoursesOpen)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors font-medium ${
+                      isActiveLink("/programmes")
+                        ? "text-yellow-600 bg-yellow-50 font-semibold"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    <span>Courses</span>
+                    <FiChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        isMobileCoursesOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  <AnimatePresence>
+                    {isMobileCoursesOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pl-6 pr-4 pb-2 space-y-1">
+                          {categories
+                            .filter((cat) => cat.status)
+                            .slice(0, 6)
+                            .map((cat) => (
+                              <Link
+                                key={cat.id}
+                                href={`/programmes?category=${encodeURIComponent(cat.title)}`}
+                                className="block px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                              >
+                                {cat.title}
+                              </Link>
+                            ))}
+                          <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-3">
+                            <Link
+                              href="/course-match"
+                              className="flex-1 text-center px-3 py-2 text-xs text-yellow-700 font-semibold bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors"
+                              onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                              Course Match Help
+                            </Link>
+                            <Link
+                              href="/programmes"
+                              className="flex-1 text-center px-3 py-2 text-xs text-gray-600 font-semibold bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                              onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                              See all programmes
+                            </Link>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
                 <Link
                   href="/pathway"
                   className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
