@@ -35,7 +35,6 @@ import {
   checkUserRecommendedCourses,
 } from "../../../services/api";
 import Button from "../../../components/Button";
-import { getCourseImage } from "../../../utils/courseImages";
 
 export default function CoursesPage({ params }) {
   const { id } = React.use(params);
@@ -51,6 +50,7 @@ export default function CoursesPage({ params }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [imageErrors, setImageErrors] = useState({});
 
   // Location state
   const [allRegions, setAllRegions] = useState(null);
@@ -666,13 +666,26 @@ export default function CoursesPage({ params }) {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
               >
-                <div className="relative h-28 sm:h-32">
-                  <Image
-                    src={getCourseImage(course.id)}
-                    alt={course.title}
-                    fill
-                    className="object-cover"
-                  />
+                <div className="relative h-28 sm:h-32 bg-gray-100">
+                  {course.image && !imageErrors[course.id] ? (
+                    <Image
+                      src={course.image}
+                      alt={course.title}
+                      fill
+                      className="object-cover"
+                      onError={() => setImageErrors((prev) => ({ ...prev, [course.id]: true }))}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                      <Image
+                        src="/images/one-million-coders-logo.png"
+                        alt="One Million Coders"
+                        width={80}
+                        height={27}
+                        className="opacity-15"
+                      />
+                    </div>
+                  )}
                   <div className="absolute top-1.5 left-1.5 bg-gray-900 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[9px] sm:text-[11px] font-bold">
                     {course.rank || `#${index + 1}`}
                   </div>
@@ -1687,13 +1700,26 @@ export default function CoursesPage({ params }) {
                           animate={{ opacity: 1 }}
                           transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
                         >
-                          <div className="relative h-28 sm:h-32">
-                            <Image
-                              src={getCourseImage(course.id)}
-                              alt={course.title}
-                              fill
-                              className="object-cover"
-                            />
+                          <div className="relative h-28 sm:h-32 bg-gray-100">
+                            {course.image && !imageErrors[course.id] ? (
+                              <Image
+                                src={course.image}
+                                alt={course.title}
+                                fill
+                                className="object-cover"
+                                onError={() => setImageErrors((prev) => ({ ...prev, [course.id]: true }))}
+                              />
+                            ) : (
+                              <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                                <Image
+                                  src="/images/one-million-coders-logo.png"
+                                  alt="One Million Coders"
+                                  width={80}
+                                  height={27}
+                                  className="opacity-15"
+                                />
+                              </div>
+                            )}
                             <div className="absolute top-1.5 left-1.5 bg-gray-900 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[9px] sm:text-[11px] font-bold">
                               #{index + 1}
                             </div>

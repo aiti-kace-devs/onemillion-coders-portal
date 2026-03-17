@@ -7,6 +7,8 @@ import { FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 export default function GalleryClient({ data }) {
   const [selectedImage, setSelectedImage] = useState(null);
+  const [imageErrors, setImageErrors] = useState({});
+  const [imageLoaded, setImageLoaded] = useState({});
 
   // Helper function to get random aspect ratios for masonry effect
   const getRandomAspectRatio = (index) => {
@@ -100,13 +102,29 @@ export default function GalleryClient({ data }) {
               >
                 <div className="relative overflow-hidden rounded-xl md:rounded-2xl bg-gray-50 shadow-sm hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1">
                   <div className={`relative ${getRandomAspectRatio(index)}`}>
-                    <Image
-                      src={image.src}
-                      alt={image.title}
-                      fill
-                      className="object-cover transition-all duration-700 group-hover:scale-105 group-hover:brightness-110"
-                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
-                    />
+                    {/* Logo placeholder shown while loading or on error */}
+                    {(!imageLoaded[image.id] || imageErrors[image.id]) && (
+                      <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center z-10">
+                        <Image
+                          src="/images/one-million-coders-logo.png"
+                          alt="One Million Coders"
+                          width={120}
+                          height={40}
+                          className="opacity-15"
+                        />
+                      </div>
+                    )}
+                    {!imageErrors[image.id] && (
+                      <Image
+                        src={image.src}
+                        alt={image.title}
+                        fill
+                        className="object-cover transition-all duration-700 group-hover:scale-105 group-hover:brightness-110"
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                        onLoad={() => setImageLoaded(prev => ({ ...prev, [image.id]: true }))}
+                        onError={() => setImageErrors(prev => ({ ...prev, [image.id]: true }))}
+                      />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
                   {image.title && (
@@ -164,13 +182,26 @@ export default function GalleryClient({ data }) {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="relative w-full h-full rounded-lg overflow-hidden shadow-2xl">
-                <Image
-                  src={selectedImage.src}
-                  alt={selectedImage.title}
-                  fill
-                  className="object-contain"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
-                />
+                {imageErrors[selectedImage.id] ? (
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                    <Image
+                      src="/images/one-million-coders-logo.png"
+                      alt="One Million Coders"
+                      width={180}
+                      height={60}
+                      className="opacity-15"
+                    />
+                  </div>
+                ) : (
+                  <Image
+                    src={selectedImage.src}
+                    alt={selectedImage.title}
+                    fill
+                    className="object-contain"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
+                    onError={() => setImageErrors(prev => ({ ...prev, [selectedImage.id]: true }))}
+                  />
+                )}
               </div>
               {selectedImage.title && (
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 md:p-6 rounded-b-lg">

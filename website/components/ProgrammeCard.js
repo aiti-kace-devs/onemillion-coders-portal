@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiClock, FiUsers, FiArrowRight, FiCheckCircle, FiX, FiLoader, FiGlobe } from "react-icons/fi";
 import Button from "./Button";
-import { getCourseImage } from "../utils/courseImages";
 import { confirmCourse } from "../services/pages";
 
 const ProgrammeCard = ({ programme, userId, centreId }) => {
@@ -16,6 +15,7 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
   const [enrollSubmitting, setEnrollSubmitting] = useState(false);
   const [enrollSuccess, setEnrollSuccess] = useState(false);
   const [enrollError, setEnrollError] = useState(null);
+  const [imageError, setImageError] = useState(false);
 
   const handleEnrollSubmit = async () => {
     try {
@@ -41,15 +41,19 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
     }
   };
 
-  // TEMPORARY: Use static image instead of API image for consistency
-  const courseImage = getCourseImage(programme.id);
-
   // Category color mapping
   const categoryColors = {
-    Cybersecurity: "bg-red-100 text-red-800 border-red-200",
-    "DATA Protection": "bg-blue-100 text-blue-800 border-blue-200",
-    "Data Protection": "bg-blue-100 text-blue-800 border-blue-200",
-    "Artificial Intelligence Training": "bg-purple-100 text-purple-800 border-purple-200",
+    "Cybersecurity": "bg-red-50 text-red-700 border-red-100",
+    "Data Protection": "bg-blue-50 text-blue-700 border-blue-100",
+    "Artificial Intelligence": "bg-purple-50 text-purple-700 border-purple-100",
+    "Software Development": "bg-emerald-50 text-emerald-700 border-emerald-100",
+    "Cloud Computing": "bg-orange-50 text-orange-700 border-orange-100",
+    "IT Support": "bg-indigo-50 text-indigo-700 border-indigo-100",
+    "Data Analyst": "bg-teal-50 text-teal-700 border-teal-100",
+    "Digital Marketing": "bg-pink-50 text-pink-700 border-pink-100",
+    "Project Management": "bg-amber-50 text-amber-700 border-amber-100",
+    "UI / UX Design": "bg-violet-50 text-violet-700 border-violet-100",
+    "Digital Literacy": "bg-cyan-50 text-cyan-700 border-cyan-100",
   };
 
   return (
@@ -57,15 +61,26 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
       className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-200 cursor-pointer group"
     >
       {/* Image Container */}
-      <div className="relative w-full h-48">
-        <Image
-          // TEMPORARY: Commented out API image, using static image for consistency
-          // src={programme.image}
-          src={courseImage}
-          alt={programme.title}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-200"
-        />
+      <div className="relative w-full h-48 bg-gray-100">
+        {programme.image && !imageError ? (
+          <Image
+            src={programme.image}
+            alt={programme.title}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-200"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+            <Image
+              src="/images/one-million-coders-logo.png"
+              alt="One Million Coders"
+              width={120}
+              height={40}
+              className="opacity-15"
+            />
+          </div>
+        )}
         {/* Category Tag Overlay */}
         <div className="absolute top-4 left-4">
           <span 
