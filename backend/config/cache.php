@@ -105,7 +105,7 @@ return [
     |
     */
 
-    'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_cache'),
+    'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_') . '_cache'),
 
     /*
     |--------------------------------------------------------------------------
@@ -117,6 +117,6 @@ return [
     |
     */
 
-    'flexible_ttl' => env('CACHE_FLEXIBLE_TTL'),
+    'flexible_ttl_in_hours' => env('CACHE_FLEXIBLE_TTL_IN_HOURS', '1,12'),
 
 ];

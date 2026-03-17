@@ -20,12 +20,7 @@ class DashboardStudentRegistrationBarChartController extends ChartController
         $cacheKey = 'chart_registrations_per_region_' . DashboardWidgetHelper::scopeCacheKeySuffix($visibleCourseIds);
 
         // Cache for 1 hour (with a quick fallback)
-        $ttlConfig = config('cache.flexible_ttl');
-        $ttl = $ttlConfig 
-            ? array_map('intval', explode(',', $ttlConfig)) 
-            : [now()->addHour(), now()->addDay()];
-
-        $payload = Cache::flexible($cacheKey, $ttl, function () use ($visibleCourseIds) {
+        $payload = Cache::flexible($cacheKey, cache_flexible_ttl(), function () use ($visibleCourseIds) {
             $rows = DB::table('users as u')
                 ->leftJoin('courses as c', 'u.registered_course', '=', 'c.id')
                 ->leftJoin('centres as ce', 'c.centre_id', '=', 'ce.id')
