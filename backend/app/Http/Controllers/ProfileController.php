@@ -27,6 +27,10 @@ class ProfileController extends Controller
             ->join('courses', 'user_admission.course_id', '=', 'courses.id')
             ->first();
 
+        if (!$user) {
+            $user = Auth::user();
+        }
+
         $user['isAdmitted'] = $user?->isAdmitted();
 
 

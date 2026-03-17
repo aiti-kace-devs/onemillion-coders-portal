@@ -26,8 +26,8 @@ const props = defineProps({
 
 const classes = computed(() =>
   props.active
-    ? "flex gap-2 p-1.5 items-center cursor-pointer capitalize bg-gray-700 rounded-sm text-white peer w-full"
-    : "flex gap-2 p-1.5 items-center cursor-pointer capitalize text-gray-500 hover:text-gray-700 peer w-full bg-transparent border-none text-left"
+    ? "flex gap-3 p-2.5 items-center cursor-pointer capitalize bg-green-600 rounded-xl font-bold text-white shadow-lg shadow-green-500/30 w-full transition-all duration-300 border border-green-600"
+    : "flex gap-3 p-2.5 items-center cursor-pointer capitalize text-gray-600 hover:bg-green-50 rounded-xl w-full transition-all duration-200 border-none text-left"
 );
 </script>
 
@@ -37,7 +37,8 @@ const classes = computed(() =>
       <slot />
 
       <div
-        class="flex-1 flex justify-between items-center text-sm font-medium whitespace-nowrap group-[.sidebar-collapsed]/container:hidden group"
+        class="flex-1 flex justify-between items-center text-sm font-bold whitespace-nowrap group-[.sidebar-collapsed]/container:hidden group"
+        :class="active ? 'text-white' : 'text-gray-600'"
       >
         <p>{{ label }}</p>
       </div>

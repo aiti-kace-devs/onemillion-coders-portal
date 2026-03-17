@@ -93,7 +93,7 @@ const user = auth?.user || {};
           <SidebarNavLink
             :active="route().current('student.dashboard')"
             :href="route('student.dashboard')"
-            :label="'Overview'"
+            :label="'Dashboard'"
           >
             <span class="material-symbols-outlined">dashboard</span>
           </SidebarNavLink>
@@ -180,10 +180,14 @@ const user = auth?.user || {};
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col md:ml-[70px] bg-gray-100">
+    <div class="flex-1 flex flex-col md:ml-[70px] bg-[#f8f9fa] relative overflow-hidden">
+      <!-- Background Accents -->
+      <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-[#f9a825]/5 rounded-full blur-[100px] -mr-64 -mt-64 pointer-events-none"></div>
+      <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#f9a825]/3 rounded-full blur-[80px] -ml-48 -mb-48 pointer-events-none"></div>
+
       <!-- Top Nav -->
       <header
-        class="sticky top-0 h-16 bg-white flex items-center justify-between px-4 lg:px-8 shadow-sm z-10"
+        class="sticky top-0 h-16 bg-white/80 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 border-b border-gray-100/50 z-50 transition-all duration-300"
         role="banner"
       >
         <div class="flex items-center gap-x-3">

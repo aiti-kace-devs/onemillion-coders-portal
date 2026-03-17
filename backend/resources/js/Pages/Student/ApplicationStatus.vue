@@ -61,15 +61,15 @@ function closeRevokeModal() {
           <p class="font-medium text-lg text-gray-900">Application Status</p>
 
           <div class="mt-5 px-5 max-w-2xl">
-            <ol class="relative border-l border-green-700">
+            <ol class="relative border-l border-green-500/30">
               <!-- Step 1: Application Submitted -->
               <li class="mb-10 ml-6">
                 <span
-                  class="absolute flex items-center justify-center w-8 h-8 bg-green-500 rounded-full -left-4 ring-4 ring-white text-white"
+                  class="absolute flex items-center justify-center w-8 h-8 bg-green-500 rounded-full -left-4 ring-4 ring-white text-white font-bold"
                   >1</span
                 >
                 <div class="flex items-center cursor-pointer" @click="toggleCollapse(0)">
-                  <h3 class="font-semibold text-lg text-green-700">
+                  <h3 class="font-bold text-lg text-gray-800">
                     Application Submitted
                   </h3>
                   <svg
@@ -98,16 +98,15 @@ function closeRevokeModal() {
               <li class="mb-10 ml-6">
                 <span
                   :class="[
-                    'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white text-white',
-                    props.user_assessment?.completed ? 'bg-green-500' : 'bg-gray-300',
+                    'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
+                    props.user_assessment?.completed ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400',
                   ]"
-                  >2</span
-                >
+                  >2</span>
                 <div class="flex items-center" :class="isStepReached(1) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'" @click="toggleCollapse(1)">
                   <h3
                     :class="[
-                      'font-semibold text-lg',
-                      props.user_assessment?.completed ? 'text-green-700' : (isStepReached(1) ? 'text-gray-700' : 'text-gray-400'),
+                      'font-bold text-lg',
+                      props.user_assessment?.completed ? 'text-gray-800' : (isStepReached(1) ? 'text-gray-700' : 'text-gray-400'),
                     ]"
                   >
                     Level Determination Test
@@ -139,7 +138,7 @@ function closeRevokeModal() {
                     This assessment helps us understand your current skills so we can place you in the right course level. Please complete it to move forward.
 
                     <div class="mt-5">
-                      <a :href="`${$page.props.quiz_frontend_url}/quiz/${props.user.userId}`" target="_blank" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 active:bg-green-900 focus:outline-none focus:border-green-900 focus:ring ring-green-300 disabled:opacity-25 transition ease-in-out duration-150">
+                      <a :href="`${$page.props.quiz_frontend_url}/quiz/${props.user.userId}`" target="_blank" class="inline-flex items-center px-6 py-2.5 bg-[#f9a825] border border-transparent rounded-xl font-bold text-xs text-gray-900 uppercase tracking-widest hover:bg-[#e09621] transition duration-150 shadow-md shadow-yellow-500/10">
                         Take assessment now
                       </a>
                     </div>
@@ -151,16 +150,15 @@ function closeRevokeModal() {
               <li class="mb-10 ml-6">
                 <span
                   :class="[
-                    'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white text-white',
-                    props.user.registered_course ? 'bg-green-500' : 'bg-gray-300',
+                    'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
+                    props.user.registered_course ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400',
                   ]"
-                  >3</span
-                >
+                  >3</span>
                 <div class="flex items-center" :class="isStepReached(2) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'" @click="toggleCollapse(2)">
                   <h3
                     :class="[
-                      'font-semibold text-lg',
-                      props.user.registered_course ? 'text-green-700' : (isStepReached(2) ? 'text-gray-700' : 'text-gray-400'),
+                      'font-bold text-lg',
+                      props.user.registered_course ? 'text-gray-800' : (isStepReached(2) ? 'text-gray-700' : 'text-gray-400'),
                     ]"
                   >
                     Course Selection
@@ -203,16 +201,15 @@ function closeRevokeModal() {
               <li class="mb-10 ml-6">
                 <span
                   :class="[
-                    'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white text-white',
-                    props.user.shortlist ? 'bg-green-500' : 'bg-gray-300',
+                    'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
+                    props.user.shortlist ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400',
                   ]"
-                  >4</span
-                >
+                  >4</span>
                 <div class="flex items-center" :class="isStepReached(3) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'" @click="toggleCollapse(3)">
                   <h3
                     :class="[
-                      'font-semibold text-lg',
-                      props.user.shortlist ? 'text-green-700' : (isStepReached(3) ? 'text-gray-700' : 'text-gray-400'),
+                      'font-bold text-lg',
+                      props.user.shortlist ? 'text-gray-800' : (isStepReached(3) ? 'text-gray-700' : 'text-gray-400'),
                     ]"
                   >
                     Shortlisted
@@ -249,18 +246,15 @@ function closeRevokeModal() {
               <li class="ml-6">
                 <span
                   :class="[
-                    'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white text-white',
-                    props.user_admission?.confirmed ? 'bg-green-500' : 'bg-gray-300',
+                    'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
+                    props.user_admission?.confirmed ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400',
                   ]"
-                  >5</span
-                >
+                  >5</span>
                 <div class="flex items-center" :class="isStepReached(4) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'" @click="toggleCollapse(4)">
                   <h3
                     :class="[
-                      'font-semibold text-lg',
-                      props.user_admission?.confirmed
-                        ? 'text-green-700'
-                        : (isStepReached(4) ? 'text-gray-700' : 'text-gray-400'),
+                      'font-bold text-lg',
+                      props.user_admission?.confirmed ? 'text-gray-800' : (isStepReached(4) ? 'text-gray-700' : 'text-gray-400'),
                     ]"
                   >
                     Admission Confirmed
