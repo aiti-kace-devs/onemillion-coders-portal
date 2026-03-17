@@ -56,6 +56,26 @@ const REGION_CENTERS = {
   GHWP: { x: 34.18, y: 87.01 },
 };
 
+// Matte fill colors for each region
+const REGION_COLORS = {
+  GHAA: "#2D6A4F",
+  GHAF: "#7CB68E",
+  GHAH: "#40916C",
+  GHBE: "#95D5B2",
+  GHBO: "#2D6A4F",
+  GHCP: "#74C69D",
+  GHEP: "#1B4332",
+  GHNE: "#52B788",
+  GHNP: "#2D6A4F",
+  GHOT: "#8FC9A3",
+  GHSV: "#40916C",
+  GHTV: "#368B5E",
+  GHUE: "#74C69D",
+  GHUW: "#1B4332",
+  GHWN: "#95D5B2",
+  GHWP: "#52B788",
+};
+
 // Region IDs ordered top to bottom by geographic position
 const REGION_ORDER = [
   "GHUE", "GHUW", "GHNE", "GHNP", "GHSV", "GHOT",
@@ -106,15 +126,19 @@ const TechGhanaSection = () => {
           // Remove fixed width/height so CSS can control sizing
           .replace(/\s+width="1000"/, "")
           .replace(/\s+height="1000"/, "")
-          // Deeper green for map regions
-          .replace(/fill="#6f9c76"/, 'fill="#2D6A4F"');
+          .replace(/\s+height="1000"/, "");
 
-        // Inject hover styles inside the SVG element
+        // Build per-region color rules + base styles
+        const regionColorRules = Object.entries(REGION_COLORS)
+          .map(([id, color]) => `#features path#${id} { fill: ${color}; }`)
+          .join("\n          ");
+
         const styleTag = `<style>
           #features path {
             transition: fill 0.6s ease-in-out, filter 0.6s ease-in-out;
             cursor: pointer;
           }
+          ${regionColorRules}
           #features path:hover {
             fill: #d4a017 !important;
             filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
@@ -307,13 +331,10 @@ setBranchesData(response.data);
                 for thousands of learners across Ghana.
               </p>
               <div className="pt-4">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
-                  <p className="text-sm text-gray-500">
-                    Hover over any region on the map to explore training
-                    programs and available courses
-                  </p>
-                </div>
+                <p className="text-sm text-gray-500">
+                  Hover over any region on the map to explore training
+                  programs and available courses
+                </p>
               </div>
             </div>
 

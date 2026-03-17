@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\AppConfig;
+use App\Services\JwtService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -46,35 +47,44 @@ class HandleInertiaRequests extends Middleware
 
         $user = Auth::guard('web')->user();
 
-        // $configs = AppConfig::whereIn('key', [
-        //     SHOW_RESULTS_TO_STUDENTS,
-        //     ALLOW_COURSE_CHANGE,
-        //     ALLOW_SESSION_CHANGE,
-        //     EXAM_DEADLINE_AFTER_REGISTRATION
-        // ])
-        //     ->pluck('value', 'key')->all();
+        $configKeys = [
+            SHOW_RESULTS_TO_STUDENTS,
+            SHOW_STUDENT_LEVEL,
+            ALLOW_COURSE_CHANGE,
+            ALLOW_SESSION_CHANGE,
+            EXAM_DEADLINE_AFTER_REGISTRATION
+        ];
+
+        $configs = [];
+        foreach ($configKeys as $key) {
+            $configs[$key] = config($key);
+        }
+
+        $quizJwtToken = null;
+        if ($user) {
+            $quizJwtToken = app(JwtService::class)->generate($user->id);
+        }
 
         return [
             ...parent::share($request),
             'auth' => [
                 'user' => $user
                     ? array_merge(
-                        $user->only('id', 'name', 'email', 'created_at'),
+                        $user->only('id', 'name', 'email', 'created_at', 'userId', 'registered_course', 'shortlist'),
                         [
+                            'student_level' => $user->student_level,
                             'isAdmitted' => $user?->isAdmitted(),
                             'hasAdmission' => $user?->hasAdmission(),
                             'hasAttendance' => $user?->hasAttendance(),
+                            'assessment_completed' => $user?->userAssessment?->completed ?? false,
                         ]
                     )
                     : null,
                 'unreadNotifications' => $user ? $user->notifications()->unread()->count() : 0,
             ],
-            'config' => [
-                SHOW_RESULTS_TO_STUDENTS => config(SHOW_RESULTS_TO_STUDENTS),
-                ALLOW_COURSE_CHANGE => config(ALLOW_COURSE_CHANGE),
-                ALLOW_SESSION_CHANGE => config(ALLOW_SESSION_CHANGE),
-                EXAM_DEADLINE_AFTER_REGISTRATION => config(EXAM_DEADLINE_AFTER_REGISTRATION),
-            ],
+            'config' => $configs,
+            'quiz_frontend_url' => config('app.quiz_frontend_url'),
+            'quiz_jwt_token' => $quizJwtToken,
             'flash' => [
                 'message' => fn() => $request->session()->get('flash'),
                 'key' => fn() => $request->session()->get('key'),

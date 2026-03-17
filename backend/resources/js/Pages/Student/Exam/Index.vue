@@ -64,9 +64,9 @@ const overallProgress = computed(() =>
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Exam</h2>
         </template>
-        <div class="pt-3">
+        <!-- <div class="pt-3">
             <ExamCard :examList="examList" />
-        </div>
+        </div> -->
     </AuthenticatedLayout>
 </template>
 

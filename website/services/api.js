@@ -8,7 +8,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000, // 15 seconds timeout
+  timeout: 30000,
 });
 
 // Request interceptor for logging
@@ -92,9 +92,11 @@ export const fetchBranchesSummary = async () => {
  * @param {string} userId - User UUID
  * @returns {Promise<Object>} - User status data
  */
-export const checkUserStatus = async (userId) => {
+export const checkUserStatus = async (userId, token) => {
   try {
-    const response = await apiRequest(`check-user/${userId}`);
+    const response = await apiRequest(`check-user/${userId}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
     return response;
   } catch (error) {
     console.error('Failed to check user status:', error);
@@ -106,9 +108,12 @@ export const checkUserStatus = async (userId) => {
  * Fetch course match questions and options
  * @returns {Promise<Object>} - Course match questions data
  */
-export const getCourseMatchQuestions = async () => {
+export const getCourseMatchQuestions = async (type, token) => {
   try {
-    const response = await apiRequest('course-match');
+    const params = type ? `?type=${type}` : '';
+    const response = await apiRequest(`course-match${params}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
     return response.data;
   } catch (error) {
     console.error('Failed to fetch course match questions:', error);
@@ -124,7 +129,7 @@ export const getCourseMatchQuestions = async () => {
  * @param {number} params.centreId - Centre ID
  * @returns {Promise<Object>} - Course recommendations data
  */
-export const getCourseRecommendations = async ({ optionIds, userId, regionId }) => {
+export const getCourseRecommendations = async ({ optionIds, userId, regionId, centreId, token }) => {
   try {
     const response = await apiRequest('recommend/courses', {
       method: 'POST',
@@ -132,7 +137,9 @@ export const getCourseRecommendations = async ({ optionIds, userId, regionId }) 
         option_ids: optionIds,
         userId,
         branch_id: regionId,
-      }
+        centre_id: centreId,
+      },
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response.matches || [];
   } catch (error) {
@@ -142,13 +149,32 @@ export const getCourseRecommendations = async ({ optionIds, userId, regionId }) 
 };
 
 /**
+ * Check if a user has previous recommended courses
+ * @param {string} userId - User UUID
+ * @returns {Promise<Object>} - { success, title, description, matches }
+ */
+export const checkUserRecommendedCourses = async (userId, token) => {
+  try {
+    const response = await apiRequest(`check-user-recommended-courses/${userId}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to check user recommended courses:', error);
+    throw error;
+  }
+};
+
+/**
  * Fetch tiered assessment questions for a user
  * @param {string} userId - User UUID
  * @returns {Promise<Object>} - Assessment questions data
  */
-export const fetchAssessmentQuestions = async (userId) => {
+export const fetchAssessmentQuestions = async (userId, token) => {
   try {
-    const response = await apiRequest(`tiered-assessment/fetch?user_id=${userId}`);
+    const response = await apiRequest(`tiered-assessment/fetch?user_id=${userId}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
     return response;
   } catch (error) {
     console.error('Failed to fetch assessment questions:', error);
@@ -163,18 +189,42 @@ export const fetchAssessmentQuestions = async (userId) => {
  * @param {string} answer - Selected answer
  * @returns {Promise<Object>} - Submission response
  */
-export const submitAssessmentAnswer = async (userId, questionId, answer) => {
+export const submitAssessmentAnswer = async (userId, questionId, answer, token) => {
   try {
     const response = await apiRequest(`tiered-assessment/submit?user_id=${userId}`, {
       method: 'POST',
       data: {
         question_id: questionId,
         answer,
-      }
+      },
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response;
   } catch (error) {
     console.error('Failed to submit assessment answer:', error);
     throw error;
   }
-}; 
+};
+
+/**
+ * Record a violation during tiered assessment
+ * @param {string} userId - User UUID
+ * @param {number} violationCount - Current violation count
+ * @param {string} token - Bearer token
+ * @returns {Promise<Object>} - Violation recording response
+ */
+export const recordViolation = async (userId, violationCount, token) => {
+  try {
+    const response = await apiRequest(`tiered-assessment/record-violation?user_id=${userId}`, {
+      method: 'POST',
+      data: {
+        violation_count: violationCount,
+      },
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to record violation:', error);
+    throw error;
+  }
+};

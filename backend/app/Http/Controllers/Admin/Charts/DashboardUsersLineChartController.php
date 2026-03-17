@@ -20,7 +20,12 @@ class DashboardUsersLineChartController extends ChartController
         $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'chart_user_count_last_8_days_' . DashboardWidgetHelper::scopeCacheKeySuffix($visibleCourseIds);
 
-        $userStats = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {
+        $ttlConfig = config('cache.flexible_ttl');
+        $ttl = $ttlConfig 
+            ? array_map('intval', explode(',', $ttlConfig)) 
+            : [now()->addHour(), now()->addDay()];
+
+        $userStats = Cache::flexible($cacheKey, $ttl, function () use ($visibleCourseIds) {
             $users = [];
             $labels = [];
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiArrowRight,
@@ -15,13 +15,18 @@ import {
   FiClock,
   FiLoader,
   FiAlertCircle,
+  FiMaximize,
+  FiAlertTriangle,
 } from "react-icons/fi";
 import {
   fetchAssessmentQuestions,
   submitAssessmentAnswer,
+  recordViolation,
 } from "../../../services/api";
 
 // ─── Constants ─────────────────────────────────────────────
+const MAX_VIOLATIONS = 3;
+
 const LEVELS = [
   { key: "beginner", label: "Step 1", color: "#2e7d32" },
   { key: "intermediate", label: "Step 2", color: "#f9a825" },
@@ -64,6 +69,86 @@ const swipeVariants = {
     transition: { duration: 0.4, ease: [0.36, 0, 0.66, -0.56] },
   }),
 };
+
+// ─── Fullscreen helpers ────────────────────────────────────
+function requestFullscreen() {
+  const el = document.documentElement;
+  const rfs =
+    el.requestFullscreen ||
+    el.webkitRequestFullscreen ||
+    el.msRequestFullscreen;
+  if (rfs) {
+    rfs.call(el).catch(() => {});
+  }
+}
+
+function exitFullscreen() {
+  const efs =
+    document.exitFullscreen ||
+    document.webkitExitFullscreen ||
+    document.msExitFullscreen;
+  if (efs && document.fullscreenElement) {
+    efs.call(document).catch(() => {});
+  }
+}
+
+function isFullscreen() {
+  return !!(
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.msFullscreenElement
+  );
+}
+
+// ─── Violation Warning Overlay ─────────────────────────────
+function ViolationOverlay({ violations, maxViolations, onResume }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+    >
+      <motion.div
+        initial={{ scale: 0.8, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        className="bg-[#1a1a2e] rounded-2xl p-8 max-w-sm w-full mx-4 text-center border border-red-500/30 shadow-2xl"
+      >
+        <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-5">
+          <FiAlertTriangle size={32} className="text-red-400" />
+        </div>
+        <h2 className="text-xl font-black text-white mb-2">
+          Tab Switch Detected
+        </h2>
+        <p className="text-white/60 text-sm mb-4">
+          Leaving the quiz screen is not allowed during the assessment.
+          Repeated violations may result in automatic submission.
+        </p>
+        <div className="flex items-center justify-center gap-1.5 mb-6">
+          {Array.from({ length: maxViolations }).map((_, i) => (
+            <div
+              key={i}
+              className="w-3 h-3 rounded-full"
+              style={{
+                background: i < violations ? "#ef4444" : "rgba(255,255,255,0.15)",
+              }}
+            />
+          ))}
+        </div>
+        <p className="text-red-400 text-xs font-bold mb-5">
+          Warning {violations} of {maxViolations}
+        </p>
+        <button
+          onClick={onResume}
+          className="w-full py-3.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2"
+        >
+          <FiMaximize size={14} />
+          Return to Quiz
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 function LevelTransition({ currentLevel, nextLevel, score, total, onComplete }) {
   const [progress, setProgress] = useState(0);
@@ -145,11 +230,20 @@ function LevelTransition({ currentLevel, nextLevel, score, total, onComplete }) 
 export default function QuizPage({ params }) {
   const { id } = React.use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
 
   // Quiz flow state
   const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Proctoring state
+  const [violations, setViolations] = useState(0);
+  const [showViolation, setShowViolation] = useState(false);
+  const violationsRef = useRef(0);
+
+  const violationCooldownRef = useRef(false); // debounce to prevent double-counting
 
   // Current question from API
   const [question, setQuestion] = useState(null);
@@ -174,7 +268,7 @@ export default function QuizPage({ params }) {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetchAssessmentQuestions(id);
+      const response = await fetchAssessmentQuestions(id, token);
 
       if (response?.status === "success" && response?.question) {
         const q = response.question;
@@ -224,6 +318,113 @@ export default function QuizPage({ params }) {
     return () => clearInterval(timerRef.current);
   }, [started, showLevelEnd, loading, assessmentComplete, question, currentLevel, score]);
 
+  // Use refs to avoid stale closures in event handlers
+  const currentLevelRef = useRef(currentLevel);
+  const scoreRef = useRef(score);
+  const assessmentCompleteRef = useRef(assessmentComplete);
+  const startedRef = useRef(started);
+  const questionRef = useRef(question);
+
+  useEffect(() => { currentLevelRef.current = currentLevel; }, [currentLevel]);
+  useEffect(() => { scoreRef.current = score; }, [score]);
+  useEffect(() => { assessmentCompleteRef.current = assessmentComplete; }, [assessmentComplete]);
+  useEffect(() => { startedRef.current = started; }, [started]);
+  useEffect(() => { questionRef.current = question; }, [question]);
+
+  // ── Proctoring: detect tab switches & fullscreen exits ──
+  useEffect(() => {
+    if (!started || assessmentComplete) return;
+
+    const addViolation = () => {
+      // Debounce: prevent double-counting when Escape triggers both
+      // fullscreenchange and visibilitychange in quick succession
+      if (violationCooldownRef.current) return;
+      violationCooldownRef.current = true;
+      setTimeout(() => { violationCooldownRef.current = false; }, 500);
+
+      violationsRef.current += 1;
+      const count = violationsRef.current;
+      setViolations(count);
+      setShowViolation(true);
+
+      // Record violation to server
+      recordViolation(id, count, token)
+        .then((result) => {
+          if (count >= MAX_VIOLATIONS) {
+            setOverallLevel(result?.user_overall_level || null);
+          }
+        })
+        .catch(() => {});
+
+      if (count >= MAX_VIOLATIONS) {
+        // Auto-submit: mark assessment as complete on client
+        setLevelScores((p) => ({ ...p, [currentLevelRef.current]: scoreRef.current }));
+        setAssessmentComplete(true);
+        setShowLevelEnd(true);
+        setShowViolation(false);
+        exitFullscreen();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && startedRef.current && !assessmentCompleteRef.current) {
+        addViolation();
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      if (!isFullscreen() && startedRef.current && !assessmentCompleteRef.current) {
+        addViolation();
+      }
+    };
+
+    // Prevent right-click context menu during quiz
+    const handleContextMenu = (e) => { e.preventDefault(); };
+
+    // Prevent common keyboard shortcuts for switching/devtools
+    const handleKeyDown = (e) => {
+      // Block F11 (fullscreen toggle), F12 (devtools)
+      if (e.key === "F11" || e.key === "F12") {
+        e.preventDefault();
+      }
+      // Block Ctrl/Cmd+Shift+I (devtools), Ctrl/Cmd+Shift+J (console)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "I" || e.key === "J" || e.key === "C")) {
+        e.preventDefault();
+      }
+      // Block Ctrl/Cmd+U (view source)
+      if ((e.ctrlKey || e.metaKey) && e.key === "u") {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [started, assessmentComplete]);
+
+  // ── Exit fullscreen when assessment completes ──
+  useEffect(() => {
+    if (assessmentComplete) {
+      exitFullscreen();
+    }
+  }, [assessmentComplete]);
+
+  // ── Resume from violation: re-enter fullscreen ──
+  const handleResumeFromViolation = useCallback(() => {
+    setShowViolation(false);
+    requestFullscreen();
+  }, []);
+
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -258,7 +459,7 @@ export default function QuizPage({ params }) {
       const questionProgress = question.progress || 0;
 
       try {
-        const result = await submitAssessmentAnswer(id, question.id, answerValue);
+        const result = await submitAssessmentAnswer(id, question.id, answerValue, token);
         const correct = result?.is_correct === true;
 
         setLastResult(result);
@@ -390,9 +591,9 @@ export default function QuizPage({ params }) {
             Level <span className="text-[#f9a825]">Assessment</span>
           </h1>
 
-          <p className="text-white/60 mb-10 max-w-xs mx-auto">
+          {/* <p className="text-white/60 mb-10 max-w-xs mx-auto">
             3 levels. Find out where you stand.
-          </p>
+          </p> */}
 
           {error && (
             <div className="flex items-center gap-2 px-4 py-3 bg-red-500/20 border border-red-500/30 rounded-xl mb-6">
@@ -406,7 +607,18 @@ export default function QuizPage({ params }) {
             whileTap={{ scale: 0.97 }}
             onClick={async () => {
               const success = await loadFirstQuestion();
-              if (success) setStarted(true);
+              if (success) {
+                setStarted(true);
+                // Request fullscreen after starting — if it fails, quiz still works
+                // but proctoring will only rely on visibility change detection
+                try {
+                  const el = document.documentElement;
+                  const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+                  if (rfs) await rfs.call(el);
+                } catch {
+                  // Fullscreen denied — quiz continues without fullscreen enforcement
+                }
+              }
             }}
             disabled={loading}
             className="w-full py-4 rounded-lg bg-[#f9a825] text-[#121212] font-bold text-lg shadow-xl hover:bg-[#f57f17] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
@@ -459,6 +671,17 @@ export default function QuizPage({ params }) {
   return (
     <div className="min-h-screen relative flex flex-col">
       {BG}
+
+      {/* ── Violation Warning Overlay ── */}
+      <AnimatePresence>
+        {showViolation && !assessmentComplete && (
+          <ViolationOverlay
+            violations={violations}
+            maxViolations={MAX_VIOLATIONS}
+            onResume={handleResumeFromViolation}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── Top Bar ── */}
       <div className="relative z-20 px-4 pt-4 pb-3">

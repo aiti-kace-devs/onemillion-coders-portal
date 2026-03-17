@@ -107,4 +107,16 @@ return [
 
     'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_cache'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cache Flexible TTL
+    |--------------------------------------------------------------------------
+    |
+    | The default TTL duration for Cache::flexible calls. It expects a comma
+    | separated string in the format "seconds_for_stale,seconds_for_refresh".
+    |
+    */
+
+    'flexible_ttl' => env('CACHE_FLEXIBLE_TTL'),
+
 ];

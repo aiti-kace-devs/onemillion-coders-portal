@@ -41,10 +41,6 @@ class StudentOperation extends Controller
     //student dashboard
     public function dashboard()
     {
-        // if (!Auth::user()->isAdmitted()) {
-        //     return redirect(route('student.profile.edit'));
-        // }
-
         $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
             ->join('users', 'users.id', '=', 'user_exams.user_id')
@@ -63,9 +59,14 @@ class StudentOperation extends Controller
 
             return $questionnaire;
         });
-        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires'));
+        $registeredCourse = null;
+        if (Auth::user()->registered_course) {
+            $registeredCourse = Course::find(Auth::user()->registered_course);
+        }
 
+        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires', 'registeredCourse'));
     }
+
     public function profile()
     {
         // Get the current authenticated user
@@ -84,34 +85,19 @@ class StudentOperation extends Controller
         return view('student.profile', compact('user', 'course', 'rejection'));
     }
 
-    // application status
     public function application_status()
     {
         $user = Auth::guard('web')->user();
 
-        $user_exam = user_exam::where('user_id', $user->id)->first();
         $user_admission = UserAdmission::where('user_id', $user->userId)->first();
-        // dd($exam_submitted, $data);
+        $user_assessment = UserAssessment::where('user_id', $user->id)->first();
 
-        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_exam', 'user_admission'));
+        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_admission', 'user_assessment'));
     }
 
     //Exam page
     public function exam()
     {
-        // Admission check removed - students can view/take exams before admission
-
-        // $student_info = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.title', 'oex_exam_masters.exam_date', 'users.created_at as registered'])
-        //     ->join('users', 'users.id', '=', 'user_exams.user_id')
-        //     ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-        //     ->orderBy('user_exams.exam_id', 'desc')
-        //     ->where('user_exams.user_id', Auth::user()->id)
-        //     ->where('user_exams.std_status', '1')
-        //     ->get()
-        //     ->toArray();
-
-        // return view('student.exam', ['student_info' => $student_info]);
-
         $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
             ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
             ->join('users', 'users.id', '=', 'user_exams.user_id')
@@ -561,14 +547,14 @@ class StudentOperation extends Controller
     {
         $user = Auth::guard('web')->user();
 
-        // if ($user->admission) {
-        //     return redirect()
-        //         ->back()
-        //         ->with([
-        //             'flash' => 'Student already admitted. Unable to change course.',
-        //             'key' => 'error',
-        //         ]);
-        // }
+        if (!$user->userAssessment?->completed) {
+            return redirect()
+                ->route('student.application-status')
+                ->with([
+                    'flash' => 'Please complete the Level Determination Assessment first.',
+                    'key' => 'info',
+                ]);
+        }
 
         $currentCourseId = $user->registered_course;
 
@@ -596,6 +582,15 @@ class StudentOperation extends Controller
         }
 
         $user = Auth::guard('web')->user();
+
+        if (!$user->userAssessment?->completed) {
+            return redirect()
+                ->route('student.application-status')
+                ->with([
+                    'flash' => 'Please complete the Level Determination Assessment first.',
+                    'key' => 'info',
+                ]);
+        }
 
         if ($user->admission) {
             return redirect()
@@ -640,7 +635,7 @@ class StudentOperation extends Controller
             ])
             ->log("{$user->name} changed their course from {$oldCourse?->course_name} to {$newCourse->course_name}");
 
-        return redirect()->route('student.profile.edit');
+        return redirect()->route('student.application-status');
     }
 
     // API function not used
@@ -1105,20 +1100,12 @@ class StudentOperation extends Controller
 
     public function fetch_assessment_question(Request $request)
     {
-        $user = $request->user('sanctum');
-
-        if (!$user && $request->has('user_id')) {
-            $user = User::where('userId', $request->user_id)->first();
-        }
-
-        if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized or missing user_id.'], 401);
-        }
+        $user = $request->user();
 
         $assessment = UserAssessment::firstOrCreate(
             ['user_id' => $user->id],
             [
-                'current_level' => 'beginner',
+                'current_level' => 'Beginner',
                 'questions_answered' => 0,
                 'correct_answers' => 0,
                 'wrong_answers' => 0,
@@ -1147,12 +1134,12 @@ class StudentOperation extends Controller
             $assessment->completed = true;
             $assessment->save();
 
-            if ($assessment->current_level === 'beginner') {
-                $user->student_level = 'beginner';
-            } elseif ($assessment->current_level === 'intermediate') {
-                $user->student_level = 'beginner';
-            } elseif ($assessment->current_level === 'advanced') {
-                $user->student_level = 'intermediate';
+            if ($assessment->current_level === 'Beginner') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Intermediate') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Advanced') {
+                $user->student_level = 'Intermediate';
             }
             $user->save();
 
@@ -1179,7 +1166,7 @@ class StudentOperation extends Controller
         $answeredIds = $assessment->answered_question_ids ?? [];
 
         $question = OexQuestionMaster::whereHas('tags', function ($query) use ($level) {
-            $query->where('name', 'LIKE', $level);
+            $query->where('name', $level);
         })
             ->whereNotIn('id', $answeredIds)
             ->inRandomOrder()
@@ -1207,15 +1194,7 @@ class StudentOperation extends Controller
 
     public function submit_assessment_answer(Request $request)
     {
-        $user = $request->user('sanctum');
-
-        if (!$user && $request->has('user_id')) {
-            $user = User::where('userId', $request->user_id)->first();
-        }
-
-        if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized or missing user_id.'], 401);
-        }
+        $user = $request->user();
 
         $request->validate([
             'question_id' => 'required|exists:oex_question_masters,id',
@@ -1247,12 +1226,12 @@ class StudentOperation extends Controller
             $assessment->completed = true;
             $assessment->save();
 
-            if ($assessment->current_level === 'beginner') {
-                $user->student_level = 'beginner';
-            } elseif ($assessment->current_level === 'intermediate') {
-                $user->student_level = 'beginner';
-            } elseif ($assessment->current_level === 'advanced') {
-                $user->student_level = 'intermediate';
+            if ($assessment->current_level === 'Beginner') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Intermediate') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Advanced') {
+                $user->student_level = 'Intermediate';
             }
             $user->save();
 
@@ -1272,8 +1251,9 @@ class StudentOperation extends Controller
                 'message' => 'Time limit exceeded! You have failed this level.',
                 'level_complete' => true,
                 'passed_level' => false,
-                'user_overall_level' => $user->student_level
-            ], 403);
+                'user_overall_level' => $user->student_level,
+                'assessment_completed' => true,
+            ], 400);
         }
 
         $question = OexQuestionMaster::find($request->question_id);
@@ -1320,36 +1300,36 @@ class StudentOperation extends Controller
 
         if ($levelComplete) {
             if ($passedLevel) {
-                if ($assessment->current_level === 'beginner') {
-                    $user->student_level = 'beginner';
+                if ($assessment->current_level === 'Beginner') {
+                    $user->student_level = 'Beginner';
                     $user->save();
 
-                    $assessment->current_level = 'intermediate';
+                    $assessment->current_level = 'Intermediate';
                     $assessment->level_started_at = null;
                     $assessment->questions_answered = 0;
                     $assessment->correct_answers = 0;
                     $assessment->wrong_answers = 0;
-                } elseif ($assessment->current_level === 'intermediate') {
-                    $user->student_level = 'intermediate';
+                } elseif ($assessment->current_level === 'Intermediate') {
+                    $user->student_level = 'Intermediate';
                     $user->save();
 
-                    $assessment->current_level = 'advanced';
+                    $assessment->current_level = 'Advanced';
                     $assessment->level_started_at = null;
                     $assessment->questions_answered = 0;
                     $assessment->correct_answers = 0;
                     $assessment->wrong_answers = 0;
-                } elseif ($assessment->current_level === 'advanced') {
-                    $user->student_level = 'advanced';
+                } elseif ($assessment->current_level === 'Advanced') {
+                    $user->student_level = 'Advanced';
                     $user->save();
                     $assessment->completed = true;
                 }
             } else {
-                if ($assessment->current_level === 'beginner') {
-                    $user->student_level = 'beginner';
-                } elseif ($assessment->current_level === 'intermediate') {
-                    $user->student_level = 'beginner';
-                } elseif ($assessment->current_level === 'advanced') {
-                    $user->student_level = 'intermediate';
+                if ($assessment->current_level === 'Beginner') {
+                    $user->student_level = 'Beginner';
+                } elseif ($assessment->current_level === 'Intermediate') {
+                    $user->student_level = 'Beginner';
+                } elseif ($assessment->current_level === 'Advanced') {
+                    $user->student_level = 'Intermediate';
                 }
                 $user->save();
                 $assessment->completed = true;
@@ -1382,6 +1362,56 @@ class StudentOperation extends Controller
             'current_level' => $assessment->current_level,
             'user_overall_level' => $user->student_level,
             'next_question' => $new_question->original['question'] ?? null,
+        ]);
+    }
+
+    public function record_assessment_violation(Request $request)
+    {
+        $user = $request->user();
+
+        $assessment = UserAssessment::where('user_id', $user->id)
+            ->where('completed', false)
+            ->first();
+
+        if (!$assessment) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No active assessment found.'
+            ], 404);
+        }
+
+        $assessment->violation_count += 1;
+        $maxViolations = config('ASSESSMENT_MAX_VIOLATIONS', 3);
+
+        if ($assessment->violation_count >= $maxViolations) {
+            $assessment->completed = true;
+            $assessment->save();
+
+            if ($assessment->current_level === 'Beginner') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Intermediate') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Advanced') {
+                $user->student_level = 'Intermediate';
+            }
+            $user->save();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Maximum violations reached! Assessment auto-submitted.',
+                'violation_count' => $assessment->violation_count,
+                'assessment_completed' => true,
+                'user_overall_level' => $user->student_level,
+            ]);
+        }
+
+        $assessment->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Violation recorded.',
+            'violation_count' => $assessment->violation_count,
+            'assessment_completed' => false,
         ]);
     }
 }
