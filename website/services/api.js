@@ -92,7 +92,7 @@ export const fetchBranchesSummary = async () => {
  * @param {string} userId - User UUID
  * @returns {Promise<Object>} - User status data
  */
-export const checkUserStatus = async (userId) => {
+export const checkUserStatus = async (userId, token) => {
   try {
     const response = await apiRequest(`check-user/${userId}`);
     return response.data;
@@ -132,7 +132,8 @@ export const getCourseRecommendations = async ({ optionIds, userId, centreId }) 
         option_ids: optionIds,
         userId,
         centre_id: centreId,
-      }
+      },
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response.matches || [];
   } catch (error) {
@@ -142,13 +143,32 @@ export const getCourseRecommendations = async ({ optionIds, userId, centreId }) 
 };
 
 /**
+ * Check if a user has previous recommended courses
+ * @param {string} userId - User UUID
+ * @returns {Promise<Object>} - { success, title, description, matches }
+ */
+export const checkUserRecommendedCourses = async (userId, token) => {
+  try {
+    const response = await apiRequest(`check-user-recommended-courses/${userId}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to check user recommended courses:', error);
+    throw error;
+  }
+};
+
+/**
  * Fetch tiered assessment questions for a user
  * @param {string} userId - User UUID
  * @returns {Promise<Object>} - Assessment questions data
  */
-export const fetchAssessmentQuestions = async (userId) => {
+export const fetchAssessmentQuestions = async (userId, token) => {
   try {
-    const response = await apiRequest(`tiered-assessment/fetch?user_id=${userId}`);
+    const response = await apiRequest(`tiered-assessment/fetch?user_id=${userId}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
     return response;
   } catch (error) {
     console.error('Failed to fetch assessment questions:', error);
@@ -163,18 +183,42 @@ export const fetchAssessmentQuestions = async (userId) => {
  * @param {string} answer - Selected answer
  * @returns {Promise<Object>} - Submission response
  */
-export const submitAssessmentAnswer = async (userId, questionId, answer) => {
+export const submitAssessmentAnswer = async (userId, questionId, answer, token) => {
   try {
     const response = await apiRequest(`tiered-assessment/submit?user_id=${userId}`, {
       method: 'POST',
       data: {
         question_id: questionId,
         answer,
-      }
+      },
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response;
   } catch (error) {
     console.error('Failed to submit assessment answer:', error);
     throw error;
   }
-}; 
+};
+
+/**
+ * Record a violation during tiered assessment
+ * @param {string} userId - User UUID
+ * @param {number} violationCount - Current violation count
+ * @param {string} token - Bearer token
+ * @returns {Promise<Object>} - Violation recording response
+ */
+export const recordViolation = async (userId, violationCount, token) => {
+  try {
+    const response = await apiRequest(`tiered-assessment/record-violation?user_id=${userId}`, {
+      method: 'POST',
+      data: {
+        violation_count: violationCount,
+      },
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to record violation:', error);
+    throw error;
+  }
+};

@@ -179,14 +179,37 @@ class CourseProgrammeController extends Controller
             $programmes = $courses->map(function ($course) {
                 $programme = $course->programme;
                 if ($programme) {
-                    $programmeData = $programme->toArray();
-                    $programmeData['course_id'] = $course->id;
-                    $programmeData['centre_id'] = $course->centre_id;
-                    $programmeData['duration'] = $course->duration;
-                    $programmeData['start_date'] = $course->start_date;
-                    $programmeData['end_date'] = $course->end_date;
-                    $programmeData['status'] = $course->status ?? true;
-                    return $programmeData;
+                    return [
+                        'id' => $programme->id,
+                        'title' => $programme->title,
+                        'duration' => $course->duration ?? $programme->duration,
+                        'status' => $course->status ?? $programme->status ?? true,
+                        'description' => $programme->description,
+                        'sub_title' => $programme->sub_title,
+                        'level' => $programme->level,
+                        'mode_of_delivery' => $programme->mode_of_delivery,
+                        'provider' => $programme->provider,
+                        'job_responsible' => $programme->job_responsible,
+                        'image' => $programme->image,
+                        'category' => $programme->category
+                            ? [
+                                'id' => $programme->category->id,
+                                'title' => $programme->category->title,
+                            ]
+                            : null,
+                        'course_certification' => $programme->courseCertification
+                            ? $programme->courseCertification
+                                ->map(fn ($cert) => [
+                                    'title' => $cert->title,
+                                    'description' => $cert->description,
+                                    'type' => $cert->type,
+                                    'status' => $cert->status,
+                                ])
+                                ->values()
+                            : [],
+                        'course_id' => $course->id,
+                        'centre_id' => $course->centre_id,
+                    ];
                 }
                 return null;
             })->filter()->unique(function ($item) {
@@ -396,7 +419,9 @@ class CourseProgrammeController extends Controller
 
     public function getBranch()
     {
-        $branch = Branch::where('status', 1)->get();
+        $branch = Branch::where('status', 1)
+            ->orderBy('title')
+            ->get(['id', 'title', 'status']);
 
         return response()->json([
             'success' => true,
@@ -427,7 +452,7 @@ class CourseProgrammeController extends Controller
                     ->get(['courses.id', 'courses.programme_id', 'courses.centre_id']);
 
                 $programmeIds = $courses->pluck('programme_id')->unique()->values();
-                $programmes = Programme::whereIn('id', $programmeIds)->get();
+                $programmes = Programme::whereIn('id', $programmeIds)->get(['title', 'sub_title']);
                 $courseIds = $courses->pluck('id');
                 $admittedUsersCount = UserAdmission::whereIn('course_id', $courseIds)
                     ->whereNotNull('confirmed')
@@ -567,7 +592,7 @@ class CourseProgrammeController extends Controller
         $districts = District::query()
             ->where('branch_id', $branch->id)
             ->orderBy('title')
-            ->get();
+            ->get(['id', 'title']);
 
         return response()->json([
             'success' => true,
@@ -618,9 +643,24 @@ class CourseProgrammeController extends Controller
             'district' => $district->title,
             'centres' => $district->centres
                 ->map(function ($centre) {
-                    $centreData = $centre->toArray();
-                    $centreData['gps_location'] = $centre->gps_location ?? [];
-                    return $centreData;
+                    return [
+                        'id' => $centre->id,
+                        'title' => $centre->title,
+                        'is_pwd_friendly' => $centre->is_pwd_friendly,
+                        'status' => $centre->status,
+                        'gps_location' => $centre->gps_location ?? [],
+                        'gps_address' => $centre->gps_address,
+                        'wheelchair_accessible' => $centre->wheelchair_accessible,
+                        'has_access_ramp' => $centre->has_access_ramp,
+                        'has_accessible_toilet' => $centre->has_accessible_toilet,
+                        'has_elevator' => $centre->has_elevator,
+                        'supports_hearing_impaired' => $centre->supports_hearing_impaired,
+                        'supports_visually_impaired' => $centre->supports_visually_impaired,
+                        'staff_trained_for_pwd' => $centre->staff_trained_for_pwd,
+                        'accessibility_rating' => $centre->accessibility_rating,
+                        'pwd_notes' => $centre->pwd_notes,
+                        'images' => $centre->images ?? []
+                    ];
                 })
                 ->values(),
         ]);

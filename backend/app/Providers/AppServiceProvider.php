@@ -39,7 +39,7 @@ class AppServiceProvider extends ServiceProvider
             \App\Console\Commands\ExportAssetsCommand::class
         );
 
-        $this->app->singleton(JwtService::class, fn () => JwtService::fromConfig());
+        $this->app->singleton(JwtService::class, fn() => JwtService::fromConfig());
     }
 
     /**
@@ -59,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         if ($this->app->isProduction()) {
+            URL::forceRootUrl(config('app.url'));
             URL::forceScheme('https');
             // Horizon::routeSlackNotificationsTo(env('LOG_SLACK_WEBHOOK_URL', ''),  env('SLACK_CHANNEL', '#general'));
         }

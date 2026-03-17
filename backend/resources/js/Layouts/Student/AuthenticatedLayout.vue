@@ -94,14 +94,14 @@ const user = auth?.user || {};
                     </button>
                 </div>
 
-                <nav class="mt-3 grid w-full space-y-2">
-                    <SidebarNavLink
-                        :active="route().current('student.dashboard')"
-                        :href="route('student.dashboard')"
-                        :label="'Overview'"
-                    >
-                        <span class="material-symbols-outlined">dashboard</span>
-                    </SidebarNavLink>
+        <nav class="mt-3 grid w-full space-y-2">
+          <SidebarNavLink
+            :active="route().current('student.dashboard')"
+            :href="route('student.dashboard')"
+            :label="'Dashboard'"
+          >
+            <span class="material-symbols-outlined">dashboard</span>
+          </SidebarNavLink>
 
                     <!--           <SidebarNavLink
             :active="route().current('student.exam.index')"
@@ -186,16 +186,58 @@ const user = auth?.user || {};
                         </SidebarNavLink>
                     </template>
 
-                    <SidebarNavLink
-                        :href="route('auth.logout')"
-                        :label="'Log Out'"
-                        :method="'post'"
-                        :as="'button'"
-                    >
-                        <span class="material-symbols-outlined">logout</span>
-                    </SidebarNavLink>
-                </nav>
-            </div>
+          <SidebarNavLink
+            :href="route('auth.logout')"
+            :label="'Log Out'"
+            :method="'post'"
+            :as="'button'"
+          >
+            <span class="material-symbols-outlined">logout</span>
+          </SidebarNavLink>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col md:ml-[70px] bg-[#f8f9fa] relative overflow-hidden">
+      <!-- Background Accents -->
+      <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-[#f9a825]/5 rounded-full blur-[100px] -mr-64 -mt-64 pointer-events-none"></div>
+      <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#f9a825]/3 rounded-full blur-[80px] -ml-48 -mb-48 pointer-events-none"></div>
+
+      <!-- Top Nav -->
+      <header
+        class="sticky top-0 h-16 bg-white/80 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 border-b border-gray-100/50 z-50 transition-all duration-300"
+        role="banner"
+      >
+        <div class="flex items-center gap-x-3">
+          <button
+            class="block lg:hidden cursor-pointer rounded-md p-1.5 text-gray-500 hover:bg-gray-100 focus:outline-none"
+            @click="isSidebarCollapsed = false"
+            aria-label="Open Sidebar"
+            :aria-expanded="!isSidebarCollapsed"
+          >
+            <svg
+              class="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h16M4 18h16"
+              ></path>
+            </svg>
+          </button>
+
+          <div
+            v-if="$slots.header"
+            class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-lg text-gray-800 leading-tight"
+          >
+            <slot name="header" />
+          </div>
         </div>
 
         <!-- Main Content -->

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
   FiMapPin,
@@ -20,6 +20,7 @@ import {
   FiStar,
   FiSearch,
   FiX,
+  FiGlobe,
 } from "react-icons/fi";
 import {
   getAllRegions,
@@ -30,6 +31,7 @@ import {
   checkUserStatus,
   getCourseMatchQuestions,
   getCourseRecommendations,
+  checkUserRecommendedCourses,
 } from "../../../services/api";
 import Button from "../../../components/Button";
 import { getCourseImage } from "../../../utils/courseImages";
@@ -37,6 +39,8 @@ import { getCourseImage } from "../../../utils/courseImages";
 export default function CoursesPage({ params }) {
   const { id } = React.use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
 
   // User verification state
   const [userStatus, setUserStatus] = useState(null);
@@ -74,7 +78,23 @@ export default function CoursesPage({ params }) {
         setVerificationError(null);
         const data = await checkUserStatus(id);
         setUserStatus(data);
-        fetchAllRegions();
+
+        // Check for previous recommended courses
+        try {
+          setCheckingRecommendations(true);
+          const recData = await checkUserRecommendedCourses(id, token);
+          if (recData?.success && recData?.matches?.length > 0) {
+            setPreviousRecommendations(recData);
+          } else {
+            // No previous recommendations — start quiz flow
+            fetchAllRegions();
+          }
+        } catch {
+          // If check fails, just start the normal flow
+          fetchAllRegions();
+        } finally {
+          setCheckingRecommendations(false);
+        }
       } catch (err) {
         console.error("Error verifying user:", err);
         setVerificationError(
@@ -82,18 +102,19 @@ export default function CoursesPage({ params }) {
             ? "User not found. Please register first."
             : "Unable to verify your account. Please try again."
         );
+        setCheckingRecommendations(false);
       } finally {
         setVerifying(false);
       }
     };
     verifyUser();
-  }, [id]);
+  }, [id, token]);
 
   const fetchAllRegions = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getAllRegions();
+      const data = await getAllRegions(token);
       setAllRegions(data);
     } catch (err) {
       setError("Failed to load regions. Please try again.");
@@ -107,7 +128,7 @@ export default function CoursesPage({ params }) {
     try {
       setLoading(true);
       setError(null);
-      const data = await getDistrictsByBranch(branchId);
+      const data = await getDistrictsByBranch(branchId, token);
       setAvailableDistricts(data);
     } catch (err) {
       setError("Failed to load districts. Please try again.");
@@ -115,13 +136,13 @@ export default function CoursesPage({ params }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
   const fetchCenters = useCallback(async (districtId) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getCentresByDistrict(districtId);
+      const data = await getCentresByDistrict(districtId, token);
       setAvailableCenters(data);
     } catch (err) {
       setError("Failed to load centers. Please try again.");
@@ -129,7 +150,7 @@ export default function CoursesPage({ params }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
   const fetchQuestions = useCallback(async () => {
     try {
@@ -143,7 +164,7 @@ export default function CoursesPage({ params }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
   const handleRegionSelect = (region) => {
     setSelectedRegion(region);
@@ -218,6 +239,7 @@ export default function CoursesPage({ params }) {
         optionIds,
         userId: id,
         centreId: selectedCentre?.id,
+        token,
       });
       setRecommendations(data || []);
       setShowResults(true);
@@ -274,7 +296,7 @@ export default function CoursesPage({ params }) {
 
 
   // Show verification state before allowing access
-  if (verifying) {
+  if (verifying || checkingRecommendations) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center px-4">
@@ -319,12 +341,6 @@ export default function CoursesPage({ params }) {
                 {/* Actions */}
                 <div className="flex flex-col gap-3">
                   <button
-                    onClick={() => router.push("/register")}
-                    className="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
-                  >
-                    Create an Account
-                  </button>
-                  <button
                     onClick={() => window.location.reload()}
                     className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium text-sm rounded-xl transition-colors"
                   >
@@ -340,6 +356,292 @@ export default function CoursesPage({ params }) {
             </p>
           </motion.div>
         </div>
+      </div>
+    );
+  }
+
+  // Show previous recommendations if available
+  if (previousRecommendations) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+        {/* Ghana flag gradient bar */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-red-600 via-yellow-400 to-green-600" />
+
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3 py-3.5 sm:py-4">
+              <Image
+                src="/images/one-million-coders-logo.png"
+                alt="One Million Coders"
+                width={120}
+                height={40}
+                className="h-8 sm:h-10 w-auto flex-shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <h1 className="text-sm sm:text-xl font-bold text-gray-900">
+                  Course Registration
+                </h1>
+                <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">
+                  One Million Coders Programme
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Enrollment Modal */}
+        <AnimatePresence>
+          {(enrollingCourseId || enrollSuccess) && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+              onClick={(e) => {
+                if (e.target === e.currentTarget && !enrollSubmitting && !enrollSuccess) {
+                  setEnrollingCourseId(null);
+                  setEnrollingCentreId(null);
+                  setNeedsSupport(null);
+                }
+              }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ duration: 0.2 }}
+                className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 sm:p-8 relative"
+              >
+                {enrollSuccess ? (
+                  <div className="text-center">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FiCheckCircle className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" />
+                    </div>
+                    <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-2">
+                      You&apos;re enrolled!
+                    </h2>
+                    <p className="text-gray-500 text-sm sm:text-base mb-6">
+                      You have been successfully enrolled in{" "}
+                      <span className="font-semibold text-gray-700">{enrolledCourseName}</span>.
+                    </p>
+                    <button
+                      onClick={() => router.push("/")}
+                      className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
+                    >
+                      Go to Home
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setEnrollingCourseId(null);
+                        setEnrollingCentreId(null);
+                        setNeedsSupport(null);
+                      }}
+                      className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <FiX className="w-5 h-5" />
+                    </button>
+                    <div className="text-center mb-5">
+                      <h2 className="text-base sm:text-xl font-bold text-gray-900 mb-1">
+                        One more thing
+                      </h2>
+                      <p className="text-gray-500 text-xs sm:text-sm">
+                        Enrolling in <span className="font-medium text-gray-700">{enrolledCourseName}</span>
+                      </p>
+                    </div>
+
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-4">
+                      Do you require any special support or accessibility assistance?
+                    </h3>
+
+                    {error && (
+                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+                        <p className="text-red-700 text-sm">{error}</p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                      <button
+                        onClick={() => setNeedsSupport(true)}
+                        className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
+                          needsSupport === true
+                            ? "bg-gray-900 text-white border-gray-900"
+                            : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                        }`}
+                      >
+                        Yes, I do
+                      </button>
+                      <button
+                        onClick={() => setNeedsSupport(false)}
+                        className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
+                          needsSupport === false
+                            ? "bg-gray-900 text-white border-gray-900"
+                            : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                        }`}
+                      >
+                        No, thanks
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          setEnrollingCourseId(null);
+                          setEnrollingCentreId(null);
+                          setNeedsSupport(null);
+                        }}
+                        className="flex-1 py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium text-sm rounded-xl transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleEnrollSubmit}
+                        disabled={needsSupport === null || enrollSubmitting}
+                        className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${
+                          needsSupport !== null && !enrollSubmitting
+                            ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        {enrollSubmitting ? (
+                          <>
+                            <FiLoader className="w-4 h-4 animate-spin" />
+                            Enrolling...
+                          </>
+                        ) : (
+                          "Confirm Enrollment"
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Previous Recommendations Content */}
+        <motion.div
+          className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 lg:py-10"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        >
+          {error && !enrollingCourseId && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-red-700 text-sm font-medium">{error}</p>
+                <button
+                  onClick={() => setError(null)}
+                  className="text-red-600 text-xs sm:text-sm underline mt-1 hover:text-red-800 transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Results header */}
+          <div className="text-center mb-6 sm:mb-10">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-5">
+              <FiCheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
+            </div>
+            <h2 className="text-base sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
+              {previousRecommendations.title }
+            </h2>
+            <p className="text-gray-500 text-xs sm:text-base max-w-lg mx-auto">
+              {previousRecommendations.description || "Based on your previous preferences, here are recommended courses that best align with your goals"}
+            </p>
+          </div>
+
+          {/* Course cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+            {previousRecommendations.matches.map((course, index) => (
+              <motion.div
+                key={course.id}
+                className="rounded-lg bg-white border border-gray-200 overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
+              >
+                <div className="relative h-28 sm:h-32">
+                  <Image
+                    src={getCourseImage(course.id)}
+                    alt={course.title}
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute top-1.5 left-1.5 bg-gray-900 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[9px] sm:text-[11px] font-bold">
+                    {course.rank || `#${index + 1}`}
+                  </div>
+                  <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+                    {course.match_percentage && (
+                      <span
+                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${
+                          parseInt(course.match_percentage) >= 70
+                            ? "bg-green-50/90 text-green-700"
+                            : "bg-yellow-50/90 text-yellow-700"
+                        }`}
+                      >
+                        <FiStar className="w-2.5 h-2.5" />
+                        {course.match_percentage}
+                      </span>
+                    )}
+                    {course.duration && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-gray-600 rounded-full text-[10px] font-medium backdrop-blur-sm">
+                        <FiClock className="w-2.5 h-2.5" />
+                        {course.duration}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="p-2.5 sm:p-3">
+                  <h3 className="text-xs sm:text-sm font-semibold text-gray-900 mb-1 line-clamp-2 leading-tight">
+                    {course.title}
+                  </h3>
+                  {course.sub_title && (
+                    <p className="text-[11px] sm:text-xs text-gray-500 mb-2 line-clamp-1">
+                      {course.sub_title}
+                    </p>
+                  )}
+                  {course.mode_of_delivery && (
+                    <div className="flex items-center gap-1 mb-2">
+                      <FiGlobe className="w-2.5 h-2.5 text-blue-600" />
+                      <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">{course.mode_of_delivery}</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => handleEnrollClick(course)}
+                    disabled={enrollSubmitting}
+                    className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-xs rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    Enroll Now
+                    <FiChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Retake Quiz button */}
+          <div className="mt-8 sm:mt-10 flex justify-center">
+            <button
+              onClick={handleStartQuizFlow}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white font-semibold text-sm rounded-xl transition-colors"
+            >
+              <FiTarget className="w-4 h-4" />
+              Retake Quiz
+            </button>
+          </div>
+        </motion.div>
       </div>
     );
   }

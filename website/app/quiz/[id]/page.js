@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiArrowRight,
@@ -19,6 +19,7 @@ import {
 import {
   fetchAssessmentQuestions,
   submitAssessmentAnswer,
+  recordViolation,
 } from "../../../services/api";
 
 // ─── Constants ─────────────────────────────────────────────
@@ -145,6 +146,8 @@ function LevelTransition({ currentLevel, nextLevel, score, total, onComplete }) 
 export default function QuizPage({ params }) {
   const { id } = React.use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
 
   // Quiz flow state
   const [started, setStarted] = useState(false);
@@ -174,7 +177,7 @@ export default function QuizPage({ params }) {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetchAssessmentQuestions(id);
+      const response = await fetchAssessmentQuestions(id, token);
 
       if (response?.status === "success" && response?.question) {
         const q = response.question;
@@ -253,7 +256,7 @@ export default function QuizPage({ params }) {
       const questionProgress = question.progress || 0;
 
       try {
-        const result = await submitAssessmentAnswer(id, question.id, answerValue);
+        const result = await submitAssessmentAnswer(id, question.id, answerValue, token);
         const correct = result?.is_correct === true;
 
         setLastResult(result);
