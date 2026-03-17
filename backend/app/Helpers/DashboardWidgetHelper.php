@@ -61,7 +61,7 @@ class DashboardWidgetHelper
         $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'dashboard_count_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
-        $dasboardCountStatistics = Cache::flexible($cacheKey, cache_flexible_ttl(), function () use ($visibleCourseIds) {
+        $dasboardCountStatistics = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($visibleCourseIds) {
             $baseUserQuery = User::query();
             self::applyCourseScope($baseUserQuery, $visibleCourseIds, 'registered_course');
 
@@ -181,7 +181,7 @@ class DashboardWidgetHelper
         $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'dashboard_table_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
-        $dashboardTableStatistics = Cache::flexible($cacheKey, cache_flexible_ttl(), function () use ($visibleCourseIds) {
+        $dashboardTableStatistics = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($visibleCourseIds) {
             $topBatches = DB::table('course_batches as cb')
                 ->join('admission_batches as ab', 'cb.batch_id', '=', 'ab.id')
                 ->leftJoin('user_admission as ua', function ($join) {
