@@ -101,6 +101,9 @@ class AddNewStudentsJob implements ShouldQueue
                 $std->pwd = (bool) ($student['pwd'] ?? false);
                 $std->status = 1;
                 $std->ghcard = $student['ghcard'] ?? null;
+                if (!empty($student['ghcard'])) {
+                    $std->card_type = 'GHCARD';
+                }
                 $std->form_response_id = $student['form_response_id'];
                 $std->save();
 

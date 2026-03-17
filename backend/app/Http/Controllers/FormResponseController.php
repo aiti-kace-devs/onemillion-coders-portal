@@ -179,6 +179,7 @@ class FormResponseController extends Controller
                 $userFieldMap = [
                     'email' => 'email',
                     'phone' => 'mobile_no',
+                    'ghana_card_number' => 'ghcard',
                 ];
                 $dbColumn = $userFieldMap[$inputField] ?? null;
                 if ($dbColumn && User::where($dbColumn, $value)->exists()) {

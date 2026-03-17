@@ -52,6 +52,9 @@ class FormSubmitedListener implements ShouldQueue
         $student['age'] = $this->getField($event->submissionData, 'age');
         $student['gender'] = $this->getField($event->submissionData, 'gender');
         $student['ghcard'] = $this->getField($event->submissionData, 'ghana_card_number', 'ghana-card-number', 'ghcard');
+        if (!empty($student['ghcard'])) {
+            $student['card_type'] = 'GHCARD';
+        }
         $student['pwd'] = $this->extractPwdFlag($event->submissionData);
         $student['exam_name'] = 'random';
         $student['form_response_id'] = $event->formResponseId;
