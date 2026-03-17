@@ -22,6 +22,13 @@ const toggleSidebar = () => {
 // Get the current route name for active link highlighting
 const { auth, component } = usePage().props;
 
+const props = defineProps({
+    fullHeight: {
+        type: Boolean,
+        default: false
+    }
+});
+
 const user = auth?.user || {};
 </script>
 

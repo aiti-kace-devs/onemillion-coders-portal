@@ -114,11 +114,10 @@ class StudentOperation extends Controller
     {
         $user = Auth::guard('web')->user();
 
-        $user_exam = user_exam::where('user_id', $user->id)->first();
         $user_admission = UserAdmission::where('user_id', $user->userId)->first();
         $user_assessment = UserAssessment::where('user_id', $user->id)->first();
 
-        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_exam', 'user_admission', 'user_assessment'));
+        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_admission', 'user_assessment'));
     }
 
     //Exam page
@@ -1129,6 +1128,14 @@ class StudentOperation extends Controller
             return response()->json(['status' => 'error', 'message' => 'Unauthorized or invalid token.'], 401);
         }
 
+        if (!is_null($user->student_level)) {
+            return response()->json([
+                'status' => 'completed',
+                'message' => 'Assessment already completed.',
+                'user_level' => $user->student_level
+            ]);
+        }
+
         $assessment = UserAssessment::firstOrCreate(
             ['user_id' => $user->id],
             [
@@ -1219,7 +1226,7 @@ class StudentOperation extends Controller
         $request->validate([
             'question_id' => 'required|exists:oex_question_masters,id',
             'answer' => 'required|string',
-            'is_violation' => 'sometimes|boolean'
+            'user_id' => 'sometimes|exists:users,userId'
         ]);
 
         $assessment = UserAssessment::where('user_id', $user->id)
@@ -1242,7 +1249,7 @@ class StudentOperation extends Controller
         $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
         $timeRemainingSeconds = $timeoutSeconds - $timeElapsedSeconds;
 
-        if ($timeRemainingSeconds <= 0 || $request->is_violation) {
+        if ($timeRemainingSeconds <= 0) {
             $assessment->completed = true;
             $assessment->save();
 
@@ -1257,12 +1264,12 @@ class StudentOperation extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'message' => $request->is_violation ? 'Maximum violations reached! Assessment auto-submitted.' : 'Time limit exceeded! You have failed this level.',
+                'message' => 'Time limit exceeded! You have failed this level.',
                 'level_complete' => true,
                 'passed_level' => false,
                 'user_overall_level' => $user->student_level,
                 'assessment_completed' => true,
-            ], $request->is_violation ? 200 : 403);
+            ], 400);
         }
 
         $question = OexQuestionMaster::find($request->question_id);
@@ -1358,6 +1365,60 @@ class StudentOperation extends Controller
             'current_level' => $assessment->current_level,
             'user_overall_level' => $user->student_level,
             'next_question' => $new_question->original['question'] ?? null,
+        ]);
+    }
+
+    public function record_assessment_violation(Request $request)
+    {
+        $user = $this->userFromToken($request);
+
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized or invalid token.'], 401);
+        }
+
+        $assessment = UserAssessment::where('user_id', $user->id)
+            ->where('completed', false)
+            ->first();
+
+        if (!$assessment) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No active assessment found.'
+            ], 404);
+        }
+
+        $assessment->violation_count += 1;
+        $maxViolations = config('ASSESSMENT_MAX_VIOLATIONS', 3);
+
+        if ($assessment->violation_count >= $maxViolations) {
+            $assessment->completed = true;
+            $assessment->save();
+
+            if ($assessment->current_level === 'beginner') {
+                $user->student_level = 'beginner';
+            } elseif ($assessment->current_level === 'intermediate') {
+                $user->student_level = 'beginner';
+            } elseif ($assessment->current_level === 'advanced') {
+                $user->student_level = 'intermediate';
+            }
+            $user->save();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Maximum violations reached! Assessment auto-submitted.',
+                'violation_count' => $assessment->violation_count,
+                'assessment_completed' => true,
+                'user_overall_level' => $user->student_level,
+            ]);
+        }
+
+        $assessment->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Violation recorded.',
+            'violation_count' => $assessment->violation_count,
+            'assessment_completed' => false,
         ]);
     }
 }
