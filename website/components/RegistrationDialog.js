@@ -120,7 +120,7 @@ const RegistrationDialog = ({ isOpen, onClose, programme, userId, courseId, cent
         fetchLocations();
       }
     }
-  }, [isOpen, programme?.id, fetchLocations]);
+  }, [isOpen, programme?.id, fetchLocations, userId]);
 
   // Fetch consent content when form step is shown
   useEffect(() => {

@@ -208,7 +208,7 @@ setBranchesData(response.data);
       container.removeEventListener("mouseleave", handleMouseLeave);
       container.removeEventListener("click", handleClick);
     };
-  }, [svgContent]);
+  }, [svgContent, router]);
 
   // Track if map is in viewport
   useEffect(() => {
