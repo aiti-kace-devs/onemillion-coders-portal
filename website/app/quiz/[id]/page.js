@@ -410,7 +410,7 @@ export default function QuizPage({ params }) {
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [started, assessmentComplete]);
+  }, [started, assessmentComplete, id, token]);
 
   // ── Exit fullscreen when assessment completes ──
   useEffect(() => {
@@ -528,7 +528,7 @@ export default function QuizPage({ params }) {
         }, 1100);
       }
     },
-    [selected, submittingAnswer, question, options, score, currentLevel, id]
+    [selected, submittingAnswer, question, options, score, currentLevel, id, token]
   );
 
   // Move to next level after transition

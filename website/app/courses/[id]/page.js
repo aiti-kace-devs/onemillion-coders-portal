@@ -126,7 +126,7 @@ export default function CoursesPage({ params }) {
       }
     };
     verifyUser();
-  }, [id, token]);
+  }, [id, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAllRegions = async () => {
     try {

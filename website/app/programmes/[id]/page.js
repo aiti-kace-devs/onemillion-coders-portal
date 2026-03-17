@@ -373,7 +373,7 @@ export default function CourseDetailsPage() {
                   <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-4 md:p-6 border border-yellow-200">
                     <div className="flex items-center space-x-2 mb-2 md:mb-3">
                       <FiStar className="w-4 h-4 md:w-5 md:h-5 text-yellow-600 flex-shrink-0" />
-                      <h3 className="text-base md:text-lg font-semibold text-gray-900">Skills and tools you'll learn</h3>
+                      <h3 className="text-base md:text-lg font-semibold text-gray-900">Skills and tools you&apos;ll learn</h3>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {programme.overview?.why_choose_this_course && programme.overview.why_choose_this_course.length > 0 ? (
