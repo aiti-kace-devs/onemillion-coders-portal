@@ -179,7 +179,7 @@ class CourseProgrammeController extends Controller
                 ->with(['programme.category', 'programme.coverImage', 'programme.courseCertification', 'programme.courseModules'])
                 ->get();
 
-            return $courses->map(function ($course) {
+            return $courses->unique('programme_id')->map(function ($course) {
                 $programme = $course->programme;
                 if ($programme) {
                     return [

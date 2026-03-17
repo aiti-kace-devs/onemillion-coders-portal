@@ -37,13 +37,17 @@
                         <div class="form-group col-md-12">
                             <label>Programmes *</label>
                             <select name="programme_ids[]" id="modal_programme_ids" class="form-control" multiple required>
-                                @foreach($programmes as $programme)
+                                @foreach($programmes->where('status', 1) as $programme)
                                     <option
                                         value="{{ $programme->id }}"
                                         data-start-date="{{ $programme->start_date }}"
                                         data-end-date="{{ $programme->end_date }}"
+                                        data-title="{{ $programme->title }}"
+                                        data-mode="{{ $programme->mode_of_delivery }}"
+                                        data-level="{{ $programme->level }}"
+                                        data-duration="{{ $programme->duration }}"
                                     >
-                                        {{ $programme->title }}
+                                        {{ $programme->title }} ({{ $programme->mode_of_delivery ?: 'N/A' }}) - {{ $programme->level ?: 'N/A' }} - {{ $programme->duration ?: 'N/A' }}
                                     </option>
                                 @endforeach
                             </select>
@@ -53,6 +57,7 @@
                         <div class="form-group col-md-12">
                             <label>Duration</label>
                             <input type="text" name="duration" id="modal_duration" class="form-control" placeholder="eg. 3 Weeks or 120 hrs">
+                            <small class="form-text text-muted">Leave blank to use each programme duration.</small>
                         </div>
                         
                         <div class="form-group col-md-6">
@@ -116,13 +121,17 @@
                             <label>Programme *</label>
                             <select name="programme_id" id="edit_programme_id" class="form-control" required>
                                 <option value="">Select Programme</option>
-                                @foreach($programmes as $programme)
+                                @foreach($programmes->where('status', 1) as $programme)
                                     <option
                                         value="{{ $programme->id }}"
                                         data-start-date="{{ $programme->start_date }}"
                                         data-end-date="{{ $programme->end_date }}"
+                                        data-title="{{ $programme->title }}"
+                                        data-mode="{{ $programme->mode_of_delivery }}"
+                                        data-level="{{ $programme->level }}"
+                                        data-duration="{{ $programme->duration }}"
                                     >
-                                        {{ $programme->title }}
+                                        {{ $programme->title }} ({{ $programme->mode_of_delivery ?: 'N/A' }}) - {{ $programme->level ?: 'N/A' }} - {{ $programme->duration ?: 'N/A' }}
                                     </option>
                                 @endforeach
                             </select>
@@ -259,7 +268,8 @@
         const programmeSelect = document.getElementById('modal_programme_ids');
         const startInput = document.getElementById('modal_start_date') || (modalElement ? modalElement.querySelector('input[name="start_date"]') : null);
         const endInput = document.getElementById('modal_end_date') || (modalElement ? modalElement.querySelector('input[name="end_date"]') : null);
-        if (!programmeSelect || !startInput || !endInput) return;
+        const durationInput = document.getElementById('modal_duration') || (modalElement ? modalElement.querySelector('input[name="duration"]') : null);
+        if (!programmeSelect || !startInput || !endInput || !durationInput) return;
 
         const selectedOptions = Array.from(programmeSelect.selectedOptions || [])
             .filter((opt) => opt && opt.value && opt.value !== '');
@@ -269,9 +279,11 @@
             const option = selectedOptions[0];
             const start = normalizeDate((option.dataset && option.dataset.startDate) ? option.dataset.startDate : option.getAttribute('data-start-date'));
             const end = normalizeDate((option.dataset && option.dataset.endDate) ? option.dataset.endDate : option.getAttribute('data-end-date'));
+            const duration = (option.dataset && option.dataset.duration) ? option.dataset.duration : option.getAttribute('data-duration');
 
             setAutoFilledValue(startInput, start);
             setAutoFilledValue(endInput, end);
+            setAutoFilledValue(durationInput, duration || '');
             return;
         }
 
@@ -279,6 +291,7 @@
         // If values were auto-filled, clear them so programme-level defaults can apply.
         clearIfAutoFilled(startInput);
         clearIfAutoFilled(endInput);
+        clearIfAutoFilled(durationInput);
     }
 
     let batchCoursesCurrentPage = 1;
@@ -289,16 +302,16 @@
         const centreSelect = document.getElementById('batchCoursesFilterCentre');
         const programmeSelect = document.getElementById('batchCoursesFilterProgramme');
         const locationSelect = document.getElementById('batchCoursesFilterLocation');
-        const dateInput = document.getElementById('batchCoursesFilterDate');
-        const statusSelect = document.getElementById('batchCoursesFilterStatus');
+        const levelSelect = document.getElementById('batchCoursesFilterLevel');
+        const modeSelect = document.getElementById('batchCoursesFilterMode');
 
         return {
             query: searchInput ? String(searchInput.value || '').trim().toLowerCase() : '',
             centreId: centreSelect ? String(centreSelect.value || '') : '',
             programmeId: programmeSelect ? String(programmeSelect.value || '') : '',
             location: locationSelect ? String(locationSelect.value || '').trim().toLowerCase() : '',
-            date: dateInput ? String(dateInput.value || '') : '',
-            status: statusSelect ? String(statusSelect.value || '') : '',
+            level: levelSelect ? String(levelSelect.value || '').trim().toLowerCase() : '',
+            mode: modeSelect ? String(modeSelect.value || '').trim().toLowerCase() : '',
         };
     }
 
@@ -311,13 +324,13 @@
             const rowLocation = String(row.dataset.location || '').toLowerCase();
             if (rowLocation !== filters.location) return false;
         }
-        if (filters.status && row.dataset.status !== filters.status) return false;
-        if (filters.date) {
-            const startDate = String(row.dataset.startDate || '');
-            const endDate = String(row.dataset.endDate || '');
-            if (startDate && filters.date < startDate) return false;
-            if (endDate && filters.date > endDate) return false;
-            if (!startDate && !endDate) return false;
+        if (filters.level) {
+            const rowLevel = String(row.dataset.level || '').toLowerCase();
+            if (rowLevel !== filters.level) return false;
+        }
+        if (filters.mode) {
+            const rowMode = String(row.dataset.mode || '').toLowerCase();
+            if (rowMode !== filters.mode) return false;
         }
         if (filters.query) {
             const text = String(row.textContent || '').toLowerCase();
@@ -376,8 +389,8 @@
         const centreSelect = document.getElementById('batchCoursesFilterCentre');
         const programmeSelect = document.getElementById('batchCoursesFilterProgramme');
         const locationSelect = document.getElementById('batchCoursesFilterLocation');
-        const dateInput = document.getElementById('batchCoursesFilterDate');
-        const statusSelect = document.getElementById('batchCoursesFilterStatus');
+        const levelSelect = document.getElementById('batchCoursesFilterLevel');
+        const modeSelect = document.getElementById('batchCoursesFilterMode');
         const clearBtn = document.getElementById('batchCoursesClearFilters');
         const prevBtn = document.getElementById('batchCoursesPrevBtn');
         const nextBtn = document.getElementById('batchCoursesNextBtn');
@@ -403,7 +416,7 @@
             });
         }
 
-        [centreSelect, programmeSelect, locationSelect, dateInput, statusSelect].forEach((el) => {
+        [centreSelect, programmeSelect, locationSelect, levelSelect, modeSelect].forEach((el) => {
             if (el) el.addEventListener('change', onFilterChange);
         });
 
@@ -413,8 +426,8 @@
                 if (centreSelect) centreSelect.value = '';
                 if (programmeSelect) programmeSelect.value = '';
                 if (locationSelect) locationSelect.value = '';
-                if (dateInput) dateInput.value = '';
-                if (statusSelect) statusSelect.value = '';
+                if (levelSelect) levelSelect.value = '';
+                if (modeSelect) modeSelect.value = '';
                 onFilterChange();
             });
         }
@@ -451,6 +464,18 @@
         const $centre = $modal.find(opts.centreSelector);
         const $programme = $modal.find(opts.programmeSelector);
 
+        const formatProgrammeOption = function (state) {
+            if (!state) return '';
+            const el = state.element;
+            if (!el || !el.dataset) return state.text || '';
+
+            const title = el.dataset.title || state.text || '';
+            const mode = el.dataset.mode || 'N/A';
+            const level = el.dataset.level || 'N/A';
+            const duration = el.dataset.duration || 'N/A';
+            return `${title} (${mode || 'N/A'}) - ${level || 'N/A'} - ${duration || 'N/A'}`;
+        };
+
         if ($programme.length && !$programme.hasClass('select2-hidden-accessible')) {
             $programme.select2({
                 theme: 'bootstrap4',
@@ -459,6 +484,8 @@
                 placeholder: opts.programmePlaceholder || 'Select Programme',
                 closeOnSelect: typeof opts.programmeCloseOnSelect === 'boolean' ? opts.programmeCloseOnSelect : true,
                 allowClear: true,
+                templateResult: formatProgrammeOption,
+                templateSelection: formatProgrammeOption,
             });
         }
 

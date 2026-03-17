@@ -38,7 +38,7 @@ trait BatchFieldHelpers
                 WHERE ua.batch_id = admission_batches.id
             ) AS admitted_students_count')
             ->selectRaw('(
-                SELECT COUNT(c2.id)
+                SELECT COUNT(DISTINCT c2.programme_id)
                 FROM courses c2
                 WHERE c2.batch_id = admission_batches.id
             ) AS courses_count');
@@ -222,7 +222,8 @@ trait BatchFieldHelpers
     {
         $branches = Branch::pluck('title', 'id')->toArray();
         $programmes = Programme::query()
-            ->select(['id', 'title', 'start_date', 'end_date'])
+            ->select(['id', 'title', 'start_date', 'end_date', 'level', 'mode_of_delivery', 'duration', 'status'])
+            ->where('status', 1)
             ->orderBy('title')
             ->get();
         
@@ -259,6 +260,20 @@ trait BatchFieldHelpers
         $locations = $batch->courses
             ->map(fn ($course) => trim((string) $course->location))
             ->filter(fn ($location) => $location !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        $levels = $batch->courses
+            ->map(fn ($course) => trim((string) ($course->programme?->level ?? '')))
+            ->filter(fn ($level) => $level !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        $modes = $batch->courses
+            ->map(fn ($course) => trim((string) ($course->programme?->mode_of_delivery ?? '')))
+            ->filter(fn ($mode) => $mode !== '')
             ->unique()
             ->sort()
             ->values();
@@ -301,16 +316,22 @@ trait BatchFieldHelpers
             $html .= '</select>
                 </div>
                 <div style="min-width:160px">
-                    <label class="form-label small text-muted" for="batchCoursesFilterDate">Date</label>
-                    <input type="date" id="batchCoursesFilterDate" class="form-control">
+                    <label class="form-label small text-muted" for="batchCoursesFilterLevel">Level</label>
+                    <select id="batchCoursesFilterLevel" class="form-control">
+                        <option value="">All Levels</option>';
+            foreach ($levels as $level) {
+                $html .= '<option value="' . e($level) . '">' . e($level) . '</option>';
+            }
+            $html .= '</select>
                 </div>
-                <div style="min-width:140px">
-                    <label class="form-label small text-muted" for="batchCoursesFilterStatus">Status</label>
-                    <select id="batchCoursesFilterStatus" class="form-control">
-                        <option value="">All Status</option>
-                        <option value="1">Active</option>
-                        <option value="0">Inactive</option>
-                    </select>
+                <div style="min-width:180px">
+                    <label class="form-label small text-muted" for="batchCoursesFilterMode">Mode of Delivery</label>
+                    <select id="batchCoursesFilterMode" class="form-control">
+                        <option value="">All Modes</option>';
+            foreach ($modes as $mode) {
+                $html .= '<option value="' . e($mode) . '">' . e($mode) . '</option>';
+            }
+            $html .= '</select>
                 </div>
                 <div>
                     <button type="button" class="btn btn-outline-secondary" id="batchCoursesClearFilters">Clear</button>
@@ -327,8 +348,8 @@ trait BatchFieldHelpers
                     <th>Programme</th>
                     <th>Location</th>
                     <th>Duration</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
+                    <th>Level</th>
+                    <th>Mode of Delivery</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -368,25 +389,23 @@ trait BatchFieldHelpers
             $dataCentreId = $course->centre_id ?? '';
             $dataProgrammeId = $course->programme_id ?? '';
             $dataLocation = strtolower(trim((string) $course->location));
-            $dataStartDate = $course->start_date ?? '';
-            $dataEndDate = $course->end_date ?? '';
-            $dataStatus = $course->status ? '1' : '0';
+            $dataLevel = strtolower(trim((string) ($course->programme?->level ?? '')));
+            $dataMode = strtolower(trim((string) ($course->programme?->mode_of_delivery ?? '')));
 
             $html .= '<tr
                 data-centre-id="' . e($dataCentreId) . '"
                 data-programme-id="' . e($dataProgrammeId) . '"
                 data-location="' . e($dataLocation) . '"
-                data-start-date="' . e($dataStartDate) . '"
-                data-end-date="' . e($dataEndDate) . '"
-                data-status="' . e($dataStatus) . '"
+                data-level="' . e($dataLevel) . '"
+                data-mode="' . e($dataMode) . '"
             >
                 <td>' . e($course->centre?->title . ' - ' . $course->programme?->title ?? '-') . '</td>
                 <td>' . e($course->centre?->title ?? '-') . '</td>
                 <td>' . e($course->programme?->title ?? '-') . '</td>
                 <td>' . e($course->location ?? '-') . '</td>
                 <td>' . e($course->duration) . '</td>
-                <td>' . e($course->start_date) . '</td>
-                <td>' . e($course->end_date) . '</td>
+                <td>' . e($course->programme?->level ?? '-') . '</td>
+                <td>' . e($course->programme?->mode_of_delivery ?? '-') . '</td>
                 <td>' . $statusToggle . '</td>
                 <td>
                     <a href="' . $showUrl . '" class="btn btn-sm btn-link">

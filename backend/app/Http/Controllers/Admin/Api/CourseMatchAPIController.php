@@ -222,7 +222,7 @@ class CourseMatchAPIController extends Controller
 
                     return strcasecmp((string) $a->title, (string) $b->title);
                 })
-                ->take(4)
+                ->take(5)
                 ->values();
 
             $centresByProgramme = $this->buildCentresByProgramme($branchCourses);
