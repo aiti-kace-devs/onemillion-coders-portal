@@ -186,12 +186,12 @@ class CourseProgrammeController extends Controller
                         'id' => $programme->id,
                         'title' => $programme->title,
                         'duration' => $course->duration ?? $programme->duration,
-                        'status' => $course->status ?? $programme->status ?? true,
+                        // 'status' => $course->status ?? $programme->status ?? true,
                         'description' => $programme->description,
                         'sub_title' => $programme->sub_title,
                         'level' => $programme->level,
                         'mode_of_delivery' => $programme->mode_of_delivery,
-                        'provider' => $programme->provider,
+                        // 'provider' => $programme->provider,
                         'job_responsible' => $programme->job_responsible,
                         'image' => $programme->image,
                         'category' => $programme->category
@@ -202,13 +202,13 @@ class CourseProgrammeController extends Controller
                             : null,
                         'course_certification' => $programme->courseCertification
                             ? $programme->courseCertification
-                                ->map(fn ($cert) => [
-                                    'title' => $cert->title,
-                                    'description' => $cert->description,
-                                    'type' => $cert->type,
-                                    'status' => $cert->status,
-                                ])
-                                ->values()
+                            ->map(fn($cert) => [
+                                'title' => $cert->title,
+                                'description' => $cert->description,
+                                'type' => $cert->type,
+                                'status' => $cert->status,
+                            ])
+                            ->values()
                             : [],
                         'course_id' => $course->id,
                         'centre_id' => $course->centre_id,
@@ -224,7 +224,7 @@ class CourseProgrammeController extends Controller
             'success' => true,
             'data' => $programmes
         ]);
-        }
+    }
 
 
 
@@ -326,11 +326,11 @@ class CourseProgrammeController extends Controller
     public function programmesByBatch($batchId, Request $request)
     {
         $query = Batch::with([
-                'courses.programme' => function ($q) {
-                    $q->with(['category', 'courseCertification', 'courseModules'])
+            'courses.programme' => function ($q) {
+                $q->with(['category', 'courseCertification', 'courseModules'])
                     ->withCount('courseModules');
-                }
-            ])
+            }
+        ])
             ->whereHas('courses.programme');
 
         // Apply optional filters
@@ -357,9 +357,9 @@ class CourseProgrammeController extends Controller
             'start_date'  => $batch->start_date,
             'end_date'    => $batch->end_date,
             'programmes'  => $batch->courses
-                                ->pluck('programme')
-                                ->unique('id')
-                                ->values(),
+                ->pluck('programme')
+                ->unique('id')
+                ->values(),
         ];
 
         return response()->json([
@@ -492,7 +492,7 @@ class CourseProgrammeController extends Controller
                     'total_courses' => $courses->count(),
                     'total_trained_coders' => $admittedUsersCount,
                     'centres' => $branch->centre
-                        ->map(fn ($centre) => [
+                        ->map(fn($centre) => [
                             'id' => $centre->id,
                             'title' => $centre->title,
                             'gps_location' => $centre->gps_location ?? [],
@@ -619,7 +619,7 @@ class CourseProgrammeController extends Controller
         $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
         $cacheKey = 'districts_by_branch:' . $branch->id . ':' . ($addCentreCount ? 'with_centres' : 'basic');
 
-        $districts = Cache::remember($cacheKey, 600, function () use ($branch, $addCentreCount) {
+        $districts = Cache::flexible($cacheKey, [600], function () use ($branch, $addCentreCount) {
             $districtQuery = District::query()
                 ->where('branch_id', $branch->id)
                 ->orderBy('title');
@@ -738,5 +738,4 @@ class CourseProgrammeController extends Controller
                 ->values(),
         ]);
     }
-
 }
