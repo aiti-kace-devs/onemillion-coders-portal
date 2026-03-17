@@ -35,8 +35,7 @@ const overallProgress = computed(() =>
 );
 
 const tieredTestTaken = computed(() => {
-    const level = user.value?.student_level;
-    return level != null && String(level).trim() !== "";
+    return !!user.value?.assessment_completed;
 });
 </script>
 

@@ -551,14 +551,14 @@ class StudentOperation extends Controller
     {
         $user = Auth::guard('web')->user();
 
-        // if ($user->admission) {
-        //     return redirect()
-        //         ->back()
-        //         ->with([
-        //             'flash' => 'Student already admitted. Unable to change course.',
-        //             'key' => 'error',
-        //         ]);
-        // }
+        if (!$user->userAssessment?->completed) {
+            return redirect()
+                ->route('student.application-status')
+                ->with([
+                    'flash' => 'Please complete the Level Determination Assessment first.',
+                    'key' => 'info',
+                ]);
+        }
 
         $currentCourseId = $user->registered_course;
 
@@ -587,6 +587,15 @@ class StudentOperation extends Controller
         }
 
         $user = Auth::guard('web')->user();
+
+        if (!$user->userAssessment?->completed) {
+            return redirect()
+                ->route('student.application-status')
+                ->with([
+                    'flash' => 'Please complete the Level Determination Assessment first.',
+                    'key' => 'info',
+                ]);
+        }
 
         if ($user->admission) {
             return redirect()

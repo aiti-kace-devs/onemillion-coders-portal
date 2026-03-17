@@ -268,4 +268,9 @@ class User extends Authenticatable
             'message' => 'true',
         ];
     }
+
+    public function userAssessment()
+    {
+        return $this->hasOne(UserAssessment::class);
+    }
 }

@@ -133,7 +133,7 @@ const user = auth?.user || {};
           </SidebarNavLink>
 
           <SidebarNavLink
-            v-if="!user.isAdmitted && !user.shortlist"
+            v-if="!user.isAdmitted && !user.shortlist && user.assessment_completed"
             :href="route('student.change-course')"
             :active="route().current('student.change-course')"
             :label="user.registered_course ? 'Change Course' : 'Choose Course'"

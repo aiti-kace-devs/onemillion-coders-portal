@@ -76,6 +76,7 @@ class HandleInertiaRequests extends Middleware
                             'isAdmitted' => $user?->isAdmitted(),
                             'hasAdmission' => $user?->hasAdmission(),
                             'hasAttendance' => $user?->hasAttendance(),
+                            'assessment_completed' => $user?->userAssessment?->completed ?? false,
                         ]
                     )
                     : null,
