@@ -149,9 +149,26 @@ class CourseProgrammeController extends Controller
     public function programmeWithBatch(Request $request)
     {
         $filter = $request->query('filter');
-        $cacheKey = 'programme_with_batch:' . ($filter ? (string) $filter : 'all');
+        $sort = $request->query('sort');
+        $order = strtolower((string) $request->query('order', 'asc'));
+        $limit = $request->query('limit');
 
-        $programmes = Cache::remember($cacheKey, 600, function () use ($filter) {
+        if (is_string($sort) && str_starts_with($sort, '-')) {
+            $sort = ltrim($sort, '-');
+            $order = 'desc';
+        }
+
+        $limit = is_numeric($limit) ? (int) $limit : null;
+        if ($limit !== null && $limit <= 0) {
+            $limit = null;
+        }
+
+        $cacheKey = 'programme_with_batch:' . ($filter ? (string) $filter : 'all')
+            . ':sort:' . ($sort ? (string) $sort : 'none')
+            . ':order:' . ($order === 'desc' ? 'desc' : 'asc')
+            . ':limit:' . ($limit !== null ? (string) $limit : 'none');
+
+        $programmes = Cache::remember($cacheKey, 600, function () use ($filter, $sort, $order, $limit) {
             $today = Carbon::today();
 
             $batchQuery = Batch::where('completed', false)
@@ -179,7 +196,7 @@ class CourseProgrammeController extends Controller
                 ->with(['programme.category', 'programme.coverImage', 'programme.courseCertification', 'programme.courseModules'])
                 ->get();
 
-            return $courses->unique('programme_id')->map(function ($course) {
+            $items = $courses->unique('programme_id')->map(function ($course) {
                 $programme = $course->programme;
                 if ($programme) {
                     return [
@@ -215,9 +232,31 @@ class CourseProgrammeController extends Controller
                     ];
                 }
                 return null;
-            })->filter()->unique(function ($item) {
-                return $item['centre_id'] . '-' . $item['id'];
-            })->values();
+            })->filter()->values();
+
+            if ($sort) {
+                $allowedSorts = [
+                    'id',
+                    'title',
+                    'duration',
+                    'sub_title',
+                    'level',
+                    'mode_of_delivery',
+                    'course_id',
+                    'centre_id',
+                ];
+
+                if (in_array($sort, $allowedSorts, true)) {
+                    $descending = $order === 'desc';
+                    $items = $items->sortBy($sort, SORT_NATURAL | SORT_FLAG_CASE, $descending)->values();
+                }
+            }
+
+            if ($limit !== null) {
+                $items = $items->take($limit)->values();
+            }
+
+            return $items;
         });
 
         return response()->json([
