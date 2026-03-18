@@ -77,8 +77,13 @@ function requestFullscreen() {
     el.requestFullscreen ||
     el.webkitRequestFullscreen ||
     el.msRequestFullscreen;
-  if (rfs) {
-    rfs.call(el).catch(() => {});
+   if (rfs) {
+    rfs.call(el).catch(() => {
+      // Fallback: ask parent to do it
+      window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
+    });
+  } else {
+    window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
   }
 }
 
@@ -88,7 +93,11 @@ function exitFullscreen() {
     document.webkitExitFullscreen ||
     document.msExitFullscreen;
   if (efs && document.fullscreenElement) {
-    efs.call(document).catch(() => {});
+    efs.call(document).catch(() => {
+      window.parent.postMessage({ type: 'EXIT_FULLSCREEN' }, '*');
+    });
+  } else {
+    window.parent.postMessage({ type: 'EXIT_FULLSCREEN' }, '*');
   }
 }
 
@@ -482,6 +491,7 @@ export default function QuizPage({ params }) {
   useEffect(() => {
     if (assessmentComplete) {
       exitFullscreen();
+      window.parent?.postMessage({ type: 'ASSESSMENT_COMPLETE' }, '*');
     }
   }, [assessmentComplete]);
 
@@ -719,7 +729,14 @@ export default function QuizPage({ params }) {
                     el.requestFullscreen ||
                     el.webkitRequestFullscreen ||
                     el.msRequestFullscreen;
-                  if (rfs) await rfs.call(el);
+                  if (rfs) {
+                    rfs.call(el).catch(() => {
+                      // Fallback: ask parent to do it
+                      window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
+                    });
+                  } else {
+                    window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
+                  }
                 } catch {
                   // Fullscreen denied — quiz continues without fullscreen enforcement
                 }

@@ -5,7 +5,7 @@ import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
 import axios from "axios";
 
 const props = defineProps({
-  user: Object,
+    user: Object,
 });
 
 const assessmentUrl = computed(() => {
@@ -40,7 +40,7 @@ function recordViolation() {
     setTimeout(() => { violationCooldown = false; }, 1000);
 
     showViolation.value = true;
-    
+
     // API call to record the violation in the backend
     const token = usePage().props.quiz_jwt_token;
     if (token) {
@@ -84,8 +84,10 @@ function handleMessage(event) {
         } else if (document.msExitFullscreen) {
             document.msExitFullscreen();
         }
-    } else if (event.data?.type === "REDIRECT" && event.data.url) {
-        window.location.href = event.data.url;
+    } else if (event.data?.type === "ASSESSMENT_COMPLETE") {
+        isComplete.value = true;
+        // go to /student/choose-course
+        router.visit('/student/change-course');
     }
 }
 
@@ -113,35 +115,35 @@ function resumeAssessment() {
 </script>
 
 <template>
-  <Head title="Level Assessment" />
-  <AuthenticatedLayout :fullHeight="true">
-    <template #header>
-      <h2 class="font-semibold text-xl text-gray-800 leading-tight">Level Assessment</h2>
-    </template>
 
-    <div class="h-[calc(100vh-64px)] overflow-hidden relative">
-        <iframe
-            ref="iframeRef"
-            :src="assessmentUrl"
-            class="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-            allowfullscreen
-            @load="handleIframeLoad"
-        ></iframe>
+    <Head title="Level Assessment" />
+    <AuthenticatedLayout :fullHeight="true">
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Level Assessment</h2>
+        </template>
 
-        <!-- Vue Violation Overlay -->
-        <div v-if="showViolation" class="absolute inset-0 bg-black/95 z-[9999] flex flex-col items-center justify-center text-center px-4">
-            <div class="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mb-6">
-                <span class="material-symbols-outlined text-5xl text-red-500">warning</span>
+        <div class="h-[calc(100vh-64px)] overflow-hidden relative">
+            <iframe ref="iframeRef" :src="assessmentUrl" class="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowfullscreen @load="handleIframeLoad"></iframe>
+
+            <!-- Vue Violation Overlay -->
+            <div v-if="showViolation"
+                class="absolute inset-0 bg-black/95 z-[9999] flex flex-col items-center justify-center text-center px-4">
+                <div class="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mb-6">
+                    <span class="material-symbols-outlined text-5xl text-red-500">warning</span>
+                </div>
+                <h2 class="text-3xl font-black text-white mb-4">Violation Detected</h2>
+                <p class="text-white/70 text-lg mb-8 max-w-md">
+                    You exited fullscreen mode or switched tabs during an active assessment. This has been recorded in
+                    our
+                    system.
+                </p>
+                <button @click="resumeAssessment"
+                    class="px-8 py-4 bg-red-600 hover:bg-red-700 transition font-bold text-white rounded-lg shadow-lg">
+                    I Understand, Return to Assessment
+                </button>
             </div>
-            <h2 class="text-3xl font-black text-white mb-4">Violation Detected</h2>
-            <p class="text-white/70 text-lg mb-8 max-w-md">
-                You exited fullscreen mode or switched tabs during an active assessment. This has been recorded in our system.
-            </p>
-            <button @click="resumeAssessment" class="px-8 py-4 bg-red-600 hover:bg-red-700 transition font-bold text-white rounded-lg shadow-lg">
-                I Understand, Return to Assessment
-            </button>
         </div>
-    </div>
-  </AuthenticatedLayout>
+    </AuthenticatedLayout>
 </template>
