@@ -138,9 +138,9 @@ function closeRevokeModal() {
                     This assessment helps us understand your current skills so we can place you in the right course level. Please complete it to move forward.
 
                     <div class="mt-5">
-                      <a :href="`${$page.props.quiz_frontend_url}/quiz/${props.user.userId}`" target="_blank" class="inline-flex items-center px-6 py-2.5 bg-[#f9a825] border border-transparent rounded-xl font-bold text-xs text-gray-900 uppercase tracking-widest hover:bg-[#e09621] transition duration-150 shadow-md shadow-yellow-500/10">
+                      <LinkButton :href="route('student.level-assessment')">
                         Take assessment now
-                      </a>
+                      </LinkButton>
                     </div>
                   </template>
                 </div>

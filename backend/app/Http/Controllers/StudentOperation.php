@@ -92,6 +92,12 @@ class StudentOperation extends Controller
         return Inertia::render('Student/ApplicationStatus', compact('user', 'user_admission', 'user_assessment'));
     }
 
+    public function level_assessment()
+    {
+        $user = Auth::guard('web')->user();
+        return Inertia::render('Student/LevelAssessment', compact('user'));
+    }
+
     //Exam page
     public function exam()
     {

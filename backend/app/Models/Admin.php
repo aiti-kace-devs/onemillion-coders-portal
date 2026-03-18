@@ -7,7 +7,6 @@ namespace App\Models;
 use App\Http\Controllers\Traits\CustomTimestamps;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use App\Notifications\ResetPasswordNotification;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Hash;
@@ -27,7 +26,7 @@ class Admin extends Authenticatable
         return (new \Statamic\Auth\Eloquent\User)->model($this);
     }
     use CrudTrait;
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, CustomTimestamps, HasUuids;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, CustomTimestamps;
     protected $guard = 'admin';
 
     protected $guard_name = 'admin';
