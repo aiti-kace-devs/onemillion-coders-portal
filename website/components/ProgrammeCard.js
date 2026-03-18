@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiClock, FiUsers, FiArrowRight, FiCheckCircle, FiX, FiLoader, FiGlobe } from "react-icons/fi";
+import { FiClock, FiArrowRight, FiCheckCircle, FiX, FiLoader, FiGlobe, FiInfo } from "react-icons/fi";
 import Button from "./Button";
 import { confirmCourse } from "../services/pages";
 
@@ -57,7 +57,7 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
   };
 
   return (
-    <div 
+    <div
       className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-200 cursor-pointer group"
     >
       {/* Image Container */}
@@ -83,7 +83,7 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
         )}
         {/* Category Tag Overlay */}
         <div className="absolute top-4 left-4">
-          <span 
+          <span
             onClick={(e) => {
               e.stopPropagation();
               // Only navigate to category page if we're already on the programmes page
@@ -91,9 +91,8 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
                 router.push(`/programmes/category/${programme.category?.id}`);
               }
             }}
-            className={`px-3 py-1 rounded-full text-xs font-medium border cursor-pointer hover:shadow-md transition-shadow ${
-              categoryColors[programme.category?.title] || "bg-gray-100 text-gray-800 border-gray-200"
-            }`}
+            className={`px-3 py-1 rounded-full text-xs font-medium border cursor-pointer hover:shadow-md transition-shadow ${categoryColors[programme.category?.title] || "bg-gray-100 text-gray-800 border-gray-200"
+              }`}
           >
             {programme.category?.title}
           </span>
@@ -104,7 +103,16 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
       <div className="p-6">
         {/* Title */}
         <h3 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-1">{programme.title}</h3>
-        <p className="text-sm text-gray-600 mb-4 line-clamp-1">{programme.sub_title}</p>
+        <div className="flex items-center justify-between gap-1 mb-2 transition-colors">
+          <div className="text-sm text-gray-600 mb-4 line-clamp-1">{programme.sub_title}</div>
+          {userId && (
+            <a href={`/programmes/${programme.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 mb-2 transition-colors">
+              <span className="text-[10px] sm:text-[11px] font-medium text-green-700">View Details</span>
+              <FiInfo className="w-2.5 h-2.5 text-green-700" />
+            </a>
+          )}
+        </div>
+
 
         {/* Stats */}
         <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
@@ -256,21 +264,19 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
                   <div className="grid grid-cols-2 gap-3 mb-6">
                     <button
                       onClick={() => setNeedsSupport(true)}
-                      className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                        needsSupport === true
-                          ? "bg-gray-900 text-white border-gray-900"
-                          : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                      }`}
+                      className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${needsSupport === true
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                        }`}
                     >
                       Yes, I do
                     </button>
                     <button
                       onClick={() => setNeedsSupport(false)}
-                      className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                        needsSupport === false
-                          ? "bg-gray-900 text-white border-gray-900"
-                          : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                      }`}
+                      className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${needsSupport === false
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                        }`}
                     >
                       No, thanks
                     </button>
@@ -286,11 +292,10 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
                     <button
                       onClick={handleEnrollSubmit}
                       disabled={needsSupport === null || enrollSubmitting}
-                      className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${
-                        needsSupport !== null && !enrollSubmitting
-                          ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      }`}
+                      className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${needsSupport !== null && !enrollSubmitting
+                        ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        }`}
                     >
                       {enrollSubmitting ? (
                         <>
