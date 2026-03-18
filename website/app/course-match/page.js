@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -32,6 +32,7 @@ import { getAllRegions } from "../../services/pages";
 
 export default function CourseMatchPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState("region"); // "region" | "quiz" | "results"
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -47,6 +48,28 @@ export default function CourseMatchPage() {
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Helper to update URL query params without navigation
+  const updateQueryParams = useCallback((params) => {
+    const url = new URL(window.location.href);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        url.searchParams.set(key, value);
+      } else {
+        url.searchParams.delete(key);
+      }
+    });
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
+  // Sync step and region to query params
+  useEffect(() => {
+    if (step === "region") return;
+    updateQueryParams({
+      step,
+      region: selectedRegion?.id || null,
+    });
+  }, [step, selectedRegion, updateQueryParams]);
+
   // Icon mapping for different question tags
   const getQuestionIcon = (tag) => {
     const iconMap = {
@@ -59,6 +82,35 @@ export default function CourseMatchPage() {
     return iconMap[tag] || FiUser;
   };
 
+  // Restore progress from query params
+  const restoreFromParams = async (regions) => {
+    const savedStep = searchParams.get("step");
+    const regionId = searchParams.get("region");
+
+    if (!savedStep || savedStep === "region" || !regionId) return;
+
+    try {
+      const region = regions?.find((r) => String(r.id) === regionId);
+      if (!region) return;
+      setSelectedRegion(region);
+
+      // If user was on quiz step, re-fetch questions
+      if (savedStep === "quiz") {
+        try {
+          const questionsData = await getCourseMatchQuestions("General");
+          setQuestions(questionsData || []);
+        } catch {
+          // If questions fail to load, user stays on region step
+          return;
+        }
+      }
+
+      setStep(savedStep);
+    } catch {
+      // If restore fails, user starts fresh
+    }
+  };
+
   // Fetch regions on component mount
   useEffect(() => {
     const fetchRegions = async () => {
@@ -67,6 +119,8 @@ export default function CourseMatchPage() {
         setError(null);
         const data = await getAllRegions();
         setAllRegions(data);
+        // After regions load, try to restore from query params
+        await restoreFromParams(data);
       } catch (err) {
         console.error("Error fetching regions:", err);
         setError("Failed to load regions. Please try again later.");
@@ -76,7 +130,7 @@ export default function CourseMatchPage() {
     };
 
     fetchRegions();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchQuestions = async () => {
     try {
@@ -171,6 +225,7 @@ export default function CourseMatchPage() {
     setSearchQuery("");
     setQuestions([]);
     setError(null);
+    updateQueryParams({ step: null, region: null });
   };
 
   const activeQuestion = questions[currentQuestion];

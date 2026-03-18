@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiSearch, FiFilter, FiClock, FiX, FiGlobe, FiArrowUp, FiChevronDown, FiSliders } from "react-icons/fi";
+import { FiSearch, FiFilter, FiClock, FiX, FiGlobe, FiArrowUp, FiChevronDown, FiSliders, FiArrowLeft } from "react-icons/fi";
 import { getProgrammesData, getCategoriesData } from "../../services";
 import ProgrammeCard from "../../components/ProgrammeCard";
 import ProgrammeSkeleton from "../../components/ProgrammeSkeleton";
 
 export default function ProgrammesClient({ initialCategory }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get("user_id");
   const centreId = searchParams.get("centre_id");
@@ -172,6 +173,21 @@ export default function ProgrammesClient({ initialCategory }) {
             </motion.div>
           </div>
         </section>
+      )}
+
+      {/* Back button - shown during enrollment flow */}
+      {userId && (
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <button
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <FiArrowLeft className="w-4 h-4" />
+              Back to Course Selection
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Search and Filters - Sticky */}

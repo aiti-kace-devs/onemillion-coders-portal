@@ -218,11 +218,12 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
                   <button
                     onClick={() => {
                       setShowEnrollModal(false);
-                      router.push("/");
+                      setEnrollSuccess(false);
+                      setNeedsSupport(null);
                     }}
                     className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
                   >
-                    Go to Home
+                    Close
                   </button>
                 </div>
               ) : (

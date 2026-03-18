@@ -84,6 +84,76 @@ export default function CoursesPage({ params }) {
   const [enrollSuccess, setEnrollSuccess] = useState(false);
   const [enrolledCourseName, setEnrolledCourseName] = useState("");
 
+  // Helper to update URL query params without navigation
+  const updateQueryParams = useCallback((params) => {
+    const url = new URL(window.location.href);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        url.searchParams.set(key, value);
+      } else {
+        url.searchParams.delete(key);
+      }
+    });
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
+  // Sync step and selections to query params
+  useEffect(() => {
+    if (!userStatus || step <= 1) return;
+    updateQueryParams({
+      step,
+      region: selectedRegion?.id || null,
+      district: selectedDistrict?.id || null,
+      centre: selectedCentre?.id || null,
+    });
+  }, [step, selectedRegion, selectedDistrict, selectedCentre, userStatus, updateQueryParams]);
+
+  // Restore progress from query params
+  const restoreFromParams = async () => {
+    const savedStep = parseInt(searchParams.get("step"));
+    const regionId = searchParams.get("region");
+    const districtId = searchParams.get("district");
+    const centreId = searchParams.get("centre");
+
+    if (!savedStep || savedStep <= 1 || !regionId) return;
+
+    try {
+      // Fetch regions and find the saved one
+      const regions = await getAllRegions(token);
+      setAllRegions(regions);
+      const region = regions?.find((r) => String(r.id) === regionId);
+      if (!region) return;
+      setSelectedRegion(region);
+
+      if (savedStep >= 2) {
+        const districts = await getDistrictsByBranch(region.id, token);
+        setAvailableDistricts(districts);
+
+        if (districtId && savedStep >= 3) {
+          const district = districts?.districts?.find((d) => String(d.id) === districtId);
+          if (!district) { setStep(2); return; }
+          setSelectedDistrict(district);
+
+          const centres = await getCentresByDistrict(district.id, token);
+          setAvailableCenters(centres);
+
+          if (centreId && savedStep >= 4) {
+            const centre = centres?.centres?.find((c) => String(c.id) === centreId);
+            if (!centre) { setStep(3); return; }
+            setSelectedCentre(centre);
+
+            const data = await getCourseMatchQuestions("Choice", token);
+            setQuestions(data || []);
+          }
+        }
+      }
+
+      setStep(savedStep);
+    } catch {
+      // If restore fails, user starts fresh
+    }
+  };
+
   useEffect(() => {
     const verifyUser = async () => {
       try {
@@ -104,12 +174,22 @@ export default function CoursesPage({ params }) {
           if (recData?.success && recData?.matches?.length > 0) {
             setPreviousRecommendations(recData);
           } else {
-            // No previous recommendations — start quiz flow
-            fetchAllRegions();
+            // No previous recommendations — check for saved progress in query params
+            const hasProgress = searchParams.get("step");
+            if (hasProgress) {
+              await restoreFromParams();
+            } else {
+              fetchAllRegions();
+            }
           }
         } catch {
           // If check fails, just start the normal flow
-          fetchAllRegions();
+          const hasProgress = searchParams.get("step");
+          if (hasProgress) {
+            await restoreFromParams();
+          } else {
+            fetchAllRegions();
+          }
         } finally {
           setCheckingRecommendations(false);
         }
@@ -325,6 +405,7 @@ export default function CoursesPage({ params }) {
           ...(centreId && { centre_id: centreId }),
         }, token);
         setEnrollSuccess(true);
+        updateQueryParams({ step: null, region: null, district: null, centre: null });
       } catch (err) {
         const apiErrors = err.response?.data?.errors;
         const apiMessage = err.response?.data?.message;
@@ -351,6 +432,7 @@ export default function CoursesPage({ params }) {
         ...(centreId && { centre_id: centreId }),
       }, token);
       setEnrollSuccess(true);
+      updateQueryParams({ step: null, region: null, district: null, centre: null });
       setEnrollingCourseId(null);
       setEnrollingCentreId(null);
     } catch (err) {
@@ -521,10 +603,15 @@ export default function CoursesPage({ params }) {
                       <span className="font-semibold text-gray-700">{enrolledCourseName}</span>.
                     </p>
                     <button
-                      onClick={() => router.push("/")}
+                      onClick={() => {
+                        setEnrollSuccess(false);
+                        setEnrollingCourseId(null);
+                        setEnrollingCentreId(null);
+                        setNeedsSupport(null);
+                      }}
                       className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
                     >
-                      Go to Home
+                      Close
                     </button>
                   </div>
                 ) : (
@@ -1588,10 +1675,14 @@ export default function CoursesPage({ params }) {
                             <span className="font-semibold text-gray-700">{enrolledCourseName}</span>.
                           </p>
                           <button
-                            onClick={() => router.push("/")}
+                            onClick={() => {
+                              setEnrollSuccess(false);
+                              setEnrollingCourseId(null);
+                              setNeedsSupport(null);
+                            }}
                             className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
                           >
-                            Go to Home
+                            Close
                           </button>
                         </div>
                       ) : (
