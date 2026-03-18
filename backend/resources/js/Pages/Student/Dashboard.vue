@@ -52,7 +52,7 @@ const tieredTestTaken = computed(() => {
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="mb-8">
                     <h2 class="text-4xl font-black text-gray-900 tracking-tighter leading-tight">
-                        Hi, {{ user.name }} <span class="inline-block origin-bottom animate-wave">👋</span>
+                        Hi, {{ user.name }}
                     </h2>
                     <p class="text-gray-500 mt-1 font-medium text-lg">It's great to see you again. Here's what's happening today.</p>
                 </div>
