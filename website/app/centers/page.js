@@ -55,19 +55,21 @@ function SearchableSelect({
             setQuery("");
           }
         }}
-        className={`w-full flex items-center gap-2 pl-10 pr-10 py-3 border rounded-xl text-sm text-left transition-all ${
+        className={`w-full flex items-center gap-2 pl-10 pr-10 py-2.5 rounded-xl text-sm text-left transition-all ${
           disabled
-            ? "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed"
+            ? "bg-gray-100/50 border border-gray-200 text-gray-400 cursor-not-allowed"
+            : selectedOption
+            ? "bg-yellow-400/15 border border-yellow-400/40 text-yellow-800 font-medium"
             : isOpen
-            ? "border-yellow-400 ring-2 ring-yellow-100 bg-white"
-            : "border-gray-300 bg-white hover:border-gray-400"
+            ? "border border-yellow-400 ring-2 ring-yellow-400/20 bg-white"
+            : "bg-gray-50 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 text-gray-600"
         }`}
       >
         {selectedOption ? selectedOption.title : placeholder}
       </button>
-      <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+      <Icon className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${selectedOption && !disabled ? "text-yellow-600" : "text-gray-400"}`} />
       <FiChevronDown
-        className={`absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none transition-transform ${
+        className={`absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5 pointer-events-none transition-transform ${
           isOpen ? "rotate-180" : ""
         }`}
       />
@@ -271,52 +273,105 @@ function CentersPageContent() {
         </div>
       </section>
 
-      {/* Region & District Selection */}
-      <section className="py-8 bg-gradient-to-b from-gray-100 to-gray-50 border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Region Select */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Region
-                </label>
-                <SearchableSelect
-                  options={regions}
-                  value={selectedRegion?.id || ""}
-                  onChange={handleRegionSelect}
-                  placeholder={
-                    loadingRegions ? "Loading regions..." : "Select a region"
-                  }
-                  disabled={loadingRegions}
-                  icon={FiMapPin}
-                />
-              </div>
-
-              {/* District Select */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  District
-                </label>
-                <SearchableSelect
-                  options={districts}
-                  value={selectedDistrict?.id || ""}
-                  onChange={handleDistrictSelect}
-                  placeholder={
-                    !selectedRegion
-                      ? "Select a region first"
-                      : loadingDistricts
-                      ? "Loading districts..."
-                      : districts.length === 0
-                      ? "No districts available"
-                      : "Select a district"
-                  }
-                  disabled={!selectedRegion || loadingDistricts}
-                  icon={FiNavigation}
-                />
-              </div>
+      {/* Region & District Selection - Sticky */}
+      <section className="sticky top-0 z-20 bg-white/85 backdrop-blur-xl border-b border-gray-200/50 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <div className="h-0.5 bg-gradient-to-r from-yellow-400 via-yellow-300 to-transparent"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            {/* Region Select */}
+            <div className="flex-1 min-w-0">
+              <SearchableSelect
+                options={regions}
+                value={selectedRegion?.id || ""}
+                onChange={handleRegionSelect}
+                placeholder={
+                  loadingRegions ? "Loading regions..." : "Select a region"
+                }
+                disabled={loadingRegions}
+                icon={FiMapPin}
+              />
             </div>
+
+            {/* Divider - desktop only */}
+            <div className="hidden sm:block w-px h-6 bg-gray-200 shrink-0"></div>
+
+            {/* District Select */}
+            <div className="flex-1 min-w-0">
+              <SearchableSelect
+                options={districts}
+                value={selectedDistrict?.id || ""}
+                onChange={handleDistrictSelect}
+                placeholder={
+                  !selectedRegion
+                    ? "Select a region first"
+                    : loadingDistricts
+                    ? "Loading districts..."
+                    : districts.length === 0
+                    ? "No districts available"
+                    : "Select a district"
+                }
+                disabled={!selectedRegion || loadingDistricts}
+                icon={FiNavigation}
+              />
+            </div>
+
+            {/* Clear button */}
+            {selectedRegion && (
+              <button
+                onClick={() => {
+                  setSelectedRegion(null);
+                  setSelectedDistrict(null);
+                  setDistricts([]);
+                  setCenters([]);
+                  setSearchQuery("");
+                  setImageErrors({});
+                }}
+                className="hidden sm:block shrink-0 px-2.5 py-1.5 text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors font-medium"
+              >
+                Reset
+              </button>
+            )}
           </div>
+
+          {/* Breadcrumb pills */}
+          {selectedRegion && (
+            <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto scrollbar-hide pb-0.5">
+              <span className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 bg-yellow-50 text-yellow-800 border border-yellow-200/60 rounded-full text-xs font-medium whitespace-nowrap shrink-0">
+                <FiMapPin className="w-3 h-3" />
+                {selectedRegion.title}
+                <button
+                  onClick={() => {
+                    setSelectedRegion(null);
+                    setSelectedDistrict(null);
+                    setDistricts([]);
+                    setCenters([]);
+                    setSearchQuery("");
+                    setImageErrors({});
+                  }}
+                  className="p-0.5 rounded-full hover:bg-yellow-200/50 transition-colors"
+                >
+                  <FiX className="w-3 h-3" />
+                </button>
+              </span>
+              {selectedDistrict && (
+                <span className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 bg-blue-50 text-blue-700 border border-blue-200/60 rounded-full text-xs font-medium whitespace-nowrap shrink-0">
+                  <FiNavigation className="w-3 h-3" />
+                  {selectedDistrict.title}
+                  <button
+                    onClick={() => {
+                      setSelectedDistrict(null);
+                      setCenters([]);
+                      setSearchQuery("");
+                      setImageErrors({});
+                    }}
+                    className="p-0.5 rounded-full hover:bg-blue-200/50 transition-colors"
+                  >
+                    <FiX className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -410,26 +465,30 @@ function CentersPageContent() {
           >
             {/* Header bar */}
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
-                {filteredCenters.length}{" "}
-                {filteredCenters.length === 1 ? "Center" : "Centers"} found
-              </h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold text-gray-900">Centers</h2>
+                <span className="px-2.5 py-0.5 bg-gray-50 rounded-full border border-gray-100 text-sm text-gray-500">
+                  <span className="font-semibold text-gray-900">{filteredCenters.length}</span>
+                  <span className="text-gray-400 mx-1">/</span>
+                  {centers.length}
+                </span>
+              </div>
 
               <div className="relative">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search centers..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-8 py-2.5 text-sm rounded-xl border border-gray-200 bg-white focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 transition-all w-52"
+                  className="pl-10 pr-9 py-2.5 text-sm rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-400 focus:bg-white transition-all placeholder:text-gray-400 w-52"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full bg-gray-200 text-gray-500 hover:bg-gray-300 hover:text-gray-700 transition-colors"
                   >
-                    <FiX className="w-3.5 h-3.5" />
+                    <FiX className="w-3 h-3" />
                   </button>
                 )}
               </div>
