@@ -329,6 +329,21 @@ export const getCentresByDistrict = async (districtId, token) => {
 };
 
 /**
+ * Fetch a single centre by ID
+ * @param {string|number} centreId - Centre ID
+ * @returns {Promise<Object>} - Centre data
+ */
+export const getCentreById = async (centreId) => {
+  try {
+    const response = await apiRequest(`/centres-by-id/${centreId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching centre ${centreId}:`, error);
+    throw error;
+  }
+};
+
+/**
  * Confirm course enrollment for a user
  * @param {{ userId: string, course_id: number, support: boolean }} data
  * @returns {Promise<Object>} - Confirmation response

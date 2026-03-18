@@ -219,11 +219,15 @@ function RegisterForm() {
       checkEmailAvailabilityDebounced(value);
     }
 
+    // Clear field-level error and top-level error banner when user makes changes
     if (formErrors[fieldName]) {
       setFormErrors((prev) => ({
         ...prev,
         [fieldName]: null,
       }));
+    }
+    if (error) {
+      setError(null);
     }
   };
 
@@ -623,7 +627,7 @@ function RegisterForm() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="bg-white border-b border-gray-200 sticky top-[76px] sm:top-[84px] z-10">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
@@ -673,7 +677,7 @@ function RegisterForm() {
                         )}
                       </div>
                       <span
-                        className={`text-[10px] sm:text-xs font-medium transition-colors ${
+                        className={`hidden sm:inline text-xs font-medium transition-colors ${
                           index <= currentGroupIndex ? "text-gray-700" : "text-gray-400"
                         }`}
                       >
@@ -842,7 +846,12 @@ function RegisterForm() {
                                 email={formData[field.field_name] || ""}
                                 phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
                                 formUuid={formSchema.uuid}
-                                onVerified={setOtpVerified}
+                                onVerified={(verified) => {
+                                  setOtpVerified(verified);
+                                  if (verified && formErrors.otp) {
+                                    setFormErrors((prev) => ({ ...prev, otp: null }));
+                                  }
+                                }}
                                 emailStatus={emailAvailability.status}
                               />
                             )}
@@ -885,7 +894,15 @@ function RegisterForm() {
                               <input
                                 type="checkbox"
                                 checked={consentAccepted}
-                                onChange={(e) => setConsentAccepted(e.target.checked)}
+                                onChange={(e) => {
+                                setConsentAccepted(e.target.checked);
+                                if (formErrors.consent) {
+                                  setFormErrors((prev) => ({ ...prev, consent: null }));
+                                }
+                                if (error) {
+                                  setError(null);
+                                }
+                              }}
                                 className="mt-0.5 w-[18px] h-[18px] rounded border-gray-300 text-yellow-500 focus:ring-yellow-500 group-hover:border-yellow-400 transition-colors"
                               />
                               <span className="text-sm text-gray-700">

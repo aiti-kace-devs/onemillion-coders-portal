@@ -270,6 +270,11 @@ export default function CourseDetailsPage() {
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
+                      ref={(el) => {
+                        if (el && activeTab === tab.id) {
+                          el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                        }
+                      }}
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center space-x-1.5 md:space-x-2 py-3 md:py-4 px-3 md:px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 whitespace-nowrap ${
                         activeTab === tab.id
@@ -290,7 +295,7 @@ export default function CourseDetailsPage() {
             </div>
             
             {/* Mobile: Show current tab name */}
-            <div className="block md:hidden mt-4 px-4">
+            {/* <div className="block md:hidden mt-4 px-4">
               <div className="flex items-center space-x-2 text-sm font-medium text-gray-900">
                 {tabs.find(tab => tab.id === activeTab)?.icon && (
                   React.createElement(tabs.find(tab => tab.id === activeTab).icon, {
@@ -299,7 +304,7 @@ export default function CourseDetailsPage() {
                 )}
                 <span>{tabs.find(tab => tab.id === activeTab)?.label}</span>
               </div>
-            </div>
+            </div> */}
           </motion.div>
 
           {/* Tab Content */}
