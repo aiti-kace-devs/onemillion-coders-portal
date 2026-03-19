@@ -19,7 +19,7 @@ const assessmentUrl = computed(() => {
 const iframeRef = ref(null);
 const hasStarted = ref(false);
 const isComplete = ref(false);
-const showViolation = ref(false);
+
 let violationCooldown = false;
 
 onMounted(() => {
@@ -34,35 +34,25 @@ onUnmounted(() => {
     document.removeEventListener("visibilitychange", handleVisibility);
 });
 
-function recordViolation() {
-    if (violationCooldown) return;
-    violationCooldown = true;
-    setTimeout(() => { violationCooldown = false; }, 1000);
 
-    showViolation.value = true;
-
-    // API call to record the violation in the backend
-    const token = usePage().props.quiz_jwt_token;
-    if (token) {
-        axios.post('/api/tiered-assessment/record-violation', {}, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).catch(err => console.error("Error recording violation:", err));
-    }
-}
 
 function handleParentFullscreen() {
     if (document.fullscreenElement === iframeRef.value) {
         hasStarted.value = true;
     } else if (!document.fullscreenElement && hasStarted.value && !isComplete.value) {
-        // Exited fullscreen!
-        recordViolation();
+        // Exited fullscreen! Tell React to trigger a violation
+        if (iframeRef.value?.contentWindow) {
+            iframeRef.value.contentWindow.postMessage({ type: 'VIOLATION_TRIGGERED' }, '*');
+        }
     }
 }
 
 function handleVisibility() {
     if (document.hidden && hasStarted.value && !isComplete.value) {
-        // Tab switch!
-        recordViolation();
+        // Tab switch! Tell React to trigger a violation
+        if (iframeRef.value?.contentWindow) {
+            iframeRef.value.contentWindow.postMessage({ type: 'VIOLATION_TRIGGERED' }, '*');
+        }
     }
 }
 
@@ -86,7 +76,8 @@ function handleMessage(event) {
         }
     } else if (event.data?.type === "ASSESSMENT_COMPLETE") {
         isComplete.value = true;
-        // go to /student/choose-course
+    } else if (event.data?.type === "LARAVEL_IFRAME_DETECTED") {
+        isComplete.value = true;
         router.visit('/student/change-course');
     }
 }
@@ -105,13 +96,6 @@ function handleIframeLoad() {
         // Ignore CORS errors
     }
 }
-
-function resumeAssessment() {
-    showViolation.value = false;
-    if (iframeRef.value && iframeRef.value.requestFullscreen) {
-        iframeRef.value.requestFullscreen().catch(err => console.warn(err));
-    }
-}
 </script>
 
 <template>
@@ -127,23 +111,6 @@ function resumeAssessment() {
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowfullscreen @load="handleIframeLoad"></iframe>
 
-            <!-- Vue Violation Overlay -->
-            <div v-if="showViolation"
-                class="absolute inset-0 bg-black/95 z-[9999] flex flex-col items-center justify-center text-center px-4">
-                <div class="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mb-6">
-                    <span class="material-symbols-outlined text-5xl text-red-500">warning</span>
-                </div>
-                <h2 class="text-3xl font-black text-white mb-4">Violation Detected</h2>
-                <p class="text-white/70 text-lg mb-8 max-w-md">
-                    You exited fullscreen mode or switched tabs during an active assessment. This has been recorded in
-                    our
-                    system.
-                </p>
-                <button @click="resumeAssessment"
-                    class="px-8 py-4 bg-red-600 hover:bg-red-700 transition font-bold text-white rounded-lg shadow-lg">
-                    I Understand, Return to Assessment
-                </button>
-            </div>
         </div>
     </AuthenticatedLayout>
 </template>

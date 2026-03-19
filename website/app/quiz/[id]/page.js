@@ -299,6 +299,10 @@ export default function QuizPage({ params }) {
             [q.level || "beginner"]: q.total_level_questions,
           }));
         }
+        if (typeof response?.violation_count === 'number') {
+          violationsRef.current = response.violation_count;
+          setViolations(response.violation_count);
+        }
         return true;
       } else if (
         response?.status === "completed" ||
@@ -469,11 +473,22 @@ export default function QuizPage({ params }) {
       }
     };
 
+    const handleViolationMessage = (e) => {
+      if (
+        e.data?.type === "VIOLATION_TRIGGERED" &&
+        startedRef.current &&
+        !assessmentCompleteRef.current
+      ) {
+        addViolation();
+      }
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("message", handleViolationMessage);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -484,6 +499,7 @@ export default function QuizPage({ params }) {
       );
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("message", handleViolationMessage);
     };
   }, [started, assessmentComplete, id, token]);
 
