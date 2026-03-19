@@ -12,7 +12,7 @@
         // Prevent clickjacking and double-sidebars automatically: 
         // Break out of iframe if loaded inside one.
         if (window.self !== window.top) {
-            window.top.location.replace(window.location.href);
+            window.top.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
         }
     </script>
     <title inertia>{{ config('app.name', 'Laravel') }}</title>

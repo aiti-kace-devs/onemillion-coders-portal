@@ -1159,9 +1159,10 @@ class StudentOperation extends Controller
                 'options' => $question->options,
                 'level' => $level,
                 'progress' => $assessment->questions_answered + 1,
-                'total_level_questions' => config(ASSESSMENT_MAX_QUESTIONS, 10),
+                'total_level_questions' => config('ASSESSMENT_MAX_QUESTIONS', 10),
                 'time_remaining_seconds' => $timeRemainingSeconds
-            ]
+            ],
+            'violation_count' => $assessment->violation_count,
         ]);
     }
 
