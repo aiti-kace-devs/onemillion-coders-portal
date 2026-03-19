@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import SplashScreen from "./SplashScreen";
+// import ConsoleBranding from "./ConsoleBranding";
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 
 export default function ClientWrapper({ children }) {
@@ -55,6 +56,7 @@ export default function ClientWrapper({ children }) {
       appendTo: 'head',
       nonce: undefined,
     }}>
+      {/* <ConsoleBranding /> */}
       {showSplash && <SplashScreen onDismiss={handleSplashDismiss} />}
       {children}
     </GoogleReCaptchaProvider>

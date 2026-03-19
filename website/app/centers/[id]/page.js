@@ -16,13 +16,21 @@ import {
   FiChevronRight,
   FiMaximize2,
 } from "react-icons/fi";
-import { getCentresByDistrict } from "../../../services/pages";
+import {
+  MdAccessible,
+  MdRampRight,
+  MdElevator,
+  MdWc,
+  MdHearing,
+  MdVisibility,
+  MdSchool,
+} from "react-icons/md";
+import { getCentreById } from "../../../services/pages";
 
 export default function CenterDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const centerId = Number(params.id);
-  const districtId = searchParams.get("district_id");
   const regionName = searchParams.get("region") || "";
   const districtName = searchParams.get("district") || "";
 
@@ -37,14 +45,11 @@ export default function CenterDetailPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        if (districtId) {
-          const data = await getCentresByDistrict(districtId);
-          const centres = data?.centres || [];
-          const found = centres.find((c) => c.id === centerId);
-          if (found) setCenter(found);
-          else setError("Center not found.");
+        const data = await getCentreById(centerId);
+        if (data) {
+          setCenter(data);
         } else {
-          setError("Missing district information.");
+          setError("Center not found.");
         }
       } catch (err) {
         console.error("Error fetching center:", err);
@@ -54,7 +59,7 @@ export default function CenterDetailPage() {
       }
     };
     fetchData();
-  }, [centerId, districtId]);
+  }, [centerId]);
 
   const images = center
     ? [
@@ -93,29 +98,49 @@ export default function CenterDetailPage() {
         {
           label: "Wheelchair accessible",
           value: center.wheelchair_accessible,
+          icon: MdAccessible,
         },
-        { label: "Access ramp", value: center.has_access_ramp },
-        { label: "Accessible toilet", value: center.has_accessible_toilet },
-        { label: "Elevator", value: center.has_elevator },
+        {
+          label: "Access ramp",
+          value: center.has_access_ramp,
+          icon: MdRampRight,
+        },
+        {
+          label: "Accessible toilet",
+          value: center.has_accessible_toilet,
+          icon: MdWc,
+        },
+        {
+          label: "Elevator",
+          value: center.has_elevator,
+          icon: MdElevator,
+        },
         {
           label: "Hearing impaired support",
           value: center.supports_hearing_impaired,
+          icon: MdHearing,
         },
         {
           label: "Visually impaired support",
           value: center.supports_visually_impaired,
+          icon: MdVisibility,
         },
         {
           label: "Staff trained for PWD",
           value: center.staff_trained_for_pwd,
+          icon: MdSchool,
         },
       ]
     : [];
 
+  const gpsInfo = center?.gps_location?.[0];
+  const displayDistrict = gpsInfo?.District || districtName;
+  const displayRegion = regionName;
+
   const directionsUrl = center
-    ? center.gps_address
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(center.gps_address)}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(center.title + ", " + districtName + ", " + regionName + ", Ghana")}`
+    ? gpsInfo?.Latitude && gpsInfo?.Longitude
+      ? `https://www.google.com/maps/search/?api=1&query=${gpsInfo.Latitude},${gpsInfo.Longitude}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(center.title + ", " + displayDistrict + ", " + displayRegion + ", Ghana")}`
     : "#";
 
   if (loading) {
@@ -334,35 +359,51 @@ export default function CenterDetailPage() {
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {accessibilityFeatures.map((feature) => (
-                    <div
-                      key={feature.label}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                        feature.value
-                          ? "bg-green-50 border border-green-100"
-                          : "bg-gray-50 border border-gray-100"
-                      }`}
-                    >
-                      {feature.value ? (
-                        <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                          <FiCheck className="w-3 h-3 text-green-600" />
-                        </div>
-                      ) : (
-                        <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                          <FiX className="w-3 h-3 text-gray-400" />
-                        </div>
-                      )}
-                      <span
-                        className={`text-sm ${
+                  {accessibilityFeatures.map((feature) => {
+                    const Icon = feature.icon;
+                    return (
+                      <div
+                        key={feature.label}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                           feature.value
-                            ? "text-green-700 font-medium"
-                            : "text-gray-400"
+                            ? "bg-green-50 border border-green-100"
+                            : "bg-gray-50 border border-gray-100"
                         }`}
                       >
-                        {feature.label}
-                      </span>
-                    </div>
-                  ))}
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            feature.value
+                              ? "bg-green-100"
+                              : "bg-gray-100"
+                          }`}
+                        >
+                          <Icon
+                            className={`w-4.5 h-4.5 ${
+                              feature.value
+                                ? "text-green-600"
+                                : "text-gray-400"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span
+                            className={`text-sm ${
+                              feature.value
+                                ? "text-green-700 font-medium"
+                                : "text-gray-400"
+                            }`}
+                          >
+                            {feature.label}
+                          </span>
+                        </div>
+                        {feature.value ? (
+                          <FiCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        ) : (
+                          <FiX className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {center.pwd_notes && (
@@ -402,9 +443,9 @@ export default function CenterDetailPage() {
                         District
                       </p>
                       <p className="text-sm text-gray-700 font-medium">
-                        {districtName}
-                        {districtName && regionName && ", "}
-                        {regionName}
+                        {displayDistrict}
+                        {displayDistrict && displayRegion && ", "}
+                        {displayRegion}
                       </p>
                     </div>
                   </div>

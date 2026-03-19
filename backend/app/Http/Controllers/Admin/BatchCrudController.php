@@ -287,7 +287,6 @@ class BatchCrudController extends CrudController
         DB::beginTransaction();
 
         try {
-            DB::table('course_batches')->where('batch_id', $id)->update(['batch_id' => null]);
             DB::table('user_admission')->where('batch_id', $id)->update(['batch_id' => null]);
 
             $result = $this->crud->delete($id);

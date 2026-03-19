@@ -21,6 +21,7 @@ import {
   FiSearch,
   FiX,
   FiGlobe,
+  FiInfo,
 } from "react-icons/fi";
 import {
   getAllRegions,
@@ -35,7 +36,6 @@ import {
   checkUserRecommendedCourses,
 } from "../../../services/api";
 import Button from "../../../components/Button";
-import { getCourseImage } from "../../../utils/courseImages";
 
 export default function CoursesPage({ params }) {
   const { id } = React.use(params);
@@ -51,6 +51,7 @@ export default function CoursesPage({ params }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [imageErrors, setImageErrors] = useState({});
 
   // Location state
   const [allRegions, setAllRegions] = useState(null);
@@ -84,6 +85,76 @@ export default function CoursesPage({ params }) {
   const [enrollSuccess, setEnrollSuccess] = useState(false);
   const [enrolledCourseName, setEnrolledCourseName] = useState("");
 
+  // Helper to update URL query params without navigation
+  const updateQueryParams = useCallback((params) => {
+    const url = new URL(window.location.href);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        url.searchParams.set(key, value);
+      } else {
+        url.searchParams.delete(key);
+      }
+    });
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
+  // Sync step and selections to query params
+  useEffect(() => {
+    if (!userStatus || step <= 1) return;
+    updateQueryParams({
+      step,
+      region: selectedRegion?.id || null,
+      district: selectedDistrict?.id || null,
+      centre: selectedCentre?.id || null,
+    });
+  }, [step, selectedRegion, selectedDistrict, selectedCentre, userStatus, updateQueryParams]);
+
+  // Restore progress from query params
+  const restoreFromParams = async () => {
+    const savedStep = parseInt(searchParams.get("step"));
+    const regionId = searchParams.get("region");
+    const districtId = searchParams.get("district");
+    const centreId = searchParams.get("centre");
+
+    if (!savedStep || savedStep <= 1 || !regionId) return;
+
+    try {
+      // Fetch regions and find the saved one
+      const regions = await getAllRegions(token);
+      setAllRegions(regions);
+      const region = regions?.find((r) => String(r.id) === regionId);
+      if (!region) return;
+      setSelectedRegion(region);
+
+      if (savedStep >= 2) {
+        const districts = await getDistrictsByBranch(region.id, token);
+        setAvailableDistricts(districts);
+
+        if (districtId && savedStep >= 3) {
+          const district = districts?.districts?.find((d) => String(d.id) === districtId);
+          if (!district) { setStep(2); return; }
+          setSelectedDistrict(district);
+
+          const centres = await getCentresByDistrict(district.id, token);
+          setAvailableCenters(centres);
+
+          if (centreId && savedStep >= 4) {
+            const centre = centres?.centres?.find((c) => String(c.id) === centreId);
+            if (!centre) { setStep(3); return; }
+            setSelectedCentre(centre);
+
+            const data = await getCourseMatchQuestions("Choice", token);
+            setQuestions(data || []);
+          }
+        }
+      }
+
+      setStep(savedStep);
+    } catch {
+      // If restore fails, user starts fresh
+    }
+  };
+
   useEffect(() => {
     const verifyUser = async () => {
       try {
@@ -104,12 +175,22 @@ export default function CoursesPage({ params }) {
           if (recData?.success && recData?.matches?.length > 0) {
             setPreviousRecommendations(recData);
           } else {
-            // No previous recommendations — start quiz flow
-            fetchAllRegions();
+            // No previous recommendations — check for saved progress in query params
+            const hasProgress = searchParams.get("step");
+            if (hasProgress) {
+              await restoreFromParams();
+            } else {
+              fetchAllRegions();
+            }
           }
         } catch {
           // If check fails, just start the normal flow
-          fetchAllRegions();
+          const hasProgress = searchParams.get("step");
+          if (hasProgress) {
+            await restoreFromParams();
+          } else {
+            fetchAllRegions();
+          }
         } finally {
           setCheckingRecommendations(false);
         }
@@ -126,7 +207,7 @@ export default function CoursesPage({ params }) {
       }
     };
     verifyUser();
-  }, [id, token]);
+  }, [id, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAllRegions = async () => {
     try {
@@ -325,6 +406,7 @@ export default function CoursesPage({ params }) {
           ...(centreId && { centre_id: centreId }),
         }, token);
         setEnrollSuccess(true);
+        updateQueryParams({ step: null, region: null, district: null, centre: null });
       } catch (err) {
         const apiErrors = err.response?.data?.errors;
         const apiMessage = err.response?.data?.message;
@@ -351,6 +433,7 @@ export default function CoursesPage({ params }) {
         ...(centreId && { centre_id: centreId }),
       }, token);
       setEnrollSuccess(true);
+      updateQueryParams({ step: null, region: null, district: null, centre: null });
       setEnrollingCourseId(null);
       setEnrollingCentreId(null);
     } catch (err) {
@@ -521,10 +604,15 @@ export default function CoursesPage({ params }) {
                       <span className="font-semibold text-gray-700">{enrolledCourseName}</span>.
                     </p>
                     <button
-                      onClick={() => router.push("/")}
+                      onClick={() => {
+                        setEnrollSuccess(false);
+                        setEnrollingCourseId(null);
+                        setEnrollingCentreId(null);
+                        setNeedsSupport(null);
+                      }}
                       className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
                     >
-                      Go to Home
+                      Close
                     </button>
                   </div>
                 ) : (
@@ -561,21 +649,19 @@ export default function CoursesPage({ params }) {
                     <div className="grid grid-cols-2 gap-3 mb-6">
                       <button
                         onClick={() => setNeedsSupport(true)}
-                        className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                          needsSupport === true
-                            ? "bg-gray-900 text-white border-gray-900"
-                            : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                        }`}
+                        className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${needsSupport === true
+                          ? "bg-gray-900 text-white border-gray-900"
+                          : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                          }`}
                       >
                         Yes, I do
                       </button>
                       <button
                         onClick={() => setNeedsSupport(false)}
-                        className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                          needsSupport === false
-                            ? "bg-gray-900 text-white border-gray-900"
-                            : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                        }`}
+                        className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${needsSupport === false
+                          ? "bg-gray-900 text-white border-gray-900"
+                          : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                          }`}
                       >
                         No, thanks
                       </button>
@@ -595,11 +681,10 @@ export default function CoursesPage({ params }) {
                       <button
                         onClick={handleEnrollSubmit}
                         disabled={needsSupport === null || enrollSubmitting}
-                        className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${
-                          needsSupport !== null && !enrollSubmitting
-                            ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
-                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        }`}
+                        className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${needsSupport !== null && !enrollSubmitting
+                          ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          }`}
                       >
                         {enrollSubmitting ? (
                           <>
@@ -649,7 +734,7 @@ export default function CoursesPage({ params }) {
               <FiCheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
             </div>
             <h2 className="text-base sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
-              {previousRecommendations.title }
+              {previousRecommendations.title}
             </h2>
             <p className="text-gray-500 text-xs sm:text-base max-w-lg mx-auto">
               {previousRecommendations.description || "Based on your previous preferences, here are recommended courses that best align with your goals"}
@@ -666,24 +751,36 @@ export default function CoursesPage({ params }) {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
               >
-                <div className="relative h-28 sm:h-32">
-                  <Image
-                    src={getCourseImage(course.id)}
-                    alt={course.title}
-                    fill
-                    className="object-cover"
-                  />
+                <div className="relative h-28 sm:h-32 bg-gray-100">
+                  {course.image && !imageErrors[course.id] ? (
+                    <Image
+                      src={course.image}
+                      alt={course.title}
+                      fill
+                      className="object-cover"
+                      onError={() => setImageErrors((prev) => ({ ...prev, [course.id]: true }))}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                      <Image
+                        src="/images/one-million-coders-logo.png"
+                        alt="One Million Coders"
+                        width={80}
+                        height={27}
+                        className="opacity-15"
+                      />
+                    </div>
+                  )}
                   <div className="absolute top-1.5 left-1.5 bg-gray-900 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[9px] sm:text-[11px] font-bold">
                     {course.rank || `#${index + 1}`}
                   </div>
                   <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
                     {course.match_percentage && (
                       <span
-                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${
-                          parseInt(course.match_percentage) >= 70
-                            ? "bg-green-50/90 text-green-700"
-                            : "bg-yellow-50/90 text-yellow-700"
-                        }`}
+                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${parseInt(course.match_percentage.split("%")[0]) >= 70
+                          ? "bg-green-50/90 text-green-700"
+                          : "bg-yellow-50/90 text-yellow-700"
+                          }`}
                       >
                         <FiStar className="w-2.5 h-2.5" />
                         {course.match_percentage}
@@ -702,9 +799,15 @@ export default function CoursesPage({ params }) {
                     {course.title}
                   </h3>
                   {course.sub_title && (
-                    <p className="text-[11px] sm:text-xs text-gray-500 mb-2 line-clamp-1">
-                      {course.sub_title}
-                    </p>
+                    <div className="flex items-center justify-between gap-1 mb-2 transition-colors">
+                      <div className="text-sm text-gray-600 line-clamp-1">{course.sub_title}</div>
+                      {userStatus && (
+                        <a href={`/programmes/${course.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 mb-2 transition-colors">
+                          <span className="text-[10px] sm:text-[11px] font-medium text-green-700">View Details</span>
+                          <FiInfo className="w-2.5 h-2.5 text-green-700" />
+                        </a>
+                      )}
+                    </div>
                   )}
                   {course.mode_of_delivery && (
                     <div className="flex items-center gap-1 mb-2">
@@ -787,13 +890,12 @@ export default function CoursesPage({ params }) {
                     className="flex items-center gap-1 sm:gap-2 group flex-shrink-0"
                   >
                     <div
-                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${
-                        step > num || (num === 4 && step === 3 && selectedCentre && questions.length > 0)
-                          ? "bg-green-500 text-white cursor-pointer group-hover:bg-green-600"
-                          : step === num
+                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${step > num || (num === 4 && step === 3 && selectedCentre && questions.length > 0)
+                        ? "bg-green-500 text-white cursor-pointer group-hover:bg-green-600"
+                        : step === num
                           ? "bg-yellow-400 text-gray-900 ring-2 sm:ring-4 ring-yellow-100"
                           : "bg-gray-200 text-gray-400"
-                      }`}
+                        }`}
                     >
                       {step > num || (num === 4 && step === 3 && selectedCentre && questions.length > 0) ? (
                         <FiCheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -802,18 +904,16 @@ export default function CoursesPage({ params }) {
                       )}
                     </div>
                     <span
-                      className={`text-[10px] sm:text-xs font-medium transition-colors ${
-                        step >= num ? "text-gray-700" : "text-gray-400"
-                      }`}
+                      className={`text-[10px] sm:text-xs font-medium transition-colors ${step >= num ? "text-gray-700" : "text-gray-400"
+                        }`}
                     >
                       {stepLabels[num - 1]}
                     </span>
                   </button>
                   {num < 4 && (
                     <div
-                      className={`flex-1 h-0.5 rounded-full mx-1.5 sm:mx-3 transition-all duration-500 ${
-                        step > num ? "bg-green-400" : "bg-gray-200"
-                      }`}
+                      className={`flex-1 h-0.5 rounded-full mx-1.5 sm:mx-3 transition-all duration-500 ${step > num ? "bg-green-400" : "bg-gray-200"
+                        }`}
                     />
                   )}
                 </React.Fragment>
@@ -945,29 +1045,29 @@ export default function CoursesPage({ params }) {
                         region.title.toLowerCase().includes(searchQuery.toLowerCase())
                       )
                       .map((region, index) => (
-                    <motion.button
-                      key={region.id}
-                      onClick={() => handleRegionSelect(region)}
-                      className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
-                    >
-                      <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
-                        {region.title}
-                      </h3>
-                    </motion.button>
-                  ))}
-                  {allRegions.filter((region) =>
-                    region.title.toLowerCase().includes(searchQuery.toLowerCase())
-                  ).length === 0 && (
-                    <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
-                      <p className="text-gray-500 text-xs sm:text-sm">
-                        No regions match &ldquo;{searchQuery}&rdquo;
-                      </p>
-                    </div>
-                  )}
-                </div>
+                        <motion.button
+                          key={region.id}
+                          onClick={() => handleRegionSelect(region)}
+                          className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
+                        >
+                          <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
+                            {region.title}
+                          </h3>
+                        </motion.button>
+                      ))}
+                    {allRegions.filter((region) =>
+                      region.title.toLowerCase().includes(searchQuery.toLowerCase())
+                    ).length === 0 && (
+                        <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
+                          <p className="text-gray-500 text-xs sm:text-sm">
+                            No regions match &ldquo;{searchQuery}&rdquo;
+                          </p>
+                        </div>
+                      )}
+                  </div>
                 </>
               ) : (
                 !loading && (
@@ -1050,28 +1150,28 @@ export default function CoursesPage({ params }) {
                         district.title.toLowerCase().includes(searchQuery.toLowerCase())
                       )
                       .map((district, index) => (
-                      <motion.button
-                        key={district.id}
-                        onClick={() => handleDistrictSelect(district)}
-                        className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
-                      >
-                        <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
-                          {district.title}
-                        </h3>
-                      </motion.button>
-                    ))}
+                        <motion.button
+                          key={district.id}
+                          onClick={() => handleDistrictSelect(district)}
+                          className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
+                        >
+                          <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
+                            {district.title}
+                          </h3>
+                        </motion.button>
+                      ))}
                     {availableDistricts.districts.filter((district) =>
                       district.title.toLowerCase().includes(searchQuery.toLowerCase())
                     ).length === 0 && (
-                      <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
-                        <p className="text-gray-500 text-xs sm:text-sm">
-                          No districts match &ldquo;{searchQuery}&rdquo;
-                        </p>
-                      </div>
-                    )}
+                        <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
+                          <p className="text-gray-500 text-xs sm:text-sm">
+                            No districts match &ldquo;{searchQuery}&rdquo;
+                          </p>
+                        </div>
+                      )}
                   </div>
                 </>
               ) : (
@@ -1156,11 +1256,10 @@ export default function CoursesPage({ params }) {
                     <div className="mb-3 sm:mb-4">
                       <button
                         onClick={() => setFilterPwdFriendly(!filterPwdFriendly)}
-                        className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-sm font-medium border transition-all duration-200 ${
-                          filterPwdFriendly
-                            ? "bg-purple-50 border-purple-300 text-purple-700"
-                            : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
-                        }`}
+                        className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-sm font-medium border transition-all duration-200 ${filterPwdFriendly
+                          ? "bg-purple-50 border-purple-300 text-purple-700"
+                          : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                          }`}
                       >
                         <span>♿</span>
                         Accessibility friendly
@@ -1353,9 +1452,8 @@ export default function CoursesPage({ params }) {
                       <div
                         className="bg-yellow-400 h-1.5 rounded-full transition-all duration-500 ease-out"
                         style={{
-                          width: `${
-                            ((currentQuestion + 1) / questions.length) * 100
-                          }%`,
+                          width: `${((currentQuestion + 1) / questions.length) * 100
+                            }%`,
                         }}
                       />
                     </div>
@@ -1403,67 +1501,63 @@ export default function CoursesPage({ params }) {
                               ? (answers[activeQuestion.id] || []).includes(option.id)
                               : answers[activeQuestion.id] === option.id;
                             return (
-                            <motion.button
-                              key={option.id}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ duration: 0.15, delay: Math.min(index * 0.03, 0.12) }}
-                              onClick={() =>
-                                handleAnswer(activeQuestion.id, option.id)
-                              }
-                              className={`relative p-4 sm:p-6 rounded-xl text-left transition-all duration-200 border-2 ${
-                                isSelected
+                              <motion.button
+                                key={option.id}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.15, delay: Math.min(index * 0.03, 0.12) }}
+                                onClick={() =>
+                                  handleAnswer(activeQuestion.id, option.id)
+                                }
+                                className={`relative p-4 sm:p-6 rounded-xl text-left transition-all duration-200 border-2 ${isSelected
                                   ? "bg-gray-900 text-white border-gray-900"
                                   : "bg-white border-gray-200 hover:border-yellow-400 active:scale-[0.98]"
-                              }`}
-                            >
-                              <div className="flex items-start gap-3">
-                                {/* Checkbox / Radio indicator */}
-                                <div className="flex-shrink-0 mt-0.5">
-                                  {activeQuestion.is_multiple_select ? (
-                                    <div
-                                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
-                                        isSelected
+                                  }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  {/* Checkbox / Radio indicator */}
+                                  <div className="flex-shrink-0 mt-0.5">
+                                    {activeQuestion.is_multiple_select ? (
+                                      <div
+                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${isSelected
                                           ? "bg-white border-white"
                                           : "border-gray-300"
-                                      }`}
-                                    >
-                                      {isSelected && (
-                                        <FiCheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-900" />
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div
-                                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                        isSelected
+                                          }`}
+                                      >
+                                        {isSelected && (
+                                          <FiCheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-900" />
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div
+                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
                                           ? "border-white"
                                           : "border-gray-300"
-                                      }`}
-                                    >
-                                      {isSelected && (
-                                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white" />
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="font-semibold text-sm sm:text-base mb-1">
-                                    {option.answer}
-                                  </h3>
-                                  {option.description && (
-                                    <p
-                                      className={`text-xs sm:text-sm leading-relaxed ${
-                                        isSelected
+                                          }`}
+                                      >
+                                        {isSelected && (
+                                          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white" />
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-sm sm:text-base mb-1">
+                                      {option.answer}
+                                    </h3>
+                                    {option.description && (
+                                      <p
+                                        className={`text-xs sm:text-sm leading-relaxed ${isSelected
                                           ? "text-gray-300"
                                           : "text-gray-500"
-                                      }`}
-                                    >
-                                      {option.description}
-                                    </p>
-                                  )}
+                                          }`}
+                                      >
+                                        {option.description}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            </motion.button>
+                              </motion.button>
                             );
                           }
                         )}
@@ -1493,11 +1587,10 @@ export default function CoursesPage({ params }) {
                       <button
                         onClick={handleNextQuestion}
                         disabled={(answers[activeQuestion.id] || []).length === 0}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                          (answers[activeQuestion.id] || []).length > 0
-                            ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
-                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        }`}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${(answers[activeQuestion.id] || []).length > 0
+                          ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          }`}
                       >
                         {currentQuestion < questions.length - 1 ? "Next" : "Get Results"}
                         <FiChevronRight className="w-4 h-4" />
@@ -1575,10 +1668,14 @@ export default function CoursesPage({ params }) {
                             <span className="font-semibold text-gray-700">{enrolledCourseName}</span>.
                           </p>
                           <button
-                            onClick={() => router.push("/")}
+                            onClick={() => {
+                              setEnrollSuccess(false);
+                              setEnrollingCourseId(null);
+                              setNeedsSupport(null);
+                            }}
                             className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
                           >
-                            Go to Home
+                            Close
                           </button>
                         </div>
                       ) : (
@@ -1607,21 +1704,19 @@ export default function CoursesPage({ params }) {
                           <div className="grid grid-cols-2 gap-3 mb-6">
                             <button
                               onClick={() => setNeedsSupport(true)}
-                              className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                                needsSupport === true
-                                  ? "bg-gray-900 text-white border-gray-900"
-                                  : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                              }`}
+                              className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${needsSupport === true
+                                ? "bg-gray-900 text-white border-gray-900"
+                                : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                                }`}
                             >
                               Yes, I do
                             </button>
                             <button
                               onClick={() => setNeedsSupport(false)}
-                              className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                                needsSupport === false
-                                  ? "bg-gray-900 text-white border-gray-900"
-                                  : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                              }`}
+                              className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${needsSupport === false
+                                ? "bg-gray-900 text-white border-gray-900"
+                                : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                                }`}
                             >
                               No, thanks
                             </button>
@@ -1640,11 +1735,10 @@ export default function CoursesPage({ params }) {
                             <button
                               onClick={handleEnrollSubmit}
                               disabled={needsSupport === null || enrollSubmitting}
-                              className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${
-                                needsSupport !== null && !enrollSubmitting
-                                  ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
-                                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                              }`}
+                              className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${needsSupport !== null && !enrollSubmitting
+                                ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                }`}
                             >
                               {enrollSubmitting ? (
                                 <>
@@ -1663,118 +1757,143 @@ export default function CoursesPage({ params }) {
                 )}
               </AnimatePresence>
 
-                  {/* Results header - course recommendations */}
-                  <div className="text-center mb-6 sm:mb-10">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-5">
-                      <FiCheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
-                    </div>
-                    <h2 className="text-base sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
-                      Your Course Matches
-                    </h2>
-                    <p className="text-gray-500 text-xs sm:text-base max-w-lg mx-auto">
-                      Based on your preferences, here are the courses that best fit
-                      your goals
-                    </p>
-                  </div>
+              {/* Results header - course recommendations */}
+              <div className="text-center mb-6 sm:mb-10">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-5">
+                  <FiCheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
+                </div>
+                <h2 className="text-base sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
+                  Your Course Matches
+                </h2>
+                <p className="text-gray-500 text-xs sm:text-base max-w-lg mx-auto">
+                  Based on your preferences, here are the courses that best fit
+                  your goals
+                </p>
+              </div>
 
-                  {recommendations.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                      {recommendations.map((course, index) => (
-                        <motion.div
-                          key={course.id}
-                          className="rounded-lg bg-white border border-gray-200 overflow-hidden"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
-                        >
-                          <div className="relative h-28 sm:h-32">
-                            <Image
-                              src={getCourseImage(course.id)}
-                              alt={course.title}
-                              fill
-                              className="object-cover"
-                            />
-                            <div className="absolute top-1.5 left-1.5 bg-gray-900 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[9px] sm:text-[11px] font-bold">
-                              #{index + 1}
-                            </div>
-                            <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
-                              {course.match_percentage != null && (
-                                <span
-                                  className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${
-                                    course.match_percentage >= 70
-                                      ? "bg-green-50/90 text-green-700"
-                                      : "bg-yellow-50/90 text-yellow-700"
-                                  }`}
-                                >
-                                  <FiStar className="w-2.5 h-2.5" />
-                                  {course.match_percentage}%
-                                </span>
-                              )}
-                              {course.duration && (
-                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-gray-600 rounded-full text-[10px] font-medium backdrop-blur-sm">
-                                  <FiClock className="w-2.5 h-2.5" />
-                                  {course.duration}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="p-2.5 sm:p-3">
-                            <h3 className="text-xs sm:text-sm font-semibold text-gray-900 mb-1 line-clamp-2 leading-tight">
-                              {course.title}
-                            </h3>
-                            {course.sub_title && (
-                              <p className="text-[11px] sm:text-xs text-gray-500 mb-2 line-clamp-1">
-                                {course.sub_title}
-                              </p>
-                            )}
-                            {course.mode_of_delivery && (
-                              <div className="flex items-center gap-1 mb-2">
-                                <FiGlobe className="w-2.5 h-2.5 text-blue-600" />
-                                <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">{course.mode_of_delivery}</span>
-                              </div>
-                            )}
-                            <button
-                              onClick={() => handleEnrollClick(course)}
-                              className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-xs rounded-lg transition-colors"
-                            >
-                              Enroll Now
-                              <FiChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 sm:py-20 bg-white rounded-2xl border border-gray-200">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                        <FiTarget className="w-5 h-5 sm:w-7 sm:h-7 text-gray-400" />
-                      </div>
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1.5 sm:mb-2">
-                        No matches found
-                      </h3>
-                      <p className="text-gray-500 mb-4 text-xs sm:text-sm max-w-sm mx-auto">
-                        We couldn&apos;t find courses matching your preferences. Try
-                        retaking the quiz with different answers.
-                      </p>
-                      <Button
-                        onClick={resetQuiz}
-                        variant="outline"
-                        className="min-h-[44px]"
-                      >
-                        Retake Quiz
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="mt-8 sm:mt-10 flex justify-center">
-                    <Button
-                      onClick={() => router.push(`/programmes?user_id=${id}${selectedCentre ? `&centre_id=${selectedCentre.id}` : ''}`)}
-                      className="min-h-[44px]"
+              {recommendations.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                  {recommendations.map((course, index) => (
+                    <motion.div
+                      key={course.id}
+                      className="rounded-lg bg-white border border-gray-200 overflow-hidden"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
                     >
-                      View All Courses
-                    </Button>
+                      <div className="relative h-28 sm:h-32 bg-gray-100">
+                        {course.image && !imageErrors[course.id] ? (
+                          <Image
+                            src={course.image}
+                            alt={course.title}
+                            fill
+                            className="object-cover"
+                            onError={() => setImageErrors((prev) => ({ ...prev, [course.id]: true }))}
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                            <Image
+                              src="/images/one-million-coders-logo.png"
+                              alt="One Million Coders"
+                              width={80}
+                              height={27}
+                              className="opacity-15"
+                            />
+                          </div>
+                        )}
+                        <div className="absolute top-1.5 left-1.5 bg-gray-900 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[9px] sm:text-[11px] font-bold">
+                          #{index + 1}
+                        </div>
+                        <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+                          {course.match_percentage != null && (
+                            <span
+                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${course.match_percentage.split("%")[0] >= 70
+                                ? "bg-green-50/90 text-green-700"
+                                : "bg-yellow-50/90 text-yellow-700"
+                                }`}
+                            >
+                              <FiStar className="w-2.5 h-2.5" />
+                              {course.match_percentage}
+                            </span>
+                          )}
+                          {course.duration && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-gray-600 rounded-full text-[10px] font-medium backdrop-blur-sm">
+                              <FiClock className="w-2.5 h-2.5" />
+                              {course.duration}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="p-2.5 sm:p-3">
+                        <h3 className="text-xs sm:text-sm font-semibold text-gray-900 mb-1 line-clamp-2 leading-tight">
+                          {course.title}
+                        </h3>
+                        {course.sub_title && (
+                          <p className="text-[11px] sm:text-xs text-gray-500 mb-2 line-clamp-1">
+                            {course.sub_title}
+                          </p>
+                        )}
+                        {course.mode_of_delivery && (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1 mb-2">
+                              <FiGlobe className="w-2.5 h-2.5 text-blue-600" />
+                              <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">{course.mode_of_delivery}</span>
+                            </div>
+                            {userStatus && (
+                              <a
+                                href={`/programmes/${course.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 mb-2 transition-colors"
+                              >
+                                <span className="text-[10px] sm:text-[11px] font-medium text-green-700">View Details</span>
+                                <FiInfo className="w-2.5 h-2.5 text-green-700" />
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => handleEnrollClick(course)}
+                          className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-xs rounded-lg transition-colors"
+                        >
+                          Enroll Now
+                          <FiChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 sm:py-20 bg-white rounded-2xl border border-gray-200">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                    <FiTarget className="w-5 h-5 sm:w-7 sm:h-7 text-gray-400" />
                   </div>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1.5 sm:mb-2">
+                    No matches found
+                  </h3>
+                  <p className="text-gray-500 mb-4 text-xs sm:text-sm max-w-sm mx-auto">
+                    We couldn&apos;t find courses matching your preferences. Try
+                    retaking the quiz with different answers.
+                  </p>
+                  <Button
+                    onClick={resetQuiz}
+                    variant="outline"
+                    className="min-h-[44px]"
+                  >
+                    Retake Quiz
+                  </Button>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="mt-8 sm:mt-10 flex justify-center">
+                <Button
+                  onClick={() => router.push(`/programmes?user_id=${id}${selectedCentre ? `&centre_id=${selectedCentre.id}` : ''}`)}
+                  className="min-h-[44px]"
+                >
+                  View All Courses
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

@@ -96,19 +96,11 @@ const TechGhanaSection = () => {
   const autoRegionRef = useRef(null);
   const [mapInView, setMapInView] = useState(true);
 
-  // Clamp tooltip position within viewport bounds
-  const positionTooltip = (x, y) => {
-    if (!tooltipRef.current) return;
-    const tooltip = tooltipRef.current;
-    const tooltipWidth = tooltip.offsetWidth || 256;
-    const tooltipHeight = tooltip.offsetHeight || 120;
-    const padding = 8;
-
-    const clampedX = Math.min(Math.max(padding, x), window.innerWidth - tooltipWidth - padding);
-    const clampedY = Math.max(padding + tooltipHeight, y);
-
-    tooltip.style.left = `${clampedX}px`;
-    tooltip.style.top = `${clampedY}px`;
+  // Compute tooltip position as percentages relative to the map container
+  const getTooltipPosition = (regionId) => {
+    const center = REGION_CENTERS[regionId];
+    if (!center) return { left: "0%", top: "0%" };
+    return { left: `${center.x}%`, top: `${center.y}%` };
   };
 
   // Fetch and process SVG map
@@ -195,8 +187,11 @@ setBranchesData(response.data);
       }
     };
 
-    const handleMouseMove = (e) => {
-      positionTooltip(e.clientX + 16, e.clientY - 16);
+    const handleClick = (e) => {
+      const path = e.target.closest("#features path");
+      if (path && path.id && REGION_MAP[path.id]) {
+        router.push(`/centers?region=${encodeURIComponent(REGION_MAP[path.id])}`);
+      }
     };
 
     const handleMouseLeave = () => {
@@ -205,15 +200,15 @@ setBranchesData(response.data);
     };
 
     container.addEventListener("mouseover", handleMouseOver);
-    container.addEventListener("mousemove", handleMouseMove);
     container.addEventListener("mouseleave", handleMouseLeave);
+    container.addEventListener("click", handleClick);
 
     return () => {
       container.removeEventListener("mouseover", handleMouseOver);
-      container.removeEventListener("mousemove", handleMouseMove);
       container.removeEventListener("mouseleave", handleMouseLeave);
+      container.removeEventListener("click", handleClick);
     };
-  }, [svgContent]);
+  }, [svgContent, router]);
 
   // Track if map is in viewport
   useEffect(() => {
@@ -226,23 +221,6 @@ setBranchesData(response.data);
     return () => observer.disconnect();
   }, [svgContent]);
 
-  // Reposition tooltip on scroll during auto-cycle
-  useEffect(() => {
-    const handleScroll = () => {
-      if (userInteracting.current || !autoRegionRef.current) return;
-      const center = REGION_CENTERS[autoRegionRef.current];
-      if (center && mapRef.current) {
-        const rect = mapRef.current.getBoundingClientRect();
-        positionTooltip(
-          rect.left + (center.x / 100) * rect.width + 16,
-          rect.top + (center.y / 100) * rect.height - 16
-        );
-      }
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   // Auto-cycle through regions top to bottom
   useEffect(() => {
     if (!mapRef.current || !svgContent) return;
@@ -252,16 +230,6 @@ setBranchesData(response.data);
 
       const regionId = REGION_ORDER[autoIndexRef.current];
       autoRegionRef.current = regionId;
-
-      // Position tooltip near the region center
-      const center = REGION_CENTERS[regionId];
-      if (center && mapRef.current) {
-        const rect = mapRef.current.getBoundingClientRect();
-        positionTooltip(
-          rect.left + (center.x / 100) * rect.width + 16,
-          rect.top + (center.y / 100) * rect.height - 16
-        );
-      }
 
       setHoveredRegion(regionId);
       autoIndexRef.current = (autoIndexRef.current + 1) % REGION_ORDER.length;
@@ -373,12 +341,15 @@ setBranchesData(response.data);
                 {/* Region Tooltip - always rendered, visibility toggled */}
                 <div
                   ref={tooltipRef}
-                  className={`fixed z-[1001] pointer-events-none transition-all duration-500 ease-in-out ${
+                  className={`absolute z-[1001] pointer-events-none transition-all duration-500 ease-in-out ${
                     hoveredRegion && mapInView ? "opacity-100 scale-100" : "opacity-0 scale-95"
                   }`}
-                  style={{ transform: "translate(0, -100%)" }}
+                  style={{
+                    ...(hoveredRegion ? getTooltipPosition(hoveredRegion) : {}),
+                    transform: "translate(-50%, -110%)",
+                  }}
                 >
-                    <div className="bg-white rounded-xl px-4 py-3 shadow-2xl border border-gray-100 w-64">
+                    <div className="bg-white rounded-xl px-3 py-2.5 shadow-2xl border border-gray-100 w-52">
                       <h4 className="font-semibold text-gray-900 text-sm mb-2">
                         {REGION_MAP[hoveredRegion]} Region
                       </h4>

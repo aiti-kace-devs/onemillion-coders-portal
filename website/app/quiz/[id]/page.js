@@ -77,8 +77,13 @@ function requestFullscreen() {
     el.requestFullscreen ||
     el.webkitRequestFullscreen ||
     el.msRequestFullscreen;
-  if (rfs) {
-    rfs.call(el).catch(() => {});
+   if (rfs) {
+    rfs.call(el).catch(() => {
+      // Fallback: ask parent to do it
+      window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
+    });
+  } else {
+    window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
   }
 }
 
@@ -88,7 +93,11 @@ function exitFullscreen() {
     document.webkitExitFullscreen ||
     document.msExitFullscreen;
   if (efs && document.fullscreenElement) {
-    efs.call(document).catch(() => {});
+    efs.call(document).catch(() => {
+      window.parent.postMessage({ type: 'EXIT_FULLSCREEN' }, '*');
+    });
+  } else {
+    window.parent.postMessage({ type: 'EXIT_FULLSCREEN' }, '*');
   }
 }
 
@@ -121,8 +130,8 @@ function ViolationOverlay({ violations, maxViolations, onResume }) {
           Tab Switch Detected
         </h2>
         <p className="text-white/60 text-sm mb-4">
-          Leaving the quiz screen is not allowed during the assessment.
-          Repeated violations may result in automatic submission.
+          Leaving the quiz screen is not allowed during the assessment. Repeated
+          violations may result in automatic submission.
         </p>
         <div className="flex items-center justify-center gap-1.5 mb-6">
           {Array.from({ length: maxViolations }).map((_, i) => (
@@ -130,7 +139,8 @@ function ViolationOverlay({ violations, maxViolations, onResume }) {
               key={i}
               className="w-3 h-3 rounded-full"
               style={{
-                background: i < violations ? "#ef4444" : "rgba(255,255,255,0.15)",
+                background:
+                  i < violations ? "#ef4444" : "rgba(255,255,255,0.15)",
               }}
             />
           ))}
@@ -150,7 +160,13 @@ function ViolationOverlay({ violations, maxViolations, onResume }) {
   );
 }
 
-function LevelTransition({ currentLevel, nextLevel, score, total, onComplete }) {
+function LevelTransition({
+  currentLevel,
+  nextLevel,
+  score,
+  total,
+  onComplete,
+}) {
   const [progress, setProgress] = useState(0);
   const AUTO_ADVANCE_MS = 3500;
 
@@ -201,7 +217,8 @@ function LevelTransition({ currentLevel, nextLevel, score, total, onComplete }) 
         transition={{ delay: 0.35 }}
         className="text-white/60 text-sm sm:text-base mb-8"
       >
-        Moving on to <span className="font-bold text-white">{nextLevel.label}</span>
+        Moving on to{" "}
+        <span className="font-bold text-white">{nextLevel.label}</span>
       </motion.p>
 
       <motion.div
@@ -260,6 +277,7 @@ export default function QuizPage({ params }) {
   const [showLevelEnd, setShowLevelEnd] = useState(false);
   const [assessmentComplete, setAssessmentComplete] = useState(false);
   const [overallLevel, setOverallLevel] = useState(null);
+  const [endedByViolation, setEndedByViolation] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const timerRef = useRef(null);
 
@@ -276,12 +294,24 @@ export default function QuizPage({ params }) {
         setCurrentLevel(q.level || "beginner");
         setTimeLeft(q.time_remaining_seconds || 900);
         if (q.total_level_questions) {
-          setLevelTotals((p) => ({ ...p, [q.level || "beginner"]: q.total_level_questions }));
+          setLevelTotals((p) => ({
+            ...p,
+            [q.level || "beginner"]: q.total_level_questions,
+          }));
+        }
+        if (typeof response?.violation_count === 'number') {
+          violationsRef.current = response.violation_count;
+          setViolations(response.violation_count);
         }
         return true;
-      } else if (response?.status === "completed" || response?.assessment_completed) {
+      } else if (
+        response?.status === "completed" ||
+        response?.assessment_completed
+      ) {
         setAssessmentComplete(true);
-        setOverallLevel(response?.user_overall_level || response?.user_level || null);
+        setOverallLevel(
+          response?.user_overall_level || response?.user_level || null,
+        );
         setShowLevelEnd(true);
         return true;
       } else {
@@ -291,7 +321,9 @@ export default function QuizPage({ params }) {
     } catch (err) {
       console.error("Error fetching assessment:", err);
       const apiMessage = err?.response?.data?.message;
-      setError(apiMessage || "Failed to load assessment questions. Please try again.");
+      setError(
+        apiMessage || "Failed to load assessment questions. Please try again.",
+      );
       return false;
     } finally {
       setLoading(false);
@@ -300,7 +332,13 @@ export default function QuizPage({ params }) {
 
   // Timer
   useEffect(() => {
-    if (started && !showLevelEnd && !loading && !assessmentComplete && question) {
+    if (
+      started &&
+      !showLevelEnd &&
+      !loading &&
+      !assessmentComplete &&
+      question
+    ) {
       timerRef.current = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
@@ -316,7 +354,15 @@ export default function QuizPage({ params }) {
       clearInterval(timerRef.current);
     }
     return () => clearInterval(timerRef.current);
-  }, [started, showLevelEnd, loading, assessmentComplete, question, currentLevel, score]);
+  }, [
+    started,
+    showLevelEnd,
+    loading,
+    assessmentComplete,
+    question,
+    currentLevel,
+    score,
+  ]);
 
   // Use refs to avoid stale closures in event handlers
   const currentLevelRef = useRef(currentLevel);
@@ -325,11 +371,21 @@ export default function QuizPage({ params }) {
   const startedRef = useRef(started);
   const questionRef = useRef(question);
 
-  useEffect(() => { currentLevelRef.current = currentLevel; }, [currentLevel]);
-  useEffect(() => { scoreRef.current = score; }, [score]);
-  useEffect(() => { assessmentCompleteRef.current = assessmentComplete; }, [assessmentComplete]);
-  useEffect(() => { startedRef.current = started; }, [started]);
-  useEffect(() => { questionRef.current = question; }, [question]);
+  useEffect(() => {
+    currentLevelRef.current = currentLevel;
+  }, [currentLevel]);
+  useEffect(() => {
+    scoreRef.current = score;
+  }, [score]);
+  useEffect(() => {
+    assessmentCompleteRef.current = assessmentComplete;
+  }, [assessmentComplete]);
+  useEffect(() => {
+    startedRef.current = started;
+  }, [started]);
+  useEffect(() => {
+    questionRef.current = question;
+  }, [question]);
 
   // ── Proctoring: detect tab switches & fullscreen exits ──
   useEffect(() => {
@@ -340,7 +396,9 @@ export default function QuizPage({ params }) {
       // fullscreenchange and visibilitychange in quick succession
       if (violationCooldownRef.current) return;
       violationCooldownRef.current = true;
-      setTimeout(() => { violationCooldownRef.current = false; }, 500);
+      setTimeout(() => {
+        violationCooldownRef.current = false;
+      }, 500);
 
       violationsRef.current += 1;
       const count = violationsRef.current;
@@ -358,7 +416,11 @@ export default function QuizPage({ params }) {
 
       if (count >= MAX_VIOLATIONS) {
         // Auto-submit: mark assessment as complete on client
-        setLevelScores((p) => ({ ...p, [currentLevelRef.current]: scoreRef.current }));
+        setLevelScores((p) => ({
+          ...p,
+          [currentLevelRef.current]: scoreRef.current,
+        }));
+        setEndedByViolation(true);
         setAssessmentComplete(true);
         setShowLevelEnd(true);
         setShowViolation(false);
@@ -367,19 +429,29 @@ export default function QuizPage({ params }) {
     };
 
     const handleVisibilityChange = () => {
-      if (document.hidden && startedRef.current && !assessmentCompleteRef.current) {
+      if (
+        document.hidden &&
+        startedRef.current &&
+        !assessmentCompleteRef.current
+      ) {
         addViolation();
       }
     };
 
     const handleFullscreenChange = () => {
-      if (!isFullscreen() && startedRef.current && !assessmentCompleteRef.current) {
+      if (
+        !isFullscreen() &&
+        startedRef.current &&
+        !assessmentCompleteRef.current
+      ) {
         addViolation();
       }
     };
 
     // Prevent right-click context menu during quiz
-    const handleContextMenu = (e) => { e.preventDefault(); };
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+    };
 
     // Prevent common keyboard shortcuts for switching/devtools
     const handleKeyDown = (e) => {
@@ -388,7 +460,11 @@ export default function QuizPage({ params }) {
         e.preventDefault();
       }
       // Block Ctrl/Cmd+Shift+I (devtools), Ctrl/Cmd+Shift+J (console)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "I" || e.key === "J" || e.key === "C")) {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.shiftKey &&
+        (e.key === "I" || e.key === "J" || e.key === "C")
+      ) {
         e.preventDefault();
       }
       // Block Ctrl/Cmd+U (view source)
@@ -397,25 +473,41 @@ export default function QuizPage({ params }) {
       }
     };
 
+    const handleViolationMessage = (e) => {
+      if (
+        e.data?.type === "VIOLATION_TRIGGERED" &&
+        startedRef.current &&
+        !assessmentCompleteRef.current
+      ) {
+        addViolation();
+      }
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("message", handleViolationMessage);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange,
+      );
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("message", handleViolationMessage);
     };
-  }, [started, assessmentComplete]);
+  }, [started, assessmentComplete, id, token]);
 
   // ── Exit fullscreen when assessment completes ──
   useEffect(() => {
     if (assessmentComplete) {
       exitFullscreen();
+      window.parent?.postMessage({ type: 'ASSESSMENT_COMPLETE' }, '*');
     }
   }, [assessmentComplete]);
 
@@ -445,8 +537,12 @@ export default function QuizPage({ params }) {
   };
 
   const progress = question?.progress || 0;
-  const totalQs = levelTotals[currentLevel] || question?.total_level_questions || 10;
-  const options = React.useMemo(() => question ? getOptions(question) : [], [question]);
+  const totalQs =
+    levelTotals[currentLevel] || question?.total_level_questions || 10;
+  const options = React.useMemo(
+    () => (question ? getOptions(question) : []),
+    [question],
+  );
 
   // Answer a question
   const handleAnswer = useCallback(
@@ -459,14 +555,22 @@ export default function QuizPage({ params }) {
       const questionProgress = question.progress || 0;
 
       try {
-        const result = await submitAssessmentAnswer(id, question.id, answerValue, token);
+        const result = await submitAssessmentAnswer(
+          id,
+          question.id,
+          answerValue,
+          token,
+        );
         const correct = result?.is_correct === true;
 
         setLastResult(result);
         if (correct) setScore((s) => s + 1);
         setAnswered((p) => ({
           ...p,
-          [currentLevel]: { ...(p[currentLevel] || {}), [questionProgress - 1]: correct },
+          [currentLevel]: {
+            ...(p[currentLevel] || {}),
+            [questionProgress - 1]: correct,
+          },
         }));
 
         setTimeout(() => {
@@ -483,7 +587,10 @@ export default function QuizPage({ params }) {
             // Current level is done, show transition
             const finalScore = correct ? score + 1 : score;
             setLevelScores((p) => ({ ...p, [currentLevel]: finalScore }));
-            setPassedLevels((p) => ({ ...p, [currentLevel]: result?.passed_level || false }));
+            setPassedLevels((p) => ({
+              ...p,
+              [currentLevel]: result?.passed_level || false,
+            }));
             setShowLevelEnd(true);
             setSelected(null);
             setSubmittingAnswer(false);
@@ -493,7 +600,10 @@ export default function QuizPage({ params }) {
               const nq = result.next_question;
               setQuestion(nq);
               if (nq.total_level_questions && nq.level) {
-                setLevelTotals((p) => ({ ...p, [nq.level]: nq.total_level_questions }));
+                setLevelTotals((p) => ({
+                  ...p,
+                  [nq.level]: nq.total_level_questions,
+                }));
               }
             }
           } else if (result?.next_question) {
@@ -505,7 +615,10 @@ export default function QuizPage({ params }) {
               setTimeLeft(nextQ.time_remaining_seconds);
             }
             if (nextQ.total_level_questions && nextQ.level) {
-              setLevelTotals((p) => ({ ...p, [nextQ.level]: nextQ.total_level_questions }));
+              setLevelTotals((p) => ({
+                ...p,
+                [nextQ.level]: nextQ.total_level_questions,
+              }));
             }
             // Update level if it changed
             if (nextQ.level && nextQ.level !== currentLevel) {
@@ -528,7 +641,16 @@ export default function QuizPage({ params }) {
         }, 1100);
       }
     },
-    [selected, submittingAnswer, question, options, score, currentLevel, id]
+    [
+      selected,
+      submittingAnswer,
+      question,
+      options,
+      score,
+      currentLevel,
+      id,
+      token,
+    ],
   );
 
   // Move to next level after transition
@@ -561,7 +683,13 @@ export default function QuizPage({ params }) {
   // Shared bg
   const BG = (
     <div className="fixed inset-0 -z-10">
-      <Image src="/images/level/level.jpg" alt="" fill className="object-cover" priority />
+      <Image
+        src="/images/level/level.jpg"
+        alt=""
+        fill
+        className="object-cover"
+        priority
+      />
       <div className="absolute inset-0 bg-black/60" />
     </div>
   );
@@ -613,8 +741,18 @@ export default function QuizPage({ params }) {
                 // but proctoring will only rely on visibility change detection
                 try {
                   const el = document.documentElement;
-                  const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-                  if (rfs) await rfs.call(el);
+                  const rfs =
+                    el.requestFullscreen ||
+                    el.webkitRequestFullscreen ||
+                    el.msRequestFullscreen;
+                  if (rfs) {
+                    rfs.call(el).catch(() => {
+                      // Fallback: ask parent to do it
+                      window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
+                    });
+                  } else {
+                    window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
+                  }
                 } catch {
                   // Fullscreen denied — quiz continues without fullscreen enforcement
                 }
@@ -634,7 +772,7 @@ export default function QuizPage({ params }) {
           </motion.button>
 
           <button
-            onClick={() => router.push(`/courses/${id}`)}
+            onClick={() => router.push(`${process.env.NEXT_PUBLIC_PORTAL_URL}`)}
             className="mt-5 text-sm text-white/40 hover:text-white/80 transition-colors"
           >
             <FiHome className="inline mr-1 -mt-0.5" size={14} /> Back to Home
@@ -665,7 +803,9 @@ export default function QuizPage({ params }) {
   const levelEndScore = levelScores[currentLevel] ?? score;
   const levelPassed = passedLevels[currentLevel] || false;
   const nextLevelExists = question?.level && question.level !== currentLevel;
-  const hasNextLevel = !assessmentComplete && (nextLevelExists || (lvlIdx < LEVELS.length - 1 && levelPassed));
+  const hasNextLevel =
+    !assessmentComplete &&
+    (nextLevelExists || (lvlIdx < LEVELS.length - 1 && levelPassed));
   const assessedLevel = getAssessedLevelLabel();
 
   return (
@@ -691,7 +831,8 @@ export default function QuizPage({ params }) {
             {LEVELS.map((level, li) => {
               const isActive = currentLevel === level.key;
               const isPassed = passedLevels[level.key] || false;
-              const isLocked = li > 0 && !passedLevels[LEVELS[li - 1].key] && !isActive;
+              const isLocked =
+                li > 0 && !passedLevels[LEVELS[li - 1].key] && !isActive;
 
               return (
                 <React.Fragment key={level.key}>
@@ -699,7 +840,9 @@ export default function QuizPage({ params }) {
                     <div
                       className="w-4 sm:w-6 h-0.5 rounded-full"
                       style={{
-                        background: isPassed ? level.color : "rgba(255,255,255,0.15)",
+                        background: isPassed
+                          ? level.color
+                          : "rgba(255,255,255,0.15)",
                       }}
                     />
                   )}
@@ -709,20 +852,20 @@ export default function QuizPage({ params }) {
                       background: isActive
                         ? `${level.color}25`
                         : isPassed
-                        ? `${level.color}15`
-                        : "rgba(255,255,255,0.06)",
+                          ? `${level.color}15`
+                          : "rgba(255,255,255,0.06)",
                       border: isActive
                         ? `2px solid ${level.color}`
                         : isPassed
-                        ? `2px solid ${level.color}40`
-                        : "2px solid rgba(255,255,255,0.08)",
+                          ? `2px solid ${level.color}40`
+                          : "2px solid rgba(255,255,255,0.08)",
                       color: isLocked
                         ? "rgba(255,255,255,0.25)"
                         : isActive
-                        ? "white"
-                        : isPassed
-                        ? level.color
-                        : "rgba(255,255,255,0.45)",
+                          ? "white"
+                          : isPassed
+                            ? level.color
+                            : "rgba(255,255,255,0.45)",
                     }}
                   >
                     {isLocked ? (
@@ -733,7 +876,9 @@ export default function QuizPage({ params }) {
                       <span
                         className="w-1.5 h-1.5 rounded-full"
                         style={{
-                          background: isActive ? level.color : "rgba(255,255,255,0.3)",
+                          background: isActive
+                            ? level.color
+                            : "rgba(255,255,255,0.3)",
                         }}
                       />
                     )}
@@ -750,7 +895,7 @@ export default function QuizPage({ params }) {
             <div className="flex gap-1">
               {Array.from({ length: totalQs }).map((_, qi) => {
                 const a = (answered[currentLevel] || {})[qi];
-                const isCurrent = qi === (progress - 1);
+                const isCurrent = qi === progress - 1;
 
                 return (
                   <motion.div
@@ -761,13 +906,17 @@ export default function QuizPage({ params }) {
                         a === true
                           ? "#16a34a"
                           : a === false
-                          ? "#ef4444"
-                          : isCurrent
-                          ? lvl.color
-                          : "rgba(255,255,255,0.12)",
+                            ? "#ef4444"
+                            : isCurrent
+                              ? lvl.color
+                              : "rgba(255,255,255,0.12)",
                     }}
-                    animate={isCurrent ? { opacity: [0.4, 1, 0.4] } : { opacity: 1 }}
-                    transition={isCurrent ? { repeat: Infinity, duration: 1.2 } : {}}
+                    animate={
+                      isCurrent ? { opacity: [0.4, 1, 0.4] } : { opacity: 1 }
+                    }
+                    transition={
+                      isCurrent ? { repeat: Infinity, duration: 1.2 } : {}
+                    }
                   />
                 );
               })}
@@ -792,7 +941,11 @@ export default function QuizPage({ params }) {
                 <div className="rounded-xl overflow-hidden shadow-2xl">
                   <div
                     className="p-8 text-center"
-                    style={{ background: assessedLevel?.color || lvl.color }}
+                    style={{
+                      background: endedByViolation
+                        ? "#dc2626"
+                        : assessedLevel?.color || lvl.color,
+                    }}
                   >
                     <motion.div
                       initial={{ scale: 0 }}
@@ -801,13 +954,21 @@ export default function QuizPage({ params }) {
                       className="w-16 h-16 rounded-xl flex items-center justify-center mb-4 mx-auto"
                       style={{ background: "rgba(255,255,255,0.2)" }}
                     >
-                      <FiAward size={36} className="text-white" />
+                      {endedByViolation ? (
+                        <FiAlertTriangle size={36} className="text-white" />
+                      ) : (
+                        <FiAward size={36} className="text-white" />
+                      )}
                     </motion.div>
                     <h2 className="text-2xl font-black text-white mb-1">
-                      Assessment Complete
+                      {endedByViolation
+                        ? "Assessment Terminated"
+                        : "Assessment Complete"}
                     </h2>
                     <p className="text-white/70 text-sm">
-                      Your skills have been evaluated
+                      {endedByViolation
+                        ? "Your quiz was ended due to exceeding the maximum number of tab-switch violations."
+                        : "Your skills have been evaluated"}
                     </p>
                   </div>
 
@@ -818,46 +979,89 @@ export default function QuizPage({ params }) {
                         const total = levelTotals[level.key];
                         const lvlScore = levelScores[level.key];
                         const lvlAnswered = answered[level.key];
-                        if (total == null && lvlScore == null && !lvlAnswered) return null;
-                        const displayTotal = total || Object.keys(lvlAnswered || {}).length || 0;
+                        if (total == null && lvlScore == null && !lvlAnswered)
+                          return null;
+                        const displayTotal =
+                          total || Object.keys(lvlAnswered || {}).length || 0;
                         const displayScore = lvlScore ?? 0;
                         const passed = passedLevels[level.key];
                         return (
-                          <div key={level.key} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: `${level.color}10`, border: `1px solid ${level.color}25` }}>
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: level.color }}>
-                              {passed ? <FiCheck size={14} className="text-white" /> : <FiX size={14} className="text-white" />}
+                          <div
+                            key={level.key}
+                            className="flex items-center gap-3 p-3 rounded-lg"
+                            style={{
+                              background: `${level.color}10`,
+                              border: `1px solid ${level.color}25`,
+                            }}
+                          >
+                            <div
+                              className="w-8 h-8 rounded-lg flex items-center justify-center"
+                              style={{ background: level.color }}
+                            >
+                              {passed ? (
+                                <FiCheck size={14} className="text-white" />
+                              ) : (
+                                <FiX size={14} className="text-white" />
+                              )}
                             </div>
                             <div className="flex-1 text-left">
-                              <p className="text-sm font-bold text-gray-800">{level.label}</p>
+                              <p className="text-sm font-bold text-gray-800">
+                                {level.label}
+                              </p>
                               <div className="flex gap-1 mt-1">
-                                {Array.from({ length: displayTotal }).map((_, i) => {
-                                  const a = (lvlAnswered || {})[i];
-                                  return (
-                                    <div
-                                      key={i}
-                                      className="w-4 h-4 rounded flex items-center justify-center"
-                                      style={{
-                                        background: a === true ? "#16a34a" : a === false ? "#ef4444" : "#e5e7eb",
-                                      }}
-                                    >
-                                      {a === true && <FiCheck size={8} className="text-white" />}
-                                      {a === false && <FiX size={8} className="text-white" />}
-                                    </div>
-                                  );
-                                })}
+                                {Array.from({ length: displayTotal }).map(
+                                  (_, i) => {
+                                    const a = (lvlAnswered || {})[i];
+                                    return (
+                                      <div
+                                        key={i}
+                                        className="w-4 h-4 rounded flex items-center justify-center"
+                                        style={{
+                                          background:
+                                            a === true
+                                              ? "#16a34a"
+                                              : a === false
+                                                ? "#ef4444"
+                                                : "#e5e7eb",
+                                        }}
+                                      >
+                                        {a === true && (
+                                          <FiCheck
+                                            size={8}
+                                            className="text-white"
+                                          />
+                                        )}
+                                        {a === false && (
+                                          <FiX
+                                            size={8}
+                                            className="text-white"
+                                          />
+                                        )}
+                                      </div>
+                                    );
+                                  },
+                                )}
                               </div>
                             </div>
-                            <span className="text-sm font-bold" style={{ color: level.color }}>{displayScore}/{displayTotal}</span>
+                            <span
+                              className="text-sm font-bold"
+                              style={{ color: level.color }}
+                            >
+                              {displayScore}/{displayTotal}
+                            </span>
                           </div>
                         );
                       })}
                     </div>
 
-
-
                     <div className="space-y-2.5">
                       <button
-                        onClick={() => router.push(`/courses/${id}`)}
+                        onClick={() =>
+                          router.push(
+                            process.env.NEXT_PUBLIC_PORTAL_URL +
+                              `/student/change-course`,
+                          )
+                        }
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
                         Proceed to Course Selection <FiArrowRight size={16} />
@@ -871,7 +1075,12 @@ export default function QuizPage({ params }) {
               <LevelTransition
                 key={`transition-${currentLevel}`}
                 currentLevel={lvl}
-                nextLevel={LEVELS[lvlIdx + 1] || { label: question?.level || "Next", color: "#f9a825" }}
+                nextLevel={
+                  LEVELS[lvlIdx + 1] || {
+                    label: question?.level || "Next",
+                    color: "#f9a825",
+                  }
+                }
                 score={levelEndScore}
                 total={totalQs}
                 onComplete={goNextLevel}
@@ -886,7 +1095,10 @@ export default function QuizPage({ params }) {
                 className="w-full max-w-md"
               >
                 <div className="rounded-xl overflow-hidden shadow-2xl">
-                  <div className="p-8 text-center" style={{ background: lvl.color }}>
+                  <div
+                    className="p-8 text-center"
+                    style={{ background: lvl.color }}
+                  >
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
@@ -900,17 +1112,27 @@ export default function QuizPage({ params }) {
                       Level Complete
                     </h2>
                     <p className="text-white/70 text-sm">
-                      You scored {levelEndScore}/{levelTotals[currentLevel] || totalQs}
+                      You scored {levelEndScore}/
+                      {levelTotals[currentLevel] || totalQs}
                     </p>
                   </div>
                   <div className="bg-white p-6 text-center">
                     <div className="mb-6">
-                      <span className="text-5xl font-black text-gray-900">{levelEndScore}</span>
-                      <span className="text-xl text-gray-400 font-bold">/{levelTotals[currentLevel] || totalQs}</span>
+                      <span className="text-5xl font-black text-gray-900">
+                        {levelEndScore}
+                      </span>
+                      <span className="text-xl text-gray-400 font-bold">
+                        /{levelTotals[currentLevel] || totalQs}
+                      </span>
                     </div>
                     <div className="space-y-2.5">
                       <button
-                        onClick={() => router.push(`/courses/${id}`)}
+                        onClick={() =>
+                          router.push(
+                            process.env.NEXT_PUBLIC_PORTAL_URL +
+                              `/student/change-course`,
+                          )
+                        }
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
                         Proceed to Course Selection <FiArrowRight size={16} />
@@ -936,12 +1158,21 @@ export default function QuizPage({ params }) {
                 {/* Question area */}
                 <div className="px-6 py-8 text-center bg-gray-100/80">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: lvl.color }}>
+                    <p
+                      className="text-xs font-bold uppercase tracking-widest"
+                      style={{ color: lvl.color }}
+                    >
                       {lvl.label} &middot; {progress}/{totalQs}
                     </p>
-                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                      timeLeft <= 60 ? "bg-red-100 text-red-600" : timeLeft <= 300 ? "bg-yellow-100 text-yellow-700" : "bg-gray-200 text-gray-600"
-                    }`}>
+                    <div
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                        timeLeft <= 60
+                          ? "bg-red-100 text-red-600"
+                          : timeLeft <= 300
+                            ? "bg-yellow-100 text-yellow-700"
+                            : "bg-gray-200 text-gray-600"
+                      }`}
+                    >
                       <FiClock size={11} />
                       <span className="font-mono">{formatTime(timeLeft)}</span>
                     </div>
@@ -952,12 +1183,18 @@ export default function QuizPage({ params }) {
                 </div>
 
                 {/* Answer grid */}
-                <div className={`grid ${options.length <= 2 ? "grid-cols-1" : "grid-cols-2"} gap-3 p-4 sm:p-5`}>
+                <div
+                  className={`grid ${options.length <= 2 ? "grid-cols-1" : "grid-cols-2"} gap-3 p-4 sm:p-5`}
+                >
                   {options.map((opt, idx) => {
                     const isSelected = selected === idx;
                     const revealed = selected !== null && lastResult !== null;
-                    const isCorrectAnswer = revealed && isSelected && lastResult?.is_correct === true;
-                    const isWrongAnswer = revealed && isSelected && lastResult?.is_correct === false;
+                    const isCorrectAnswer =
+                      revealed && isSelected && lastResult?.is_correct === true;
+                    const isWrongAnswer =
+                      revealed &&
+                      isSelected &&
+                      lastResult?.is_correct === false;
                     const labels = ["A", "B", "C", "D", "E", "F"];
 
                     let bg = ANSWER_COLORS[idx % ANSWER_COLORS.length].bg;
@@ -1034,49 +1271,67 @@ export default function QuizPage({ params }) {
 
                 {/* ── Result banner ── */}
                 <AnimatePresence>
-                  {selected !== null && lastResult !== null && (() => {
-                    const wasCorrect = lastResult.is_correct === true;
-                    return (
-                      <motion.div
-                        key="banner"
-                        initial={{ x: "-110%" }}
-                        animate={{ x: "0%" }}
-                        exit={{ x: "110%" }}
-                        transition={{ type: "spring", stiffness: 280, damping: 26 }}
-                        className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                        style={{ zIndex: 20 }}
-                      >
-                        <div
-                          className="w-[150%] py-5 flex items-center justify-center gap-4 shadow-2xl"
-                          style={{
-                            background: wasCorrect ? "#16a34a" : "#ef4444",
-                            transform: "rotate(-3deg)",
+                  {selected !== null &&
+                    lastResult !== null &&
+                    (() => {
+                      const wasCorrect = lastResult.is_correct === true;
+                      return (
+                        <motion.div
+                          key="banner"
+                          initial={{ x: "-110%" }}
+                          animate={{ x: "0%" }}
+                          exit={{ x: "110%" }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 280,
+                            damping: 26,
                           }}
+                          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                          style={{ zIndex: 20 }}
                         >
-                          <motion.div
-                            initial={{ scale: 0, rotate: -90 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            transition={{ delay: 0.12, type: "spring", stiffness: 400 }}
-                            className="w-11 h-11 rounded-full border-[3px] border-white/40 flex items-center justify-center"
+                          <div
+                            className="w-[150%] py-5 flex items-center justify-center gap-4 shadow-2xl"
+                            style={{
+                              background: wasCorrect ? "#16a34a" : "#ef4444",
+                              transform: "rotate(-3deg)",
+                            }}
                           >
-                            {wasCorrect ? (
-                              <FiCheck size={24} className="text-white" strokeWidth={3} />
-                            ) : (
-                              <FiX size={24} className="text-white" strokeWidth={3} />
-                            )}
-                          </motion.div>
-                          <motion.span
-                            initial={{ opacity: 0, x: 40 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.18 }}
-                            className="text-white text-3xl sm:text-4xl font-black italic tracking-tight"
-                          >
-                            {wasCorrect ? "Correct!" : "Incorrect"}
-                          </motion.span>
-                        </div>
-                      </motion.div>
-                    );
-                  })()}
+                            <motion.div
+                              initial={{ scale: 0, rotate: -90 }}
+                              animate={{ scale: 1, rotate: 0 }}
+                              transition={{
+                                delay: 0.12,
+                                type: "spring",
+                                stiffness: 400,
+                              }}
+                              className="w-11 h-11 rounded-full border-[3px] border-white/40 flex items-center justify-center"
+                            >
+                              {wasCorrect ? (
+                                <FiCheck
+                                  size={24}
+                                  className="text-white"
+                                  strokeWidth={3}
+                                />
+                              ) : (
+                                <FiX
+                                  size={24}
+                                  className="text-white"
+                                  strokeWidth={3}
+                                />
+                              )}
+                            </motion.div>
+                            <motion.span
+                              initial={{ opacity: 0, x: 40 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.18 }}
+                              className="text-white text-3xl sm:text-4xl font-black italic tracking-tight"
+                            >
+                              {wasCorrect ? "Correct!" : "Incorrect"}
+                            </motion.span>
+                          </div>
+                        </motion.div>
+                      );
+                    })()}
                 </AnimatePresence>
               </div>
             </motion.div>

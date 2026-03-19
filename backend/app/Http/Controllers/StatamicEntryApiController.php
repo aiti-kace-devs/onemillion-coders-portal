@@ -116,12 +116,7 @@ class StatamicEntryApiController extends Controller
         ]);
 
 
-        $ttlConfig = config('cache.flexible_ttl');
-        $ttl = $ttlConfig 
-            ? array_map('intval', explode(',', $ttlConfig)) 
-            : [now()->addHour(), now()->addDay()];
-
-        return Cache::flexible('page_' . $slug, $ttl, function () use ($request, $slug) {
+        return Cache::flexible('page_' . $slug, \cache_flexible_ttl(), function () use ($request, $slug) {
             $fields = $request->input('fields');
             $includeRelated = $request->input('include_related') ?? 'sections.section_items.pathways.sections.section_items';
             $relationshipFields = $includeRelated ? array_map('trim', explode(',', $includeRelated)) : [];
@@ -529,12 +524,7 @@ class StatamicEntryApiController extends Controller
     public function footer(Request $request): JsonResponse
     {
 
-        $ttlConfig = config('cache.flexible_ttl');
-        $ttl = $ttlConfig 
-            ? array_map('intval', explode(',', $ttlConfig)) 
-            : [now()->addHour(), now()->addDay()];
-
-        $footer = Cache::flexible('footer', $ttl, function () {
+        $footer = Cache::flexible('footer', \cache_flexible_ttl(), function () {
             return [
                 'contact_us' => GlobalSet::findByHandle('contact')->in('default')->toArray(),
                 'quick_links' => GlobalSet::findByHandle('quick_links')->in('default')->toAugmentedArray(),

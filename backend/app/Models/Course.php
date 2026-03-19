@@ -56,6 +56,25 @@ class Course extends Model
         return $this->belongsTo(Programme::class);
     }
 
+    public function isOnlineProgramme(): bool
+    {
+        $mode = $this->programme?->mode_of_delivery;
+        return strtolower(trim((string) $mode)) === 'online';
+    }
+
+    public function siblingCourseIdsForProgrammeBatch(): array
+    {
+        if (!$this->programme_id || !$this->batch_id) {
+            return $this->id ? [$this->id] : [];
+        }
+
+        return self::query()
+            ->where('programme_id', $this->programme_id)
+            ->where('batch_id', $this->batch_id)
+            ->pluck('id')
+            ->all();
+    }
+
     public function batch()
     {
         return $this->belongsTo(Batch::class);
@@ -63,7 +82,7 @@ class Course extends Model
 
     public function batches()
     {
-        return $this->belongsToMany(Batch::class, 'course_batches', 'course_id', 'batch_id');
+        return $this->belongsTo(Batch::class, 'batch_id');
     }
 
     public function assignedAdmins()
@@ -112,7 +131,6 @@ class Course extends Model
             // Ensure dependent records are removed first (FK constraints are restrict in the DB).
             $course->sessions()->delete();
             $course->assignedAdmins()->detach();
-            $course->batches()->detach();
         });
 
         static::saving(function ($course) {

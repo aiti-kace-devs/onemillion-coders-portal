@@ -112,21 +112,30 @@ class RegistrationFormAPIController extends Controller
 
     public function check_user_by_userID($userID)
     {
-
-        if (!config(ALLOW_COURSE_CHANGE, false)) {
-            return response()->json([
-            'success' => false,
-            'message' => 'Students not allowed to change course at this time. Contact the administrators.'
-            ]);
-
-        }
-
         $user = User::where('userId', $userID)->first();
 
         if (!$user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found'
+            ], 404);
+        }
+
+        if (is_null($user->registered_course)) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'registered_course' => null,
+                    'student_level' => $user->student_level,
+                    'userId' => $user->userId,
+                ]
+            ]);
+        }
+
+        if (!config('ALLOW_COURSE_CHANGE', false)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Course change is not allowed at this time. Please contact the administrators.'
             ]);
         }
 
@@ -139,6 +148,7 @@ class RegistrationFormAPIController extends Controller
             ]
         ]);
     }
+
 
     public function confirmCourse(Request $request)
     {

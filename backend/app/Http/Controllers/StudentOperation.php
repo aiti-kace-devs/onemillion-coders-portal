@@ -95,6 +95,12 @@ class StudentOperation extends Controller
         return Inertia::render('Student/ApplicationStatus', compact('user', 'user_admission', 'user_assessment'));
     }
 
+    public function level_assessment()
+    {
+        $user = Auth::guard('web')->user();
+        return Inertia::render('Student/LevelAssessment', compact('user'));
+    }
+
     //Exam page
     public function exam()
     {
@@ -1186,9 +1192,10 @@ class StudentOperation extends Controller
                 'options' => $question->options,
                 'level' => $level,
                 'progress' => $assessment->questions_answered + 1,
-                'total_level_questions' => config(ASSESSMENT_MAX_QUESTIONS, 10),
+                'total_level_questions' => config('ASSESSMENT_MAX_QUESTIONS', 10),
                 'time_remaining_seconds' => $timeRemainingSeconds
-            ]
+            ],
+            'violation_count' => $assessment->violation_count,
         ]);
     }
 

@@ -191,22 +191,50 @@ class MailerHelper
 
     public static function convertToHtml(string $content): string
     {
-        // Convert mail::button components to styled links
+        // Unwrap mail::message components to preserve inner content
+        $content = preg_replace(
+            "/@component\(\s*'mail::message'\s*\)\s*\n(.*?)\n\s*@endcomponent/s",
+            '$1',
+            $content
+        );
+        $content = preg_replace(
+            "/\[component\]:\s?#\s?\('mail::message'\)\s*\n(.*?)\n\s*\[endcomponent\]:\s?#/s",
+            '$1',
+            $content
+        );
+
+        // Convert mail::button components to styled links (markdown-style)
         $content = preg_replace(
             "/\[component\]:\s?#\s?\('mail::button',\s*\['url'\s*=>\s*'([^']+)'\]\)\s*\n(.*?)\n\s*\[endcomponent\]:\s?#/s",
             '<p><a href="$1" style="display:inline-block;padding:10px 20px;background:#1d4ed8;color:#fff;border-radius:6px;text-decoration:none;">$2</a></p>',
             $content
         );
 
-        // Convert mail::panel components to styled divs
+        // Convert mail::button components to styled links (@component style)
+        $content = preg_replace(
+            "/@component\(\s*'mail::button'\s*,\s*\['url'\s*=>\s*'([^']+)'\]\s*\)\s*\n(.*?)\n\s*@endcomponent/s",
+            '<p><a href="$1" style="display:inline-block;padding:10px 20px;background:#1d4ed8;color:#fff;border-radius:6px;text-decoration:none;">$2</a></p>',
+            $content
+        );
+
+        // Convert mail::panel components to styled divs (markdown-style)
         $content = preg_replace(
             "/\[component\]:\s?#\s?\('mail::panel'\)\s*\n(.*?)\n\s*\[endcomponent\]:\s?#/s",
             '<div style="padding:12px 16px;background:#f3f4f6;border-radius:8px;margin:8px 0;">$1</div>',
             $content
         );
 
+        // Convert mail::panel components to styled divs (@component style)
+        $content = preg_replace(
+            "/@component\(\s*'mail::panel'\s*\)\s*\n(.*?)\n\s*@endcomponent/s",
+            '<div style="padding:12px 16px;background:#f3f4f6;border-radius:8px;margin:8px 0;">$1</div>',
+            $content
+        );
+
         // Remove any remaining component/endcomponent lines
         $content = preg_replace('/\[(end)?component\]:\s?#\s?(\(.*?\))?\s*/i', '', $content);
+        $content = preg_replace('/@component\([^\)]*\)\s*/i', '', $content);
+        $content = preg_replace('/@endcomponent\s*/i', '', $content);
 
         // Convert ## headings to <h2>
         $content = preg_replace('/^##\s*(.+)$/m', '<h2 style="margin:0 0 8px;">$1</h2>', $content);
@@ -228,6 +256,10 @@ class MailerHelper
 
         // Wrap in paragraph
         $content = '<p>' . $content . '</p>';
+
+        // Unwrap block elements that ended up inside a paragraph
+        $content = preg_replace('/<p>\s*(<(div|h[1-6]|ul|ol)[^>]*>)/i', '$1', $content);
+        $content = preg_replace('/(<\/(div|h[1-6]|ul|ol)>)\s*<\/p>/i', '$1', $content);
 
         // Clean up empty paragraphs
         $content = preg_replace('/<p>\s*<\/p>/', '', $content);

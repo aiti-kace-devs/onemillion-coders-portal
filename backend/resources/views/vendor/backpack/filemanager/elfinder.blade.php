@@ -21,7 +21,7 @@
 
     @include('backpack.filemanager::common_scripts', ['locale' => in_array($locale, array_keys($elfinderConfiguredLanguages)) ? $locale : null])
     @include('backpack.filemanager::common_styles')
-    
+
     <!-- elFinder initialization (REQUIRED) -->
     <script type="text/javascript" charset="utf-8">
         // Documentation for client options:
@@ -40,12 +40,13 @@
                         i18nBaseUrl: '{{ \Illuminate\Support\Str::beforeLast(Basset::getUrl("bp-elfinder-i18n-".$locale), "elfinder.") }}/',
                     @endif
                 @endif
-                customData: { 
+                customData: {
                     _token: '{{ csrf_token() }}'
                 },
                 url : '{{ route("elfinder.connector") }}',  // connector URL
                 soundPath: '{{ Basset::getUrl(base_path("vendor/studio-42/elfinder/sounds")) }}',
                 cssAutoLoad: false,
+                height: 900
             });
         });
     </script>

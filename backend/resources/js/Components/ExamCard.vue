@@ -1,5 +1,5 @@
 <script setup>
-import { usePage } from "@inertiajs/vue3";
+import { usePage, Link } from "@inertiajs/vue3";
 import { computed } from "vue";
 
 const user = usePage().props.auth?.user || {};
@@ -14,10 +14,8 @@ const levelDeterminationTestUrl = computed(() => {
 </script>
 
 <template>
-    <a
-        :href="levelDeterminationTestUrl"
-        target="_blank"
-        rel="noopener noreferrer"
+    <Link
+        :href="route('student.level-assessment')"
         class="block h-full"
     >
         <div
@@ -46,5 +44,5 @@ const levelDeterminationTestUrl = computed(() => {
                 </p>
             </div>
         </div>
-    </a>
+    </Link>
 </template>

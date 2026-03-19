@@ -204,6 +204,11 @@ export default function PathwayDetailPage() {
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
+                      ref={(el) => {
+                        if (el && activeTab === tab.id) {
+                          el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                        }
+                      }}
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center space-x-1.5 md:space-x-2 py-3 md:py-4 px-3 md:px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 whitespace-nowrap ${
                         activeTab === tab.id
@@ -224,7 +229,7 @@ export default function PathwayDetailPage() {
             </div>
             
             {/* Mobile: Show current tab name */}
-            <div className="block md:hidden mt-4 px-4">
+            {/* <div className="block md:hidden mt-4 px-4">
               <div className="flex items-center space-x-2 text-sm font-medium text-gray-900">
                 {tabs.find(tab => tab.id === activeTab)?.icon && (
                   React.createElement(tabs.find(tab => tab.id === activeTab).icon, {
@@ -233,7 +238,7 @@ export default function PathwayDetailPage() {
                 )}
                 <span>{tabs.find(tab => tab.id === activeTab)?.label}</span>
               </div>
-            </div>
+            </div> */}
           </motion.div>
 
           {/* Tab Content */}
@@ -286,25 +291,29 @@ export default function PathwayDetailPage() {
                 <div className="space-y-4 md:space-y-6 lg:mt-0">
                   <div className="bg-white rounded-2xl p-4 md:p-6 shadow-lg border border-gray-200">
                     <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Pathway Details</h3>
-                    <div className="space-y-3 md:space-y-4">
-                      <div className="flex justify-between items-start">
-                        <span className="text-gray-600 text-sm md:text-base">Duration</span>
-                        <span className="font-semibold text-gray-900 text-sm md:text-base text-right">{pathway.duration}</span>
-                      </div>
-                      <div className="flex justify-between items-start">
-                        <span className="text-gray-600 text-sm md:text-base">Focus</span>
-                        <span className="font-semibold text-gray-900 text-sm md:text-base text-right">{pathway.focus}</span>
-                      </div>
+                    <div className="space-y-3">
+                      {pathway.duration && (
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-sm text-gray-500">Duration</span>
+                          <span className="text-sm font-medium text-gray-900">{pathway.duration}</span>
+                        </div>
+                      )}
+                      {pathway.focus && (
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-sm text-gray-500">Focus</span>
+                          <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">{pathway.focus}</span>
+                        </div>
+                      )}
                       {pathway.support?.mentorship && (
-                        <div className="flex justify-between items-start">
-                          <span className="text-gray-600 text-sm md:text-base">Mentorship</span>
-                          <span className="font-semibold text-gray-900 text-xs md:text-sm text-right max-w-[60%]">{pathway.support.mentorship}</span>
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-sm text-gray-500">Mentorship</span>
+                          <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">{pathway.support.mentorship}</span>
                         </div>
                       )}
                       {pathway.support?.community && (
-                        <div className="flex justify-between items-start">
-                          <span className="text-gray-600 text-sm md:text-base">Community</span>
-                          <span className="font-semibold text-gray-900 text-xs md:text-sm text-right max-w-[60%]">{pathway.support.community}</span>
+                        <div className="flex justify-between items-center py-2">
+                          <span className="text-sm text-gray-500">Community</span>
+                          <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">{pathway.support.community}</span>
                         </div>
                       )}
                     </div>

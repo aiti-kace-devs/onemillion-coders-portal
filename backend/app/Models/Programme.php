@@ -89,6 +89,11 @@ class Programme extends Model
         return $this->morphToMany(Tag::class, 'taggable');
     }
 
+    public function isOnline(): bool
+    {
+        return strtolower(trim((string) $this->mode_of_delivery)) === 'online';
+    }
+
 
 
 
