@@ -17,9 +17,9 @@
                         <input type="hidden" name="batch_id" value="{{ $batchId }}">
                         
                         <div class="form-group col-md-12">
-                            <label>Branch *</label>
+                            <label>Region *</label>
                             <select name="branch_id" id="modal_branch_id" class="form-control" required>
-                                <option value="">Select Branch</option>
+                                <option value="">Select Region</option>
                                 @foreach($branches as $id => $title)
                                     <option value="{{ $id }}">{{ $title }}</option>
                                 @endforeach
@@ -29,7 +29,7 @@
                         <div class="form-group col-md-12">
                             <label>Training Centres *</label>
                             <select name="centre_ids[]" id="modal_centre_ids" class="form-control" multiple required>
-                                <option value="">Select a branch first</option>
+                                <option value="">Select a region first</option>
                             </select>
                             <small class="form-text text-muted">Select one or more training centres.</small>
                         </div>
@@ -113,7 +113,7 @@
                         <div class="form-group col-md-12">
                             <label>Training Centre *</label>
                             <select name="centre_id" id="edit_centre_id" class="form-control" required>
-                                <option value="">Select a branch first</option>
+                                <option value="">Select a region first</option>
                             </select>
                         </div>
 
@@ -315,6 +315,94 @@
         };
     }
 
+    function collectBatchCoursesCentreData() {
+        const tbody = document.getElementById('batchCoursesTableBody');
+        const centresById = new Map();
+        const centresByLocation = new Map();
+
+        if (!tbody) return { centresById, centresByLocation };
+
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.forEach((row) => {
+            const centreId = String(row.dataset.centreId || '').trim();
+            if (!centreId) return;
+
+            const centreTitle = String(row.dataset.centreTitle || '').trim();
+            if (!centresById.has(centreId)) {
+                centresById.set(centreId, centreTitle || centreId);
+            }
+
+            const location = String(row.dataset.location || '').trim().toLowerCase();
+            if (!centresByLocation.has(location)) {
+                centresByLocation.set(location, new Set());
+            }
+            centresByLocation.get(location).add(centreId);
+        });
+
+        return { centresById, centresByLocation };
+    }
+
+    function syncBatchCoursesCentresForLocation(locationValue) {
+        const centreSelect = document.getElementById('batchCoursesFilterCentre');
+        if (!centreSelect) return;
+
+        const locationSelect = document.getElementById('batchCoursesFilterLocation');
+        const hasLocationOptions = locationSelect
+            ? Array.from(locationSelect.options || []).some((opt) => opt && opt.value)
+            : false;
+        const location = String(locationValue || '').trim().toLowerCase();
+        const { centresById, centresByLocation } = collectBatchCoursesCentreData();
+        const allowedIds = location ? (centresByLocation.get(location) || new Set()) : null;
+        const currentValue = String(centreSelect.value || '');
+
+        centreSelect.innerHTML = '';
+
+        if (!location && !hasLocationOptions) {
+            centreSelect.disabled = false;
+            centreSelect.appendChild(new Option('All Centres', ''));
+
+            const items = Array.from(centresById.entries()).map(([id, title]) => ({
+                id,
+                title: title || id,
+            })).sort((a, b) => a.title.localeCompare(b.title));
+
+            items.forEach((item) => {
+                centreSelect.appendChild(new Option(item.title, item.id));
+            });
+
+            if (currentValue && centresById.has(currentValue)) {
+                centreSelect.value = currentValue;
+            } else {
+                centreSelect.value = '';
+            }
+            return;
+        }
+
+        if (!location) {
+            centreSelect.appendChild(new Option('Select a location first', ''));
+            centreSelect.disabled = true;
+            return;
+        }
+
+        centreSelect.disabled = false;
+        centreSelect.appendChild(new Option('All Centres', ''));
+
+        const items = Array.from(allowedIds).map((id) => ({
+            id,
+            title: centresById.get(id) || id,
+        })).sort((a, b) => a.title.localeCompare(b.title));
+
+        items.forEach((item) => {
+            centreSelect.appendChild(new Option(item.title, item.id));
+        });
+
+        if (currentValue && allowedIds.has(currentValue)) {
+            centreSelect.value = currentValue;
+        } else {
+            centreSelect.value = '';
+        }
+    }
+
     function rowMatchesBatchCoursesFilters(row, filters) {
         if (!row || !filters) return false;
 
@@ -416,7 +504,14 @@
             });
         }
 
-        [centreSelect, programmeSelect, locationSelect, levelSelect, modeSelect].forEach((el) => {
+        if (locationSelect) {
+            locationSelect.addEventListener('change', function () {
+                syncBatchCoursesCentresForLocation(locationSelect.value);
+                onFilterChange();
+            });
+        }
+
+        [centreSelect, programmeSelect, levelSelect, modeSelect].forEach((el) => {
             if (el) el.addEventListener('change', onFilterChange);
         });
 
@@ -428,6 +523,7 @@
                 if (locationSelect) locationSelect.value = '';
                 if (levelSelect) levelSelect.value = '';
                 if (modeSelect) modeSelect.value = '';
+                if (locationSelect) syncBatchCoursesCentresForLocation(locationSelect.value);
                 onFilterChange();
             });
         }
@@ -446,6 +542,10 @@
                 batchCoursesCurrentPage += 1;
                 applyBatchCoursesSearchFilter();
             });
+        }
+
+        if (locationSelect) {
+            syncBatchCoursesCentresForLocation(locationSelect.value);
         }
 
         applyBatchCoursesSearchFilter();
@@ -494,7 +594,7 @@
                 theme: 'bootstrap4',
                 width: '100%',
                 dropdownParent: $dropdownParent,
-                placeholder: opts.centrePlaceholder || 'Select a branch first',
+                placeholder: opts.centrePlaceholder || 'Select a region first',
                 closeOnSelect: typeof opts.centreCloseOnSelect === 'boolean' ? opts.centreCloseOnSelect : true,
                 allowClear: true,
                 minimumInputLength: 0,
@@ -784,7 +884,7 @@
                 branchSelector: '#modal_branch_id',
                 centreSelector: '#modal_centre_ids',
                 programmeSelector: '#modal_programme_ids',
-                centrePlaceholder: 'Select a branch first',
+                centrePlaceholder: 'Select a region first',
                 centreCloseOnSelect: false,
                 programmePlaceholder: 'Select Programmes',
                 programmeCloseOnSelect: false,
@@ -809,7 +909,7 @@
 
             // No branch selected: disable + reset placeholder.
             if (!branchId) {
-                centreSelect.innerHTML = '<option value="">Select a branch first</option>';
+                centreSelect.innerHTML = '<option value="">Select a region first</option>';
                 centreSelect.disabled = true;
                 return;
             }
@@ -939,7 +1039,7 @@
                 branchSelector: '#edit_branch_id',
                 centreSelector: '#edit_centre_id',
                 programmeSelector: '#edit_programme_id',
-                centrePlaceholder: 'Select a branch first',
+                centrePlaceholder: 'Select a region first',
                 centreCloseOnSelect: true,
                 programmePlaceholder: 'Select Programme',
                 programmeCloseOnSelect: true,
@@ -1017,6 +1117,8 @@
                                 if (msg) msg.style.display = 'block';
                             }
 
+                            const locationSelect = document.getElementById('batchCoursesFilterLocation');
+                            syncBatchCoursesCentresForLocation(locationSelect ? locationSelect.value : '');
                             applyBatchCoursesSearchFilter();
                             return;
                         }

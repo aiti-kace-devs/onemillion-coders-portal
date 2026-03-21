@@ -388,12 +388,14 @@ trait BatchFieldHelpers
             
             $dataCentreId = $course->centre_id ?? '';
             $dataProgrammeId = $course->programme_id ?? '';
+            $dataCentreTitle = $course->centre?->title ?? '';
             $dataLocation = strtolower(trim((string) $course->location));
             $dataLevel = strtolower(trim((string) ($course->programme?->level ?? '')));
             $dataMode = strtolower(trim((string) ($course->programme?->mode_of_delivery ?? '')));
 
             $html .= '<tr
                 data-centre-id="' . e($dataCentreId) . '"
+                data-centre-title="' . e($dataCentreTitle) . '"
                 data-programme-id="' . e($dataProgrammeId) . '"
                 data-location="' . e($dataLocation) . '"
                 data-level="' . e($dataLevel) . '"
