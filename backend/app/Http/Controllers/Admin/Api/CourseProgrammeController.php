@@ -562,11 +562,12 @@ class CourseProgrammeController extends Controller
         $branch = Branch::query()->findOrFail($data['branch_id']);
 
         $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
-        $cacheKey = 'districts_by_branch:' . $branch->id . ':' . ($addCentreCount ? 'with_centres' : 'basic');
+        $cacheKey = 'districts_by_branch:' . $branch->id . ':' . ($addCentreCount ? 'with_centres' : 'basic') . ':has_centres';
 
         $districts = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($branch, $addCentreCount) {
             $districtQuery = District::query()
                 ->where('branch_id', $branch->id)
+                ->whereHas('centres')
                 ->orderBy('title');
 
             if ($addCentreCount) {
