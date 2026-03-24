@@ -36,7 +36,7 @@ const courseSelectionUrl = computed(() => {
 
 <template>
   <Head :title="pageTitle" />
-  <AuthenticatedLayout :fullHeight="!isShortlisted" :hideGradient="true">
+  <AuthenticatedLayout :fullHeight="!isShortlisted">
     <template #header>
       <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ pageTitle }}</h2>
     </template>
@@ -56,13 +56,15 @@ const courseSelectionUrl = computed(() => {
         </div>
 
         <!-- Case 2: Not Shortlisted - Show Iframe (for both Choose and Change) -->
-        <div v-else class="h-[calc(100vh-64px)] overflow-hidden">
-            <iframe
-                :src="courseSelectionUrl"
-                class="w-full h-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen
-            ></iframe>
+        <div v-else class="h-[calc(100vh-70px)] overflow-hidden relative">
+            <div class="-mt-[70px]">
+                <iframe
+                    :src="courseSelectionUrl"
+                    class="w-full h-[calc(100vh+6px)] border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                ></iframe>
+            </div>
         </div>
       </div>
     </div>
