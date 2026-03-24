@@ -41,8 +41,8 @@ class SendExamLoginCredentialsJob implements ShouldQueue
 
         $fullName = trim(
             ($this->std->first_name ?? '') . ' ' .
-                ($this->std->middle_name ?? '') . ' ' .
-                ($this->std->last_name ?? '')
+            ($this->std->middle_name ?? '') . ' ' .
+            ($this->std->last_name ?? '')
         );
 
         $fullName = preg_replace('/\s+/', ' ', $fullName);
@@ -51,11 +51,11 @@ class SendExamLoginCredentialsJob implements ShouldQueue
             AFTER_REGISTRATION_EMAIL,
             $this->std->email,
             [
-                'name'     => $fullName,
+                'name' => $fullName,
                 // 'deadline' => $deadline,
                 'password' => $this->plainPassword,
-                'email'    => $this->std->email,
-                'examUrl'  => url('/student/dashboard'),
+                'email' => $this->std->email,
+                'examUrl' => url('/student/level-assessment'),
             ],
             'One Million Coders Login Credentials'
         );

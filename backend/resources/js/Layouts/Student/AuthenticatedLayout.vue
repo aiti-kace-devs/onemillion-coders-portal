@@ -26,6 +26,10 @@ const props = defineProps({
     fullHeight: {
         type: Boolean,
         default: false
+    },
+    hideGradient: {
+        type: Boolean,
+        default: false
     }
 });
 
@@ -181,6 +185,7 @@ const user = auth?.user || {};
 
     <!-- Main Content -->
     <div class="flex-1 flex flex-col md:ml-[70px] bg-[#f8f9fa] relative overflow-hidden">
+
       <!-- Background Accents -->
       <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-[#f9a825]/5 rounded-full blur-[100px] -mr-64 -mt-64 pointer-events-none"></div>
       <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#f9a825]/3 rounded-full blur-[80px] -ml-48 -mb-48 pointer-events-none"></div>
@@ -235,8 +240,8 @@ const user = auth?.user || {};
             {{ auth.unreadNotifications > 99 ? '99+' : auth.unreadNotifications }}
           </span>
         </Link>
-
       </header>
+      <div v-if="!hideGradient" class="h-1.5 w-full bg-gradient-to-r from-red-600 via-yellow-400 to-green-600 z-40 sticky top-16"></div>
 
       <!-- Page content -->
       <main :class="props.fullHeight ? '' : 'py-6 px-4 lg:px-8'">
