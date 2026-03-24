@@ -13,7 +13,7 @@ const assessmentUrl = computed(() => {
     const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     const token = usePage().props.quiz_jwt_token;
     const path = `${base}/quiz/${props.user.userId}`;
-    return token ? `${path}?token=${token}` : path;
+    return token ? `${path}?token=${token}&embed=true` : `${path}?embed=true`;
 });
 
 const iframeRef = ref(null);
@@ -106,7 +106,7 @@ function handleIframeLoad() {
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Level Assessment</h2>
         </template>
 
-        <div class="h-[calc(100vh-64px)] overflow-hidden relative">
+        <div class="h-[calc(100vh-70px)] overflow-hidden relative">
             <iframe ref="iframeRef" :src="assessmentUrl" class="w-full h-full border-0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowfullscreen @load="handleIframeLoad"></iframe>

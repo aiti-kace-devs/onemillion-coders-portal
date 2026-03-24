@@ -36,7 +36,7 @@ const courseSelectionUrl = computed(() => {
 
 <template>
   <Head :title="pageTitle" />
-  <AuthenticatedLayout :fullHeight="!isShortlisted">
+  <AuthenticatedLayout :fullHeight="!isShortlisted" :hideGradient="true">
     <template #header>
       <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ pageTitle }}</h2>
     </template>
