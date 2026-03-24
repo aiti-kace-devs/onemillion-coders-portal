@@ -217,8 +217,7 @@ function LevelTransition({
         transition={{ delay: 0.35 }}
         className="text-white/60 text-sm sm:text-base mb-8"
       >
-        Moving on to{" "}
-        <span className="font-bold text-white">{nextLevel.label}</span>
+        Moving on to the next step
       </motion.p>
 
       <motion.div
@@ -237,7 +236,7 @@ function LevelTransition({
           />
         </div>
         <p className="text-white/30 text-xs mt-2">
-          Starting {nextLevel.label}...
+          Starting next step...
         </p>
       </motion.div>
     </motion.div>
