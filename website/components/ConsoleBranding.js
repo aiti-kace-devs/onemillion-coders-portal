@@ -45,7 +45,7 @@ const ASCII_LINES = [
   "                 @@@@@@@@@@@@@@@@@@@@@@@@@@@ @ @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  @@@@",
 ];
 
-// Render ASCII art onto a canvas and return as a data URL
+// Render GI-KACE ASCII art onto a canvas and return as a data URL
 function generateArtImage() {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
