@@ -7,6 +7,7 @@ node_modules/
 node_modules
 /.vscode
 /.vite
+!backend/resources/views/vendor/
 /vendor/
 backend/vendor/
 backend/public/vendor/

@@ -5,11 +5,12 @@ namespace App\Models;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class OexCategory extends Model
 {
-    use CrudTrait;
-    use HasFactory;
+    use CrudTrait, HasFactory, LogsActivity;
 
     /*
     |--------------------------------------------------------------------------
@@ -24,12 +25,18 @@ class OexCategory extends Model
     // protected $fillable = [];
     // protected $hidden = [];
 
-    protected $fillable=['name','status'];
+    protected $fillable = ['name', 'status'];
 
 
     protected $casts = [
         'status' => 'boolean',
     ];
 
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty();
+    }
 
 }
