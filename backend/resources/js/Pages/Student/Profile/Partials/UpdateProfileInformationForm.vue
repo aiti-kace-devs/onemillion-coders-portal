@@ -123,7 +123,7 @@ const submit = () => {
       <h2 class="text-lg font-medium text-gray-900">Profile Information</h2>
 
       <div class="mt-1">
-        <p v-if="detailsUpdated" class="text-sm text-green-600">
+        <p v-if="detailsUpdated" class="text-sm text-red-600">
           You have already updated your details
         </p>
 
