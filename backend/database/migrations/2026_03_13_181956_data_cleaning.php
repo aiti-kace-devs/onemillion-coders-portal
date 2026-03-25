@@ -80,9 +80,11 @@ return new class extends Migration
             $table->dropColumn('cover_image_id');
         });
 
-        Schema::table('course_categories', function (Blueprint $table) {
-            $table->string('icon')->nullable()->after('title');
-        });
+        if (!Schema::hasColumn('course_categories', 'icon')) {
+            Schema::table('course_categories', function (Blueprint $table) {
+                $table->string('icon')->nullable()->after('title');
+            });
+        }
 
         Schema::dropIfExists('pagebuilder__page_translations');
         Schema::dropIfExists('pagebuilder__pages');

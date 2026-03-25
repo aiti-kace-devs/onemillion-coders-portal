@@ -10,6 +10,7 @@ use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\FilterHelper;
 use App\Helpers\CourseFieldHelpers;
 use App\Helpers\WidgetHelper;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class CourseModuleCrudController
@@ -47,6 +48,7 @@ class CourseModuleCrudController extends CrudController
     protected function setupListOperation()
     {
         WidgetHelper::courseModuleStatisticsWidget();
+        CrudListHelper::editInDropdown();
 
         CRUD::column('title')->type('textarea');
         FilterHelper::addGenericRelationshipColumn('programme', 'Course', 'programme', 'title');

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('old_admissions', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
+            $table->string('user_id');
             $table->unsignedBigInteger('course_id');
             $table->dateTime('confirmed')->nullable();
             $table->dateTime('email_sent')->nullable();
