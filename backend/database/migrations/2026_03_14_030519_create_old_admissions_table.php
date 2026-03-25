@@ -13,12 +13,19 @@ return new class extends Migration
     {
         Schema::create('old_admissions', function (Blueprint $table) {
             $table->id();
-            $table->string('user_id');
-            $table->string('course_id')->nullable();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('course_id');
             $table->dateTime('confirmed')->nullable();
             $table->dateTime('email_sent')->nullable();
-            $table->string('session')->nullable();
+            $table->unsignedBigInteger('session')->nullable();
             $table->timestamps();
+
+            $table->foreign('session')->references('id')->on('course_sessions')
+                ->onDelete('restrict')->onUpdate('cascade');
+            $table->foreign('course_id')->references('id')->on('courses')
+                ->onDelete('restrict')->onUpdate('cascade');
+            $table->foreign('user_id')->references('userId')->on('users')
+                ->onDelete('restrict')->onUpdate('cascade');
         });
     }
 
