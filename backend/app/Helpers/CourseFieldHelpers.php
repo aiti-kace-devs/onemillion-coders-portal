@@ -395,8 +395,8 @@ CRUD::addField([
 
     protected static function addBatchWhereClause($batchId)
     {
-        CRUD::addClause('whereHas', 'course.batches', function ($query) use ($batchId) {
-            $query->where('course_batches.id', $batchId);
+        CRUD::addClause('whereHas', 'course', function ($query) use ($batchId) {
+            $query->where('batch_id', $batchId);
         });
     }
 

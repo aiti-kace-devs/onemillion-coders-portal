@@ -61,7 +61,7 @@ class DashboardWidgetHelper
         $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'dashboard_count_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
-        $dasboardCountStatistics = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {
+        $dasboardCountStatistics = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($visibleCourseIds) {
             $baseUserQuery = User::query();
             self::applyCourseScope($baseUserQuery, $visibleCourseIds, 'registered_course');
 
@@ -181,11 +181,11 @@ class DashboardWidgetHelper
         $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'dashboard_table_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
-        $dashboardTableStatistics = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {
-            $topBatches = DB::table('course_batches as cb')
-                ->join('admission_batches as ab', 'cb.batch_id', '=', 'ab.id')
+        $dashboardTableStatistics = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($visibleCourseIds) {
+            $topBatches = DB::table('courses as c')
+                ->join('admission_batches as ab', 'c.batch_id', '=', 'ab.id')
                 ->leftJoin('user_admission as ua', function ($join) {
-                    $join->on('cb.id', '=', 'ua.course_batch_id')
+                    $join->on('c.id', '=', 'ua.course_id')
                         ->whereNotNull('ua.confirmed');
                 })
                 ->when(is_array($visibleCourseIds), function ($query) use ($visibleCourseIds) {
@@ -194,44 +194,28 @@ class DashboardWidgetHelper
                         return;
                     }
 
-                    $query->whereIn('cb.course_id', $visibleCourseIds);
+                    $query->whereIn('c.id', $visibleCourseIds);
                 })
                 ->select(
                     'ab.id as batch_id',
                     'ab.title',
                     'ab.year',
                     'ab.completed',
-                    DB::raw('COUNT(DISTINCT ua.id) as admitted_students_count')
+                    DB::raw('COUNT(DISTINCT ua.id) as admitted_students_count'),
+                    DB::raw('COUNT(DISTINCT c.programme_id) as courses_count')
                 )
                 ->groupBy('ab.id', 'ab.title', 'ab.year', 'ab.completed')
                 ->orderByDesc('admitted_students_count')
                 ->limit(5)
-                ->get();
-
-            $batchesWithCourses = $topBatches->map(function ($batch) use ($visibleCourseIds) {
-                $courseIds = DB::table('course_batches as cb')
-                    ->where('batch_id', $batch->batch_id)
-                    ->when(is_array($visibleCourseIds), function ($query) use ($visibleCourseIds) {
-                        if (empty($visibleCourseIds)) {
-                            $query->whereRaw('1 = 0');
-                            return;
-                        }
-
-                        $query->whereIn('cb.course_id', $visibleCourseIds);
-                    })
-                    ->pluck('cb.course_id')
-                    ->unique()
-                    ->values()
-                    ->toArray();
-
-                $batch->course_ids = $courseIds;
-                $batch->courses_count = count($courseIds);
-
-                return $batch;
-            });
+                ->get()
+                ->map(function ($batch) {
+                    $batch->admitted_students_count = (int) $batch->admitted_students_count;
+                    $batch->courses_count = (int) $batch->courses_count;
+                    return $batch;
+                });
 
             return [
-                'topAdmissionBatch' => $batchesWithCourses,
+                'topAdmissionBatch' => $topBatches,
                 'topAdmittedRegion' => DB::table('user_admission as ua')
                     ->join('courses as c', 'ua.course_id', '=', 'c.id')
                     ->leftJoin('centres as ce', 'c.centre_id', '=', 'ce.id')

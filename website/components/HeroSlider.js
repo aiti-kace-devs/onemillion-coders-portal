@@ -259,18 +259,19 @@ const HeroSlider = ({ data }) => {
         </div>
       </div>
 
-      {/* Mobile-optimized Slide Navigation */}
+      {/* Bottom Navigation Bar - Indicators & Arrow Controls */}
       <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center sm:justify-start">
+          <div className="flex items-center justify-between">
+            {/* Slide Indicators */}
             <motion.div
               initial={{ opacity: 0, y: prefersReducedMotion ? 0 : (isMobile ? 10 : 20) }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ 
-                duration: prefersReducedMotion ? 0.3 : (isMobile ? 0.6 : 0.8), 
-                delay: prefersReducedMotion ? 0.3 : (isMobile ? 0.4 : 0.8) 
+              transition={{
+                duration: prefersReducedMotion ? 0.3 : (isMobile ? 0.6 : 0.8),
+                delay: prefersReducedMotion ? 0.3 : (isMobile ? 0.4 : 0.8)
               }}
-              className="flex space-x-3 bg-black/20 backdrop-blur-sm rounded-full p-2 sm:p-1 sm:bg-transparent sm:backdrop-blur-none"
+              className="flex items-center space-x-2 sm:space-x-3 bg-black/20 backdrop-blur-sm rounded-full p-1.5 sm:p-1 sm:bg-transparent sm:backdrop-blur-none"
             >
               {slides.map((_, index) => (
                 <motion.button
@@ -286,32 +287,22 @@ const HeroSlider = ({ data }) => {
                   }}
                   whileHover={prefersReducedMotion ? {} : { scale: 1.2 }}
                   whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
-                  className={`h-[4px] sm:h-[3px] rounded-full transition-all duration-300 ease-out backdrop-blur-sm ${
+                  className={`h-[3px] sm:h-[3px] rounded-full transition-all duration-300 ease-out backdrop-blur-sm ${
                     index === currentSlide
-                      ? "bg-white w-10 sm:w-8 shadow-sm"
-                      : "bg-white/40 w-10 sm:w-8 hover:bg-white/60 hover:shadow-sm"
+                      ? "bg-white w-6 sm:w-8 shadow-sm"
+                      : "bg-white/40 w-6 sm:w-8 hover:bg-white/60 hover:shadow-sm"
                   }`}
                 />
               ))}
             </motion.div>
-          </div>
-        </div>
-      </div>
 
-      {/* Touch-friendly Arrow Navigation - Responsive positioning */}
-      <div className={`absolute z-20 ${
-        isMobile 
-          ? "bottom-16 left-0 right-0"  // Mobile: above indicators, centered
-          : "bottom-4 sm:bottom-8 right-4 sm:right-0"  // Desktop: bottom-right corner
-      }`}>
-        <div className={isMobile ? "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" : "sm:max-w-7xl sm:mx-auto sm:px-4 sm:px-6 lg:px-8"}>
-          <div className={`flex items-center ${isMobile ? "justify-center" : "justify-end"}`}>
+            {/* Arrow Controls & Play/Pause */}
             <motion.div
               initial={{ opacity: 0, y: prefersReducedMotion ? 0 : (isMobile ? 10 : 20) }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ 
-                duration: prefersReducedMotion ? 0.3 : (isMobile ? 0.6 : 0.8), 
-                delay: prefersReducedMotion ? 0.3 : (isMobile ? 0.6 : 0.9) 
+              transition={{
+                duration: prefersReducedMotion ? 0.3 : (isMobile ? 0.6 : 0.8),
+                delay: prefersReducedMotion ? 0.3 : (isMobile ? 0.6 : 0.9)
               }}
               className={`flex items-center justify-center bg-black/30 backdrop-blur-md rounded-full shadow-lg ${
                 isMobile ? "p-2" : "p-1.5"
@@ -344,6 +335,46 @@ const HeroSlider = ({ data }) => {
               {/* Divider */}
               <div className={`bg-white/30 ${isMobile ? "w-px h-5 mx-3" : "w-px h-4 mx-2"}`}></div>
 
+              {/* Play/Pause - Desktop only, between arrows */}
+              {!isMobile && (
+                <>
+                  <motion.button
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{
+                      duration: prefersReducedMotion ? 0.2 : 0.3,
+                      delay: prefersReducedMotion ? 0.2 : 1.4,
+                      type: prefersReducedMotion ? "tween" : "spring",
+                      stiffness: 200,
+                    }}
+                    whileHover={prefersReducedMotion ? {} : {
+                      scale: 1.1,
+                      backgroundColor: "rgba(255,255,255,0.2)",
+                    }}
+                    whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
+                    className="flex items-center justify-center rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 w-7 h-7"
+                    aria-label={isPlaying ? "Pause slideshow" : "Play slideshow"}
+                  >
+                    <motion.div
+                      key={isPlaying ? "pause" : "play"}
+                      initial={prefersReducedMotion ? {} : { scale: 0, rotate: 90 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={prefersReducedMotion ? {} : { duration: 0.3, type: "spring", stiffness: 300 }}
+                    >
+                      {isPlaying ? (
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14h3V5H8zm5 0v14h3V5h-3z" />
+                        </svg>
+                      ) : (
+                        <FiPlay className="w-3.5 h-3.5" />
+                      )}
+                    </motion.div>
+                  </motion.button>
+                  <div className="w-px h-4 mx-2 bg-white/30"></div>
+                </>
+              )}
+
               {/* Next Arrow */}
               <motion.button
                 onClick={goToNext}
@@ -367,43 +398,12 @@ const HeroSlider = ({ data }) => {
               >
                 <FiChevronRight className={isMobile ? "w-4 h-4" : "w-3.5 h-3.5"} />
               </motion.button>
+
             </motion.div>
           </div>
         </div>
       </div>
 
-      {/* Play/Pause Control - Desktop only, repositioned */}
-      {!isMobile && (
-        <motion.button
-          onClick={() => setIsPlaying(!isPlaying)}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{
-            duration: prefersReducedMotion ? 0.3 : 0.5,
-            delay: prefersReducedMotion ? 0.4 : 1.4,
-            type: prefersReducedMotion ? "tween" : "spring",
-            stiffness: 200,
-          }}
-          whileHover={prefersReducedMotion ? {} : { scale: 1.1 }}
-          whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
-          className="absolute top-1/2 right-6 transform -translate-y-1/2 z-10 bg-white/10 backdrop-blur-md rounded-full p-2.5 text-white hover:bg-white/20 transition-all duration-200 shadow-lg"
-        >
-          <motion.div
-            key={isPlaying ? "pause" : "play"}
-            initial={prefersReducedMotion ? {} : { scale: 0, rotate: 90 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={prefersReducedMotion ? {} : { duration: 0.3, type: "spring", stiffness: 300 }}
-          >
-            {isPlaying ? (
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14h3V5H8zm5 0v14h3V5h-3z" />
-              </svg>
-            ) : (
-              <FiPlay className="w-4 h-4" />
-            )}
-          </motion.div>
-        </motion.button>
-      )}
     </div>
   );
 };

@@ -220,7 +220,8 @@ services:
       - "traefik.http.routers.website.middlewares=website-security"
       - "traefik.http.middlewares.website-security.headers.browserxssfilter=true"
       - "traefik.http.middlewares.website-security.headers.contenttypenosniff=true"
-      - "traefik.http.middlewares.website-security.headers.frameDeny=true"
+      - "traefik.http.middlewares.website-security.headers.frameDeny=false"
+      - "traefik.http.middlewares.website-security.headers.contentSecurityPolicy=frame-ancestors 'self' app.${APP_DOMAIN:-omcp.localhost}"
       - "traefik.http.middlewares.website-security.headers.sslredirect=false"
     networks:
       - omcp-network

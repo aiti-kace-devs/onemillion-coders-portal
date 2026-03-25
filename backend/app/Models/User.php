@@ -69,7 +69,6 @@ class User extends Authenticatable
         'updated_at' => 'datetime',
         'status' => 'boolean',
         'pwd' => 'boolean',
-        'password_changed_at' => 'datetime',
         'data' => 'array',
         'support' => 'boolean',
     ];
@@ -273,5 +272,10 @@ class User extends Authenticatable
             'status' => true,
             'message' => 'true',
         ];
+    }
+
+    public function userAssessment()
+    {
+        return $this->hasOne(UserAssessment::class);
     }
 }

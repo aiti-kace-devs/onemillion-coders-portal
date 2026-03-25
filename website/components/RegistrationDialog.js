@@ -20,17 +20,24 @@ import {
   submitRegistration,
   getConsentData,
   checkEmailAvailability,
+  confirmCourse,
 } from "../services/pages";
 import Button from "./Button";
 import OtpVerification from "./OtpVerification";
-import { getCourseImage } from "../utils/courseImages";
 import GhanaGradientText from "./GhanaGradients/GhanaGradientText";
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 
 
-const RegistrationDialog = ({ isOpen, onClose, programme }) => {
+const RegistrationDialog = ({ isOpen, onClose, programme, userId, courseId, centreId }) => {
   const { executeRecaptcha} = useGoogleReCaptcha();
-  
+
+  // Enrollment mode state (when userId is present)
+  const [needsSupport, setNeedsSupport] = useState(null);
+  const [supportDetails, setSupportDetails] = useState('');
+  const [enrollSubmitting, setEnrollSubmitting] = useState(false);
+  const [enrollSuccess, setEnrollSuccess] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
   // State management
   const [step, setStep] = useState(1); // 1: location, 2: form, 3: success
   const [loading, setLoading] = useState(false);
@@ -105,9 +112,15 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
       setConsentContent("");
       setOtpVerified(false);
       setEmailAvailability({ status: null, message: "" });
-      fetchLocations();
+      setNeedsSupport(null);
+      setSupportDetails('');
+      setEnrollSubmitting(false);
+      setEnrollSuccess(false);
+      if (!userId) {
+        fetchLocations();
+      }
     }
-  }, [isOpen, programme?.id, fetchLocations]);
+  }, [isOpen, programme?.id, fetchLocations, userId]);
 
   // Fetch consent content when form step is shown
   useEffect(() => {
@@ -438,7 +451,239 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
     );
   };
 
+  // Handle enrollment submission (when userId is present)
+  const handleEnrollSubmit = async () => {
+    try {
+      setEnrollSubmitting(true);
+      setError(null);
+      await confirmCourse({
+        userId,
+        course_id: courseId || programme.id,
+        support: needsSupport === true,
+        ...(centreId && { centre_id: centreId }),
+      });
+      setEnrollSuccess(true);
+    } catch (err) {
+      const apiErrors = err.response?.data?.errors;
+      const apiMessage = err.response?.data?.message;
+      if (apiErrors) {
+        const errorMessages = Object.values(apiErrors).flat().join('. ');
+        setError(errorMessages);
+      } else {
+        setError(apiMessage || 'Failed to submit enrollment. Please try again.');
+      }
+      console.error('Error submitting enrollment:', err);
+    } finally {
+      setEnrollSubmitting(false);
+    }
+  };
+
   if (!isOpen) return null;
+
+  // Simplified enrollment view when userId is present
+  if (userId) {
+    return (
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+
+          {/* Dialog */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="relative bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+          >
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 z-50 p-2 bg-white/90 hover:bg-white text-gray-600 hover:text-gray-900 rounded-full shadow-lg backdrop-blur-sm transition-all duration-200 hover:shadow-xl"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            <div className="flex max-h-[90vh]">
+              {/* Left Side - Course Image */}
+              <div className="hidden md:block w-1/2 relative bg-gray-100">
+                {programme?.image && !imageError ? (
+                  <Image
+                    src={programme?.image}
+                    alt={programme?.title}
+                    fill
+                    className="object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                    <Image
+                      src="/images/one-million-coders-logo.png"
+                      alt="One Million Coders"
+                      width={120}
+                      height={40}
+                      className="opacity-15"
+                    />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-transparent" />
+
+                {/* Course Info Overlay */}
+                <div className="absolute inset-0 flex flex-col justify-end p-8">
+                  <div className="text-white">
+                    <div className="mb-4">
+                      <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
+                        {programme?.category?.title}
+                      </span>
+                    </div>
+                    <h3 className="text-2xl font-bold mb-3 leading-tight">
+                      {programme?.title}
+                    </h3>
+                    <p className="text-white/90 text-sm leading-relaxed">
+                      {programme?.sub_title || 'Professional certification program'}
+                    </p>
+                    {programme?.duration && (
+                      <div className="flex items-center space-x-2 mt-4 text-white/80">
+                        <FiClock className="w-4 h-4" />
+                        <span className="text-sm">{programme.duration}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side - Support Question */}
+              <div className="w-full md:w-1/2 flex flex-col">
+                {/* Mobile Header */}
+                <div className="md:hidden p-6 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">Enroll</h2>
+                      <p className="text-sm text-gray-600">{programme?.title}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desktop Header */}
+                <div className="hidden md:block p-6 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    <GhanaGradientText variant="red-yellow-green">
+                      Enroll in Programme
+                    </GhanaGradientText>
+                  </h2>
+                  <p className="text-gray-600">
+                    {enrollSuccess ? 'Enrollment submitted successfully!' : 'Just one quick question before you enroll'}
+                  </p>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  {error && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-3">
+                      <FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                      <p className="text-red-700">{error}</p>
+                    </div>
+                  )}
+
+                  {enrollSuccess ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <FiCheckCircle className="w-8 h-8 text-green-600" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                        Enrollment Successful!
+                      </h3>
+                      <p className="text-gray-600 mb-6 leading-relaxed">
+                        You have been enrolled in <span className="font-semibold">{programme?.title}</span>. Further details will be sent to you.
+                      </p>
+                      <Button onClick={onClose} variant="primary">
+                        Close
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          Would you like access to a training centre?
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Our training centres provide computers, internet access, and other resources to support your learning. Let us know if you&apos;d like to visit a centre to use these resources.
+                        </p>
+
+                        <div className="grid gap-3">
+                          <button
+                            onClick={() => setNeedsSupport(true)}
+                            className={`p-4 rounded-lg border-2 text-left transition-all duration-200 ${
+                              needsSupport === true
+                                ? 'border-yellow-400 bg-yellow-50'
+                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                needsSupport === true ? 'border-yellow-400' : 'border-gray-300'
+                              }`}>
+                                {needsSupport === true && (
+                                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                                )}
+                              </div>
+                              <span className="font-medium text-gray-900">Yes</span>
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => setNeedsSupport(false)}
+                            className={`p-4 rounded-lg border-2 text-left transition-all duration-200 ${
+                              needsSupport === false
+                                ? 'border-yellow-400 bg-yellow-50'
+                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                needsSupport === false ? 'border-yellow-400' : 'border-gray-300'
+                              }`}>
+                                {needsSupport === false && (
+                                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                                )}
+                              </div>
+                              <span className="font-medium text-gray-900">No</span>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
+                      <div className="pt-4">
+                        <Button
+                          onClick={handleEnrollSubmit}
+                          disabled={needsSupport === null || enrollSubmitting}
+                          icon={enrollSubmitting ? FiLoader : FiCheckCircle}
+                          className="w-full"
+                        >
+                          {enrollSubmitting ? 'Submitting...' : 'Confirm Enrollment'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
 
   return (
     <AnimatePresence>
@@ -474,18 +719,26 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
 
           <div className="flex max-h-[90vh]">
             {/* Left Side - Course Image (Half of dialog) */}
-            <div className="hidden md:block w-1/2 relative">
-              <Image
-                // TEMPORARY: Commented out API image, using static image for consistency
-                // src={
-                //   programme?.image ||
-                //   "/images/hero/Certified-Data-Protection-Manager.jpg"
-                // }
-                src={getCourseImage(programme?.id)}
-                alt={programme?.title}
-                fill
-                className="object-cover"
-              />
+            <div className="hidden md:block w-1/2 relative bg-gray-100">
+              {programme?.image && !imageError ? (
+                <Image
+                  src={programme?.image}
+                  alt={programme?.title}
+                  fill
+                  className="object-cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                  <Image
+                    src="/images/one-million-coders-logo.png"
+                    alt="One Million Coders"
+                    width={120}
+                    height={40}
+                    className="opacity-15"
+                  />
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-transparent" />
 
               {/* Course Info Overlay */}

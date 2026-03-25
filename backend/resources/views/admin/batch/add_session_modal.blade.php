@@ -51,6 +51,7 @@
                         <option value="Afternoon">Afternoon</option>
                         <option value="Evening">Evening</option>
                         <option value="Fullday">Fullday</option>
+                        <option value="Online">Online</option>
                     </select>
                 </div>
 

@@ -38,7 +38,7 @@ trait BatchFieldHelpers
                 WHERE c.batch_id = admission_batches.id
             ) AS admitted_students_count')
             ->selectRaw('(
-                SELECT COUNT(c2.id)
+                SELECT COUNT(DISTINCT c2.programme_id)
                 FROM courses c2
                 WHERE c2.batch_id = admission_batches.id
             ) AS courses_count');
@@ -222,7 +222,8 @@ trait BatchFieldHelpers
     {
         $branches = Branch::pluck('title', 'id')->toArray();
         $programmes = Programme::query()
-            ->select(['id', 'title', 'start_date', 'end_date'])
+            ->select(['id', 'title', 'start_date', 'end_date', 'level', 'mode_of_delivery', 'duration', 'status'])
+            ->where('status', 1)
             ->orderBy('title')
             ->get();
 
@@ -259,6 +260,20 @@ trait BatchFieldHelpers
         $locations = $batch->courses
             ->map(fn ($course) => trim((string) $course->location))
             ->filter(fn ($location) => $location !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        $levels = $batch->courses
+            ->map(fn ($course) => trim((string) ($course->programme?->level ?? '')))
+            ->filter(fn ($level) => $level !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        $modes = $batch->courses
+            ->map(fn ($course) => trim((string) ($course->programme?->mode_of_delivery ?? '')))
+            ->filter(fn ($mode) => $mode !== '')
             ->unique()
             ->sort()
             ->values();
@@ -301,16 +316,22 @@ trait BatchFieldHelpers
             $html .= '</select>
                 </div>
                 <div style="min-width:160px">
-                    <label class="form-label small text-muted" for="batchCoursesFilterDate">Date</label>
-                    <input type="date" id="batchCoursesFilterDate" class="form-control">
+                    <label class="form-label small text-muted" for="batchCoursesFilterLevel">Level</label>
+                    <select id="batchCoursesFilterLevel" class="form-control">
+                        <option value="">All Levels</option>';
+            foreach ($levels as $level) {
+                $html .= '<option value="' . e($level) . '">' . e($level) . '</option>';
+            }
+            $html .= '</select>
                 </div>
-                <div style="min-width:140px">
-                    <label class="form-label small text-muted" for="batchCoursesFilterStatus">Status</label>
-                    <select id="batchCoursesFilterStatus" class="form-control">
-                        <option value="">All Status</option>
-                        <option value="1">Active</option>
-                        <option value="0">Inactive</option>
-                    </select>
+                <div style="min-width:180px">
+                    <label class="form-label small text-muted" for="batchCoursesFilterMode">Mode of Delivery</label>
+                    <select id="batchCoursesFilterMode" class="form-control">
+                        <option value="">All Modes</option>';
+            foreach ($modes as $mode) {
+                $html .= '<option value="' . e($mode) . '">' . e($mode) . '</option>';
+            }
+            $html .= '</select>
                 </div>
                 <div>
                     <button type="button" class="btn btn-outline-secondary" id="batchCoursesClearFilters">Clear</button>
@@ -327,8 +348,8 @@ trait BatchFieldHelpers
                     <th>Programme</th>
                     <th>Location</th>
                     <th>Duration</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
+                    <th>Level</th>
+                    <th>Mode of Delivery</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -367,26 +388,26 @@ trait BatchFieldHelpers
 
             $dataCentreId = $course->centre_id ?? '';
             $dataProgrammeId = $course->programme_id ?? '';
+            $dataCentreTitle = $course->centre?->title ?? '';
             $dataLocation = strtolower(trim((string) $course->location));
-            $dataStartDate = $course->start_date ?? '';
-            $dataEndDate = $course->end_date ?? '';
-            $dataStatus = $course->status ? '1' : '0';
+            $dataLevel = strtolower(trim((string) ($course->programme?->level ?? '')));
+            $dataMode = strtolower(trim((string) ($course->programme?->mode_of_delivery ?? '')));
 
             $html .= '<tr
                 data-centre-id="' . e($dataCentreId) . '"
+                data-centre-title="' . e($dataCentreTitle) . '"
                 data-programme-id="' . e($dataProgrammeId) . '"
                 data-location="' . e($dataLocation) . '"
-                data-start-date="' . e($dataStartDate) . '"
-                data-end-date="' . e($dataEndDate) . '"
-                data-status="' . e($dataStatus) . '"
+                data-level="' . e($dataLevel) . '"
+                data-mode="' . e($dataMode) . '"
             >
                 <td>' . e($course->centre?->title . ' - ' . $course->programme?->title ?? '-') . '</td>
                 <td>' . e($course->centre?->title ?? '-') . '</td>
                 <td>' . e($course->programme?->title ?? '-') . '</td>
                 <td>' . e($course->location ?? '-') . '</td>
                 <td>' . e($course->duration) . '</td>
-                <td>' . e($course->start_date) . '</td>
-                <td>' . e($course->end_date) . '</td>
+                <td>' . e($course->programme?->level ?? '-') . '</td>
+                <td>' . e($course->programme?->mode_of_delivery ?? '-') . '</td>
                 <td>' . $statusToggle . '</td>
                 <td>
                     <a href="' . $showUrl . '" class="btn btn-sm btn-link">
@@ -492,7 +513,7 @@ trait BatchFieldHelpers
         $createdCount = 0;
         $programmesById = Programme::query()
             ->whereIn('id', $programmeIds)
-            ->get(['id', 'start_date', 'end_date'])
+            ->get(['id', 'start_date', 'end_date', 'duration', 'mode_of_delivery'])
             ->keyBy('id');
 
         // Create a course for each combination of programme and centre
@@ -500,6 +521,7 @@ trait BatchFieldHelpers
             $programme = $programmesById->get($programmeId);
             $programmeStartDate = $programme?->start_date;
             $programmeEndDate = $programme?->end_date;
+            $programmeDuration = $programme?->duration;
 
             foreach ($centreIds as $centreId) {
                 // Check if this combination already exists
@@ -514,12 +536,39 @@ trait BatchFieldHelpers
                         'programme_id' => $programmeId,
                         'course_name' => null, // Will be auto-generated by the booted observer
                         'location' => null, // Will be auto-generated by the booted observer
-                        'duration' => $duration,
+                        'duration' => $duration ?: $programmeDuration,
                         'start_date' => $startDate ?: ($programmeStartDate ?: $batch->start_date),
                         'end_date' => $endDate ?: ($programmeEndDate ?: $batch->end_date),
                         'batch_id' => $batch->id,
                         'status' => true,
                     ]);
+
+                    if ($programme && strtolower(trim((string) $programme->mode_of_delivery)) === 'online') {
+                        $sourceCourseId = Course::query()
+                            ->where('programme_id', $programmeId)
+                            ->where('batch_id', $batch->id)
+                            ->where('id', '!=', $course->id)
+                            ->whereHas('sessions')
+                            ->orderBy('id')
+                            ->value('id');
+
+                        if ($sourceCourseId) {
+                            $sourceSessions = CourseSession::query()
+                                ->where('course_id', $sourceCourseId)
+                                ->get(['session', 'limit', 'course_time', 'link', 'status']);
+
+                            foreach ($sourceSessions as $session) {
+                                CourseSession::create([
+                                    'course_id' => $course->id,
+                                    'session' => $session->session,
+                                    'limit' => $session->limit,
+                                    'course_time' => $session->course_time,
+                                    'link' => $session->link,
+                                    'status' => $session->status,
+                                ]);
+                            }
+                        }
+                    }
 
                     $createdCount++;
                 }
@@ -603,8 +652,26 @@ trait BatchFieldHelpers
         }
 
         $course = Course::findOrFail($courseId);
+        $sessionCourseId = $course->id;
 
-        $sessions = $course->sessions()
+        if ($course->isOnlineProgramme()) {
+            $hasSessions = CourseSession::query()
+                ->where('course_id', $course->id)
+                ->exists();
+
+            if (!$hasSessions) {
+                $courseIds = $course->siblingCourseIdsForProgrammeBatch();
+                if (!empty($courseIds)) {
+                    $sessionCourseId = CourseSession::query()
+                        ->whereIn('course_id', $courseIds)
+                        ->orderBy('course_id')
+                        ->value('course_id') ?? $course->id;
+                }
+            }
+        }
+
+        $sessions = CourseSession::query()
+            ->where('course_id', $sessionCourseId)
             ->select(['id', 'session', 'limit', 'course_time', 'link', 'status'])
             ->orderBy('id')
             ->get()
@@ -640,7 +707,7 @@ trait BatchFieldHelpers
         $data = request()->validate([
             'sessions' => 'required|array|min:1',
             'sessions.*.id' => 'nullable|integer',
-            'sessions.*.session' => 'required|string|in:Morning,Afternoon,Evening,Fullday',
+            'sessions.*.session' => 'required|string|in:Morning,Afternoon,Evening,Fullday,Online',
             'sessions.*.limit' => 'required|integer|min:1|max:100000',
             'sessions.*.course_time' => 'required|string|max:255',
             'sessions.*.link' => 'nullable|string|max:255',
@@ -669,60 +736,87 @@ trait BatchFieldHelpers
                 ->with('error', 'Add at least one valid session row before saving.');
         }
 
+        $duplicateSessions = $rows->pluck('session')->duplicates();
+        if ($duplicateSessions->isNotEmpty()) {
+            return redirect()
+                ->back()
+                ->with('error', 'Each session (Morning/Afternoon/Evening/Fullday) can only be added once.');
+        }
+
+        $onlineProgramme = $course->isOnlineProgramme();
+        $targetCourseIds = $onlineProgramme ? $course->siblingCourseIdsForProgrammeBatch() : [$course->id];
+        if (empty($targetCourseIds)) {
+            $targetCourseIds = [$course->id];
+        }
+
         try {
-            DB::transaction(function () use ($course, $rows) {
-                $existingSessions = CourseSession::query()
-                    ->where('course_id', $course->id)
-                    ->get()
-                    ->keyBy('id');
+            DB::transaction(function () use ($course, $rows, $onlineProgramme, $targetCourseIds) {
+                $submittedSessionNames = $rows->pluck('session')->values()->all();
 
-                $submittedIds = [];
+                foreach ($targetCourseIds as $targetCourseId) {
+                    $existingSessions = CourseSession::query()
+                        ->where('course_id', $targetCourseId)
+                        ->get();
 
-                foreach ($rows as $row) {
-                    $payload = [
-                        'course_id' => $course->id,
-                        'session' => $row['session'],
-                        'limit' => $row['limit'],
-                        'course_time' => $row['course_time'],
-                        'link' => $row['link'] !== '' ? $row['link'] : null,
-                        'status' => $row['status'] ? '1' : '0',
-                    ];
+                    $existingById = $existingSessions->keyBy('id');
+                    $existingBySession = $existingSessions->keyBy('session');
+                    $submittedIds = [];
 
-                    if ($row['id']) {
-                        if (!$existingSessions->has($row['id'])) {
-                            throw new \RuntimeException('One or more sessions could not be matched to this course. Reload and try again.');
+                    foreach ($rows as $row) {
+                        $payload = [
+                            'course_id' => $targetCourseId,
+                            'session' => $row['session'],
+                            'limit' => $row['limit'],
+                            'course_time' => $row['course_time'],
+                            'link' => $row['link'] !== '' ? $row['link'] : null,
+                            'status' => $row['status'] ? '1' : '0',
+                        ];
+
+                        if (!$onlineProgramme && $targetCourseId === $course->id && $row['id']) {
+                            if (!$existingById->has($row['id'])) {
+                                throw new \RuntimeException('One or more sessions could not be matched to this course. Reload and try again.');
+                            }
+
+                            $session = $existingById->get($row['id']);
+                            $session->fill($payload);
+                            $session->save();
+                            $submittedIds[] = $session->id;
+                            continue;
                         }
 
-                        $session = $existingSessions->get($row['id']);
-                        $session->fill($payload);
-                        $session->save();
-                        $submittedIds[] = $session->id;
+                        $session = $existingBySession->get($row['session']);
+                        if ($session) {
+                            $session->fill($payload);
+                            $session->save();
+                            $submittedIds[] = $session->id;
+                            continue;
+                        }
+
+                        $created = CourseSession::create($payload);
+                        $submittedIds[] = $created->id;
+                    }
+
+                    $idsToDelete = $existingSessions
+                        ->filter(fn ($session) => !in_array($session->session, $submittedSessionNames, true))
+                        ->pluck('id')
+                        ->values();
+
+                    if ($idsToDelete->isEmpty()) {
                         continue;
                     }
 
-                    $created = CourseSession::create($payload);
-                    $submittedIds[] = $created->id;
+                    $admissionsLinked = UserAdmission::query()
+                        ->whereIn('session', $idsToDelete->all())
+                        ->count();
+
+                    if ($admissionsLinked > 0) {
+                        throw new \RuntimeException('One or more removed sessions already have student admissions. Remove those admissions first.');
+                    }
+
+                    CourseSession::query()
+                        ->whereIn('id', $idsToDelete->all())
+                        ->delete();
                 }
-
-                $submittedIds = collect($submittedIds);
-                $idsToDelete = $existingSessions->keys()->diff($submittedIds)->values();
-
-                if ($idsToDelete->isEmpty()) {
-                    return;
-                }
-
-                $admissionsLinked = UserAdmission::query()
-                    ->whereIn('session', $idsToDelete->all())
-                    ->count();
-
-                if ($admissionsLinked > 0) {
-                    throw new \RuntimeException('One or more removed sessions already have student admissions. Remove those admissions first.');
-                }
-
-                CourseSession::query()
-                    ->where('course_id', $course->id)
-                    ->whereIn('id', $idsToDelete->all())
-                    ->delete();
             });
         } catch (\RuntimeException $e) {
             return redirect()

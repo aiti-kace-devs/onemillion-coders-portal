@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { 
   FiArrowLeft, 
@@ -21,11 +21,15 @@ import { getProgrammeData } from '../../../services/pages';
 import Button from '../../../components/Button';
 import ProgrammeDetailsSkeleton from '@/components/ProgrammeDetailsSkeleton';
 import RegistrationDialog from '@/components/RegistrationDialog';
-import { getCourseImage } from '../../../utils/courseImages';
 
 export default function CourseDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const userId = searchParams.get('user_id');
+  const courseId = searchParams.get('course_id');
+  const [imageError, setImageError] = useState(false);
+  const centreId = searchParams.get('centre_id');
   const [activeTab, setActiveTab] = useState('overview');
   const [programme, setProgramme] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -196,16 +200,19 @@ export default function CourseDetailsPage() {
               {/* CTA Button */}
               <div className="flex">
                 <Button
-                  // onClick={() => isAvailable && setShowRegistrationDialog(true)}
                   onClick={() => {
-                    router.push('/register')
+                    if (userId) {
+                      isAvailable && setShowRegistrationDialog(true);
+                    } else {
+                      router.push('/register');
+                    }
                   }}
                   variant="primary"
                   icon={FiPlay}
                   disabled={!isAvailable}
                   className="!bg-white !text-gray-900 hover:!bg-gray-100"
                 >
-                  {isAvailable ? 'Register Now' : 'Notify When Available'}
+                  {isAvailable ? (userId ? 'Enroll Now' : 'Get Started') : 'Notify When Available'}
                 </Button>
               </div>
             </motion.div>
@@ -217,16 +224,29 @@ export default function CourseDetailsPage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="relative"
             >
-              <div className="relative h-96 lg:h-[500px] rounded-2xl overflow-hidden shadow-2xl">
-                <Image
-                  // TEMPORARY: Commented out API image, using static image for consistency
-                  // src={programme.image || '/images/hero/Certified-Data-Protection-Manager.jpg'}
-                  src={getCourseImage(programme.id)}
-                  alt={programme.title}
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              <div className="relative h-96 lg:h-[500px] rounded-2xl overflow-hidden shadow-2xl bg-gray-100">
+                {programme.image && !imageError ? (
+                  <>
+                    <Image
+                      src={programme.image}
+                      alt={programme.title}
+                      fill
+                      className="object-cover"
+                      onError={() => setImageError(true)}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  </>
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                    <Image
+                      src="/images/one-million-coders-logo.png"
+                      alt="One Million Coders"
+                      width={180}
+                      height={60}
+                      className="opacity-15"
+                    />
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
@@ -250,6 +270,11 @@ export default function CourseDetailsPage() {
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
+                      ref={(el) => {
+                        if (el && activeTab === tab.id) {
+                          el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                        }
+                      }}
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center space-x-1.5 md:space-x-2 py-3 md:py-4 px-3 md:px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 whitespace-nowrap ${
                         activeTab === tab.id
@@ -270,7 +295,7 @@ export default function CourseDetailsPage() {
             </div>
             
             {/* Mobile: Show current tab name */}
-            <div className="block md:hidden mt-4 px-4">
+            {/* <div className="block md:hidden mt-4 px-4">
               <div className="flex items-center space-x-2 text-sm font-medium text-gray-900">
                 {tabs.find(tab => tab.id === activeTab)?.icon && (
                   React.createElement(tabs.find(tab => tab.id === activeTab).icon, {
@@ -279,7 +304,7 @@ export default function CourseDetailsPage() {
                 )}
                 <span>{tabs.find(tab => tab.id === activeTab)?.label}</span>
               </div>
-            </div>
+            </div> */}
           </motion.div>
 
           {/* Tab Content */}
@@ -322,49 +347,51 @@ export default function CourseDetailsPage() {
                 <div className="space-y-4 md:space-y-6 lg:mt-0">
                   <div className="bg-white rounded-2xl p-4 md:p-6 shadow-lg border border-gray-200">
                     <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Programme Details</h3>
-                    <div className="space-y-3 md:space-y-4">
+                    <div className="space-y-3">
                       {programme.duration && (
-                        <div className="flex justify-between items-start">
-                          <span className="text-gray-600 text-sm md:text-base">Duration</span>
-                          <span className="font-semibold text-gray-900 text-sm md:text-base text-right">{programme.duration}</span>
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-sm text-gray-500">Duration</span>
+                          <span className="text-sm font-medium text-gray-900">{programme.duration}</span>
                         </div>
                       )}
-                      <div className="flex justify-between items-start">
-                        <span className="text-gray-600 text-sm md:text-base">Modules</span>
-                        <span className="font-semibold text-gray-900 text-sm md:text-base text-right">
-                          {programme.course_modules_count || 0}
-                        </span>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-sm text-gray-500">Modules</span>
+                        <span className="text-sm font-medium text-gray-900">{programme.course_modules_count || 0}</span>
                       </div>
-                      <div className="flex justify-between items-start">
-                        <span className="text-gray-600 text-sm md:text-base">Category</span>
-                        <span className="font-semibold text-gray-900 text-xs md:text-sm text-right max-w-[60%]">{programme.category?.title}</span>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-sm text-gray-500">Category</span>
+                        <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">{programme.category?.title}</span>
                       </div>
-                      <div className="flex justify-between items-start">
-                        <span className="text-gray-600 text-sm md:text-base">Level</span>
-                        <span className="font-semibold text-gray-900 text-sm md:text-base text-right">{programme.level || 'Professional'}</span>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-sm text-gray-500">Level</span>
+                        <span className="text-sm font-medium text-gray-900">{programme.level || 'Professional'}</span>
                       </div>
+                      {programme.mode_of_delivery && (
+                        <div className="flex justify-between items-center py-2">
+                          <span className="text-sm text-gray-500">Mode</span>
+                          <span className="text-sm font-medium text-gray-900">{programme.mode_of_delivery}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-4 md:p-6 border border-yellow-200">
                     <div className="flex items-center space-x-2 mb-2 md:mb-3">
                       <FiStar className="w-4 h-4 md:w-5 md:h-5 text-yellow-600 flex-shrink-0" />
-                      <h3 className="text-base md:text-lg font-semibold text-gray-900">Why Choose This Programme?</h3>
+                      <h3 className="text-base md:text-lg font-semibold text-gray-900">Skills and tools you&apos;ll learn</h3>
                     </div>
-                    <ul className="space-y-2 text-xs md:text-sm text-gray-700 leading-relaxed">
+                    <div className="flex flex-wrap gap-2">
                       {programme.overview?.why_choose_this_course && programme.overview.why_choose_this_course.length > 0 ? (
                         programme.overview.why_choose_this_course.map((reason, index) => (
-                          <li key={index}>• {reason}</li>
+                          <span key={index} className="inline-block px-3 py-1.5 text-xs md:text-sm text-gray-700 bg-white border border-gray-200 rounded-full">
+                            {reason}
+                          </span>
                         ))
                       ) : (
                         <>
-                          <li>• Industry-recognized certification</li>
-                          <li>• Hands-on practical training</li>
-                          <li>• Expert instructor guidance</li>
-                          <li>• Career placement support</li>
                         </>
                       )}
-                    </ul>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -479,6 +506,9 @@ export default function CourseDetailsPage() {
         isOpen={showRegistrationDialog}
         onClose={() => setShowRegistrationDialog(false)}
         programme={programme}
+        userId={userId}
+        courseId={courseId}
+        centreId={centreId}
       />
     </div>
   );

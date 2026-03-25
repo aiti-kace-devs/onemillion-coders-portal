@@ -198,9 +198,11 @@ export const getCourseRecommendations = async (answers) => {
  * Fetch all regions/branches
  * @returns {Promise<Object>} - Regions data
  */
-export const getAllRegions = async () => {
+export const getAllRegions = async (token) => {
   try {
-    const response = await apiRequest("/branches");
+    const response = await apiRequest("/branches", {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
     const filteredRegions  =  response?.data?.filter((item) => {
       return item.status === true
     })
@@ -297,9 +299,11 @@ export const getCentreProgrammes = async (centreId) => {
  * @param {string|number} branchId - Branch/Region ID
  * @returns {Promise<Object>} - Districts data
  */
-export const getDistrictsByBranch = async (branchId) => {
+export const getDistrictsByBranch = async (branchId, token) => {
   try {
-    const response = await apiRequest(`/districts-by-branch?branch_id=${branchId}`);
+    const response = await apiRequest(`/districts-by-branch?branch_id=${branchId}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
     return response;
   } catch (error) {
     console.error(`Error fetching districts for branch ${branchId}:`, error);
@@ -312,12 +316,48 @@ export const getDistrictsByBranch = async (branchId) => {
  * @param {string|number} districtId - District ID
  * @returns {Promise<Object>} - Centres data
  */
-export const getCentresByDistrict = async (districtId) => {
+export const getCentresByDistrict = async (districtId, token) => {
   try {
-    const response = await apiRequest(`/centres-by-district?district_id=${districtId}`);
+    const response = await apiRequest(`/centres-by-district?district_id=${districtId}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
     return response;
   } catch (error) {
     console.error(`Error fetching centres for district ${districtId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch a single centre by ID
+ * @param {string|number} centreId - Centre ID
+ * @returns {Promise<Object>} - Centre data
+ */
+export const getCentreById = async (centreId) => {
+  try {
+    const response = await apiRequest(`/centres-by-id/${centreId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching centre ${centreId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Confirm course enrollment for a user
+ * @param {{ userId: string, course_id: number, support: boolean }} data
+ * @returns {Promise<Object>} - Confirmation response
+ */
+export const confirmCourse = async (data, token) => {
+  try {
+    const response = await apiRequest("/confirm-course", {
+      method: "POST",
+      data,
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error("Error confirming course:", error);
     throw error;
   }
 };
