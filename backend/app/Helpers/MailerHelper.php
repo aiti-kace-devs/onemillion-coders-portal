@@ -206,28 +206,28 @@ class MailerHelper
         // Convert mail::button components to styled links (markdown-style)
         $content = preg_replace(
             "/\[component\]:\s?#\s?\('mail::button',\s*\['url'\s*=>\s*'([^']+)'\]\)\s*\n(.*?)\n\s*\[endcomponent\]:\s?#/s",
-            '<p><a href="$1" style="display:inline-block;padding:10px 20px;background:#1d4ed8;color:#fff;border-radius:6px;text-decoration:none;">$2</a></p>',
+            '<p><a href="$1" style="display:inline-block;padding:10px 20px;background:#f9a825;color:#000;font-weight:bold;border-radius:12px;text-decoration:none;">$2</a></p>',
             $content
         );
 
         // Convert mail::button components to styled links (@component style)
         $content = preg_replace(
             "/@component\(\s*'mail::button'\s*,\s*\['url'\s*=>\s*'([^']+)'\]\s*\)\s*\n(.*?)\n\s*@endcomponent/s",
-            '<p><a href="$1" style="display:inline-block;padding:10px 20px;background:#1d4ed8;color:#fff;border-radius:6px;text-decoration:none;">$2</a></p>',
+            '<p><a href="$1" style="display:inline-block;padding:10px 20px;background:#f9a825;color:#000;font-weight:bold;border-radius:12px;text-decoration:none;">$2</a></p>',
             $content
         );
 
         // Convert mail::panel components to styled divs (markdown-style)
         $content = preg_replace(
             "/\[component\]:\s?#\s?\('mail::panel'\)\s*\n(.*?)\n\s*\[endcomponent\]:\s?#/s",
-            '<div style="padding:12px 16px;background:#f3f4f6;border-radius:8px;margin:8px 0;">$1</div>',
+            '<div style="padding:12px 16px;background:#f3f4f6;border-left: 4px solid #f9a825;border-radius:8px;margin:8px 0;">$1</div>',
             $content
         );
 
         // Convert mail::panel components to styled divs (@component style)
         $content = preg_replace(
             "/@component\(\s*'mail::panel'\s*\)\s*\n(.*?)\n\s*@endcomponent/s",
-            '<div style="padding:12px 16px;background:#f3f4f6;border-radius:8px;margin:8px 0;">$1</div>',
+            '<div style="padding:12px 16px;background:#f3f4f6;border-left: 4px solid #f9a825;border-radius:8px;margin:8px 0;">$1</div>',
             $content
         );
 
@@ -243,7 +243,7 @@ class MailerHelper
         $content = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $content);
 
         // Convert markdown links [text](url) to <a>
-        $content = preg_replace('/\[([^\]]+)\]\(([^\)]+)\)/', '<a href="$2" style="color:#1d4ed8;">$1</a>', $content);
+        $content = preg_replace('/\[([^\]]+)\]\(([^\)]+)\)/', '<a href="$2" style="color:#3869d4;font-weight:bold;">$1</a>', $content);
 
         // Convert <br> and line breaks
         $content = str_replace('<br>', '<br/>', $content);

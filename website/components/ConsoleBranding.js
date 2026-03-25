@@ -2,57 +2,83 @@
 
 import { useEffect } from "react";
 
-// Minimal QR code generator (numeric mode, version 1, error correction L)
-// Generates a QR code as a data URL using canvas
-function generateQRDataUrl(size = 200) {
-  // Pre-encoded QR matrix for a sample QR code
-  // This is a 21x21 Version 1 QR code pattern
-  const qr = [
-    [1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1],
-    [1,0,0,0,0,0,1,0,0,1,0,1,0,0,1,0,0,0,0,0,1],
-    [1,0,1,1,1,0,1,0,1,1,0,0,1,0,1,0,1,1,1,0,1],
-    [1,0,1,1,1,0,1,0,0,1,1,0,0,0,1,0,1,1,1,0,1],
-    [1,0,1,1,1,0,1,0,1,0,1,1,0,0,1,0,1,1,1,0,1],
-    [1,0,0,0,0,0,1,0,0,0,0,1,1,0,1,0,0,0,0,0,1],
-    [1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1],
-    [0,0,0,0,0,0,0,0,1,1,0,0,1,0,0,0,0,0,0,0,0],
-    [1,0,1,1,1,0,1,1,0,0,1,1,0,1,1,0,1,0,0,1,0],
-    [0,1,0,1,0,0,0,0,1,0,1,0,0,1,0,1,0,1,1,0,1],
-    [1,0,1,0,1,1,1,0,0,1,0,1,1,0,1,0,1,0,1,0,0],
-    [0,1,0,0,1,0,0,1,1,0,1,0,0,1,0,0,1,1,0,1,1],
-    [0,0,1,1,0,1,1,0,1,1,0,1,1,0,0,1,0,0,1,0,0],
-    [0,0,0,0,0,0,0,0,1,0,0,1,0,1,0,0,1,0,1,1,0],
-    [1,1,1,1,1,1,1,0,0,1,1,0,1,0,1,0,0,1,0,0,1],
-    [1,0,0,0,0,0,1,0,1,0,0,1,0,0,0,1,1,0,1,1,0],
-    [1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,0,1,0,0,0,1],
-    [1,0,1,1,1,0,1,0,0,0,1,0,0,1,1,0,0,1,1,0,0],
-    [1,0,1,1,1,0,1,0,1,0,1,1,0,0,1,1,0,1,0,1,1],
-    [1,0,0,0,0,0,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0],
-    [1,1,1,1,1,1,1,0,1,0,0,1,0,1,0,1,0,1,1,0,1],
-  ];
+const ASCII_LINES = [
+  "",
+  "",
+  "",
+  "                                            @@@@@@@@@@@@@",
+  "                                       @@@@@@ @@        @@@@@",
+  "                                ##########  @     @  %%%%%%%%%@@",
+  "                               # @@ @@ ######       %%%%%%%%%%%%%@@@@",
+  "                              ##@@@       #####    #############%%%  @@@",
+  "                              %%@@    @@@ @  #####################%%% @@",
+  "                             @@  @       @@@@  #####  % ******######%%@@",
+  "                           @@   @      @      @#####**@     @***#####%@@",
+  "                          @@    @   @        ####****************####@@@",
+  "                          @  @ @  @         ####******************##@@%%",
+  "                          @   @@@          %####***************%**#@@ %%",
+  "                          @   @@ @@       %%####*****************%@@ @@%",
+  "                          @  @  @    @@     #####@@*************@@@   @@",
+  "                         @@     @        =:::####@@**********#@@@#     @",
+  "                          @ @   @       -:::-@@@     ********@@@@@",
+  "                          @@     @    @-:: =       @##******####    @",
+  "                          @@@@   @  @ :::  @         ##########   @@  @",
+  "                            @    @@ ::::    @        @########% @@@@@",
+  "                             @@   @::-*     @ #####% %%%%%%%%   @@  @",
+  "                               @  =::   @   @  ###### @@%%%%  @  @ ##",
+  "                              @@@ ::       @@@@    ####%%@  @   @@ ##",
+  "                                 +::    @@@@@@  @@@@@@######## @@ ##",
+  "                                 ::@@                  @ @ ########",
+  "                                  :: @@@@      @    @@    @@@",
+  "                                    -::=@@@@ @@ @ @@@@@",
+  "                                                @",
+  "",
+  "",
+  "                   @@@@@@   @@@@       @@@    @@@@    @@@@       @@@@@@  @@@@@@@@@",
+  "                 @@@@@@@@@@ @@@@       @@@  @@@@@    @@@@@@    @@@@@@@@@@@@@@@@@@@",
+  "                @@@@    @@  @@@@       @@@@@@@@     @@@@@@@   @@@@    @@ @@@@",
+  "                @@@@  @@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@ @@@@        @@@@@@@@@",
+  "                @@@@   @@@@@@@@@@@@@@@ @@@@@@@@    @@@@@@@@@@ @@@@    @@ @@@@@@@@",
+  "                 @@@@@@@@@@@@@@@       @@@   @@@@ @@@@@@@@@@@@ @@@@@@@@@@@@@@@@@@@",
+  "                   @@@@@@@  @@@@       @@@    @@@@@@@     @@@@   @@@@@@  @@@@@@@@@",
+  "",
+  "                 @@@@@@@@@@@@@@@@@@@@@@@@@@@ @ @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  @@@@",
+];
 
+// Render GI-KACE ASCII art onto a canvas and return as a data URL
+function generateArtImage() {
   const canvas = document.createElement("canvas");
-  const moduleSize = Math.floor(size / 21);
-  const actualSize = moduleSize * 21;
-  canvas.width = actualSize;
-  canvas.height = actualSize;
   const ctx = canvas.getContext("2d");
 
-  // Light grey background
-  ctx.fillStyle = "#f3f4f6";
-  ctx.fillRect(0, 0, actualSize, actualSize);
+  const fontSize = 14;
+  const lineHeight = fontSize * 1.15;
+  const font = `${fontSize}px monospace`;
 
-  // Draw modules in medium grey
-  ctx.fillStyle = "#9ca3af";
-  for (let row = 0; row < 21; row++) {
-    for (let col = 0; col < 21; col++) {
-      if (qr[row][col]) {
-        ctx.fillRect(col * moduleSize, row * moduleSize, moduleSize, moduleSize);
-      }
-    }
+  ctx.font = font;
+
+  // Measure the widest line
+  let maxWidth = 0;
+  for (const line of ASCII_LINES) {
+    const w = ctx.measureText(line).width;
+    if (w > maxWidth) maxWidth = w;
   }
 
-  return canvas.toDataURL("image/png");
+  const padding = 20;
+  canvas.width = maxWidth + padding * 2;
+  canvas.height = ASCII_LINES.length * lineHeight + padding * 2;
+
+  // Transparent background (no fill)
+
+  // Draw text
+  ctx.font = font;
+  ctx.fillStyle = "#000000";
+  ctx.textBaseline = "top";
+
+  for (let i = 0; i < ASCII_LINES.length; i++) {
+    ctx.fillText(ASCII_LINES[i], padding, padding + i * lineHeight);
+  }
+
+  return { dataUrl: canvas.toDataURL("image/png"), width: canvas.width, height: canvas.height };
 }
 
 export default function ConsoleBranding() {
@@ -79,20 +105,19 @@ export default function ConsoleBranding() {
     // Suppress immediately
     suppress();
 
-    // Generate QR code as data URL
-    const qrDataUrl = generateQRDataUrl(200);
-    const qrSize = 200;
+    // Render ASCII art as an image and display in console
+    const { dataUrl, width, height } = generateArtImage();
 
-    // Preload the generated image
     const img = new window.Image();
     img.onload = () => {
       console.log = original.log;
-
+      const scale = 0.35;
+      const w = Math.round(width * scale);
+      const h = Math.round(height * scale);
       console.log(
         "%c ",
-        `font-size: 1px; padding: ${qrSize / 2}px ${qrSize / 2}px; background: url(${qrDataUrl}) no-repeat; background-size: ${qrSize}px ${qrSize}px; line-height: ${qrSize}px;`
+        `font-size: 1px; padding: ${h / 2}px ${w / 2}px; background: url(${dataUrl}) no-repeat; background-size: ${w}px ${h}px; line-height: ${h}px;`
       );
-
       suppress();
     };
 
@@ -100,7 +125,7 @@ export default function ConsoleBranding() {
       suppress();
     };
 
-    img.src = qrDataUrl;
+    img.src = dataUrl;
   }, []);
 
   return null;

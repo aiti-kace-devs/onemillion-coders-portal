@@ -125,14 +125,12 @@ class StudentOperation extends Controller
 
         $user = Auth::guard('web')->user();
         $eligibilityStatus = $user->examEligibilityStatus($id);
-        // dd($question->pluck("id"));
         if (!$eligibilityStatus['status']) {
             return redirect(route('student.exam.index'))->with([
                 'flash' => $eligibilityStatus['message'],
                 'key' => 'error',
             ]);
         }
-        // dd($question->pluck("id"));
         $exam = Oex_exam_master::where('id', $id)->get()->first();
         $questions = [];
         $usedTime = $eligibilityStatus['usedTime'] ?? 0;
@@ -269,8 +267,7 @@ class StudentOperation extends Controller
             $percentage = round(($yes_ans / $total) * 100);
 
             return redirect(route('student.exam.index'))->with([
-                // 'flash' => "Test already submitted on this exam. Submission Date: {$std_info->submitted} .Result: {$percentage}% ({$yes_ans}/{$total})",
-                'flash' => "Test already submitted on this exam. Submission Date: {$std_info->submitted}",
+                'flash' => "Test already submitted on this exam. Submission Date: {$std_info->submitted} .Result: {$percentage}% ({$yes_ans}/{$total})",
                 'key' => 'info',
             ]);
         }
@@ -317,10 +314,6 @@ class StudentOperation extends Controller
         $total = $yes_ans + $no_ans;
         $res->exam_set = $exam_set_id;
         $res->save();
-        // $storedResult = Oex_result::where('user_id', $user->id)
-        //     ->where('exam_id', $request->exam_id)
-        //     ->first();
-        // GoogleSheets::updateGoogleSheets($userId, ['result' => $storedResult->yes_ans]);
         NotificationController::notify(
             $user->id,
             'AFTER_EXAM_SUBMISSION_EMAIL',
@@ -507,7 +500,6 @@ class StudentOperation extends Controller
 
             $admission->confirmed = now();
             $admission->session = $session->id;
-            $admission->email_sent = now();
             $admission->location = $courseDetails->location;
             $admission->save();
 
@@ -830,8 +822,6 @@ class StudentOperation extends Controller
         });
 
         return Inertia::render('Student/Assessment/Index', compact('questionnaires'));
-
-        return view('student.questionnaire', compact('questionnaires'));
     }
 
     public function take_questionnaire($code)
@@ -885,8 +875,6 @@ class StudentOperation extends Controller
         $instructorQuestions = collect($questionnaire->schema)->where('type', 'instructors')->first()['questions'] ?? [];
 
         return Inertia::render('Student/Assessment/TakeQuestionnaire', compact('questionnaire', 'hasSubmitted', 'instructors', 'instructorQuestions', 'responses'));
-
-        return view('student.take_questionnaire', compact('questionnaire', 'hasSubmitted', 'instructors', 'instructorQuestions', 'responses'));
     }
 
     public function store_questionnaire(Request $request)
@@ -1127,27 +1115,10 @@ class StudentOperation extends Controller
             ]);
         }
 
-        if (is_null($assessment->level_started_at)) {
-            $assessment->level_started_at = now();
-            $assessment->save();
-        }
-
-        $timeoutSeconds = config('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 900);
-        $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
-        $timeRemainingSeconds = $timeoutSeconds - $timeElapsedSeconds;
+        $timeRemainingSeconds = $this->getAssessmentTimeRemaining($assessment);
 
         if ($timeRemainingSeconds <= 0) {
-            $assessment->completed = true;
-            $assessment->save();
-
-            if ($assessment->current_level === 'Beginner') {
-                $user->student_level = 'Beginner';
-            } elseif ($assessment->current_level === 'Intermediate') {
-                $user->student_level = 'Beginner';
-            } elseif ($assessment->current_level === 'Advanced') {
-                $user->student_level = 'Intermediate';
-            }
-            $user->save();
+            $this->completeAssessment($user, $assessment, false);
 
             activity('assessment')
                 ->causedBy($user)
@@ -1220,27 +1191,10 @@ class StudentOperation extends Controller
             ], 404);
         }
 
-        if (is_null($assessment->level_started_at)) {
-            $assessment->level_started_at = now();
-            $assessment->save();
-        }
-
-        $timeoutSeconds = config('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 900);
-        $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
-        $timeRemainingSeconds = $timeoutSeconds - $timeElapsedSeconds;
+        $timeRemainingSeconds = $this->getAssessmentTimeRemaining($assessment);
 
         if ($timeRemainingSeconds <= 0) {
-            $assessment->completed = true;
-            $assessment->save();
-
-            if ($assessment->current_level === 'Beginner') {
-                $user->student_level = 'Beginner';
-            } elseif ($assessment->current_level === 'Intermediate') {
-                $user->student_level = 'Beginner';
-            } elseif ($assessment->current_level === 'Advanced') {
-                $user->student_level = 'Intermediate';
-            }
-            $user->save();
+            $this->completeAssessment($user, $assessment, false);
 
             activity('assessment')
                 ->causedBy($user)
@@ -1326,20 +1280,10 @@ class StudentOperation extends Controller
                     $assessment->correct_answers = 0;
                     $assessment->wrong_answers = 0;
                 } elseif ($assessment->current_level === 'Advanced') {
-                    $user->student_level = 'Advanced';
-                    $user->save();
-                    $assessment->completed = true;
+                    $this->completeAssessment($user, $assessment, true);
                 }
             } else {
-                if ($assessment->current_level === 'Beginner') {
-                    $user->student_level = 'Beginner';
-                } elseif ($assessment->current_level === 'Intermediate') {
-                    $user->student_level = 'Beginner';
-                } elseif ($assessment->current_level === 'Advanced') {
-                    $user->student_level = 'Intermediate';
-                }
-                $user->save();
-                $assessment->completed = true;
+                $this->completeAssessment($user, $assessment, false);
             }
         }
 
@@ -1391,17 +1335,7 @@ class StudentOperation extends Controller
         $maxViolations = config('ASSESSMENT_MAX_VIOLATIONS', 3);
 
         if ($assessment->violation_count >= $maxViolations) {
-            $assessment->completed = true;
-            $assessment->save();
-
-            if ($assessment->current_level === 'Beginner') {
-                $user->student_level = 'Beginner';
-            } elseif ($assessment->current_level === 'Intermediate') {
-                $user->student_level = 'Beginner';
-            } elseif ($assessment->current_level === 'Advanced') {
-                $user->student_level = 'Intermediate';
-            }
-            $user->save();
+            $this->completeAssessment($user, $assessment, false);
 
             return response()->json([
                 'status' => 'error',
@@ -1420,5 +1354,48 @@ class StudentOperation extends Controller
             'violation_count' => $assessment->violation_count,
             'assessment_completed' => false,
         ]);
+    }
+
+    private function getAssessmentTimeRemaining($assessment)
+    {
+        if (is_null($assessment->level_started_at)) {
+            $assessment->level_started_at = now();
+            $assessment->save();
+        }
+
+        $timeoutSeconds = config('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 900);
+        $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
+        return $timeoutSeconds - $timeElapsedSeconds;
+    }
+
+    private function completeAssessment($user, $assessment, $passed = false)
+    {
+        $assessment->completed = true;
+
+        if ($passed) {
+            $user->student_level = 'Advanced';
+        } else {
+            if ($assessment->current_level === 'Beginner') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Intermediate') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Advanced') {
+                $user->student_level = 'Intermediate';
+            }
+        }
+
+        $user->save();
+        $assessment->save();
+
+        // activity('assessment')
+        //     ->causedBy($user)
+        //     ->performedOn($assessment)
+        //     ->withProperties([
+        //         'level' => $user->student_level,
+        //         'correct_answers' => $assessment->correct_answers,
+        //         'wrong_answers' => $assessment->wrong_answers,
+        //     ])
+        //     ->event('Assessment Completed')
+        //     ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
     }
 }
