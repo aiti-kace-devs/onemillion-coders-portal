@@ -119,6 +119,14 @@ class AppConfigSeeder extends Seeder
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
+                [
+                    'key' => SHOW_COURSE_ASSESSMENT_TO_STUDENTS,
+                    'value' => 1,
+                    'type' => 'boolean',
+                    'is_cached' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
                 // OTP verification parameters (admin-configurable)
                 ['key' => 'OTP_TTL', 'value' => 600, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
                 ['key' => 'OTP_VERIFIED_TTL', 'value' => 1800, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
