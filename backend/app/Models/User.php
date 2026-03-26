@@ -69,7 +69,6 @@ class User extends Authenticatable
      * @var array
      */
     protected $casts = [
-        'email_verified_at' => 'datetime',
         'shortlist' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -117,7 +116,13 @@ class User extends Authenticatable
         }
     }
 
-
+    /**
+     * Set the email attribute - always store lowercase.
+     */
+    public function setEmailAttribute($value): void
+    {
+        $this->attributes['email'] = is_string($value) ? strtolower($value) : $value;
+    }
 
     public function course()
     {

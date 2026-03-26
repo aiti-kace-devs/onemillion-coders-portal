@@ -10,6 +10,7 @@ use App\Models\Constituency;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Illuminate\Support\Facades\DB;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class ConstituencyCrudController
@@ -26,7 +27,7 @@ class ConstituencyCrudController extends CrudController
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
-     * 
+     *
      * @return void
      */
     public function setup()
@@ -38,7 +39,7 @@ class ConstituencyCrudController extends CrudController
 
     /**
      * Define what happens when the List operation is loaded.
-     * 
+     *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
      * @return void
      */
@@ -70,11 +71,12 @@ class ConstituencyCrudController extends CrudController
         FilterHelper::addBooleanFilter('status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
+        CrudListHelper::editInDropdown();
     }
 
     /**
      * Define what happens when the Create operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
      * @return void
      */
@@ -86,7 +88,7 @@ class ConstituencyCrudController extends CrudController
 
     /**
      * Define what happens when the Update operation is loaded.
-     * 
+     *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
      * @return void
      */
@@ -139,7 +141,7 @@ class ConstituencyCrudController extends CrudController
             'tab' => 'General Info',
         ]);
 
-        
+
         CRUD::addField([
             'name' => 'status',
             'label' => 'Status',
