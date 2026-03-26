@@ -9,12 +9,15 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class User extends Authenticatable
 {
     use CrudTrait;
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, LogsActivity, CausesActivity;
 
     protected $guard_name = 'web';
 
@@ -43,6 +46,7 @@ class User extends Authenticatable
         'pwd',
         'registered_course',
         'shortlist',
+        'last_login',
         'student_level',
         'data',
         'support'
@@ -74,6 +78,24 @@ class User extends Authenticatable
     ];
 
 
+
+    protected static function booted()
+    {
+        static::updated(function ($user) {
+            if ($user->wasChanged('shortlist') && $user->shortlist) {
+                \App\Models\UserAdmission::updateOrCreate(
+                    ['user_id' => $user->userId],
+                    [
+                        'course_id' => $user->registered_course,
+                        'session' => null,
+                        'confirmed' => null,
+                        'location' => null,
+                        'email_sent' => null
+                    ]
+                );
+            }
+        });
+    }
 
     /**
      * Set the password attribute with a double-hashing guard.
@@ -272,6 +294,16 @@ class User extends Authenticatable
             'status' => true,
             'message' => 'true',
         ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->useLogName('student')
+            ->setDescriptionForEvent(fn(string $event) => "Student {$event}")
+            ->dontLogIfAttributesChangedOnly(['last_login']);
     }
 
     public function userAssessment()

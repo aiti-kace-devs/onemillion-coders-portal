@@ -23,7 +23,7 @@ use App\Http\Controllers\Admin\UtilitiesController;
 Route::group([
     'prefix' => config('backpack.base.route_prefix', 'admin'),
     'middleware' =>
-    config('backpack.base.middleware_key', 'admin'),
+        config('backpack.base.middleware_key', 'admin'),
     'namespace' => 'App\Http\Controllers\Admin',
 ], function () { // custom admin routes
     Route::crud('admin', 'AdminCrudController');
@@ -152,6 +152,9 @@ Route::group([
     Route::get('utilities', [UtilitiesController::class, 'index'])->name('admin.utilities.index');
     Route::post('utilities/run', [UtilitiesController::class, 'run'])->name('admin.utilities.run');
 
+    Route::get('user/activities/{user_id}', 'UserCrudController@getActivities')->name('user.activities');
+
+    Route::crud('activity', 'ActivityCrudController');
     // Route::crud('media', 'MediaCrudController');
     Route::post('course-batch/{id}/toggle', [CourseBatchCrudController::class, 'toggleStatus']);
     Route::get('course-batch/{id}/admitted-students-data', [CourseBatchCrudController::class, 'admittedStudentsData'])->name('course-batch.admitted-students-data');

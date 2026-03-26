@@ -535,6 +535,12 @@
             height: 240px;
         }
 
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            margin-top: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+
         .dataTables_wrapper .dataTables_filter input {
             margin-left: .5rem;
         }

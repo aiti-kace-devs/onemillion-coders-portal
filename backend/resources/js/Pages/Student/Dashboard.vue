@@ -10,6 +10,7 @@ const props = defineProps({
     registeredCourse: Object,
 });
 
+const { config } = usePage().props;
 const user = computed(() => usePage().props.auth?.user || {});
 
 const hasRegisteredCourse = computed(() => !!props.registeredCourse);
@@ -134,7 +135,7 @@ const tieredTestTaken = computed(() => {
                             </Link>
 
                             <Link
-                                v-if="user.isAdmitted"
+                                v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS && config.SHOW_RESULTS_TO_STUDENTS"
                                 :href="route('student.results')"
                                 class="block h-full"
                             >
@@ -174,7 +175,7 @@ const tieredTestTaken = computed(() => {
 
                             <Link
                                 :href="route('student.assessment.index')"
-                                v-if="user.isAdmitted"
+                                v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
                                 class="block h-full"
                             >
                                 <div
@@ -312,7 +313,7 @@ const tieredTestTaken = computed(() => {
                         </div>
                     </div>
 
-                    <div v-if="user.isAdmitted">
+                    <div v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS">
                         <p
                             class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest"
                         >

@@ -137,7 +137,7 @@ class ManageStudentCrudController extends CrudController
         // CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
 
         $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
-        
+
         $coursesQuery = Course::query()
             ->with('centre')
             ->whereHas('batch', function ($query) {
@@ -164,7 +164,7 @@ class ManageStudentCrudController extends CrudController
 
         $courses = $coursesQuery
             ->get()
-            ->mapWithKeys(fn (Course $course) => [$course->id => $course->display_name]);
+            ->mapWithKeys(fn(Course $course) => [$course->id => $course->display_name]);
 
         $sessionsQuery = CourseSession::query();
         if (is_array($visibleCourseIds)) {
@@ -172,9 +172,13 @@ class ManageStudentCrudController extends CrudController
         }
         $sessions = $sessionsQuery->get();
 
+        $entry = $this->crud->getEntry($this->crud->getCurrentEntryId());
+        $activities = $entry->actions()->latest()->get();
+
         View::share([
             'courses' => $courses,
             'sessions' => $sessions,
+            'activities' => $activities,
         ]);
     }
     /**
@@ -541,7 +545,7 @@ class ManageStudentCrudController extends CrudController
 
         $courses = $coursesQuery
             ->get()
-            ->map(fn (Course $course) => [
+            ->map(fn(Course $course) => [
                 'id' => $course->id,
                 'course_name' => $course->course_name,
                 'display_name' => $course->display_name,
@@ -559,7 +563,7 @@ class ManageStudentCrudController extends CrudController
         $courseId = $request->input('course_id');
 
         $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
-        if (is_array($visibleCourseIds) && ! in_array((int) $courseId, $visibleCourseIds, true)) {
+        if (is_array($visibleCourseIds) && !in_array((int) $courseId, $visibleCourseIds, true)) {
             return response()->json([]);
         }
 
@@ -601,7 +605,7 @@ class ManageStudentCrudController extends CrudController
         $examResults = $user->examResults()->with('exam')->get();
         $examMetrics = [
             'total_exams' => $examResults->count(),
-            'results' => $examResults->map(function($result) {
+            'results' => $examResults->map(function ($result) {
                 return [
                     'exam_name' => $result->exam?->title ?? 'N/A',
                     'score' => $result->yes_ans,
@@ -614,8 +618,8 @@ class ManageStudentCrudController extends CrudController
             }),
             'latest_score_percentage' => $examResults->first() ? (
                 ($examResults->first()->yes_ans + $examResults->first()->no_ans) > 0
-                    ? round(($examResults->first()->yes_ans / ($examResults->first()->yes_ans + $examResults->first()->no_ans)) * 100, 2)
-                    : 0
+                ? round(($examResults->first()->yes_ans / ($examResults->first()->yes_ans + $examResults->first()->no_ans)) * 100, 2)
+                : 0
             ) : null,
         ];
 
@@ -630,7 +634,7 @@ class ManageStudentCrudController extends CrudController
             'attendance_rate' => $attendanceRecords->count() > 0
                 ? round(($attendanceRecords->where('status', 'present')->count() / $attendanceRecords->count()) * 100, 2)
                 : 0,
-            'records' => $attendanceRecords->map(function($record) {
+            'records' => $attendanceRecords->map(function ($record) {
                 return [
                     'date' => $record->created_at,
                     'status' => $record->status,

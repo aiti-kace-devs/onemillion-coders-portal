@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\StudentAdmitted;
+use App\Models\Oex_question_master;
 use App\Models\OexExamMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
@@ -31,6 +32,8 @@ use App\Http\Controllers\NotificationController;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\Models\Activity;
+
 use App\Models\UserAssessment;
 
 class StudentOperation extends Controller
@@ -319,6 +322,12 @@ class StudentOperation extends Controller
         );
         TestSubmittedJob::dispatch($user, $res);
 
+        activity('exam')
+            ->causedBy($user)
+            ->withProperties(['exam_id' => $request->exam_id])
+            ->event('Exam submitted')
+            ->log("$user->name submitted the exam at $std_info->submitted with score $res->yes_ans/$total");
+
         return redirect(route('student.exam.index'));
     }
 
@@ -447,7 +456,7 @@ class StudentOperation extends Controller
 
     public function confirm_session(Request $request)
     {
-        $user = $request->guard('web')->user();
+        $user = Auth::guard('web')->user();
 
         $data = $request->validate(
             [
@@ -470,7 +479,6 @@ class StudentOperation extends Controller
                     'key' => 'error',
                 ]);
             }
-
             $courseDetails = Course::find($admission->course_id);
             $session = CourseSession::where('course_id', $courseDetails->id)->where('id', $data['session_id'])->first();
 
@@ -497,6 +505,25 @@ class StudentOperation extends Controller
 
             if (!$changingSession) {
                 AdmitStudentJob::dispatch($admission);
+                activity('user_admission')
+                    ->causedBy($user)
+                    ->performedOn($admission)
+                    ->withProperties([
+                        'session' => $session->name,
+                        'course' => $courseDetails->course_name,
+                    ])
+                    ->event('Session Confirmed')
+                    ->log("$user->name confirmed their session: {$session->name}");
+            } else {
+                activity('user_admission')
+                    ->causedBy($user)
+                    ->performedOn($admission)
+                    ->withProperties([
+                        'session' => $session->name,
+                        'course' => $courseDetails->course_name,
+                    ])
+                    ->event('Session Changed')
+                    ->log("$user->name changed their session to: {$session->name}");
             }
 
             return redirect()->back()->with([
@@ -579,8 +606,32 @@ class StudentOperation extends Controller
             [],
             ['course_id' => 'course']
         );
+
+        // Get course information
+        $oldCourse = Course::find($user->registered_course);
+        $newCourse = Course::find($request->course_id);
+
+        if (!$newCourse) {
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'Selected course not found.',
+                    'key' => 'error',
+                ]);
+        }
+
+        // Update user record with course and session information
         $user->registered_course = $request->course_id;
         $user->save();
+
+        activity('student')
+            ->causedBy($user)
+            ->event('Course Changed')
+            ->withProperties([
+                'old_course' => $oldCourse?->course_name,
+                'new_course' => $newCourse->course_name,
+            ])
+            ->log("{$user->name} changed their course from {$oldCourse?->course_name} to {$newCourse->course_name}");
 
         return redirect()->route('student.application-status');
     }
@@ -602,6 +653,10 @@ class StudentOperation extends Controller
                 CreateStudentAdmissionJob::dispatch($user, $course, null);
                 $count++;
             }
+            activity('user_admission')
+                ->causedBy($user)
+                ->event('Admission Created')
+                ->log("Admitted {$count} students successfully!");
 
             return response()->json([
                 'success' => true,
@@ -632,6 +687,10 @@ class StudentOperation extends Controller
             ]);
 
             $user->update(['shortlist' => 0]);
+            activity('user_admission')
+                ->causedBy($user)
+                ->event('Admission Deleted')
+                ->log("$user->name deleted admission successfully!");
 
             return Redirect::route('student.application-status');
         } else {
@@ -739,6 +798,10 @@ class StudentOperation extends Controller
 
         $user->details_updated_at = now();
         $user->save();
+        activity('student')
+            ->causedBy($user)
+            ->event('Details Updated')
+            ->log("{$user->name}'s details updated successfully!");
 
         return redirect()
             ->back()
@@ -1057,6 +1120,17 @@ class StudentOperation extends Controller
         if ($timeRemainingSeconds <= 0) {
             $this->completeAssessment($user, $assessment, false);
 
+            activity('assessment')
+                ->causedBy($user)
+                ->performedOn($assessment)
+                ->withProperties([
+                    'level' => $user->student_level,
+                    'correct_answers' => $assessment->correct_answers,
+                    'wrong_answers' => $assessment->wrong_answers,
+                ])
+                ->event('Assessment Completed')
+                ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Time limit exceeded! You have failed this level.',
@@ -1121,6 +1195,17 @@ class StudentOperation extends Controller
 
         if ($timeRemainingSeconds <= 0) {
             $this->completeAssessment($user, $assessment, false);
+
+            activity('assessment')
+                ->causedBy($user)
+                ->performedOn($assessment)
+                ->withProperties([
+                    'level' => $user->student_level,
+                    'correct_answers' => $assessment->correct_answers,
+                    'wrong_answers' => $assessment->wrong_answers,
+                ])
+                ->event('Assessment Completed')
+                ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
 
             return response()->json([
                 'status' => 'error',
@@ -1203,6 +1288,19 @@ class StudentOperation extends Controller
         }
 
         $assessment->save();
+
+        if ($assessment->completed) {
+            activity('assessment')
+                ->causedBy($user)
+                ->performedOn($assessment)
+                ->withProperties([
+                    'level' => $user->student_level,
+                    'correct_answers' => $assessment->correct_answers,
+                    'wrong_answers' => $assessment->wrong_answers,
+                ])
+                ->event('Assessment Completed')
+                ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
+        }
 
         $new_question = $this->fetch_assessment_question($request);
 
@@ -1289,15 +1387,15 @@ class StudentOperation extends Controller
         $user->save();
         $assessment->save();
 
-        // activity('assessment')
-        //     ->causedBy($user)
-        //     ->performedOn($assessment)
-        //     ->withProperties([
-        //         'level' => $user->student_level,
-        //         'correct_answers' => $assessment->correct_answers,
-        //         'wrong_answers' => $assessment->wrong_answers,
-        //     ])
-        //     ->event('Assessment Completed')
-        //     ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
+        activity('assessment')
+            ->causedBy($user)
+            ->performedOn($assessment)
+            ->withProperties([
+                'level' => $user->student_level,
+                'correct_answers' => $assessment->correct_answers,
+                'wrong_answers' => $assessment->wrong_answers,
+            ])
+            ->event('Assessment Completed')
+            ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
     }
 }
