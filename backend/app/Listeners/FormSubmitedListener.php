@@ -48,11 +48,14 @@ class FormSubmitedListener implements ShouldQueue
             : null;
         $student['userId'] = Str::uuid()->toString();
         $registeredCourse = $this->getField($event->submissionData, 'course', 'course_id');
-        $student['registered_course'] = !empty($registeredCourse) ? $registeredCourse : null;
+        // $student['registered_course'] = !empty($registeredCourse) ? $registeredCourse : null;
         $student['age'] = $this->getField($event->submissionData, 'age');
         $student['gender'] = $this->getField($event->submissionData, 'gender');
         $student['ghcard'] = $this->getField($event->submissionData, 'ghana_card_number', 'ghana-card-number', 'ghcard');
-        $student['has_disability'] = $this->extractDisabilityFlag($event->submissionData);
+        if (!empty($student['ghcard'])) {
+            $student['card_type'] = 'GHCARD';
+        }
+        $student['pwd'] = $this->extractPwdFlag($event->submissionData);
         $student['exam_name'] = 'random';
         $student['form_response_id'] = $event->formResponseId;
 
@@ -76,28 +79,51 @@ class FormSubmitedListener implements ShouldQueue
         return null;
     }
 
-    private function extractDisabilityFlag(array $payload): bool
+    private function extractPwdFlag(array $payload): bool
     {
+        $preferredKeys = [
+            'do_you_require_any_special_support_for_your_training',
+            'do-you-require-any-special-support-for-your-training',
+            'pwd',
+            'has_disability',
+        ];
+
+        foreach ($preferredKeys as $key) {
+            if (array_key_exists($key, $payload)) {
+                return $this->normalizeBoolean($payload[$key]);
+            }
+        }
+
         foreach ($payload as $key => $value) {
-            if (stripos((string) $key, 'disability') === false) {
+            if (
+                stripos((string) $key, 'disability') === false &&
+                stripos((string) $key, 'special_support') === false
+            ) {
                 continue;
             }
 
-            if (is_bool($value)) {
-                return $value;
-            }
+            return $this->normalizeBoolean($value);
+        }
 
-            if (is_numeric($value)) {
-                return (int) $value === 1;
-            }
+        return false;
+    }
 
-            $normalized = strtolower(trim((string) $value));
-            if (in_array($normalized, ['1', 'true', 'yes', 'y'], true)) {
-                return true;
-            }
-            if (in_array($normalized, ['0', 'false', 'no', 'n'], true)) {
-                return false;
-            }
+    private function normalizeBoolean($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value === 1;
+        }
+
+        $normalized = strtolower(trim((string) $value));
+        if (in_array($normalized, ['1', 'true', 'yes', 'y'], true)) {
+            return true;
+        }
+        if (in_array($normalized, ['0', 'false', 'no', 'n'], true)) {
+            return false;
         }
 
         return false;
@@ -122,9 +148,12 @@ class FormSubmitedListener implements ShouldQueue
             'ghana_card_number' => 'ghcard',
             'ghana-card-number' => 'ghcard',
             'ghcard' => 'ghcard',
-            'course' => 'registered_course',
-            'course_id' => 'registered_course',
-            'has_disability' => 'has_disability',
+            // 'course' => 'registered_course',
+            // 'course_id' => 'registered_course',
+            'do_you_require_any_special_support_for_your_training' => 'pwd',
+            'do-you-require-any-special-support-for-your-training' => 'pwd',
+            'has_disability' => 'pwd',
+            'pwd' => 'pwd',
         ];
 
         foreach ($payload as $key => $value) {
@@ -136,8 +165,11 @@ class FormSubmitedListener implements ShouldQueue
             $normalizedKey = str_replace('-', '_', $normalizedKey);
 
             $alias = $aliasMap[$normalizedKey] ?? $normalizedKey;
-            if (stripos($normalizedKey, 'disability') !== false) {
-                $alias = 'has_disability';
+            if (
+                stripos($normalizedKey, 'disability') !== false ||
+                stripos($normalizedKey, 'special_support') !== false
+            ) {
+                $alias = 'pwd';
             }
 
             if (isset($userColumns[$alias])) {

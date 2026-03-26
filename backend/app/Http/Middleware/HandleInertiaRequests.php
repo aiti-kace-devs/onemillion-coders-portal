@@ -50,6 +50,7 @@ class HandleInertiaRequests extends Middleware
         $configKeys = [
             SHOW_RESULTS_TO_STUDENTS,
             SHOW_STUDENT_LEVEL,
+            SHOW_COURSE_ASSESSMENT_TO_STUDENTS,
             ALLOW_COURSE_CHANGE,
             ALLOW_SESSION_CHANGE,
             EXAM_DEADLINE_AFTER_REGISTRATION
@@ -75,6 +76,7 @@ class HandleInertiaRequests extends Middleware
                             'isAdmitted' => $user?->isAdmitted(),
                             'hasAdmission' => $user?->hasAdmission(),
                             'hasAttendance' => $user?->hasAttendance(),
+                            'assessment_completed' => $user?->userAssessment?->completed ?? false,
                         ]
                     )
                     : null,

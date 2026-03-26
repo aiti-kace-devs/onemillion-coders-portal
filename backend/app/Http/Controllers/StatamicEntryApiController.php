@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Statamic\Facades\Entry;
 use Statamic\Facades\Collection;
 use Statamic\Facades\Asset;
@@ -114,41 +115,46 @@ class StatamicEntryApiController extends Controller
             'include_related' => 'nullable|string',
         ]);
 
-        $fields = $request->input('fields');
-        $includeRelated = $request->input('include_related') ?? 'sections.section_items.pathways.sections.section_items';
-        $relationshipFields = $includeRelated ? array_map('trim', explode(',', $includeRelated)) : [];
 
-        $entry = \Statamic\Facades\Entry::query()
-            ->where('collection', 'pages')
-            ->where('slug', $slug)
-            ->first();
+        return Cache::flexible('page_' . $slug, \cache_flexible_ttl(), function () use ($request, $slug) {
+            $fields = $request->input('fields');
+            $includeRelated = $request->input('include_related') ?? 'sections.section_items.pathways.sections.section_items';
+            $relationshipFields = $includeRelated ? array_map('trim', explode(',', $includeRelated)) : [];
 
-        if (!$entry) {
-            return response()->json(['message' => 'Page not found'], 404);
-        }
+            $entry = Entry::query()
+                ->where('collection', 'pages')
+                ->where('slug', $slug)
+                ->first();
 
-        $data = $entry->data();
-        $data['id'] = $entry->id();
-        $data['slug'] = $entry->slug();
-        $data['url'] = $entry->url();
-        $data['collection'] = $entry->collection()->handle();
-
-        if (!empty($relationshipFields)) {
-            $related = $this->getRelatedEntries($entry, $relationshipFields);
-            if ($related instanceof \Illuminate\Support\Collection) {
-                $related = $related->toArray();
+            if (!$entry) {
+                return response()->json(['message' => 'Page not found'], 404);
             }
-            if ($data instanceof \Illuminate\Support\Collection) {
-                $data = $data->toArray();
-            }
-            $data = array_merge($data, $related);
-        }
 
-        // Optionally filter fields
-        if ($fields) {
-            $fieldsArr = array_map('trim', explode(',', $fields));
-            $data = array_intersect_key($data, array_flip($fieldsArr));
-        }
+            $data = $entry->data();
+            $data['id'] = $entry->id();
+            $data['slug'] = $entry->slug();
+            $data['url'] = $entry->url();
+            $data['collection'] = $entry->collection()->handle();
+
+            if (!empty($relationshipFields)) {
+                $related = $this->getRelatedEntries($entry, $relationshipFields);
+                if ($related instanceof \Illuminate\Support\Collection) {
+                    $related = $related->toArray();
+                }
+                if ($data instanceof \Illuminate\Support\Collection) {
+                    $data = $data->toArray();
+                }
+                $data = array_merge($data, $related);
+            }
+
+            // Optionally filter fields
+            if ($fields) {
+                $fieldsArr = array_map('trim', explode(',', $fields));
+                $data = array_intersect_key($data, array_flip($fieldsArr));
+            }
+
+            return response()->json(['data' => $data]);
+        });
 
         //footer
         // $footer = [
@@ -159,7 +165,7 @@ class StatamicEntryApiController extends Controller
         //     'social_media' => GlobalSet::findByHandle('social_media')->in('default')->toAugmentedArray(),
         // ];
 
-        return response()->json(['data' => $data]);
+        // cache the response for 1 hour
     }
 
     /**
@@ -517,13 +523,16 @@ class StatamicEntryApiController extends Controller
      */
     public function footer(Request $request): JsonResponse
     {
-        $footer = [
-            'contact_us' => GlobalSet::findByHandle('contact')->in('default')->toArray(),
-            'quick_links' => GlobalSet::findByHandle('quick_links')->in('default')->toAugmentedArray(),
-            'copyrights' => GlobalSet::findByHandle('copyrights')->in('default')->toAugmentedArray(),
-            'collaborators' => GlobalSet::findByHandle('collaborators')->in('default')->toArray(),
-            'social_media' => GlobalSet::findByHandle('social_media')->in('default')->toAugmentedArray(),
-        ];
+
+        $footer = Cache::flexible('footer', \cache_flexible_ttl(), function () {
+            return [
+                'contact_us' => GlobalSet::findByHandle('contact')->in('default')->toArray(),
+                'quick_links' => GlobalSet::findByHandle('quick_links')->in('default')->toAugmentedArray(),
+                'copyrights' => GlobalSet::findByHandle('copyrights')->in('default')->toAugmentedArray(),
+                'collaborators' => GlobalSet::findByHandle('collaborators')->in('default')->toArray(),
+                'social_media' => GlobalSet::findByHandle('social_media')->in('default')->toAugmentedArray(),
+            ];
+        });
 
         return response()->json(['data' => $footer]);
     }

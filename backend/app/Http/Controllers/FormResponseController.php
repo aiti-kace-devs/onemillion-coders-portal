@@ -139,7 +139,9 @@ class FormResponseController extends Controller
                 case 'file':
                     $rules[] = 'file';
                     $rules[] = 'max:2048';
-                    if (!empty($field['options'])) {
+                    if ($field['field_name'] === 'certificate') {
+                        $rules[] = 'mimes:pdf';
+                    } elseif (!empty($field['options'])) {
                         $allowedMimes = array_map('trim', explode(',', strtolower($field['options'])));
                         $rules[] = 'mimes:' . implode(',', $allowedMimes);
                     }
@@ -177,6 +179,7 @@ class FormResponseController extends Controller
                 $userFieldMap = [
                     'email' => 'email',
                     'phone' => 'mobile_no',
+                    'ghana_card_number' => 'ghcard',
                 ];
                 $dbColumn = $userFieldMap[$inputField] ?? null;
                 if ($dbColumn && User::where($dbColumn, $value)->exists()) {
@@ -327,8 +330,8 @@ class FormResponseController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Student created successfully',
-            'data' => $response,
+            'message' => 'User created successfully',
+            // 'data' => $response,
         ], 201);
     }
 

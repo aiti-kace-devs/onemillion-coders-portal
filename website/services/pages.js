@@ -184,8 +184,8 @@ export const getPageData = async (slug) => {
 export const getCourseRecommendations = async (answers) => {
   try {
     const response = await apiRequest("/course-match", {
-      method: 'POST',
-      data: answers
+      method: "POST",
+      data: answers,
     });
     return response.data;
   } catch (error) {
@@ -198,12 +198,14 @@ export const getCourseRecommendations = async (answers) => {
  * Fetch all regions/branches
  * @returns {Promise<Object>} - Regions data
  */
-export const getAllRegions = async () => {
+export const getAllRegions = async (token) => {
   try {
-    const response = await apiRequest("/branches");
-    const filteredRegions  =  response?.data?.filter((item) => {
-      return item.status === true
-    })
+    const response = await apiRequest("/branches", {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    const filteredRegions = response?.data?.filter((item) => {
+      return item.status === true;
+    });
     return filteredRegions;
   } catch (error) {
     console.error("Error fetching regions:", error);
@@ -236,7 +238,10 @@ export const getProgrammeLocations = async (programmeId) => {
     const response = await apiRequest(`/programmes/${programmeId}/locations`);
     return response;
   } catch (error) {
-    console.error(`Error fetching programme locations for ID ${programmeId}:`, error);
+    console.error(
+      `Error fetching programme locations for ID ${programmeId}:`,
+      error,
+    );
     throw error;
   }
 };
@@ -264,10 +269,10 @@ export const submitRegistration = async (formData) => {
   try {
     const isFormData = formData instanceof FormData;
     const response = await apiRequest("/add-student", {
-      method: 'POST',
+      method: "POST",
       data: formData,
       ...(isFormData && {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { "Content-Type": "multipart/form-data" },
       }),
     });
     return response;
@@ -297,9 +302,14 @@ export const getCentreProgrammes = async (centreId) => {
  * @param {string|number} branchId - Branch/Region ID
  * @returns {Promise<Object>} - Districts data
  */
-export const getDistrictsByBranch = async (branchId) => {
+export const getDistrictsByBranch = async (branchId, token) => {
   try {
-    const response = await apiRequest(`/districts-by-branch?branch_id=${branchId}`);
+    const response = await apiRequest(
+      `/districts-by-branch?branch_id=${branchId}`,
+      {
+        ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+      },
+    );
     return response;
   } catch (error) {
     console.error(`Error fetching districts for branch ${branchId}:`, error);
@@ -312,12 +322,51 @@ export const getDistrictsByBranch = async (branchId) => {
  * @param {string|number} districtId - District ID
  * @returns {Promise<Object>} - Centres data
  */
-export const getCentresByDistrict = async (districtId) => {
+export const getCentresByDistrict = async (districtId, token) => {
   try {
-    const response = await apiRequest(`/centres-by-district?district_id=${districtId}`);
+    const response = await apiRequest(
+      `/centres-by-district?district_id=${districtId}`,
+      {
+        ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+      },
+    );
     return response;
   } catch (error) {
     console.error(`Error fetching centres for district ${districtId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch a single centre by ID
+ * @param {string|number} centreId - Centre ID
+ * @returns {Promise<Object>} - Centre data
+ */
+export const getCentreById = async (centreId) => {
+  try {
+    const response = await apiRequest(`/centres-by-id/${centreId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching centre ${centreId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Confirm course enrollment for a user
+ * @param {{ userId: string, course_id: number, support: boolean }} data
+ * @returns {Promise<Object>} - Confirmation response
+ */
+export const confirmCourse = async (data, token) => {
+  try {
+    const response = await apiRequest("/confirm-course", {
+      method: "POST",
+      data,
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error("Error confirming course:", error);
     throw error;
   }
 };
@@ -336,7 +385,9 @@ export const getCentresByDistrict = async (districtId) => {
  */
 export const checkEmailAvailability = async (email) => {
   try {
-    const response = await apiRequest(`/otp/check-email?email=${encodeURIComponent(email)}`);
+    const response = await apiRequest(
+      `/otp/check-email?email=${encodeURIComponent(email)}`,
+    );
     return response;
   } catch (error) {
     console.error("Error checking email availability:", error);
@@ -383,4 +434,3 @@ export const verifyOtp = async (data) => {
     throw error;
   }
 };
-

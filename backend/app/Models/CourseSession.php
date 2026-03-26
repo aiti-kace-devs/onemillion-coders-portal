@@ -71,7 +71,27 @@ class CourseSession extends Model
 
     public function slotLeft()
     {
-        $used = UserAdmission::where('session', $this->id)->whereNotNull('confirmed')->count();
+        $sessionIds = $this->sharedSessionIds();
+        $used = UserAdmission::whereIn('session', $sessionIds)->whereNotNull('confirmed')->count();
         return $this->limit - $used;
+    }
+
+    protected function sharedSessionIds(): array
+    {
+        $course = $this->course;
+        if (!$course || !$course->isOnlineProgramme()) {
+            return [$this->id];
+        }
+
+        $courseIds = $course->siblingCourseIdsForProgrammeBatch();
+        if (empty($courseIds)) {
+            return [$this->id];
+        }
+
+        return self::query()
+            ->whereIn('course_id', $courseIds)
+            ->where('session', $this->session)
+            ->pluck('id')
+            ->all();
     }
 }

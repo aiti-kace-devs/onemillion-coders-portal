@@ -20,7 +20,7 @@
     <x-backpack::menu-dropdown title="Student Management" icon="la la-users">
         @can('student.read.all')
             <x-backpack::menu-dropdown-item title="Manage Students" icon="la la-user-graduate" :link="backpack_url('manage-student')" />
-            <x-backpack::menu-dropdown-item title="Students" icon="la la-user-alt" :link="backpack_url('user')" />
+            {{-- <x-backpack::menu-dropdown-item title="Students" icon="la la-user-alt" :link="backpack_url('user')" /> --}}
         @endcan
         @can('student-verification.read.all')
             <x-backpack::menu-dropdown-item title="Student Verifications" icon="la la-check-circle" :link="backpack_url('student-verification')" />

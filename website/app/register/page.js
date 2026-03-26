@@ -211,11 +211,15 @@ export default function RegisterPage() {
       checkEmailAvailabilityDebounced(value);
     }
 
+    // Clear field-level error and top-level error banner when user makes changes
     if (formErrors[fieldName]) {
       setFormErrors((prev) => ({
         ...prev,
         [fieldName]: null,
       }));
+    }
+    if (error) {
+      setError(null);
     }
   };
 
@@ -257,6 +261,15 @@ export default function RegisterPage() {
             }
           } catch (error) {
             errors[field.field_name] = "Please enter a valid Ghana phone number";
+          }
+        }
+
+        if (field.type === "file" && value instanceof File && field.options) {
+          const allowedExtensions = field.options.split(",").map((ext) => ext.trim().toLowerCase());
+          const fileName = value.name || "";
+          const fileExtension = fileName.split(".").pop()?.toLowerCase();
+          if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+            errors[field.field_name] = `Only ${allowedExtensions.map((e) => e.toUpperCase()).join(", ")} files are allowed`;
           }
         }
       });
@@ -494,7 +507,13 @@ export default function RegisterPage() {
             id={`file-${field.field_name}`}
             type="file"
             className="hidden"
-            accept={field.type === "image" ? "image/*" : undefined}
+            accept={
+              field.type === "image"
+                ? "image/*"
+                : field.options
+                ? field.options.split(",").map((ext) => `.${ext.trim().toLowerCase()}`).join(",")
+                : undefined
+            }
             onChange={(e) => {
               const file = e.target.files[0];
               if (file) {
@@ -511,7 +530,11 @@ export default function RegisterPage() {
                 Drag & drop or click to upload
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                {field.type === "image" ? "PNG, JPG, GIF up to 5MB" : "PDF, DOC up to 10MB"}
+                {field.type === "image"
+                  ? "PNG, JPG, GIF up to 5MB"
+                  : field.options
+                  ? `${field.options.split(",").map((e) => e.trim().toUpperCase()).join(", ")} up to 10MB`
+                  : "PDF, DOC up to 10MB"}
               </p>
             </>
           )}
@@ -596,7 +619,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="bg-white border-b border-gray-200 sticky top-[76px] sm:top-[84px] z-10">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
@@ -646,7 +669,7 @@ export default function RegisterPage() {
                         )}
                       </div>
                       <span
-                        className={`text-[10px] sm:text-xs font-medium transition-colors ${
+                        className={`hidden sm:inline text-xs font-medium transition-colors ${
                           index <= currentGroupIndex ? "text-gray-700" : "text-gray-400"
                         }`}
                       >
@@ -815,7 +838,12 @@ export default function RegisterPage() {
                                 email={formData[field.field_name] || ""}
                                 phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
                                 formUuid={formSchema.uuid}
-                                onVerified={setOtpVerified}
+                                onVerified={(verified) => {
+                                  setOtpVerified(verified);
+                                  if (verified && formErrors.otp) {
+                                    setFormErrors((prev) => ({ ...prev, otp: null }));
+                                  }
+                                }}
                                 emailStatus={emailAvailability.status}
                               />
                             )}
@@ -858,7 +886,15 @@ export default function RegisterPage() {
                               <input
                                 type="checkbox"
                                 checked={consentAccepted}
-                                onChange={(e) => setConsentAccepted(e.target.checked)}
+                                onChange={(e) => {
+                                setConsentAccepted(e.target.checked);
+                                if (formErrors.consent) {
+                                  setFormErrors((prev) => ({ ...prev, consent: null }));
+                                }
+                                if (error) {
+                                  setError(null);
+                                }
+                              }}
                                 className="mt-0.5 w-[18px] h-[18px] rounded border-gray-300 text-yellow-500 focus:ring-yellow-500 group-hover:border-yellow-400 transition-colors"
                               />
                               <span className="text-sm text-gray-700">

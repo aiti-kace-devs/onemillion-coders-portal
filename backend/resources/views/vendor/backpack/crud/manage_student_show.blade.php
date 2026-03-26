@@ -559,9 +559,6 @@
                             </tbody>
                         </table>
                     </div>
-                    @if ($attendanceRecords->isEmpty())
-                        <div class="text-center text-muted py-2">No attendance records</div>
-                    @endif
                 </div>
             </div>
         </div>
@@ -679,11 +676,35 @@
         </div> --}}
     </div>
 
-    {{-- <div class="row mb-4">
+    <div class="row mb-4">
         <div class="col-md-12">
-
+            <div class="card">
+                <div class="card-header">
+                    <strong><i class="la la-history"></i> Activity Logs</strong>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="dtActivityLogs" class="table table-sm table-striped table-hover w-100 mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 200px;">Date</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($activities as $activity)
+                                    <tr>
+                                        <td class="text-nowrap">{{ $activity->created_at->format('Y-m-d H:i:s') }}</td>
+                                        <td>{{ $activity->description }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div> --}}
+    </div>
 
     @push('after_styles')
         <link rel="stylesheet" href="{{ asset('assets/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
@@ -708,10 +729,54 @@
 
             .dataTables_wrapper .dataTables_filter input {
                 margin-left: .5rem;
+                border: 1px solid #dee2e6;
+                padding: .25rem .5rem;
+                border-radius: .25rem;
             }
 
             .dataTables_wrapper .dataTables_length select {
                 margin: 0 .25rem;
+                border: 1px solid #dee2e6;
+                padding: .2rem .4rem;
+                border-radius: .25rem;
+            }
+
+            .dataTables_wrapper .dataTables_length,
+            .dataTables_wrapper .dataTables_filter {
+                margin-top: 0.5rem;
+                margin-bottom: 1.25rem;
+            }
+
+            .table thead th {
+                text-transform: uppercase;
+                font-size: 0.75rem;
+                font-weight: 600;
+                letter-spacing: 0.025em;
+                color: #6c757d;
+                border-top: none;
+                background-color: #f8f9fa;
+            }
+
+            #dtActivityLogs td {
+                vertical-align: middle !important;
+                padding-top: 0.75rem !important;
+                padding-bottom: 0.75rem !important;
+            }
+
+            .table-hover tbody tr:hover {
+                background-color: rgba(13, 110, 253, 0.04);
+            }
+
+            .card {
+                border: none;
+                box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+                border-radius: 0.5rem;
+            }
+
+            .card-header {
+                background-color: transparent;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+                padding: 1rem 1.25rem;
             }
         </style>
     @endpush
@@ -898,7 +963,14 @@
                             deferRender: true,
                             language: {
                                 search: "",
-                                searchPlaceholder: "Search..."
+                                searchPlaceholder: "Search...",
+                                emptyTable: options.emptyTable || "No data available in table",
+                                info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                                infoEmpty: "No entries to show",
+                                paginate: {
+                                    next: '<i class="la la-angle-right"></i>',
+                                    previous: '<i class="la la-angle-left"></i>'
+                                }
                             },
                         }, options || {}));
                     } catch (e) {
@@ -1073,6 +1145,11 @@
                     safeInitDataTable('#dtExamResults', {
                         order: [
                             [3, 'desc']
+                        ]
+                    });
+                    safeInitDataTable('#dtActivityLogs', {
+                        order: [
+                            [0, 'desc']
                         ]
                     });
 

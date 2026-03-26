@@ -12,6 +12,7 @@ class UserAssessment extends Model
         'answered_question_ids' => 'array',
         'completed' => 'boolean',
         'level_started_at' => 'datetime',
+        'violation_count' => 'integer',
     ];
 
     public function user()

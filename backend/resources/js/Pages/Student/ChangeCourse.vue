@@ -28,19 +28,21 @@ function submit() {
 const courseSelectionUrl = computed(() => {
     const baseUrl = usePage().props.quiz_frontend_url || '';
     const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    return `${base}/courses/${props.user.userId}`;
+    const token = usePage().props.quiz_jwt_token;
+    const path = `${base}/courses/${props.user.userId}`;
+    return token ? `${path}?token=${token}` : path;
 });
 </script>
 
 <template>
   <Head :title="pageTitle" />
-  <AuthenticatedLayout>
+  <AuthenticatedLayout :fullHeight="!isShortlisted">
     <template #header>
       <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ pageTitle }}</h2>
     </template>
 
-    <div class="py-12">
-      <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+    <div :class="isShortlisted ? 'py-12 px-4' : ''">
+      <div :class="isShortlisted ? 'max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6' : ''">
         <!-- Case 1: Shortlisted - Show Read-Only -->
         <div v-if="isShortlisted" class="bg-white shadow rounded-lg p-6">
           <div class="max-w-xl">
@@ -54,16 +56,11 @@ const courseSelectionUrl = computed(() => {
         </div>
 
         <!-- Case 2: Not Shortlisted - Show Iframe (for both Choose and Change) -->
-        <div v-else class="bg-white shadow rounded-lg overflow-hidden border border-gray-100">
-             <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-                <h3 class="font-medium text-lg text-gray-900">{{ pageTitle }}</h3>
-                <span v-if="!isRegistered" class="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full uppercase tracking-wider">Required</span>
-                <span v-else class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full uppercase tracking-wider">Active</span>
-            </div>
-            <div class="relative w-full" style="height: 800px;">
+        <div v-else class="h-[calc(100vh-70px)] overflow-hidden relative">
+            <div class="-mt-[70px]">
                 <iframe
                     :src="courseSelectionUrl"
-                    class="absolute top-0 left-0 w-full h-full border-0"
+                    class="w-full h-[calc(100vh+6px)] border-0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen
                 ></iframe>

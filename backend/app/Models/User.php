@@ -44,9 +44,10 @@ class User extends Authenticatable
         'ghcard',
         'gender',
         'network_type',
-        'has_disability',
+        'pwd',
         'registered_course',
         'shortlist',
+        'last_login',
         'student_level',
         'data',
         'support'
@@ -73,7 +74,7 @@ class User extends Authenticatable
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'status' => 'boolean',
-        'has_disability' => 'boolean',
+        'pwd' => 'boolean',
         'data' => 'array',
         'support' => 'boolean',
     ];
@@ -299,5 +300,10 @@ class User extends Authenticatable
             ->useLogName('student')
             ->setDescriptionForEvent(fn(string $event) => "Student {$event}")
             ->dontLogIfAttributesChangedOnly(['last_login']);
+    }
+
+    public function userAssessment()
+    {
+        return $this->hasOne(UserAssessment::class);
     }
 }

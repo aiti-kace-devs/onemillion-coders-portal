@@ -20,7 +20,7 @@ class DashboardAgeGroupBarChartController extends ChartController
         $cacheKey = 'chart_age_groups_dynamic_decades_' . DashboardWidgetHelper::scopeCacheKeySuffix($visibleCourseIds);
 
         // Cache for 1 hour (fallback 10s)
-        $payload = Cache::flexible($cacheKey, [now()->addHour(), now()->addDay()], function () use ($visibleCourseIds) {
+        $payload = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($visibleCourseIds) {
             // Handle all types of dashes, hyphens, and plus signs
             $rows = DB::table('users as u')
                 ->when(is_array($visibleCourseIds), function ($query) use ($visibleCourseIds) {

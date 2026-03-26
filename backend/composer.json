@@ -64,7 +64,8 @@
         },
         "files": [
             "app/Helpers/Constants.php",
-            "app/Helpers/MailerHelper.php"
+            "app/Helpers/MailerHelper.php",
+            "app/Helpers/CacheHelper.php"
         ]
     },
     "autoload-dev": {
