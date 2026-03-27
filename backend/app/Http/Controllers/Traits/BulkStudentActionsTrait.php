@@ -137,20 +137,23 @@ trait BulkStudentActionsTrait
                 );
             }
 
-            $updatedCount = User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
+            $updatedCount = $usersToUpdate->count();
+            activity()->withoutLogs(function () use ($usersToUpdate) {
+                User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
 
-            foreach ($usersToUpdate as $user) {
-                \App\Models\UserAdmission::updateOrCreate(
-                    ['user_id' => $user->userId],
-                    [
-                        'course_id' => $user->registered_course,
-                        'session' => null,
-                        'confirmed' => null,
-                        'location' => null,
-                        'email_sent' => null
-                    ]
-                );
-            }
+                foreach ($usersToUpdate as $user) {
+                    \App\Models\UserAdmission::updateOrCreate(
+                        ['user_id' => $user->userId],
+                        [
+                            'course_id' => $user->registered_course,
+                            'session' => null,
+                            'confirmed' => null,
+                            'location' => null,
+                            'email_sent' => null
+                        ]
+                    );
+                }
+            });
 
 
             activity('user_admission')
@@ -190,20 +193,23 @@ trait BulkStudentActionsTrait
             );
         }
 
-        $updatedCount = User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
+        $updatedCount = $usersToUpdate->count();
+        activity()->withoutLogs(function () use ($usersToUpdate) {
+            User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
 
-        foreach ($usersToUpdate as $user) {
-            \App\Models\UserAdmission::updateOrCreate(
-                ['user_id' => $user->userId],
-                [
-                    'course_id' => $user->registered_course,
-                    'session' => null,
-                    'confirmed' => null,
-                    'location' => null,
-                    'email_sent' => null
-                ]
-            );
-        }
+            foreach ($usersToUpdate as $user) {
+                \App\Models\UserAdmission::updateOrCreate(
+                    ['user_id' => $user->userId],
+                    [
+                        'course_id' => $user->registered_course,
+                        'session' => null,
+                        'confirmed' => null,
+                        'location' => null,
+                        'email_sent' => null
+                    ]
+                );
+            }
+        });
 
 
         activity('user_admission')

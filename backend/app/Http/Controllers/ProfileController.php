@@ -65,10 +65,10 @@ class ProfileController extends Controller
         $user->details_updated_at = now();
         $user->save();
 
-        activity('student')
-            ->causedBy($user)
-            ->event('Profile Modified')
-            ->log("{$user->name} successfully modified their profile.");
+        // activity('student')
+        //     ->causedBy($user)
+        //     ->event('Profile Modified')
+        //     ->log("{$user->name} successfully modified their profile.");
 
         return Redirect::route('student.profile.edit');
     }
