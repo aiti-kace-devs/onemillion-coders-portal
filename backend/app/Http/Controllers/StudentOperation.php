@@ -619,10 +619,10 @@ class StudentOperation extends Controller
                     'key' => 'error',
                 ]);
         }
-
-        // Update user record with course and session information
-        $user->registered_course = $request->course_id;
-        $user->save();
+        activity()->withoutLogs(function () use ($user, $request) {
+            $user->registered_course = $request->course_id;
+            $user->save();
+        });
 
         activity('student')
             ->causedBy($user)
@@ -678,7 +678,10 @@ class StudentOperation extends Controller
         $delete_user_admission = UserAdmission::where('user_id', $user->userId)->first();
 
         if ($delete_user_admission) {
-            $delete_user_admission->delete();
+            activity()->withoutLogs(function () use ($delete_user_admission, $user) {
+                $delete_user_admission->delete();
+                $user->update(['shortlist' => 0]);
+            });
 
             AdmissionRejection::create([
                 'user_id' => $user->userId,
@@ -686,7 +689,6 @@ class StudentOperation extends Controller
                 'rejected_at' => now(),
             ]);
 
-            $user->update(['shortlist' => 0]);
             activity('user_admission')
                 ->causedBy($user)
                 ->event('Admission Deleted')
@@ -797,7 +799,9 @@ class StudentOperation extends Controller
         }
 
         $user->details_updated_at = now();
-        $user->save();
+        activity()->withoutLogs(function () use ($user) {
+            $user->save();
+        });
         activity('student')
             ->causedBy($user)
             ->event('Details Updated')
@@ -1120,17 +1124,6 @@ class StudentOperation extends Controller
         if ($timeRemainingSeconds <= 0) {
             $this->completeAssessment($user, $assessment, false);
 
-            activity('assessment')
-                ->causedBy($user)
-                ->performedOn($assessment)
-                ->withProperties([
-                    'level' => $user->student_level,
-                    'correct_answers' => $assessment->correct_answers,
-                    'wrong_answers' => $assessment->wrong_answers,
-                ])
-                ->event('Assessment Completed')
-                ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
-
             return response()->json([
                 'status' => 'error',
                 'message' => 'Time limit exceeded! You have failed this level.',
@@ -1195,17 +1188,6 @@ class StudentOperation extends Controller
 
         if ($timeRemainingSeconds <= 0) {
             $this->completeAssessment($user, $assessment, false);
-
-            activity('assessment')
-                ->causedBy($user)
-                ->performedOn($assessment)
-                ->withProperties([
-                    'level' => $user->student_level,
-                    'correct_answers' => $assessment->correct_answers,
-                    'wrong_answers' => $assessment->wrong_answers,
-                ])
-                ->event('Assessment Completed')
-                ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
 
             return response()->json([
                 'status' => 'error',
@@ -1288,19 +1270,6 @@ class StudentOperation extends Controller
         }
 
         $assessment->save();
-
-        if ($assessment->completed) {
-            activity('assessment')
-                ->causedBy($user)
-                ->performedOn($assessment)
-                ->withProperties([
-                    'level' => $user->student_level,
-                    'correct_answers' => $assessment->correct_answers,
-                    'wrong_answers' => $assessment->wrong_answers,
-                ])
-                ->event('Assessment Completed')
-                ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
-        }
 
         $new_question = $this->fetch_assessment_question($request);
 
@@ -1394,6 +1363,7 @@ class StudentOperation extends Controller
                 'level' => $user->student_level,
                 'correct_answers' => $assessment->correct_answers,
                 'wrong_answers' => $assessment->wrong_answers,
+                'violation_count' => $assessment->violation_count,
             ])
             ->event('Assessment Completed')
             ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");

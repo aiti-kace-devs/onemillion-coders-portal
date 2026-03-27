@@ -689,6 +689,7 @@
                                 <tr>
                                     <th style="width: 200px;">Date</th>
                                     <th>Description</th>
+                                    <th>Properties</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -696,6 +697,7 @@
                                     <tr>
                                         <td class="text-nowrap">{{ $activity->created_at->format('Y-m-d H:i:s') }}</td>
                                         <td>{{ $activity->description }}</td>
+                                        <td>{{ $activity->properties }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>

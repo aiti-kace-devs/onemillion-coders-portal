@@ -67,7 +67,9 @@ trait AttendanceRecordTrait
         $attendance->user_id = $user_id;
         $attendance->course_id = $course_id;
         $attendance->date = $date;
-        $attendance->save();
+        activity()->withoutLogs(function () use ($attendance) {
+            $attendance->save();
+        });
 
         $user = \App\Models\User::where('userId', $user_id)->first();
         if ($user) {
