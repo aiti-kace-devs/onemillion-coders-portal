@@ -619,9 +619,8 @@ class StudentOperation extends Controller
                     'key' => 'error',
                 ]);
         }
-
-        // Prevent automatic model logging to avoid duplicates
-        activity()->withoutLogs(function () use ($user) {
+        activity()->withoutLogs(function () use ($user, $request) {
+            $user->registered_course = $request->course_id;
             $user->save();
         });
 
