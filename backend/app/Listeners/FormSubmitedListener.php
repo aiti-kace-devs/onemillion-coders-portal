@@ -82,8 +82,8 @@ class FormSubmitedListener implements ShouldQueue
     private function extractPwdFlag(array $payload): bool
     {
         $preferredKeys = [
-            'do_you_require_any_special_support_for_your_training',
-            'do-you-require-any-special-support-for-your-training',
+            'do_you_need_any_accessibility_support_pwd',
+            'do-you-need-any-accessibility-support-pwd',
             'pwd',
             'has_disability',
         ];
@@ -97,7 +97,7 @@ class FormSubmitedListener implements ShouldQueue
         foreach ($payload as $key => $value) {
             if (
                 stripos((string) $key, 'disability') === false &&
-                stripos((string) $key, 'special_support') === false
+                stripos((string) $key, 'accessibility') === false
             ) {
                 continue;
             }
@@ -150,8 +150,8 @@ class FormSubmitedListener implements ShouldQueue
             'ghcard' => 'ghcard',
             // 'course' => 'registered_course',
             // 'course_id' => 'registered_course',
-            'do_you_require_any_special_support_for_your_training' => 'pwd',
-            'do-you-require-any-special-support-for-your-training' => 'pwd',
+            'do_you_need_any_accessibility_support_pwd' => 'pwd',
+            'do-you-need-any-accessibility-support-pwd' => 'pwd',
             'has_disability' => 'pwd',
             'pwd' => 'pwd',
         ];
@@ -167,7 +167,7 @@ class FormSubmitedListener implements ShouldQueue
             $alias = $aliasMap[$normalizedKey] ?? $normalizedKey;
             if (
                 stripos($normalizedKey, 'disability') !== false ||
-                stripos($normalizedKey, 'special_support') !== false
+                stripos($normalizedKey, 'accessibility') !== false
             ) {
                 $alias = 'pwd';
             }
