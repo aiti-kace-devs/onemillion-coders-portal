@@ -87,6 +87,14 @@ COPY auth.json ./auth.json
 RUN composer install --no-dev --optimize-autoloader --no-scripts \
     && rm -rf /composer/cache
 
+RUN composer install --no-dev --optimize-autoloader --no-scripts \
+    && rm -rf /composer/cache \
+    # Fix elFinder PHP 8.3.30 set_time_limit() TypeError
+    && sed -i 's/\$defLimit = ini_get(.max_execution_time.);/\$defLimit = (int)ini_get("max_execution_time");/' \
+       vendor/studio-42/elfinder/php/elFinder.class.php \
+    && sed -i 's/set_time_limit(\$time);/set_time_limit((int)\$time);/' \
+       vendor/studio-42/elfinder/php/elFinder.class.php
+           
 # Install npm dependencies
 RUN npm install
 
