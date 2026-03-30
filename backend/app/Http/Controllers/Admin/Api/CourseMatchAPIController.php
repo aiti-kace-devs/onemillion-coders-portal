@@ -174,11 +174,14 @@ class CourseMatchAPIController extends Controller
             'option_ids.*' => 'integer|exists:course_match_options,id',
             'userId' => 'nullable|exists:users,userId',
             'branch_id' => 'nullable|integer|exists:branches,id',
+            'centre_id' => 'nullable|integer|exists:centres,id',
             'debug' => 'sometimes|boolean',
         ]);
 
         $userId = $data['userId'] ?? null;
         $branchId = $data['branch_id'] ?? null;
+        $centreId = $data['centre_id'] ?? null;
+
 
         $user = null;
         if ($userId) {
@@ -191,14 +194,15 @@ class CourseMatchAPIController extends Controller
             }
         }
 
+
         $optionIds = array_values($data['option_ids']);
         $includeDebug = filter_var($request->input('debug', false), FILTER_VALIDATE_BOOLEAN);
 
         $studentLevel = $user ? strtolower(trim((string) $user->student_level)) : '';
         // Log::info('Student level: ' . $studentLevel);
 
-        $branchCourses = $this->getBranchCourses($branchId !== null ? (int) $branchId : null);
-        $programmeIds = $branchCourses->pluck('programme_id')->unique()->values()->all();
+        $centreCourses = $this->getCentreCourses($centreId !== null ? (int) $centreId : null);
+        $programmeIds = $centreCourses->pluck('programme_id')->unique()->values()->all();
 
         [$preferredDelivery, $deliveryOptionIds] = $this->detectPreferredDelivery($optionIds);
         [, $categoryOptionIds] = $this->detectCategorySelections($optionIds);
@@ -227,10 +231,10 @@ class CourseMatchAPIController extends Controller
             ->take(4)
             ->values();
 
-        $centresByProgramme = $this->buildCentresByProgramme($branchCourses);
+        $centresByProgramme = $this->buildCentresByProgramme($centreCourses);
 
-        $result = $top->map(function ($programme, $index) use ($branchCourses, $centresByProgramme, $includeDebug) {
-            $programmeCourses = $branchCourses->where('programme_id', $programme->id);
+        $result = $top->map(function ($programme, $index) use ($centreCourses, $centresByProgramme, $includeDebug) {
+            $programmeCourses = $centreCourses->where('programme_id', $programme->id);
 
             $payload = [
                 'rank' => '#' . ($index + 1),
@@ -257,7 +261,7 @@ class CourseMatchAPIController extends Controller
         });
 
         if ($userId) {
-            $this->storeRecommendations($top, $branchCourses, $optionIds, $studentLevel, $userId);
+            $this->storeRecommendations($top, $centreCourses, $optionIds, $studentLevel, $userId);
         }
 
         return response()->json([
@@ -286,6 +290,29 @@ class CourseMatchAPIController extends Controller
 
         if ($branchId !== null) {
             $query->where('centres.branch_id', $branchId);
+        }
+
+        return $query->get(['courses.id', 'courses.programme_id', 'courses.centre_id']);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, \App\Models\Course>
+     */
+    protected function getCentreCourses(?int $centreId = null)
+    {
+        $today = Carbon::today()->toDateString();
+
+        $query = Course::join('centres', 'courses.centre_id', '=', 'centres.id')
+            ->join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
+            ->whereNotNull('courses.programme_id')
+            ->where('courses.status', 1)
+            ->where('admission_batches.start_date', '<=', $today)
+            ->where('admission_batches.end_date', '>=', $today)
+            ->where('admission_batches.completed', false)
+            ->where('admission_batches.status', true);
+
+        if ($centreId !== null) {
+            $query->where('courses.centre_id', $centreId);
         }
 
         return $query->get(['courses.id', 'courses.programme_id', 'courses.centre_id']);
