@@ -18,18 +18,9 @@ class MediaHelper
      * @param string $columnName
      */
 
-    const DISK_ARTICLE_IMAGES = 'article_images';
-    const DISK_FEATURED_IMAGES = 'article_featured_images';
-    const DISK_FORUM_IMAGES = 'forum_images';
-    const DISK_ARTICLE_CATEGORY_IMAGES = 'article_category_images';
-    const DISK_PARTNER_IMAGES = 'partner_images';
-    const DISK_PRODUCT_TYPE_IMAGES = 'product_type_images';
-    const DISK_PRODUCT_IMAGES = 'product_images';
-    const DISK_SITE_SETTINGS_IMAGES = 'site_settings_images';
-    const DISK_TRANSLATION_AUDIO = 'translation_audio';
-    const DISK_REPORT_DOCUMENT = 'report_document';
-
-    const DISK_RESOURCES = 'resources';
+    const DISK_PROGRAMME_IMAGES = 'course-images';
+    const DISK_CENTRE_IMAGES = 'centre-images';
+    const DISK_CERTIFICATE_FILES = 'certificates';
 
     public static function resolveMediaIdFromPath(Request &$request, string $columnName, $getId = false)
     {
@@ -64,8 +55,36 @@ class MediaHelper
 
 
 
+    protected static function normalizeMediaPath(string $mediaPath): string
+    {
+        $mediaPath = trim($mediaPath);
+
+        if (empty($mediaPath)) {
+            return $mediaPath;
+        }
+
+        if (str_starts_with($mediaPath, 'Google Cloud Storage/')) {
+            $mediaPath = substr($mediaPath, strlen('Google Cloud Storage/'));
+        }
+
+        // If it's a full URL, strip the CDN or GCS API URI prefix
+        $cdmUrl = rtrim(env('GOOGLE_CLOUD_STORAGE_API_URI', ''), '/');
+        $cdnUrl = rtrim(config('filesystems.cdn_url', ''), '/');
+
+        foreach (array_filter([$cdmUrl, $cdnUrl]) as $base) {
+            if (!empty($base) && str_starts_with($mediaPath, $base)) {
+                $mediaPath = substr($mediaPath, strlen($base));
+                $mediaPath = ltrim($mediaPath, '/');
+                break;
+            }
+        }
+
+        return ltrim($mediaPath, '/');
+    }
+
     protected static function processSingleMediaPath(string $mediaPath, Request $request)
     {
+        $mediaPath = self::normalizeMediaPath($mediaPath);
         $media = Media::where('file', $mediaPath)->first();
 
         if (!$media) {
@@ -129,9 +148,11 @@ class MediaHelper
     {
         $filepath = $request->input($columnName);
 
-        if (empty($gcsPath)) {
+        if (empty($filepath)) {
             return;
         }
+
+        $filepath = self::normalizeMediaPath($filepath);
 
         $media = Media::where('file', $filepath)->first();
         $request->merge([$columnName => $media ? $media->file : null]);
@@ -235,6 +256,48 @@ class MediaHelper
         ]);
     }
 
+    public static function previewMediaImagesFile(string $columnName = 'media', ?string $label = 'Media File'): void
+    {
+        $label = $label ?? ucwords(str_replace('_', ' ', $columnName));
+
+        CRUD::addColumn([
+            'label' => $label,
+            'limit' => -1,
+            'name'  => $columnName . '_file',
+            'value' => function ($entry) use ($columnName) {
+                $value = $entry->{$columnName};
+
+                // Handle if value is a full URL string (e.g., from image column)
+                if (is_string($value) && !empty($value)) {
+                    $imageUrl = $value;
+                    // If it's not already a full URL, prepend CDN URL
+                    if (strpos($imageUrl, 'http://') !== 0 && strpos($imageUrl, 'https://') !== 0) {
+                        $imageUrl = rtrim(config('filesystems.cdn_url'), '/') . '/' . ltrim($imageUrl, '/');
+                    }
+                    return " <a href='" . $imageUrl . "' target='_blank'><img src='" . $imageUrl . "' alt='' class='img-fluid' style='width:60px;height:60px;' ></a>";
+                }
+
+                // Handle if value is a Media model object
+                if (is_object($value)) {
+                    $fileModel = $value;
+                    $path = $fileModel->file ?? null;
+
+                    if ($fileModel && $fileModel->thumbnails_generated) {
+                        $path = $fileModel->thumbnail_medium ?? $path;
+                    }
+
+                    if ($path) {
+                        $fullpath = rtrim(config('filesystems.cdn_url'), '/') . '/' . ltrim($path, '/');
+                        return " <a href='" . $fullpath . "' target='_blank'><img src='" . $fullpath . "' alt='' class='img-fluid' style='width:60px;height:60px;' ></a>";
+                    }
+                }
+
+                return '<span class="text-muted">No file</span>';
+            },
+            'escaped' => false,
+        ]);
+    }
+
 
 
 
@@ -281,57 +344,20 @@ class MediaHelper
 
 
 
-    public static function getArticleImagesDiskOptions()
+    public static function getProgrammeImagesDiskOptions()
     {
-        return self::getDiskOptions([self::DISK_ARTICLE_IMAGES], self::getImageTypes());
+        return self::getDiskOptions([self::DISK_PROGRAMME_IMAGES], self::getImageTypes());
     }
 
-    public static function getFeaturedImageDiskOptions()
+    public static function getCentreImagesDiskOptions()
     {
-        return self::getDiskOptions([self::DISK_FEATURED_IMAGES], self::getImageTypes());
+        return self::getDiskOptions([self::DISK_CENTRE_IMAGES], self::getImageTypes());
     }
 
-    public static function getForumImagesDiskOptions()
+    public static function getCertificateFilesDiskOptions()
     {
-        return self::getDiskOptions([self::DISK_FORUM_IMAGES], self::getImageTypes());
+        return self::getDiskOptions([self::DISK_CERTIFICATE_FILES], self::getDocumentTypes());
     }
-
-    public static function getArticleCategoryImagesDiskOptions()
-    {
-        return self::getDiskOptions([self::DISK_ARTICLE_CATEGORY_IMAGES], self::getImageTypes());
-    }
-
-    public static function getPartnerImagesDiskOptions()
-    {
-        return self::getDiskOptions([self::DISK_PARTNER_IMAGES], self::getImageTypes());
-    }
-
-    public static function getProductTypeImagesDiskOptions()
-    {
-        return self::getDiskOptions([self::DISK_PRODUCT_TYPE_IMAGES], self::getImageTypes());
-    }
-
-    public static function getProductImagesDiskOptions()
-    {
-        return self::getDiskOptions([self::DISK_PRODUCT_IMAGES], self::getImageTypes());
-    }
-
-    public static function getSiteSettingsImagesDiskOptions()
-    {
-        return self::getDiskOptions([self::DISK_SITE_SETTINGS_IMAGES], self::getImageTypes());
-    }
-
-    public static function getTranslationAudioDiskOptions()
-    {
-        return self::getDiskOptions([self::DISK_TRANSLATION_AUDIO], self::getAudioTypes());
-    }
-
-    public static function getReportDocumentDiskOptions()
-    {
-        return self::getDiskOptions([self::DISK_REPORT_DOCUMENT], self::getDocumentTypes());
-    }
-
-
 
 
     private static function getImageTypes()

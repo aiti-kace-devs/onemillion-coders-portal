@@ -1,5 +1,7 @@
 <?php
 
+use App\Helpers\MediaHelper;
+
 $gcs = [
     'driver' => 'gcs',
     'key_file_path' => storage_path(env('GOOGLE_CLOUD_KEY_FILE', null)), // optional: /path/to/service-account.json
@@ -44,6 +46,8 @@ return [
     |
     */
 
+    'cdn_url' =>  env('GOOGLE_CLOUD_STORAGE_API_URI'),
+
     'disks' => [
 
         'local' => [
@@ -72,7 +76,16 @@ return [
         'gcs_uploads' => array_merge($gcs, [
             'root' => 'uploads',
             'url' => env('GOOGLE_CLOUD_STORAGE_API_URI') . '/uploads',
-        ])
+        ]),
+
+        MediaHelper::DISK_PROGRAMME_IMAGES => array_merge(
+            $gcs,
+            [
+                'path_prefix' => env('CLOUD_STORAGE_PATH_PREFIX', 'media') . '/image/course-images',
+                // 'root' => 'course-images',
+                'url' => env('GOOGLE_CLOUD_STORAGE_API_URI') . '/course-images',
+            ]
+        ),
     ],
 
     /*
