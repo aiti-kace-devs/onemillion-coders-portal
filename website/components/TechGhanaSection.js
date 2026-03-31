@@ -238,6 +238,29 @@ setBranchesData(response.data);
     return () => clearInterval(interval);
   }, [svgContent, mapInView]);
 
+  // Highlight hovered region by setting inline styles directly on the SVG path
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const svg = mapRef.current.querySelector("svg");
+    if (!svg) return;
+
+    // Clear previous highlight
+    const allPaths = svg.querySelectorAll("#features path");
+    allPaths.forEach((p) => {
+      p.style.fill = "";
+      p.style.filter = "";
+    });
+
+    // Apply highlight to current region
+    if (hoveredRegion) {
+      const path = svg.querySelector(`#features path#${hoveredRegion}`);
+      if (path) {
+        path.style.fill = "#d4a017";
+        path.style.filter = "drop-shadow(0 4px 6px rgba(0,0,0,0.3))";
+      }
+    }
+  }, [hoveredRegion]);
+
   // Find branch data for a hovered region
   // Normalizes names to handle variations like "Greater Accra" vs "Greater Accra Region",
   // "North East" vs "Northern East", etc.
@@ -321,15 +344,7 @@ setBranchesData(response.data);
                   </div>
                 )}
 
-                {/* Dynamic highlight style — React-controlled, survives re-renders */}
-                {hoveredRegion && (
-                  <style>{`
-                    #features path#${hoveredRegion} {
-                      fill: #d4a017 !important;
-                      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
-                    }
-                  `}</style>
-                )}
+                {/* Region highlight applied via useEffect on the SVG path directly */}
 
                 {/* SVG Map */}
                 <div

@@ -8,15 +8,22 @@ export default function PartnersSection({ data }) {
   const [isMobile, setIsMobile] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
-  // Detect mobile device
+  // Detect mobile device (debounced)
   useEffect(() => {
+    let timeoutId;
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsMobile(window.innerWidth < 768);
+      }, 150);
     };
-    
-    checkMobile();
+
+    setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', checkMobile);
+    };
   }, []);
 
   // Use only API data
@@ -94,35 +101,42 @@ export default function PartnersSection({ data }) {
         </div>
 
         {/* Partners Grid */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ 
-            duration: prefersReducedMotion ? 0.3 : 0.6,
-            delay: prefersReducedMotion ? 0.2 : 0.6 
-          }}
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
           viewport={{ once: true }}
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: {
+                duration: prefersReducedMotion ? 0.3 : 0.6,
+                delay: prefersReducedMotion ? 0.2 : 0.6,
+                staggerChildren: prefersReducedMotion ? 0 : 0.08,
+              },
+            },
+          }}
           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8"
         >
-          {partners.map((partner, index) => (
+          {partners.map((partner) => (
             <motion.div
               key={partner.name}
-              initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: prefersReducedMotion ? 0.3 : 0.4,
-                delay: prefersReducedMotion ? 0 : index * 0.08,
-                ease: "easeOut",
+              variants={{
+                hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 30 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { duration: prefersReducedMotion ? 0.3 : 0.4, ease: "easeOut" },
+                },
               }}
               whileHover={prefersReducedMotion ? {} : { y: -8 }}
-              viewport={{ once: true }}
               className="group"
             >
               <div 
-                className={`cursor-pointer relative h-32 sm:h-40 lg:h-48 backdrop-blur-sm border rounded-xl lg:rounded-2xl p-4 sm:p-6 lg:p-8 transition-all duration-300 ease-out group-hover:scale-[1.02] ${
+                className={`cursor-pointer relative h-32 sm:h-40 lg:h-48 border rounded-xl lg:rounded-2xl p-4 sm:p-6 lg:p-8 transition-all duration-300 ease-out group-hover:scale-[1.02] ${
                   isMobile
-                    ? 'bg-gradient-to-br from-gray-50/95 via-white/90 to-gray-100/95 border-gray-200/50 shadow-lg hover:shadow-xl hover:from-yellow-50/95 hover:via-white/95 hover:to-yellow-50/90 hover:border-yellow-300/60' // Sophisticated gradient on mobile
-                    : 'bg-white/10 border-white/20 hover:bg-white/15 hover:border-yellow-500/40 hover:shadow-xl hover:shadow-yellow-500/20'
+                    ? 'bg-gradient-to-br from-gray-50 via-white to-gray-100 border-gray-200/50 shadow-lg hover:shadow-xl hover:from-yellow-50 hover:via-white hover:to-yellow-50 hover:border-yellow-300/60'
+                    : 'backdrop-blur-sm bg-white/10 border-white/20 hover:bg-white/15 hover:border-yellow-500/40 hover:shadow-xl hover:shadow-yellow-500/20'
                 }`}
                 onClick={() => {
                   if (partner.url) {
