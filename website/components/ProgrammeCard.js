@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiClock, FiArrowRight, FiCheckCircle, FiX, FiLoader, FiGlobe, FiInfo } from "react-icons/fi";
+import { FiClock, FiArrowRight, FiCheckCircle, FiX, FiLoader, FiGlobe, FiMapPin, FiInfo } from "react-icons/fi";
 import Button from "./Button";
 import { confirmCourse } from "../services/pages";
 
@@ -55,6 +55,59 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
     "UI / UX Design": "bg-violet-50 text-violet-700 border-violet-100",
     "Digital Literacy": "bg-cyan-50 text-cyan-700 border-cyan-100",
   };
+
+  // Level color mapping for programme level badges
+  const getLevelColor = (level) => {
+    const normalizedLevel = level?.trim().toLowerCase();
+    const levelColors = {
+      'beginner': 'bg-green-50 text-green-700',
+      'intermediate': 'bg-yellow-50 text-yellow-700',
+      'advanced': 'bg-blue-50 text-blue-700',
+    };
+    return levelColors[normalizedLevel] || 'bg-green-50 text-green-700';
+  };
+
+    // Custom SVG bars for programme level badges
+    const getLevelBars = (level) => {
+      const allBars = [
+        { x: 8, y: 52, height: 20 },   // bar 1 (short)
+        { x: 39, y: 32, height: 40 },  // bar 2 (medium)
+        { x: 70, y: 8, height: 64 }    // bar 3 (tall)
+      ];
+
+      const filledCounts = {
+        'beginner': 1,
+        'intermediate': 2,
+        'advanced': 3
+      };
+
+      const fillColors = {
+        beginner: '#15803D', // green-700
+        intermediate: '#A16207', // yellow-700
+        advanced: '#1D4ED8', // blue-700
+      };
+
+      const normalizedLevel = level?.trim().toLowerCase();
+      const filledCount = filledCounts[normalizedLevel] || 1;
+      const filledColor = fillColors[normalizedLevel] || '#000000';
+
+      return (
+        <svg viewBox="0 0 100 80" className="w-4 h-4" xmlns="http://www.w3.org/2000/svg">
+          {allBars.map((bar, index) => (
+            <rect
+              key={index}
+              x={bar.x}
+              y={bar.y}
+              width="22"
+              height={bar.height}
+              rx="3"
+              ry="3"
+              fill={index < filledCount ? filledColor : '#D1D5DB'}
+            />
+          ))}
+        </svg>
+      );
+    };
 
   return (
     <div
@@ -122,14 +175,25 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
           </div>
           <div className="flex items-center space-x-2">
             {programme.mode_of_delivery && (
-              <span className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
-                <FiGlobe className="w-3 h-3" />
+              <span className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                programme.mode_of_delivery === "Online"
+                  ? "bg-blue-50 text-blue-700"
+                  : "bg-orange-50 text-orange-700"
+              }`}>
+                {programme.mode_of_delivery === "Online" ? (
+                  <FiGlobe className="w-3 h-3" />
+                ) : (
+                  <FiMapPin className="w-3 h-3" />
+                )}
                 {programme.mode_of_delivery}
               </span>
             )}
-            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
-              {programme.level}
-            </span>
+            
+            {/* Level Badge highlight color and bars */}
+            <span className={`flex items-center gap-2 px-2 py-1 rounded text-xs font-medium ${getLevelColor(programme.level)}`}>
+             {getLevelBars(programme.level)}
+             {programme.level}
+          </span>
           </div>
         </div>
 

@@ -57,7 +57,7 @@ const ImpactSection = ({ data }) => {
     if (isAutoPlaying && testimonials.length > 0) {
       interval = setInterval(() => {
         setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
-      }, 3000); // Change every 3 seconds
+      }, 7000); // Change every 7 seconds
     }
 
     return () => {
