@@ -53,7 +53,7 @@ class HandleInertiaRequests extends Middleware
             SHOW_COURSE_ASSESSMENT_TO_STUDENTS,
             ALLOW_COURSE_CHANGE,
             ALLOW_SESSION_CHANGE,
-            EXAM_DEADLINE_AFTER_REGISTRATION
+            // EXAM_DEADLINE_AFTER_REGISTRATION
         ];
 
         $configs = [];

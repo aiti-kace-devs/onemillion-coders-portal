@@ -20,22 +20,30 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
-        $user = User::select('users.*', 'users.updated_at as user_updated', 'users.created_at as user_created', 'users.name as student_name', 'courses.*', 'course_sessions.session as selected_session', 'course_sessions.*', 'user_admission.*')
-            ->where('userId', Auth::user()->userId)
-            ->join('user_admission', 'user_admission.user_id', '=', 'users.userId')
-            ->join('course_sessions', 'user_admission.session', '=', 'course_sessions.id')
-            ->join('courses', 'user_admission.course_id', '=', 'courses.id')
-            ->first();
+        $user = Auth::user();
+        $userData = $user->only([
+            'id',
+            'userId',
+            'name',
+            'first_name',
+            'middle_name',
+            'last_name',
+            'email',
+            'mobile_no',
+            'gender',
+            'network_type',
+            'card_type',
+            'ghcard',
+            'age',
+            'pwd',
+            'details_updated_at',
+            'registered_course'
+        ]);
 
-        if (!$user) {
-            $user = Auth::user();
-        }
-
-        $user['isAdmitted'] = $user?->isAdmitted();
-
+        $userData['isAdmitted'] = $user->isAdmitted();
 
         return Inertia::render('Student/Profile/Edit', [
-            'user' => $user
+            'user' => $userData
         ]);
     }
 

@@ -1055,12 +1055,13 @@ export default function QuizPage({ params }) {
 
                     <div className="space-y-2.5">
                       <button
-                        onClick={() =>
-                          router.push(
-                            process.env.NEXT_PUBLIC_PORTAL_URL +
-                              `/student/change-course`,
-                          )
-                        }
+                        onClick={() => {
+                          if (window.parent !== window) {
+                            window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
+                          }
+                          const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || '';
+                          window.location.href = portalUrl ? `${portalUrl}/student/change-course` : '/student/change-course';
+                        }}
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
                         Proceed to Course Selection <FiArrowRight size={16} />
@@ -1126,12 +1127,13 @@ export default function QuizPage({ params }) {
                     </div>
                     <div className="space-y-2.5">
                       <button
-                        onClick={() =>
-                          router.push(
-                            process.env.NEXT_PUBLIC_PORTAL_URL +
-                              `/student/change-course`,
-                          )
-                        }
+                        onClick={() => {
+                          if (window.parent !== window) {
+                            window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
+                          }
+                          const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || '';
+                          window.location.href = portalUrl ? `${portalUrl}/student/change-course` : '/student/change-course';
+                        }}
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
                         Proceed to Course Selection <FiArrowRight size={16} />
