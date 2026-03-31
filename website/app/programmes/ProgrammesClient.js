@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiSearch, FiFilter, FiClock, FiX, FiGlobe, FiArrowUp, FiChevronDown, FiSliders, FiArrowLeft } from "react-icons/fi";
+import { FiSearch, FiFilter, FiClock, FiX, FiGlobe, FiArrowUp, FiChevronDown, FiSliders, FiArrowLeft, FiMonitor, FiUsers } from "react-icons/fi";
 import { getProgrammesData, getCategoriesData } from "../../services";
 import ProgrammeCard from "../../components/ProgrammeCard";
 import ProgrammeSkeleton from "../../components/ProgrammeSkeleton";
@@ -224,7 +224,7 @@ export default function ProgrammesClient({ initialCategory }) {
               {[
                 { value: selectedCategory, setter: setSelectedCategory, icon: FiFilter, active: selectedCategory !== "All",
                   options: categories.map(c => ({ value: c, label: c })) },
-                { value: selectedMode, setter: setSelectedMode, icon: FiGlobe, active: selectedMode !== "All",
+                { value: selectedMode, setter: setSelectedMode, icon: selectedMode === "Online" ? FiMonitor : selectedMode === "In Person" ? FiUsers : FiGlobe, active: selectedMode !== "All",
                   options: deliveryModes.map(m => ({ value: m, label: m === "All" ? "All Modes" : m })) },
                 { value: selectedDuration, setter: setSelectedDuration, icon: FiClock, active: selectedDuration !== "All",
                   options: [
@@ -397,7 +397,7 @@ export default function ProgrammesClient({ initialCategory }) {
                   {[
                     { label: "Category", icon: FiFilter, value: selectedCategory, setter: setSelectedCategory,
                       options: categories.map(c => ({ value: c, label: c })) },
-                    { label: "Delivery Mode", icon: FiGlobe, value: selectedMode, setter: setSelectedMode,
+                    { label: "Delivery Mode", icon: selectedMode === "Online" ? FiMonitor : selectedMode === "In Person" ? FiUsers : FiGlobe, value: selectedMode, setter: setSelectedMode,
                       options: deliveryModes.map(m => ({ value: m, label: m === "All" ? "All Modes" : m })) },
                     { label: "Duration", icon: FiClock, value: selectedDuration, setter: setSelectedDuration,
                       options: [

@@ -15,7 +15,8 @@ import {
   FiGlobe,
   FiPlay,
   FiStar,
-  FiLoader
+  FiLoader,
+  FiMonitor
 } from 'react-icons/fi';
 import { getProgrammeData } from '../../../services/pages';
 import Button from '../../../components/Button';
@@ -369,7 +370,19 @@ export default function CourseDetailsPage() {
                       {programme.mode_of_delivery && (
                         <div className="flex justify-between items-center py-2">
                           <span className="text-sm text-gray-500">Mode</span>
-                          <span className="text-sm font-medium text-gray-900">{programme.mode_of_delivery}</span>
+                          <span className={`text-sm font-medium flex items-center gap-1.5 ${
+                            programme.mode_of_delivery === "Online" ? "text-blue-700" :
+                            programme.mode_of_delivery === "In Person" ? "text-green-700" : "text-purple-700"
+                          }`}>
+                            {programme.mode_of_delivery === "Online" ? (
+                              <FiMonitor className="w-3.5 h-3.5" />
+                            ) : programme.mode_of_delivery === "In Person" ? (
+                              <FiUsers className="w-3.5 h-3.5" />
+                            ) : (
+                              <FiGlobe className="w-3.5 h-3.5" />
+                            )}
+                            {programme.mode_of_delivery}
+                          </span>
                         </div>
                       )}
                     </div>

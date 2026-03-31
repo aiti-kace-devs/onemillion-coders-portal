@@ -1,4 +1,4 @@
-FROM php:8.3-fpm-bookworm
+FROM php:8.4-fpm-bookworm
 
 # Environment variables
 ENV PHP_PM_MAX_CHILDREN=12 \
@@ -9,7 +9,7 @@ ENV PHP_PM_MAX_CHILDREN=12 \
     PHP_DATE_TIMEZONE=UTC \
     PHP_MEMORY_LIMIT=1G \
     NGINX_VERSION=1.25.3 \
-    PHP_VERSION=8.3 \
+    PHP_VERSION=8.4 \
     PHP_OPEN_BASEDIR=/var/www/html:/dev/stdout:/tmp:/var/www:/var/www/.config/gcloud \
     COMPOSER_ALLOW_SUPERUSER=1
 

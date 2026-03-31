@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiClock, FiArrowRight, FiCheckCircle, FiX, FiLoader, FiGlobe, FiInfo } from "react-icons/fi";
+import { FiClock, FiArrowRight, FiCheckCircle, FiX, FiLoader, FiGlobe, FiInfo, FiMonitor, FiUsers } from "react-icons/fi";
 import Button from "./Button";
 import { confirmCourse } from "../services/pages";
 
@@ -55,6 +55,29 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
     "UI / UX Design": "bg-violet-50 text-violet-700 border-violet-100",
     "Digital Literacy": "bg-cyan-50 text-cyan-700 border-cyan-100",
   };
+
+  // Mode of delivery mapping
+  const modeStyles = {
+    "Online": {
+      color: "bg-blue-50 text-blue-700 border-blue-100",
+      icon: FiMonitor
+    },
+    "In Person": {
+      color: "bg-green-50 text-green-700 border-green-100",
+      icon: FiUsers
+    },
+    "Hybrid": {
+      color: "bg-purple-50 text-purple-700 border-purple-100",
+      icon: FiGlobe
+    }
+  };
+
+  const currentMode = modeStyles[programme.mode_of_delivery] || {
+    color: "bg-gray-50 text-gray-700 border-gray-100",
+    icon: FiGlobe
+  };
+
+  const ModeIcon = currentMode.icon;
 
   return (
     <div
@@ -122,12 +145,12 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
           </div>
           <div className="flex items-center space-x-2">
             {programme.mode_of_delivery && (
-              <span className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
-                <FiGlobe className="w-3 h-3" />
+              <span className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${currentMode.color}`}>
+                <ModeIcon className="w-3 h-3" />
                 {programme.mode_of_delivery}
               </span>
             )}
-            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
+            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium border border-yellow-200">
               {programme.level}
             </span>
           </div>
