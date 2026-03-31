@@ -1,11 +1,7 @@
 <script setup>
-import { ref, reactive, computed } from "vue";
-import { Head, router, useForm, usePage } from "@inertiajs/vue3";
+import { computed } from "vue";
+import { Head, usePage } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
-import PrimaryButton from "@/Components/PrimaryButton.vue";
-import SelectInput from "@/Components/SelectInput.vue";
-import InputLabel from "@/Components/InputLabel.vue";
-import InputError from "@/Components/InputError.vue";
 
 const props = defineProps({
   courses: Array,
@@ -20,10 +16,6 @@ const pageTitle = computed(() => {
     if (isShortlisted.value) return "Registered Course";
     return isRegistered.value ? "Change Course" : "Choose Course";
 });
-
-function submit() {
-  // ... (keep if needed for manual change, but user said "dont touch anything on the react front end")
-}
 
 const courseSelectionUrl = computed(() => {
     const baseUrl = usePage().props.quiz_frontend_url || '';
