@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiUsers, FiClock, FiAward, FiBookOpen, FiChevronRight, FiMapPin, FiGlobe } from 'react-icons/fi';
+import { FiClock, FiAward, FiBookOpen, FiChevronRight, FiMapPin, FiGlobe } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Button from './Button';
@@ -88,8 +88,14 @@ const ProgramCard = ({ program }) => {
           )}
           {program.mode_of_delivery && (
             <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center space-x-1">
-              <FiGlobe className="w-3 h-3 text-blue-600" />
-              <span className="text-xs font-medium text-blue-700">{program.mode_of_delivery}</span>
+              {program.mode_of_delivery === "Online" ? (
+                <FiGlobe className="w-3 h-3 text-blue-600" />
+              ) : (
+                <FiMapPin className="w-3 h-3 text-orange-600" />
+              )}
+              <span className={`text-xs font-medium ${
+                program.mode_of_delivery === "Online" ? "text-blue-700" : "text-orange-700"
+              }`}>{program.mode_of_delivery}</span>
             </div>
           )}
         </div>

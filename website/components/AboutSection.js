@@ -83,7 +83,7 @@ const AboutSection = ({ data }) => {
               {/* Ghana flag inspired border - pulsing glow effect */}
               <div
                 className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-red-600/40 via-yellow-400/40 to-green-600/40
-                             animate-pulse blur-xl"
+                             opacity-60 blur-md"
               ></div>
 
               {/* Main image container with responsive aspect ratios */}

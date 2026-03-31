@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiClock, FiArrowRight, FiCheckCircle, FiX, FiLoader, FiGlobe, FiInfo } from "react-icons/fi";
+import { FiClock, FiArrowRight, FiCheckCircle, FiX, FiLoader, FiGlobe, FiMapPin, FiInfo } from "react-icons/fi";
 import Button from "./Button";
 import { confirmCourse } from "../services/pages";
 
@@ -175,8 +175,16 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
           </div>
           <div className="flex items-center space-x-2">
             {programme.mode_of_delivery && (
-              <span className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
-                <FiGlobe className="w-3 h-3" />
+              <span className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                programme.mode_of_delivery === "Online"
+                  ? "bg-blue-50 text-blue-700"
+                  : "bg-orange-50 text-orange-700"
+              }`}>
+                {programme.mode_of_delivery === "Online" ? (
+                  <FiGlobe className="w-3 h-3" />
+                ) : (
+                  <FiMapPin className="w-3 h-3" />
+                )}
                 {programme.mode_of_delivery}
               </span>
             )}
