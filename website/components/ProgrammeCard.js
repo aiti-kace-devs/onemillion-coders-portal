@@ -56,6 +56,59 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
     "Digital Literacy": "bg-cyan-50 text-cyan-700 border-cyan-100",
   };
 
+  // Level color mapping for programme level badges
+  const getLevelColor = (level) => {
+    const normalizedLevel = level?.trim().toLowerCase();
+    const levelColors = {
+      'beginner': 'bg-green-50 text-green-700',
+      'intermediate': 'bg-yellow-50 text-yellow-700',
+      'advanced': 'bg-blue-50 text-blue-700',
+    };
+    return levelColors[normalizedLevel] || 'bg-green-50 text-green-700';
+  };
+
+    // Custom SVG bars for programme level badges
+    const getLevelBars = (level) => {
+      const allBars = [
+        { x: 8, y: 52, height: 20 },   // bar 1 (short)
+        { x: 39, y: 32, height: 40 },  // bar 2 (medium)
+        { x: 70, y: 8, height: 64 }    // bar 3 (tall)
+      ];
+
+      const filledCounts = {
+        'beginner': 1,
+        'intermediate': 2,
+        'advanced': 3
+      };
+
+      const fillColors = {
+        beginner: '#15803D', // green-700
+        intermediate: '#A16207', // yellow-700
+        advanced: '#1D4ED8', // blue-700
+      };
+
+      const normalizedLevel = level?.trim().toLowerCase();
+      const filledCount = filledCounts[normalizedLevel] || 1;
+      const filledColor = fillColors[normalizedLevel] || '#000000';
+
+      return (
+        <svg viewBox="0 0 100 80" className="w-4 h-4" xmlns="http://www.w3.org/2000/svg">
+          {allBars.map((bar, index) => (
+            <rect
+              key={index}
+              x={bar.x}
+              y={bar.y}
+              width="22"
+              height={bar.height}
+              rx="3"
+              ry="3"
+              fill={index < filledCount ? filledColor : '#D1D5DB'}
+            />
+          ))}
+        </svg>
+      );
+    };
+
   return (
     <div
       className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-200 cursor-pointer group"
@@ -127,9 +180,12 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
                 {programme.mode_of_delivery}
               </span>
             )}
-            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
-              {programme.level}
-            </span>
+            
+            {/* Level Badge highlight color and bars */}
+            <span className={`flex items-center gap-2 px-2 py-1 rounded text-xs font-medium ${getLevelColor(programme.level)}`}>
+             {getLevelBars(programme.level)}
+             {programme.level}
+          </span>
           </div>
         </div>
 
