@@ -26,7 +26,7 @@ class Course extends Model
         'centre_id',
         'programme_id',
         'course_name',
-        'location',
+        // 'location',
         'duration',
         'start_date',
         'batch_id',
@@ -162,11 +162,11 @@ class Course extends Model
                 ? "{$programme->title} - ({$centre->title})"
                 : $course->course_name;
 
-            $course->location = $branch?->title;
+            // $course->location = $branch?->title;
         });
 
         static::saved(function ($course) {
-            if ($course->wasChanged(['course_name', 'location'])) {
+            if ($course->wasChanged(['course_name'])) {
                 $course->sessions()->get()->each(function ($session) {
                     $session->setSessionName();
                     $session->save();
