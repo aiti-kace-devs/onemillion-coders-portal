@@ -59,13 +59,7 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
-        'remember_token',
-        'ghcard',
-        'mobile_no',
-        'age',
-        'gender',
-        'network_type',
-        'card_type',
+        'remember_token'
     ];
 
     /**
@@ -315,5 +309,37 @@ class User extends Authenticatable
     public function userAssessment()
     {
         return $this->hasOne(UserAssessment::class);
+    }
+
+    /**
+     * Get the student's full name (alias for frontend consistency)
+     */
+    public function getStudentNameAttribute()
+    {
+        return $this->full_name;
+    }
+
+    /**
+     * Get the name of the course the student is admitted to
+     */
+    public function getCourseNameAttribute()
+    {
+        return $this->admission?->course?->course_name;
+    }
+
+    /**
+     * Get the session name (e.g., Morning, Evening)
+     */
+    public function getSelectedSessionAttribute()
+    {
+        return $this->admission?->courseSession?->session;
+    }
+
+    /**
+     * Get the date the admission was confirmed (used as verification date)
+     */
+    public function getVerificationDateAttribute()
+    {
+        return $this->admission?->confirmed;
     }
 }

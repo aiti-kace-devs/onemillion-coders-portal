@@ -62,7 +62,7 @@ class HandleInertiaRequests extends Middleware
         }
 
         $quizJwtToken = null;
-        if ($user) {
+        if ($user && in_array(Route::currentRouteName(), ['student.change-course', 'student.level-assessment'])) {
             $quizJwtToken = app(JwtService::class)->generate($user->id);
         }
 

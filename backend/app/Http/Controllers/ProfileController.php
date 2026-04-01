@@ -20,11 +20,21 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
-        $user = Auth::user();
-        $userData = $user->only([
+        $user = $request->user()->load(['admission.course', 'admission.courseSession']);
+
+        $userData = array_merge($user->toArray(), [
+            'isAdmitted' => $user->isAdmitted(),
+            'student_name' => $user->student_name,
+            'course_name' => $user->course_name,
+            'selected_session' => $user->selected_session,
+            'verification_date' => $user->verification_date,
+        ]);
+
+        $userData = collect($userData)->only([
             'id',
             'userId',
             'name',
+            'student_name',
             'first_name',
             'middle_name',
             'last_name',
@@ -37,10 +47,12 @@ class ProfileController extends Controller
             'age',
             'pwd',
             'details_updated_at',
-            'registered_course'
-        ]);
-
-        $userData['isAdmitted'] = $user->isAdmitted();
+            'registered_course',
+            'course_name',
+            'selected_session',
+            'verification_date',
+            'isAdmitted'
+        ])->toArray();
 
         return Inertia::render('Student/Profile/Edit', [
             'user' => $userData
