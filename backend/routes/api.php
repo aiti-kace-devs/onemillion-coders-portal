@@ -56,6 +56,8 @@ Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->middleware('
 |
 */
 Route::get('/pages/footer', [StatamicEntryApiController::class, 'footer']);
+Route::get('/pages/privacy', [StatamicEntryApiController::class, 'privacy']);
+Route::get('/pages/terms', [StatamicEntryApiController::class, 'terms']);
 Route::get('/pages/{slug}', [StatamicEntryApiController::class, 'showPageBySlug']);
 
 Route::get('/forms/{handle}', [StatamicEntryApiController::class, 'showFormByHandle']);

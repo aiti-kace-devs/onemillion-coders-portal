@@ -537,6 +537,30 @@ class StatamicEntryApiController extends Controller
         return response()->json(['data' => $footer]);
     }
 
+    public function privacy(Request $request): JsonResponse
+    {
+
+        $privacy = Cache::flexible('privacy', \cache_flexible_ttl(), function () {
+            return [
+                GlobalSet::findByHandle('terms_and_privacy')->in('default')->toArray(),
+            ];
+        });
+
+        return response()->json(['data' => $privacy]);
+    }
+
+    public function terms(Request $request): JsonResponse
+    {
+
+        $terms = Cache::flexible('terms', \cache_flexible_ttl(), function () {
+            return [
+                GlobalSet::findByHandle('consent')->in('default')->toArray(),
+            ];
+        });
+
+        return response()->json(['data' => $terms]);
+    }
+
     public function showFormByHandle(Request $request, $handle): JsonResponse
     {
         $form = Form::find($handle);
