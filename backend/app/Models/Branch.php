@@ -20,6 +20,12 @@ class Branch extends Model
     protected $casts = [
         'status' => 'boolean',
     ];
+
+    public function getLocationAttribute(): string
+    {
+        return $this->title ?? '';
+    }
+
     public function centre()
     {
         return $this->hasMany(Centre::class);

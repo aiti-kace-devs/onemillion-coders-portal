@@ -8,6 +8,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\CourseFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class CourseMatchOptionCrudController
@@ -44,6 +45,7 @@ class CourseMatchOptionCrudController extends CrudController
     protected function setupListOperation()
     {
         WidgetHelper::CourseMatchOptionStatisticsWidget();
+        CrudListHelper::editInDropdown();
 
         CRUD::column('value');
         CRUD::column('answer');
