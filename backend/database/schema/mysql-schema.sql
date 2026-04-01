@@ -4,6 +4,28 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+DROP TABLE IF EXISTS `activity_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `activity_log` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `log_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `subject_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `event` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `subject_id` bigint unsigned DEFAULT NULL,
+  `causer_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `causer_id` bigint unsigned DEFAULT NULL,
+  `properties` json DEFAULT NULL,
+  `batch_uuid` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `subject` (`subject_type`,`subject_id`),
+  KEY `causer` (`causer_type`,`causer_id`),
+  KEY `activity_log_log_name_index` (`log_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `admin_course`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -586,7 +608,6 @@ DROP TABLE IF EXISTS `courses`;
 CREATE TABLE `courses` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `course_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `course` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `duration` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `start_date` date DEFAULT NULL,
   `end_date` date DEFAULT NULL,
@@ -666,23 +687,6 @@ CREATE TABLE `failed_jobs` (
   `failed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `failed_jobs_uuid_unique` (`uuid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-DROP TABLE IF EXISTS `form_responses`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `form_responses` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `uuid` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `form_id` bigint unsigned NOT NULL,
-  `response_data` json NOT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  `deleted_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `form_responses_uuid_unique` (`uuid`),
-  KEY `form_responses_form_id_foreign` (`form_id`),
-  CONSTRAINT `form_responses_form_id_foreign` FOREIGN KEY (`form_id`) REFERENCES `forms` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `forms`;
@@ -1325,7 +1329,6 @@ CREATE TABLE `users` (
   `details_updated_at` datetime DEFAULT NULL,
   `last_login` timestamp NULL DEFAULT NULL,
   `network_type` enum('mtn','telecel','airteltigo') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `form_response_id` bigint unsigned DEFAULT NULL,
   `student_level` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `users_email_unique` (`email`),
@@ -1334,13 +1337,11 @@ CREATE TABLE `users` (
   UNIQUE KEY `idx_mobile_no` (`mobile_no`),
   UNIQUE KEY `users_student_id_unique` (`student_id`),
   UNIQUE KEY `users_ghcard_unique` (`ghcard`),
-  KEY `users_form_response_id_foreign` (`form_response_id`),
   KEY `users_id_index` (`id`),
   KEY `users_exam_foreign` (`exam`),
   KEY `users_registered_course_foreign` (`registered_course`),
   KEY `users_verified_by_foreign` (`verified_by`),
   CONSTRAINT `users_exam_foreign` FOREIGN KEY (`exam`) REFERENCES `oex_exam_masters` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT `users_form_response_id_foreign` FOREIGN KEY (`form_response_id`) REFERENCES `form_responses` (`id`) ON DELETE SET NULL,
   CONSTRAINT `users_registered_course_foreign` FOREIGN KEY (`registered_course`) REFERENCES `courses` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `users_verified_by_foreign` FOREIGN KEY (`verified_by`) REFERENCES `admins` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1623,32 +1624,35 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (114,'2026_02_12_13
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (115,'2026_02_12_180000_update_courses_batch_fk_set_null',18);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (116,'2026_02_13_090512_update_courses_unique_constraint',18);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (117,'2026_02_13_101500_add_indexes_for_course_batch_metrics',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (118,'2026_02_15_161733_add_number_of_questions_to_oex_exam_masters_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (119,'2026_02_15_200000_remove_link_from_otp_email_template',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (120,'2026_02_24_130000_create_districts_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (121,'2026_02_24_130100_create_district_centre_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (122,'2026_02_25_100637_create_tags_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (123,'2026_02_25_100646_create_taggables_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (124,'2026_03_02_140711_create_constituencies_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (125,'2026_03_02_160000_add_constituency_id_to_centres_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (126,'2026_03_03_210907_drop_oex_question_master_programme_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (127,'2026_03_03_212406_create_tag_types_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (128,'2026_03_03_212650_add_tag_type_id_to_tags_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (129,'2026_03_10_221757_add_level_columns_for_assessment',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (130,'2026_03_10_221802_create_user_assessments_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (131,'2026_03_11_000000_update_users_registered_course_and_add_data',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (132,'2026_03_11_000001_add_mode_of_delivery_and_provider_to_programmes_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (133,'2026_03_11_000002_add_is_multiple_select_and_type_to_course_match_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (134,'2026_03_12_000000_create_user_course_recommendations_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (135,'2026_03_12_000010_add_reference_source_to_course_match_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (136,'2026_03_13_000000_add_need_support_to_users_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (137,'2026_03_13_000001_add_centre_id_to_user_course_recommendations_table',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (138,'2026_03_13_115030_add_images_to_centres',18);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (139,'2026_03_13_181956_data_cleaning',19);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (140,'2026_03_14_000001_add_gps_location_to_centres_table',19);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (141,'2026_03_14_000002_change_centre_gps_address_to_string',19);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (142,'2026_03_14_030519_create_old_admissions_table',19);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (143,'2026_03_14_114731_add_violation_count_to_user_assessments_table',19);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (144,'2026_03_17_000001_add_icon_to_course_categories_table',19);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (145,'2026_03_17_000001_add_unique_index_to_users_ghcard',19);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (146,'2026_03_18_172613_add_pwd_to_users_table',19);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (118,'2026_02_14_130822_create_activity_log_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (119,'2026_02_14_130823_add_event_column_to_activity_log_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (120,'2026_02_14_130824_add_batch_uuid_column_to_activity_log_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (121,'2026_02_15_161733_add_number_of_questions_to_oex_exam_masters_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (122,'2026_02_15_200000_remove_link_from_otp_email_template',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (123,'2026_02_24_130000_create_districts_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (124,'2026_02_24_130100_create_district_centre_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (125,'2026_02_25_100637_create_tags_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (126,'2026_02_25_100646_create_taggables_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (127,'2026_03_02_140711_create_constituencies_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (128,'2026_03_02_160000_add_constituency_id_to_centres_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (129,'2026_03_03_210907_drop_oex_question_master_programme_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (130,'2026_03_03_212406_create_tag_types_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (131,'2026_03_03_212650_add_tag_type_id_to_tags_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (132,'2026_03_10_221757_add_level_columns_for_assessment',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (133,'2026_03_10_221802_create_user_assessments_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (134,'2026_03_11_000000_update_users_registered_course_and_add_data',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (135,'2026_03_11_000001_add_mode_of_delivery_and_provider_to_programmes_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (136,'2026_03_11_000002_add_is_multiple_select_and_type_to_course_match_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (137,'2026_03_12_000000_create_user_course_recommendations_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (138,'2026_03_12_000010_add_reference_source_to_course_match_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (139,'2026_03_13_000000_add_need_support_to_users_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (140,'2026_03_13_000001_add_centre_id_to_user_course_recommendations_table',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (141,'2026_03_13_115030_add_images_to_centres',18);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (142,'2026_03_13_181956_data_cleaning',19);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (143,'2026_03_14_000001_add_gps_location_to_centres_table',19);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (144,'2026_03_14_000002_change_centre_gps_address_to_string',19);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (145,'2026_03_14_030519_create_old_admissions_table',19);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (146,'2026_03_14_114731_add_violation_count_to_user_assessments_table',19);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (147,'2026_03_17_000001_add_icon_to_course_categories_table',19);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (148,'2026_03_17_000001_add_unique_index_to_users_ghcard',19);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (149,'2026_03_18_172613_add_pwd_to_users_table',19);
