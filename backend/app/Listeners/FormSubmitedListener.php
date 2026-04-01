@@ -34,7 +34,7 @@ class FormSubmitedListener implements ShouldQueue
         $fullName = preg_replace('/\s+/', ' ', $fullName); // remove extra spaces
 
         $student = [];
-        $student['name'] = $fullName; 
+        $student['name'] = $fullName;
         $student['first_name'] = $firstName;
         $student['middle_name'] = $middleName;
         $student['last_name'] = $lastName;
