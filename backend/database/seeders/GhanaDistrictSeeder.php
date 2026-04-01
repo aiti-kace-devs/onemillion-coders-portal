@@ -9,7 +9,7 @@ class GhanaDistrictSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('districts')->insert([
+        $rows = [
 
 
             // =========================
@@ -341,6 +341,15 @@ class GhanaDistrictSeeder extends Seeder
             ['title' => 'Tano North Municipal', 'branch_id' => 17,'status'=>1],
             ['title' => 'Tano South Municipal', 'branch_id' => 17,'status'=>1],
 
-        ]);
+        ];
+
+        $validBranchIds = DB::table('branches')->pluck('id')->all();
+        $filtered = array_values(array_filter($rows, function (array $row) use ($validBranchIds) {
+            return in_array((int) ($row['branch_id'] ?? 0), $validBranchIds, true);
+        }));
+
+        foreach (array_chunk($filtered, 500) as $chunk) {
+            DB::table('districts')->insertOrIgnore($chunk);
+        }
     }
 }

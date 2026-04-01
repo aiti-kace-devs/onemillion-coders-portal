@@ -167,6 +167,11 @@ class User extends Authenticatable
         return $this->belongsTo(FormResponse::class, 'form_response_id');
     }
 
+    public function partnerProgress()
+    {
+        return $this->hasMany(StudentPartnerProgress::class, 'user_id', 'id');
+    }
+
     public function admission()
     {
         return $this->hasOne(UserAdmission::class, 'user_id', 'userId');

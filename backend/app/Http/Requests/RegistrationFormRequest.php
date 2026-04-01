@@ -70,7 +70,7 @@ class RegistrationFormRequest extends FormRequest
             'schema.*.title.required' => 'Each form field must have a title.',
             'schema.*.title.max' => 'Field title cannot exceed 255 characters.',
             'schema.*.type.required' => 'Each form field must have a type.',
-            'schema.*.type.in' => 'Field type must be one of: text, email, select, phonenumber, select_course, textarea, number, date, file, checkbox, radio.',
+            'schema.*.type.in' => 'Field type must be one of: text, email, select, phonenumber, password, select_course, textarea, number, date, file, checkbox, radio.',
             'schema.*.description.max' => 'Field description cannot exceed 500 characters.',
             'schema.*.rules.max' => 'Field rules cannot exceed 1000 characters.',
             'schema.*.options.max' => 'Field options cannot exceed 1000 characters.',

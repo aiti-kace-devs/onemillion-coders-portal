@@ -13,11 +13,14 @@ use App\Models\User;
 use App\Models\CourseSession;
 use App\Models\District;
 use App\Models\OexExamMaster;
+use App\Models\StudentPartnerProgressHistory;
 use App\Models\UserAdmission;
+use App\Jobs\RefreshPartnerProgressJob;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Helpers\CourseVisibilityHelper;
+use App\Services\PartnerProgressSyncService;
 use Illuminate\Support\Facades\View;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\GetsFilteredQuery;
@@ -174,11 +177,24 @@ class ManageStudentCrudController extends CrudController
 
         $entry = $this->crud->getEntry($this->crud->getCurrentEntryId());
         $activities = $entry->actions()->latest()->get();
+        $progressState = app(PartnerProgressSyncService::class)->getSnapshotForPreview($entry);
+        $progressHistory = collect();
+        if (!empty($progressState['snapshot'])) {
+            $progressHistory = StudentPartnerProgressHistory::query()
+                ->where('student_partner_progress_id', $progressState['snapshot']->id)
+                ->orderBy('captured_at')
+                ->limit(120)
+                ->get();
+        }
 
         View::share([
             'courses' => $courses,
             'sessions' => $sessions,
             'activities' => $activities,
+            'partnerProgressEligible' => (bool) ($progressState['eligible'] ?? false),
+            'partnerProgressSnapshot' => $progressState['snapshot'] ?? null,
+            'partnerProgressStatus' => $progressState['status'] ?? 'not_eligible',
+            'partnerProgressHistory' => $progressHistory,
         ]);
     }
     /**
@@ -648,6 +664,21 @@ class ManageStudentCrudController extends CrudController
             'admission_info' => $admissionInfo,
             'exam_metrics' => $examMetrics,
             'attendance_metrics' => $attendanceMetrics,
+        ]);
+    }
+
+    public function refreshPartnerProgress($userId, Request $request)
+    {
+        if (!backpack_user() || !backpack_user()->can('student.read.all')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $user = User::findOrFail($userId);
+        $force = (bool) $request->boolean('force', true);
+        RefreshPartnerProgressJob::dispatch($user->id, $force);
+
+        return response()->json([
+            'message' => 'Partner progress sync has been queued.',
         ]);
     }
 

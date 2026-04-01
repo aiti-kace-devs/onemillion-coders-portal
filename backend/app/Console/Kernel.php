@@ -26,6 +26,15 @@ class Kernel extends ConsoleKernel
             ->dailyAt('01:00');
 
         $schedule->command('email:sendFeedback')->everyTenMinutes();
+        $schedule->command('partner:send-stale-progress-reminders')->hourly();
+        $schedule->command(sprintf(
+            'partner:sync-program-progress %s --per-page=%d --updated-since=%s',
+            (string) config('services.partner_startocode.program_slug', 'gh-program'),
+            (int) config('services.partner_startocode.bulk_per_page', 100),
+            now()->subHours(2)->toIso8601String()
+        ))
+            ->hourly()
+            ->withoutOverlapping();
 
         $schedule->command('horizon:snapshot')->everyFiveMinutes();
 

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\AppConfig;
 use App\Services\JwtService;
+use App\Services\PartnerCourseEligibilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -62,8 +63,11 @@ class HandleInertiaRequests extends Middleware
         }
 
         $quizJwtToken = null;
+        $hasPartnerProgressMenu = false;
         if ($user) {
             $quizJwtToken = app(JwtService::class)->generate($user->id);
+            $hasPartnerProgressMenu = (bool) config('services.partner_startocode.enable_student_progress_menu', true)
+                && app(PartnerCourseEligibilityService::class)->resolveStartocodeMappingForUser($user) !== null;
         }
 
         return [
@@ -77,6 +81,7 @@ class HandleInertiaRequests extends Middleware
                             'hasAdmission' => $user?->hasAdmission(),
                             'hasAttendance' => $user?->hasAttendance(),
                             'assessment_completed' => $user?->userAssessment?->completed ?? false,
+                            'hasPartnerProgressMenu' => $hasPartnerProgressMenu,
                         ]
                     )
                     : null,

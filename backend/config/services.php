@@ -50,4 +50,21 @@ return [
         'use_gcs_fuse' => env('USE_GCS_FUSE', false),
         'gcs_fuse_path' => env('GCS_FUSE_PATH', storage_path('app/public/basset')),
     ],
+
+    'partner_startocode' => [
+        /** Stored in DB as student_partner_progress.partner_code and partner_course_mappings.partner_code */
+        'code' => env('STARTOCODE_PARTNER_CODE', 'startocode'),
+        'base_url' => env('STARTOCODE_BASE_URL'),
+        'token' => env('STARTOCODE_API_TOKEN'),
+        'timeout_seconds' => env('STARTOCODE_TIMEOUT_SECONDS', 10),
+        'stale_after_days' => env('STARTOCODE_STALE_AFTER_DAYS', 7),
+        'preview_refresh_minutes' => env('STARTOCODE_PREVIEW_REFRESH_MINUTES', 30),
+        'history_min_gap_hours' => env('STARTOCODE_HISTORY_MIN_GAP_HOURS', 12),
+        'enable_student_progress_menu' => env('STARTOCODE_ENABLE_STUDENT_PROGRESS_MENU', true),
+        'program_slug' => env('STARTOCODE_PROGRAM_SLUG', 'gh-program'),
+        'bulk_per_page' => env('STARTOCODE_BULK_PER_PAGE', 100),
+        'send_stale_reminders' => env('STARTOCODE_SEND_STALE_REMINDERS', true),
+        'reminder_cooldown_hours' => env('STARTOCODE_REMINDER_COOLDOWN_HOURS', 24),
+        'reminder_batch_size' => env('STARTOCODE_REMINDER_BATCH_SIZE', 200),
+    ],
 ];

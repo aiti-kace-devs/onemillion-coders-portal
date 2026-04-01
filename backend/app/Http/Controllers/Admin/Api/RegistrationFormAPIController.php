@@ -43,6 +43,7 @@ class RegistrationFormAPIController extends Controller
             'Educational Information' => [
                 'highest_level_of_education',
                 'certificate',
+                'password',
             ],
         ];
 

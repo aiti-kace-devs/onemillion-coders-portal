@@ -141,6 +141,23 @@
 
     $currentAdmin = backpack_user();
     $isSuperAdmin = $currentAdmin && method_exists($currentAdmin, 'isSuper') && $currentAdmin->isSuper();
+
+    $partnerSnapshot = $partnerProgressSnapshot ?? null;
+    $partnerSummary = $partnerSnapshot?->progress_summary_json ?? [];
+    $partnerSelected = $partnerSummary['selected'] ?? [];
+    $partnerOverall = (float) ($partnerSnapshot?->overall_progress_percent ?? 0);
+    $partnerVideo = (float) ($partnerSelected['video_percentage_complete'] ?? 0);
+    $partnerQuiz = (float) ($partnerSelected['quiz_percentage_complete'] ?? 0);
+    $partnerProject = (float) ($partnerSelected['project_percentage_complete'] ?? 0);
+    $partnerTask = (float) ($partnerSelected['task_percentage_complete'] ?? 0);
+    $partnerLastActivity = $partnerSnapshot?->last_activity_at;
+    $partnerLastSynced = $partnerSnapshot?->last_synced_at;
+    $partnerStale = $partnerSnapshot?->stale_after_at ? $partnerSnapshot->stale_after_at->lte(now()) : false;
+    $partnerHistory = $partnerProgressHistory ?? collect();
+    $partnerHistoryValues = $partnerHistory->values();
+    $partnerTrendStart = (float) ($partnerHistoryValues->first()->overall_progress_percent ?? $partnerOverall);
+    $partnerTrendEnd = (float) ($partnerHistoryValues->last()->overall_progress_percent ?? $partnerOverall);
+    $partnerTrendDelta = round($partnerTrendEnd - $partnerTrendStart, 1);
 @endphp
 
 @section('content')
@@ -676,6 +693,109 @@
         </div> --}}
     </div>
 
+    @if ($partnerProgressEligible ?? false)
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <strong><i class="la la-signal"></i> Partner Learning Progress</strong>
+                        <div class="d-flex align-items-center gap-2">
+                            @if ($partnerSnapshot)
+                                <span class="badge {{ $partnerStale ? 'bg-warning text-dark' : 'bg-success' }}">
+                                    {{ $partnerStale ? 'Stale' : 'Fresh' }}
+                                </span>
+                            @elseif (($partnerProgressStatus ?? '') === 'syncing')
+                                <span class="badge bg-info text-dark">Syncing...</span>
+                            @endif
+                            <button type="button" class="btn btn-sm btn-outline-primary js-refresh-partner-progress">
+                                <i class="la la-refresh"></i> Refresh Progress
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @if ($partnerSnapshot)
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <div class="text-muted small">Overall Completion</div>
+                                    <div class="h4 mb-0">{{ number_format($partnerOverall, 1) }}%</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-muted small">Last Activity</div>
+                                    <div>{{ $partnerLastActivity ? $partnerLastActivity->format('Y-m-d H:i') : 'N/A' }}</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-muted small">Last Synced</div>
+                                    <div>{{ $partnerLastSynced ? $partnerLastSynced->format('Y-m-d H:i') : 'N/A' }}</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-muted small">Completion Flags</div>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <span class="badge {{ !empty($partnerSelected['has_completed_all_quiz']) ? 'bg-success' : 'bg-secondary' }}">Quiz</span>
+                                        <span class="badge {{ !empty($partnerSelected['has_completed_all_project']) ? 'bg-success' : 'bg-secondary' }}">Project</span>
+                                        <span class="badge {{ !empty($partnerSelected['has_completed_all_task']) ? 'bg-success' : 'bg-secondary' }}">Task</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-lg-6">
+                                    <div class="text-muted small mb-2">Activity histogram over time</div>
+                                    <div id="partnerActivityLegend" class="d-flex flex-wrap gap-2 mb-2"></div>
+                                    <div class="chart-wrap-sm">
+                                        <canvas id="partnerActivityHistogramChart"></canvas>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="text-muted small mb-2">Component trend indicators (latest window)</div>
+                                        <div class="small text-muted mb-2">
+                                            Indicator logic:
+                                            <span class="badge bg-success">Increasing</span> (&gt; +0.5 pts),
+                                            <span class="badge bg-danger">Decreasing</span> (&lt; -0.5 pts),
+                                            <span class="badge bg-warning text-dark">Stable / stale</span> (between -0.5 and +0.5 pts),
+                                            <span class="badge bg-secondary">No progress</span> (current value near 0).
+                                        </div>
+                                        <div id="partnerBarTrendIndicators" class="d-flex flex-wrap gap-2"></div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="text-muted small">Activity line trends over time</div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="btn-group btn-group-sm" role="group" aria-label="Trend range">
+                                                <button type="button" class="btn btn-outline-secondary js-trend-range"
+                                                    data-range="7">7d</button>
+                                                <button type="button" class="btn btn-outline-secondary js-trend-range"
+                                                    data-range="14">14d</button>
+                                                <button type="button" class="btn btn-outline-secondary js-trend-range"
+                                                    data-range="30">30d</button>
+                                                <button type="button" class="btn btn-outline-secondary js-trend-range active"
+                                                    data-range="all">All</button>
+                                            </div>
+                                            <span id="partnerTrendDeltaBadge"
+                                                class="badge {{ $partnerTrendDelta >= 0 ? 'bg-success' : 'bg-danger' }}">
+                                                {{ $partnerTrendDelta >= 0 ? '+' : '' }}{{ $partnerTrendDelta }} pts
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="text-muted small mb-2">
+                                        Range is day-based: <strong>7d</strong> = last 7 days, <strong>14d</strong> = last 14 days,
+                                        <strong>30d</strong> = last 30 days, <strong>All</strong> = full available history to date.
+                                    </div>
+                                    <div class="chart-wrap-sm">
+                                        <canvas id="partnerProgressTrendChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        @else
+                            <div class="text-center text-muted py-4">
+                                <i class="la la-spinner fa-spin fa-2x mb-2"></i>
+                                <div>Partner progress is being synchronized. Refresh shortly.</div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
@@ -800,6 +920,7 @@
                 const CHANGE_ADMISSION_URL = @json(route('manage-student.change-admission', ['user' => $userId]));
                 const CHOOSE_SESSION_URL = @json(route('manage-student.choose-session', ['user' => $userId]));
                 const DELETE_ADMISSION_URL = @json(route('manage-student.delete-admission', ['user_id' => $userId]));
+                const REFRESH_PARTNER_PROGRESS_URL = @json(route('manage-student.partner-progress.refresh', ['user' => $userId]));
 
                 function getCsrfToken() {
                     const meta = document.querySelector('meta[name="csrf-token"]');
@@ -1521,6 +1642,339 @@
                             }
                         });
                     }
+
+                    const partnerProgressCtx = document.getElementById('partnerProgressChart');
+                    const partnerHistogramCtx = document.getElementById('partnerActivityHistogramChart');
+
+                    const partnerTrendCtx = document.getElementById('partnerProgressTrendChart');
+                    if (partnerTrendCtx) {
+                        const allHistoryRows = @json(($partnerHistory ?? collect())->values());
+                        const snapshotSelected = @json($partnerSelected ?? []);
+                        const deltaBadge = document.getElementById('partnerTrendDeltaBadge');
+                        const barTrendContainer = document.getElementById('partnerBarTrendIndicators');
+                        let partnerTrendChart = null;
+                        let partnerHistogramChart = null;
+
+                        const palette = [
+                            'rgba(230, 25, 75, 1)',
+                            'rgba(60, 180, 75, 1)',
+                            'rgba(0, 130, 200, 1)',
+                            'rgba(245, 130, 48, 1)',
+                            'rgba(145, 30, 180, 1)',
+                            'rgba(70, 240, 240, 1)',
+                            'rgba(240, 50, 230, 1)',
+                            'rgba(210, 245, 60, 1)',
+                        ];
+
+                        const activityKeysFromSnapshot = Object.keys(snapshotSelected || {}).filter((key) => key.endsWith(
+                            '_percentage_complete'));
+                        const fallbackKeys = [
+                            'video_percentage_complete',
+                            'quiz_percentage_complete',
+                            'project_percentage_complete',
+                            'task_percentage_complete'
+                        ];
+                        const activityKeys = activityKeysFromSnapshot.length ? activityKeysFromSnapshot : fallbackKeys;
+                        const activityMeta = activityKeys.map((key, idx) => ({
+                            key,
+                            label: key.replace('_percentage_complete', '').replace(/_/g, ' ').replace(/\b\w/g,
+                                (ch) => ch.toUpperCase()),
+                            color: palette[idx % palette.length]
+                        }));
+
+                        const computeRowsByRange = (rangeValue) => {
+                            if (!Array.isArray(allHistoryRows)) return [];
+                            if (!rangeValue || rangeValue === 'all') return allHistoryRows;
+                            const days = parseInt(rangeValue, 10);
+                            if (Number.isNaN(days) || days <= 0) return allHistoryRows;
+
+                            const latest = allHistoryRows[allHistoryRows.length - 1];
+                            const latestRaw = latest?.captured_at || latest?.created_at;
+                            if (!latestRaw) return allHistoryRows;
+
+                            const latestDate = new Date(latestRaw);
+                            if (Number.isNaN(latestDate.getTime())) return allHistoryRows;
+
+                            const cutoff = new Date(latestDate.getTime() - (days * 24 * 60 * 60 * 1000));
+                            const filtered = allHistoryRows.filter((row) => {
+                                const raw = row?.captured_at || row?.created_at;
+                                const dt = raw ? new Date(raw) : null;
+                                return dt && !Number.isNaN(dt.getTime()) && dt >= cutoff;
+                            });
+
+                            return filtered.length > 0 ? filtered : allHistoryRows;
+                        };
+
+                        const buildLabels = (rows) => rows.map((row) => {
+                            const dt = row.captured_at || row.created_at;
+                            if (!dt) return '';
+                            return String(dt).replace('T', ' ').substring(0, 16);
+                        });
+
+                        const buildOverall = (rows) => rows.map((row) => Number(row.overall_progress_percent || 0));
+                        const getActivityValue = (row, key) => {
+                            const selectedMetrics = row?.payload_json?.selected_metrics;
+                            if (selectedMetrics && selectedMetrics[key] !== undefined && selectedMetrics[key] !== null) {
+                                return Number(selectedMetrics[key] || 0);
+                            }
+                            if (row[key] !== undefined && row[key] !== null) {
+                                return Number(row[key] || 0);
+                            }
+                            return 0;
+                        };
+
+                        const updateDeltaBadge = (values) => {
+                            if (!deltaBadge || !Array.isArray(values) || values.length < 2) return;
+                            const delta = Number((values[values.length - 1] - values[0]).toFixed(1));
+                            const positive = delta >= 0;
+                            deltaBadge.classList.remove('bg-success', 'bg-danger');
+                            deltaBadge.classList.add(positive ? 'bg-success' : 'bg-danger');
+                            deltaBadge.textContent = `${positive ? '+' : ''}${delta} pts`;
+                        };
+
+                        const formatDateTime = (raw) => {
+                            if (!raw) return 'N/A';
+                            return String(raw).replace('T', ' ').substring(0, 16);
+                        };
+
+                        const getTrendMeta = (start, end) => {
+                            const startNum = Number(start || 0);
+                            const endNum = Number(end || 0);
+                            const delta = Number((endNum - startNum).toFixed(1));
+
+                            if (delta > 0.5) {
+                                return {
+                                    key: 'increasing',
+                                    label: `Increasing (+${delta})`,
+                                    badge: 'bg-success'
+                                };
+                            }
+                            if (delta < -0.5) {
+                                return {
+                                    key: 'decreasing',
+                                    label: `Decreasing (${delta})`,
+                                    badge: 'bg-danger'
+                                };
+                            }
+                            if (endNum <= 0.5) {
+                                return {
+                                    key: 'no_progress',
+                                    label: 'No progress',
+                                    badge: 'bg-secondary'
+                                };
+                            }
+                            return {
+                                key: 'stable',
+                                label: 'Stable / stale',
+                                badge: 'bg-warning text-dark'
+                            };
+                        };
+
+                        const renderBarTrendIndicators = (rows) => {
+                            if (!barTrendContainer) return;
+                            barTrendContainer.innerHTML = '';
+                            if (!Array.isArray(rows) || rows.length < 2) {
+                                barTrendContainer.innerHTML =
+                                    '<span class="badge bg-secondary">Need at least 2 sync points for indicators</span>';
+                                return;
+                            }
+
+                            const first = rows[0];
+                            const last = rows[rows.length - 1];
+                            const dateText = `${formatDateTime(first.captured_at || first.created_at)} -> ${formatDateTime(last.captured_at || last.created_at)}`;
+
+                            activityMeta.forEach((item) => {
+                                const start = getActivityValue(first, item.key);
+                                const end = getActivityValue(last, item.key);
+                                const trend = getTrendMeta(start, end);
+                                const el = document.createElement('span');
+                                el.className = `badge ${trend.badge}`;
+                                el.textContent = `${item.label}: ${trend.label}`;
+                                el.title = dateText;
+                                barTrendContainer.appendChild(el);
+                            });
+                        };
+
+                        const renderActivityLegend = () => {
+                            const legend = document.getElementById('partnerActivityLegend');
+                            if (!legend) return;
+                            legend.innerHTML = '';
+
+                            activityMeta.forEach((item) => {
+                                const chip = document.createElement('span');
+                                chip.className = 'badge border text-dark';
+                                chip.style.backgroundColor = item.color.replace(', 1)', ', 0.14)');
+                                chip.style.borderColor = item.color.replace(', 1)', ', 0.45)');
+                                chip.innerHTML =
+                                    `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${item.color};margin-right:6px;"></span>${item.label}`;
+                                legend.appendChild(chip);
+                            });
+                        };
+
+                        const renderHistogram = (rows, labels) => {
+                            if (!partnerHistogramCtx) return;
+                            if (partnerHistogramChart) {
+                                partnerHistogramChart.destroy();
+                                partnerHistogramChart = null;
+                            }
+
+                            const datasets = activityMeta.map((item) => ({
+                                label: item.label,
+                                type: 'bar',
+                                data: rows.map((row) => getActivityValue(row, item.key)),
+                                backgroundColor: item.color.replace(', 1)', ', 0.55)'),
+                                borderColor: item.color,
+                                borderWidth: 1,
+                            }));
+
+                            partnerHistogramChart = new Chart(partnerHistogramCtx, {
+                                type: 'bar',
+                                data: {
+                                    labels,
+                                    datasets
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    legend: {
+                                        display: true,
+                                        position: 'bottom',
+                                    },
+                                    scales: {
+                                        yAxes: [{
+                                            ticks: {
+                                                beginAtZero: true,
+                                                max: 100,
+                                                callback: function(value) {
+                                                    return value + '%';
+                                                }
+                                            }
+                                        }],
+                                        xAxes: [{
+                                            ticks: {
+                                                maxTicksLimit: 7
+                                            }
+                                        }]
+                                    }
+                                }
+                            });
+                        };
+
+                        const renderTrendChart = (rows) => {
+                            const historyLabels = buildLabels(rows);
+                            const historyOverall = buildOverall(rows);
+
+                            if (partnerTrendChart) {
+                                partnerTrendChart.destroy();
+                                partnerTrendChart = null;
+                            }
+
+                            if (rows.length > 1) {
+                                updateDeltaBadge(historyOverall);
+                                renderBarTrendIndicators(rows);
+                                renderHistogram(rows, historyLabels);
+                                const lineDatasets = activityMeta.map((item, idx) => ({
+                                    label: `${item.label} (%)`,
+                                    data: rows.map((row) => getActivityValue(row, item.key)),
+                                    borderColor: item.color,
+                                    backgroundColor: item.color.replace(', 1)', ', 0.08)'),
+                                    borderWidth: idx === 0 ? 3 : 2,
+                                    fill: false,
+                                    lineTension: 0.25,
+                                    pointRadius: 3,
+                                    pointHoverRadius: 5,
+                                }));
+                                partnerTrendChart = new Chart(partnerTrendCtx, {
+                                type: 'line',
+                                data: {
+                                    labels: historyLabels,
+                                    datasets: lineDatasets
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    legend: {
+                                        display: true,
+                                        position: 'bottom'
+                                    },
+                                    scales: {
+                                        yAxes: [{
+                                            ticks: {
+                                                beginAtZero: true,
+                                                max: 100,
+                                                stepSize: 10,
+                                                callback: function(value) {
+                                                    return value + '%';
+                                                }
+                                            }
+                                        }],
+                                        xAxes: [{
+                                            ticks: {
+                                                maxTicksLimit: 6
+                                            }
+                                        }]
+                                    }
+                                }
+                            });
+                        } else {
+                            if (deltaBadge) {
+                                deltaBadge.classList.remove('bg-success');
+                                deltaBadge.classList.add('bg-secondary');
+                                deltaBadge.textContent = 'N/A';
+                            }
+                            if (barTrendContainer) {
+                                barTrendContainer.innerHTML =
+                                    '<span class="badge bg-secondary">Need at least 2 sync points for indicators</span>';
+                            }
+                            if (partnerHistogramCtx) {
+                                partnerHistogramCtx.parentElement.innerHTML =
+                                    '<div class="text-center text-muted py-4"><i class="la la-chart-bar fa-2x mb-2"></i><div>Need at least 2 sync points to show histogram by activity.</div></div>';
+                            }
+                            partnerTrendCtx.parentElement.innerHTML =
+                                '<div class="text-center text-muted py-4"><i class="la la-chart-line fa-2x mb-2"></i><div>Need at least 2 sync points to show a progress trend.</div></div>';
+                        }
+                        };
+
+                        renderActivityLegend();
+                        renderTrendChart(computeRowsByRange('all'));
+
+                        document.querySelectorAll('.js-trend-range').forEach((btn) => {
+                            btn.addEventListener('click', function() {
+                                document.querySelectorAll('.js-trend-range').forEach((b) => b.classList.remove('active'));
+                                this.classList.add('active');
+                                const range = this.getAttribute('data-range') || 'all';
+                                renderTrendChart(computeRowsByRange(range));
+                            });
+                        });
+                    }
+
+                    document.querySelectorAll('.js-refresh-partner-progress').forEach((btn) => {
+                        btn.addEventListener('click', function() {
+                            this.disabled = true;
+                            const csrf = getCsrfToken();
+                            fetch(REFRESH_PARTNER_PROGRESS_URL, {
+                                method: 'POST',
+                                headers: Object.assign({
+                                    'Accept': 'application/json',
+                                }, csrf ? {
+                                    'X-CSRF-TOKEN': csrf
+                                } : {}),
+                            }).then((r) => r.json()).then((resp) => {
+                                if (window.Noty) new Noty({
+                                    type: "success",
+                                    text: resp.message || 'Sync queued successfully.'
+                                }).show();
+                            }).catch(() => {
+                                if (window.Noty) new Noty({
+                                    type: "error",
+                                    text: 'Unable to queue partner sync.'
+                                }).show();
+                            }).finally(() => {
+                                this.disabled = false;
+                                window.setTimeout(() => window.location.reload(), 1200);
+                            });
+                        });
+                    });
                 });
             })();
         </script>

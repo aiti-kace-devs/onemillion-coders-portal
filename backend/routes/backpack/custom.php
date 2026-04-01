@@ -83,6 +83,7 @@ Route::group([
 
     // AJAX routes for student metrics and dropdowns
     Route::get('manage-student/{user}/metrics', 'ManageStudentCrudController@getStudentMetrics')->name('manage-student.metrics');
+    Route::post('manage-student/{user}/partner-progress/refresh', 'ManageStudentCrudController@refreshPartnerProgress')->name('manage-student.partner-progress.refresh');
     Route::get('manage-student/courses-ajax', 'ManageStudentCrudController@getCoursesAjax')->name('manage-student.courses-ajax');
     Route::get('manage-student/sessions-ajax', 'ManageStudentCrudController@getSessionsAjax')->name('manage-student.sessions-ajax');
 

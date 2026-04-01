@@ -587,6 +587,7 @@ Route::prefix('student')->name('student.')->group(function () {
 
         // Results route
         Route::get('/results', [StudentOperation::class, 'results'])->name('results');
+        Route::get('/progress', [StudentOperation::class, 'progress'])->name('progress');
 
         // Change course route
         Route::get('/change-course', [StudentOperation::class, 'change_course'])->name('change-course');

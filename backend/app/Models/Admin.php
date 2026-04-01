@@ -128,6 +128,21 @@ class Admin extends Authenticatable
         return $this->name . ' (' . $this->email . ')';
     }
 
+    /**
+     * Return Gravatar URL without server-side fetching.
+     */
+    public function avatar(): string
+    {
+        if (empty($this->email)) {
+            return '';
+        }
+
+        $normalizedEmail = strtolower(trim($this->email));
+        $hash = hash('sha256', $normalizedEmail);
+
+        return "https://www.gravatar.com/avatar/{$hash}.jpg?s=80&d=blank&r=g";
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

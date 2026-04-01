@@ -92,6 +92,7 @@ trait StudentFormFieldHelpers
                     'text' => 'Text',
                     'email' => 'Email',
                     'phonenumber' => 'Phonenumber',
+                    'password' => 'Password',
                     'textarea' => 'Textarea',
                     'select' => 'Select',
                     'checkbox' => 'Checkbox',

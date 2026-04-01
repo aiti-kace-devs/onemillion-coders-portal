@@ -153,6 +153,15 @@ const user = auth?.user || {};
             <span class="material-symbols-outlined"> contract </span>
           </SidebarNavLink>
 
+          <SidebarNavLink
+            v-if="user.hasPartnerProgressMenu"
+            :href="route('student.progress')"
+            :active="route().current('student.progress')"
+            :label="'Progress'"
+          >
+            <span class="material-symbols-outlined">monitoring</span>
+          </SidebarNavLink>
+
           <template v-if="user.isAdmitted">
             <SidebarNavLink
               :active="route().current('student.attendance.show')"

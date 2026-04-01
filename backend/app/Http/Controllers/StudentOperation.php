@@ -35,9 +35,61 @@ use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
 
 use App\Models\UserAssessment;
+use App\Models\StudentPartnerProgress;
+use App\Models\StudentPartnerProgressHistory;
+use App\Services\PartnerProgressSyncService;
+use App\Services\PartnerProgressVisualizationService;
 
 class StudentOperation extends Controller
 {
+    public function progress(
+        PartnerProgressSyncService $syncService,
+        PartnerProgressVisualizationService $visualizationService
+    ) {
+        $user = Auth::guard('web')->user();
+        $state = $syncService->getSnapshotForPreview($user);
+
+        if (!($state['eligible'] ?? false)) {
+            return redirect()
+                ->route('student.dashboard')
+                ->with([
+                    'flash' => 'Progress is not available for your current course.',
+                    'key' => 'info',
+                ]);
+        }
+
+        $snapshot = $state['snapshot'] ?? null;
+        if (!$snapshot && !empty($state['course_id'])) {
+            $partnerCode = (string) config('services.partner_startocode.code', 'startocode');
+            $snapshot = StudentPartnerProgress::query()
+                ->where('user_id', $user->id)
+                ->where('partner_code', $partnerCode)
+                ->where('course_id', $state['course_id'])
+                ->latest('id')
+                ->first();
+        }
+
+        $history = collect();
+        if ($snapshot) {
+            $history = StudentPartnerProgressHistory::query()
+                ->where('student_partner_progress_id', $snapshot->id)
+                ->orderBy('captured_at')
+                ->limit(180)
+                ->get();
+        }
+
+        $payload = $visualizationService->buildStudentProgressPayload($snapshot, $history);
+
+        return Inertia::render('Student/Progress', [
+            'progressState' => [
+                'eligible' => (bool) ($state['eligible'] ?? false),
+                'status' => $state['status'] ?? 'not_eligible',
+                'course_id' => $state['course_id'] ?? null,
+            ],
+            'progressData' => $payload,
+        ]);
+    }
+
     //student dashboard
     public function dashboard()
     {
