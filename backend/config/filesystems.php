@@ -18,6 +18,27 @@ $gcs = [
     'visibility_handler' => \League\Flysystem\GoogleCloudStorage\UniformBucketLevelAccessVisibility::class,
 ];
 
+$defaultDriver = env('FILESYSTEM_DRIVER', 'local');
+$defaultDiskConfigs = [
+    'local' => [
+        'driver' => 'local',
+        'root' => storage_path('app'),
+    ],
+    'gcs' => $gcs,
+    's3' => [
+        'driver' => 's3',
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_DEFAULT_REGION'),
+        'bucket' => env('AWS_BUCKET'),
+        'url' => env('AWS_URL'),
+        'endpoint' => env('AWS_ENDPOINT'),
+        'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+    ],
+];
+
+$baseConfig = $defaultDiskConfigs[$defaultDriver] ?? $defaultDiskConfigs['local'];
+
 return [
 
     /*
@@ -62,16 +83,7 @@ return [
             'visibility' => 'public',
         ],
 
-        's3' => [
-            'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_BUCKET'),
-            'url' => env('AWS_URL'),
-            'endpoint' => env('AWS_ENDPOINT'),
-            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
-        ],
+        's3' => $defaultDiskConfigs['s3'],
         'gcs' => $gcs,
         'gcs_uploads' => array_merge($gcs, [
             'root' => 'uploads',
@@ -79,10 +91,9 @@ return [
         ]),
 
         MediaHelper::DISK_PROGRAMME_IMAGES => array_merge(
-            $gcs,
+            $baseConfig,
             [
                 'path_prefix' => env('CLOUD_STORAGE_PATH_PREFIX', 'media') . '/image/course-images',
-                // 'root' => 'course-images',
                 'url' => env('GOOGLE_CLOUD_STORAGE_API_URI') . '/course-images',
             ]
         ),

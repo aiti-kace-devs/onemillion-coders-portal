@@ -670,8 +670,8 @@ class CentreCrudController extends CrudController
         }
 
         // Strip "Google Cloud Storage/" or similar disk aliases
-        if (strpos($imagePath, 'Google Cloud Storage/') === 0) {
-            $imagePath = substr($imagePath, strlen('Google Cloud Storage/'));
+        if (strpos($imagePath, CLOUD_STORAGE_ALIAS . '/') === 0) {
+            $imagePath = substr($imagePath, strlen(CLOUD_STORAGE_ALIAS . '/'));
         }
 
         // Build the full CDN URL

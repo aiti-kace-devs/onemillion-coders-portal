@@ -63,20 +63,8 @@ class MediaHelper
             return $mediaPath;
         }
 
-        if (str_starts_with($mediaPath, 'Google Cloud Storage/')) {
-            $mediaPath = substr($mediaPath, strlen('Google Cloud Storage/'));
-        }
-
-        // If it's a full URL, strip the CDN or GCS API URI prefix
-        $cdmUrl = rtrim(env('GOOGLE_CLOUD_STORAGE_API_URI', ''), '/');
-        $cdnUrl = rtrim(config('filesystems.cdn_url', ''), '/');
-
-        foreach (array_filter([$cdmUrl, $cdnUrl]) as $base) {
-            if (!empty($base) && str_starts_with($mediaPath, $base)) {
-                $mediaPath = substr($mediaPath, strlen($base));
-                $mediaPath = ltrim($mediaPath, '/');
-                break;
-            }
+        if (str_starts_with($mediaPath, CLOUD_STORAGE_ALIAS . '/')) {
+            $mediaPath = substr($mediaPath, strlen(CLOUD_STORAGE_ALIAS . '/'));
         }
 
         return ltrim($mediaPath, '/');
