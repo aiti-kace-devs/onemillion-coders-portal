@@ -105,10 +105,7 @@ class StudentOperation extends Controller
 
     public function level_assessment()
     {
-        $user = Auth::guard('web')->user();
-        return Inertia::render('Student/LevelAssessment', [
-            'user' => $user->only(['userId'])
-        ]);
+        return Inertia::render('Student/LevelAssessment');
     }
 
     //Exam page
@@ -575,21 +572,16 @@ class StudentOperation extends Controller
 
         $currentCourseId = $user->registered_course;
 
-        $courses = Course::where('status', 1)->where('id', '!=', $currentCourseId)->get();
+        // $courses = Course::where('status', 1)->where('id', '!=', $currentCourseId)->get();
 
         $currentCourse = null;
         if (!empty($currentCourseId)) {
             $currentCourse = Course::find($currentCourseId);
         }
 
-        $userFields = ['id', 'userId', 'name', 'shortlist', 'registered_course'];
-        if (config(SHOW_STUDENT_LEVEL, false)) {
-            $userFields[] = 'student_level';
-        }
+
 
         return Inertia::render('Student/ChangeCourse', [
-            'user' => $user->only($userFields),
-            'courses' => $courses,
             'currentCourse' => $currentCourse
         ]);
     }
