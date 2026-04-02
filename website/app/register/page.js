@@ -272,6 +272,13 @@ function RegisterForm() {
           }
         }
 
+        if (field.title?.toLowerCase().includes("ghana card") && value) {
+          const ghanaCardRegex = /^GHA-\d{9}-\d{1}$/;
+          if (!ghanaCardRegex.test(value)) {
+            errors[field.field_name] = "Please enter a valid Ghana Card Number (GHA-XXXXXXXXX-X)";
+          }
+        }
+
         if (field.type === "file" && value instanceof File && field.options) {
           const allowedExtensions = field.options.split(",").map((ext) => ext.trim().toLowerCase());
           const fileName = value.name || "";
@@ -609,6 +616,40 @@ function RegisterForm() {
     }
 
     // Standard input field
+    if (field.title?.toLowerCase().includes("ghana card")) {
+      return (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => {
+            const inputVal = e.target.value.toUpperCase();
+
+            // If deleting and only prefix remains, allow clearing
+            if (inputVal === "GHA" || inputVal === "GH" || inputVal === "G") {
+              handleFieldChange(field.field_name, "");
+              return;
+            }
+
+            const numbers = inputVal.replace(/[^0-9]/g, "");
+            let formatted = "";
+            if (numbers.length > 0) {
+              formatted = "GHA-" + numbers.slice(0, 9);
+              if (numbers.length > 9) {
+                formatted += "-" + numbers.slice(9, 10);
+              }
+            }
+
+            if (formatted.length <= 15) {
+              handleFieldChange(field.field_name, formatted);
+            }
+          }}
+          className={baseClasses}
+          placeholder="GHA-123456789-0"
+          autoComplete="off"
+        />
+      );
+    }
+
     return (
       <input
         type={inputType}
