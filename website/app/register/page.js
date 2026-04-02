@@ -618,35 +618,27 @@ function RegisterForm() {
     // Standard input field
     if (field.title?.toLowerCase().includes("ghana card")) {
       return (
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => {
-            const inputVal = e.target.value.toUpperCase();
-
-            // If deleting and only prefix remains, allow clearing
-            if (inputVal === "GHA" || inputVal === "GH" || inputVal === "G") {
-              handleFieldChange(field.field_name, "");
-              return;
-            }
-
-            const numbers = inputVal.replace(/[^0-9]/g, "");
-            let formatted = "";
-            if (numbers.length > 0) {
-              formatted = "GHA-" + numbers.slice(0, 9);
+        <div className="relative">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900 font-medium select-none pointer-events-none">
+            GHA-
+          </span>
+          <input
+            type="text"
+            value={value.replace("GHA-", "")}
+            onChange={(e) => {
+              const numbers = e.target.value.replace(/[^0-9]/g, "");
+              let formattedNumbers = numbers.slice(0, 9);
               if (numbers.length > 9) {
-                formatted += "-" + numbers.slice(9, 10);
+                formattedNumbers += "-" + numbers.slice(9, 10);
               }
-            }
-
-            if (formatted.length <= 15) {
-              handleFieldChange(field.field_name, formatted);
-            }
-          }}
-          className={baseClasses}
-          placeholder="GHA-123456789-0"
-          autoComplete="off"
-        />
+              // Keep GHA- in the actual value for the backend
+              handleFieldChange(field.field_name, numbers ? `GHA-${formattedNumbers}` : "");
+            }}
+            className={`${baseClasses} pl-14`}
+            placeholder="123456789-0"
+            autoComplete="off"
+          />
+        </div>
       );
     }
 
