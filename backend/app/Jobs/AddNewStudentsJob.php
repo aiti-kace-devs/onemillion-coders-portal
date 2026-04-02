@@ -48,7 +48,7 @@ class AddNewStudentsJob implements ShouldQueue
                 // 'registered_course' => 'nullable|exists:courses,id',
                 'age' => 'required',
                 'userId' => 'required',
-                'password' => 'sometimes',
+                'password' => 'sometimes|nullable|string',
                 'exam_name' => 'sometimes',
                 'ghcard' => 'nullable',
                 'form_response_id' => 'required',

@@ -21,15 +21,22 @@ const HeroSlider = ({ data }) => {
   const prefersReducedMotion = useReducedMotion();
   const router = useRouter();
 
-  // Detect mobile device
+  // Detect mobile device (debounced)
   useEffect(() => {
+    let timeoutId;
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsMobile(window.innerWidth < 768);
+      }, 150);
     };
-    
-    checkMobile();
+
+    setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', checkMobile);
+    };
   }, []);
 
   // Use only API data
@@ -271,7 +278,9 @@ const HeroSlider = ({ data }) => {
                 duration: prefersReducedMotion ? 0.3 : (isMobile ? 0.6 : 0.8),
                 delay: prefersReducedMotion ? 0.3 : (isMobile ? 0.4 : 0.8)
               }}
-              className="flex items-center space-x-2 sm:space-x-3 bg-black/20 backdrop-blur-sm rounded-full p-1.5 sm:p-1 sm:bg-transparent sm:backdrop-blur-none"
+              className={`flex items-center space-x-2 sm:space-x-3 rounded-full p-1.5 sm:p-1 ${
+                isMobile ? "bg-black/40" : "bg-transparent"
+              }`}
             >
               {slides.map((_, index) => (
                 <motion.button
@@ -304,8 +313,8 @@ const HeroSlider = ({ data }) => {
                 duration: prefersReducedMotion ? 0.3 : (isMobile ? 0.6 : 0.8),
                 delay: prefersReducedMotion ? 0.3 : (isMobile ? 0.6 : 0.9)
               }}
-              className={`flex items-center justify-center bg-black/30 backdrop-blur-md rounded-full shadow-lg ${
-                isMobile ? "p-2" : "p-1.5"
+              className={`flex items-center justify-center rounded-full shadow-lg ${
+                isMobile ? "bg-black/50 p-2" : "bg-black/30 backdrop-blur-md p-1.5"
               }`}
             >
               {/* Previous Arrow */}

@@ -169,7 +169,8 @@ services:
       # Security headers middleware
       - "traefik.http.middlewares.security-headers.headers.browserxssfilter=true"
       - "traefik.http.middlewares.security-headers.headers.contenttypenosniff=true"
-      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=false"
+      - "traefik.http.middlewares.security-headers.headers.contentSecurityPolicy=frame-ancestors 'self' https://app.${APP_DOMAIN:-omcp.localhost}"
       - "traefik.http.middlewares.security-headers.headers.sslredirect=false"
       - "traefik.http.middlewares.security-headers.headers.stsincludesubdomains=true"
       - "traefik.http.middlewares.security-headers.headers.stspreload=true"

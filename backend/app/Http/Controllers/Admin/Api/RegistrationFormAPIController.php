@@ -34,16 +34,19 @@ class RegistrationFormAPIController extends Controller
                 'do_you_need_any_accessibility_support_pwd'
             ],
 
-            'Verification and Identification' => [
-                'email',
-                'phone',
-                'ghana_card_number'
-            ],
-
             'Educational Information' => [
                 'highest_level_of_education',
                 'certificate',
             ],
+
+            'Verification and Password' => [
+                'email',
+                'phone',
+                'ghana_card_number',
+                'password',
+            ],
+
+
         ];
 
 
@@ -169,14 +172,14 @@ class RegistrationFormAPIController extends Controller
         $data = $validator->validated();
 
         $user = User::where('userId', $data['userId'])->first();
-        
+
         if (!$user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found'
             ]);
         }
-        
+
         $course = Course::with('programme')->find($data['course_id']);
         if (!$course) {
             return response()->json([

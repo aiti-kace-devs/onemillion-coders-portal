@@ -127,18 +127,18 @@ class CreateStudentAPIController extends Controller
 
             if (!empty($field['validators']['unique'])) {
                 $valueToCheck = $formattedData[$field['field_name']] ?? null;
-            
+
                 if (!empty($valueToCheck)) {
                     $userFieldMap = [
                         'email' => 'email',
                         'phone' => 'mobile_no',
                     ];
-            
+
                     $dbColumn = $userFieldMap[$field['field_name']] ?? null;
-            
+
                     if ($dbColumn) {
                         $exists = User::where($dbColumn, $valueToCheck)->exists();
-            
+
                         if ($exists) {
                             return redirect()->back()->withInput()->withErrors([
                                 $fieldKey => ["{$fieldTitle} has already been taken."]
@@ -202,6 +202,17 @@ class CreateStudentAPIController extends Controller
                     $fieldName = $field['field_name'];
                     break;
 
+                case 'password':
+                    $rules[] = 'string';
+                    $rules[] = 'min:6';
+                    $rules[] = 'max:64';
+                    $rules[] = 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,64}$/';
+                    $customMessages["{$fieldKey}.string"] = "Password must be a valid text string.";
+                    $customMessages["{$fieldKey}.min"] = "Password must be at least 6 characters.";
+                    $customMessages["{$fieldKey}.max"] = "Password must not exceed 64 characters.";
+                    $customMessages["{$fieldKey}.regex"] = "Password must contain at least one uppercase letter, one lowercase letter, and one number.";
+                    break;
+
                 default:
                     $rules[] = 'nullable';
                     break;
@@ -235,14 +246,21 @@ class CreateStudentAPIController extends Controller
             }
         }
 
+        // Strip plain-text password from stored response data (it will be hashed on the users table)
+        $passwordValue = $validated['response_data']['password'] ?? null;
+        unset($validated['response_data']['password']);
+
         $response = new FormResponse($validated);
 
         $form->responses()->save($response);
 
-        // Log::info($validated['response_data']);
-        // Log::info($fieldName);
+        // Re-attach password to the dispatched data so the job can hash and save it on the user
+        $dispatchData = $validated['response_data'];
+        if ($passwordValue !== null) {
+            $dispatchData['password'] = $passwordValue;
+        }
 
-        FormSubmittedEvent::dispatch($validated['response_data'], $response->id, $fieldName);
+        FormSubmittedEvent::dispatch($dispatchData, $response->id, $fieldName);
 
 
         return response()->json([
@@ -363,7 +381,14 @@ class CreateStudentAPIController extends Controller
 
                 case 'phonenumber':
                     $rules[] = 'phone';
-                    $customMessages["{$fieldKey}.file"] = "The {$field['title']} must be a valid phonenumber.";
+                    $customMessages["{$fieldKey}.phone"] = "The {$field['title']} must be a valid phonenumber.";
+                    break;
+
+                case 'password':
+                    $rules[] = 'nullable';
+                    $rules[] = 'string';
+                    $rules[] = 'min:6';
+                    $rules[] = 'max:64';
                     break;
 
                 default:
@@ -373,7 +398,6 @@ class CreateStudentAPIController extends Controller
 
             $validationRules[$fieldKey] = implode('|', $rules);
         }
-        dd($validationRules);
         $validated = $request->validate($validationRules, $customMessages);
 
         // Handle file uploads
