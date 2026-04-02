@@ -213,9 +213,9 @@ class User extends Authenticatable
         return $this->hasMany(Attendance::class, 'user_id', 'userId');
     }
 
-    public function hasAttendance()
+    public function hasAttendance(): bool
     {
-        return $this->hasMany(Attendance::class, 'user_id', 'userId');
+        return $this->attendances()->exists();
     }
 
     public function getNameWithEmail()

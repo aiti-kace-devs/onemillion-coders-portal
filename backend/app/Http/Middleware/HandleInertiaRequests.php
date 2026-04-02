@@ -52,8 +52,7 @@ class HandleInertiaRequests extends Middleware
             SHOW_STUDENT_LEVEL,
             SHOW_COURSE_ASSESSMENT_TO_STUDENTS,
             ALLOW_COURSE_CHANGE,
-            ALLOW_SESSION_CHANGE,
-            // EXAM_DEADLINE_AFTER_REGISTRATION
+            ALLOW_SESSION_CHANGE
         ];
 
         $configs = [];
@@ -71,12 +70,16 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user
                     ? array_merge(
-                        $user->only('id', 'name', 'email', 'created_at', 'userId', 'registered_course', 'shortlist'),
+                        $user->only('id', 'name', 'userId', 'registered_course', 'shortlist'),
+                        Route::currentRouteName() === 'student.profile.edit'
+                        ? $user->only('email', 'created_at')
+                        : [],
                         [
                             'isAdmitted' => $user?->isAdmitted(),
                             'hasAdmission' => $user?->hasAdmission(),
                             'hasAttendance' => $user?->hasAttendance(),
                             'assessment_completed' => $user?->userAssessment?->completed ?? false,
+                            'student_level' => config(SHOW_STUDENT_LEVEL, false) ? $user?->student_level : null,
                         ]
                     )
                     : null,

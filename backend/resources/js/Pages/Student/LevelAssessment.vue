@@ -2,25 +2,22 @@
 import { computed, ref, onMounted, onUnmounted } from "vue";
 import { Head, usePage, router } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
-import axios from "axios";
 
-const props = defineProps({
-    user: Object,
-});
+const { auth, quiz_frontend_url, quiz_jwt_token } = usePage().props;
+const user = auth.user;
 
 const assessmentUrl = computed(() => {
-    const baseUrl = usePage().props.quiz_frontend_url || '';
+    const baseUrl = quiz_frontend_url || '';
     const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    const token = usePage().props.quiz_jwt_token;
-    const path = `${base}/quiz/${props.user.userId}`;
-    return token ? `${path}?token=${token}&embed=true` : `${path}?embed=true`;
+    const path = `${base}/quiz/${user.userId}`;
+    return quiz_jwt_token ? `${path}?token=${quiz_jwt_token}&embed=true` : `${path}?embed=true`;
 });
 
 const iframeRef = ref(null);
 const hasStarted = ref(false);
 const isComplete = ref(false);
 
-let violationCooldown = false;
+
 
 onMounted(() => {
     window.addEventListener("message", handleMessage);
