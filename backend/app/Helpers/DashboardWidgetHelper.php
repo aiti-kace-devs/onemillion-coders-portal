@@ -66,7 +66,7 @@ class DashboardWidgetHelper
     public static function dashboardCountStatisticsWidget()
     {
         $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
-        $cacheKey = 'dashboard_count_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
+        $cacheKey = 'dashboard_count_statistics_v2_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
         $dasboardCountStatistics = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($visibleCourseIds) {
             $baseUserQuery = User::query();
@@ -76,30 +76,28 @@ class DashboardWidgetHelper
             self::applyCourseScope($courseQuery, $visibleCourseIds, 'id');
 
             $scopeSuffix = self::scopeCacheKeySuffix($visibleCourseIds);
-            $shortlistedCacheKey = 'shortlistedUsers_' . $scopeSuffix;
-            $admittedCacheKey = 'admittedUsers_' . $scopeSuffix;
+            $shortlistedCacheKey = 'shortlistedUsers_v2_' . $scopeSuffix;
+            $admittedCacheKey = 'admittedUsers_v2_' . $scopeSuffix;
 
             $totalCourses = $courseQuery->count();
-            if (self::isCentreManager()) {
-                if (is_array($visibleCourseIds) && empty($visibleCourseIds)) {
-                    $totalCourses = 0;
-                } else {
-                    $batchCoursesQuery = DB::table('admission_batches as ab')
-                        ->join('courses as c2', 'c2.batch_id', '=', 'ab.id')
-                        ->where('ab.completed', 0)
-                        ->where('ab.status', 1);
+            if (is_array($visibleCourseIds) && empty($visibleCourseIds)) {
+                $totalCourses = 0;
+            } else {
+                $batchCoursesQuery = DB::table('admission_batches as ab')
+                    ->join('courses as c2', 'c2.batch_id', '=', 'ab.id')
+                    ->where('ab.completed', 0)
+                    ->where('ab.status', 1);
 
-                    if (is_array($visibleCourseIds)) {
-                        $batchCoursesQuery->whereIn('c2.id', $visibleCourseIds);
-                    }
-
-                    $totalCourses = $batchCoursesQuery
-                        ->select('ab.id')
-                        ->selectRaw('COUNT(DISTINCT c2.programme_id) as courses_count')
-                        ->groupBy('ab.id')
-                        ->get()
-                        ->sum('courses_count');
+                if (is_array($visibleCourseIds)) {
+                    $batchCoursesQuery->whereIn('c2.id', $visibleCourseIds);
                 }
+
+                $totalCourses = $batchCoursesQuery
+                    ->select('ab.id')
+                    ->selectRaw('COUNT(DISTINCT c2.programme_id) as courses_count')
+                    ->groupBy('ab.id')
+                    ->get()
+                    ->sum('courses_count');
             }
 
             return [
@@ -120,9 +118,7 @@ class DashboardWidgetHelper
             ];
         });
 
-        $coursesHint = self::isCentreManager()
-            ? 'Courses in active or ongoing batches.'
-            : 'All Courses in the system';
+        $coursesHint = 'Courses in active or ongoing batches.';
 
         Widget::add([
             'type' => 'div',
