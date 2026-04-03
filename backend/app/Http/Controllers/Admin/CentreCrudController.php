@@ -11,6 +11,7 @@ use App\Models\Constituency;
 use App\Helpers\CourseFieldHelpers;
 use App\Models\District;
 use App\Helpers\GeneralFieldsAndColumns;
+use App\Helpers\CentreVisibilityHelper;
 use Illuminate\Http\Request;
 use App\Helpers\CrudListHelper;
 use App\Helpers\FilterHelper;
@@ -47,6 +48,12 @@ class CentreCrudController extends CrudController
         CRUD::setModel(\App\Models\Centre::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/centre');
         CRUD::setEntityNameStrings('centre', 'centres');
+
+        $this->applyCurrentAdminCentreScope();
+
+        if ($this->isCentreManager()) {
+            CRUD::denyAccess(['create', 'update', 'delete']);
+        }
     }
 
     /**
@@ -57,59 +64,104 @@ class CentreCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CrudListHelper::editInDropdown();
-        WidgetHelper::centreStatisticsWidget();
+        if ($this->isCentreManager()) {
+            CRUD::denyAccess(['create', 'update', 'delete']);
+        } else {
+            CrudListHelper::editInDropdown();
+            WidgetHelper::centreStatisticsWidget();
+        }
 
         $this->crud->query->with('districts');
 
-        CRUD::column('title')->type('textarea');
-        CRUD::column('branch_id')->label('Region')->linkTo('branch.show');
-        FilterHelper::addGenericRelationshipColumn('constituency', 'Constituency', 'constituency', 'title');
-        CRUD::addColumn([
-            'name' => 'districts',
-            'label' => 'Districts',
-            'type' => 'closure',
-            'function' => function ($entry) {
-                $districts = $entry->districts ?? collect();
-                if ($districts->isEmpty()) {
-                    return 'N/A';
-                }
+        if (!backpack_user()->can('centre.read.all') && !backpack_user()->can('centre.read.self')) {
+            abort(403, 'Unauthorized action.');
+        }
 
-                return $districts
-                    ->map(function ($district) {
-                        $url = backpack_url('district/' . $district->id . '/show');
-                        return '<a href="' . $url . '">' . e($district->title) . '</a>';
-                    })
-                    ->implode(', ');
-            },
-            'escaped' => false,
-        ]);
-        CRUD::addColumn([
-            'name' => 'is_pwd_friendly',
-            'label' => 'Is PWD Friendly',
-            'type' => 'view',
-            'view' => 'admin.status_toggle.status_column',
-            'toggle_url' => 'centre/{id}/toggle-is-pwd-friendly',
-        ]);
-        CRUD::addColumn([
-            'name' => 'status',
-            'label' => 'Status',
-            'type' => 'view',
-            'view' => 'admin.status_toggle.status_column',
-        ]);
+        CRUD::column('title')->type('textarea')->label('Centre Name');
+
+        if ($this->isCentreManager()) {
+            CRUD::addColumn([
+                'name' => 'branch',
+                'label' => 'Region',
+                'type' => 'closure',
+                'function' => function ($entry) {
+                    return $entry->branch?->title ?? '-';
+                },
+            ]);
+
+            CRUD::addColumn([
+                'name' => 'constituency',
+                'label' => 'Constituency',
+                'type' => 'closure',
+                'function' => function ($entry) {
+                    return $entry->constituency?->title ?? '-';
+                },
+            ]);
+
+            CRUD::addColumn([
+                'name' => 'districts',
+                'label' => 'Districts',
+                'type' => 'closure',
+                'function' => function ($entry) {
+                    $districts = $entry->districts ?? collect();
+                    if ($districts->isEmpty()) {
+                        return 'N/A';
+                    }
+
+                    return $districts->pluck('title')->implode(', ');
+                },
+            ]);
+        } else {
+            CRUD::column('branch_id')->label('Region')->linkTo('branch.show');
+            FilterHelper::addGenericRelationshipColumn('constituency', 'Constituency', 'constituency', 'title');
+            CRUD::addColumn([
+                'name' => 'districts',
+                'label' => 'Districts',
+                'type' => 'closure',
+                'function' => function ($entry) {
+                    $districts = $entry->districts ?? collect();
+                    if ($districts->isEmpty()) {
+                        return 'N/A';
+                    }
+
+                    return $districts
+                        ->map(function ($district) {
+                            $url = backpack_url('district/' . $district->id . '/show');
+                            return '<a href="' . $url . '">' . e($district->title) . '</a>';
+                        })
+                        ->implode(', ');
+                },
+                'escaped' => false,
+            ]);
+            CRUD::addColumn([
+                'name' => 'is_pwd_friendly',
+                'label' => 'Is PWD Friendly',
+                'type' => 'view',
+                'view' => 'admin.status_toggle.status_column',
+                'toggle_url' => 'centre/{id}/toggle-is-pwd-friendly',
+            ]);
+            CRUD::addColumn([
+                'name' => 'status',
+                'label' => 'Status',
+                'type' => 'view',
+                'view' => 'admin.status_toggle.status_column',
+            ]);
+        }
         CRUD::column('created_at');
-        FilterHelper::addSelectFilter(
-            'branch_id',
-            'Region',
-            Branch::query()->orderBy('title')->pluck('title', 'id')->toArray(),
-            'select2'
-        );
-        FilterHelper::addSelectFilter(
-            'constituency_id',
-            'Constituency',
-            Constituency::query()->orderBy('title')->pluck('title', 'id')->toArray(),
-            'select2'
-        );
+        if (! $this->isCentreManager()) {
+            FilterHelper::addSelectFilter(
+                'branch_id',
+                'Region',
+                Branch::query()->orderBy('title')->pluck('title', 'id')->toArray(),
+                'select2'
+            );
+            FilterHelper::addSelectFilter(
+                'constituency_id',
+                'Constituency',
+                Constituency::query()->orderBy('title')->pluck('title', 'id')->toArray(),
+                'select2'
+            );
+        }
         FilterHelper::addBooleanFilter('status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
@@ -118,7 +170,34 @@ class CentreCrudController extends CrudController
 
     protected function setupShowOperation()
     {
+        if (!backpack_user()->can('centre.read.all') && !backpack_user()->can('centre.read.self')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         CRUD::set('show.view', 'vendor.backpack.crud.centre_show');
+    }
+
+    protected function isCentreManager(): bool
+    {
+        $admin = backpack_user();
+
+        return $admin && method_exists($admin, 'hasRole') && $admin->hasRole('centre-manager');
+    }
+
+    protected function applyCurrentAdminCentreScope(): void
+    {
+        $visibleCentreIds = CentreVisibilityHelper::currentAdminVisibleCentreIds();
+
+        if ($visibleCentreIds === null) {
+            return;
+        }
+
+        if (empty($visibleCentreIds)) {
+            $this->crud->addClause('whereRaw', '1 = 0');
+            return;
+        }
+
+        $this->crud->addClause('whereIn', 'id', $visibleCentreIds);
     }
     /**
      * Define what happens when the Create operation is loaded.

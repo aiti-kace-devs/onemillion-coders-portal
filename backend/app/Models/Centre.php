@@ -82,6 +82,12 @@ class Centre extends Model
         return $this->hasMany(Course::class);
     }
 
+    public function admins()
+    {
+        return $this->belongsToMany(Admin::class, 'admin_centre', 'centre_id', 'admin_id')
+            ->withTimestamps();
+    }
+
     public function districts()
     {
         return $this->belongsToMany(District::class, 'district_centre', 'centre_id', 'district_id')

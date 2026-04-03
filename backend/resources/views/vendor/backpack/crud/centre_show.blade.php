@@ -19,7 +19,30 @@
         ->map(fn($id) => (int) $id)
         ->all();
 
-    $totalCourses = count($courseIdsArray);
+    $activeCourseIdsArray = \Illuminate\Support\Facades\DB::table('courses as c')
+        ->join('admission_batches as ab', 'c.batch_id', '=', 'ab.id')
+        ->where('c.centre_id', $centreId)
+        ->where('ab.completed', 0)
+        ->where('ab.status', 1)
+        ->pluck('c.id')
+        ->map(fn($id) => (int) $id)
+        ->unique()
+        ->values()
+        ->all();
+
+    $totalCourses = 0;
+    if (!empty($activeCourseIdsArray)) {
+        $totalCourses = \Illuminate\Support\Facades\DB::table('admission_batches as ab')
+            ->join('courses as c2', 'c2.batch_id', '=', 'ab.id')
+            ->where('c2.centre_id', $centreId)
+            ->where('ab.completed', 0)
+            ->where('ab.status', 1)
+            ->select('ab.id')
+            ->selectRaw('COUNT(DISTINCT c2.programme_id) as courses_count')
+            ->groupBy('ab.id')
+            ->get()
+            ->sum('courses_count');
+    }
     $ongoingCourses = 0;
     $totalRegisteredUsers = 0;
     $totalShortlistedUsers = 0;
@@ -52,7 +75,7 @@
 
     if (!empty($courseIdsArray)) {
         $ongoingCourses = (int) \Illuminate\Support\Facades\DB::table('courses')
-            ->whereIn('id', $courseIdsArray)
+            ->whereIn('id', $activeCourseIdsArray)
             ->whereNotNull('start_date')
             ->whereNotNull('end_date')
             ->whereDate('start_date', '<=', $today)
@@ -147,13 +170,13 @@
         $ageValues = $ageCounts->pluck('total')->map(fn($v) => (int) $v)->values();
 
         $registeredByCourse = \Illuminate\Support\Facades\DB::table('users')
-            ->whereIn('registered_course', $courseIdsArray)
+            ->whereIn('registered_course', $activeCourseIdsArray)
             ->selectRaw('registered_course as course_id, COUNT(id) as total')
             ->groupBy('registered_course')
             ->pluck('total', 'course_id');
 
         $shortlistedByCourse = \Illuminate\Support\Facades\DB::table('users')
-            ->whereIn('registered_course', $courseIdsArray)
+            ->whereIn('registered_course', $activeCourseIdsArray)
             ->where(function ($query) {
                 $query->where('shortlist', 1)->orWhere('shortlist', true);
             })
@@ -163,7 +186,7 @@
 
         $supportByCourse = \Illuminate\Support\Facades\DB::table('user_admission as ua')
             ->join('users as u', 'u.userId', '=', 'ua.user_id')
-            ->whereIn('ua.course_id', $courseIdsArray)
+            ->whereIn('ua.course_id', $activeCourseIdsArray)
             ->whereNotNull('ua.confirmed')
             ->selectRaw(
                 '
@@ -182,7 +205,7 @@
 
         $deliveryCounts = \Illuminate\Support\Facades\DB::table('courses as c')
             ->join('programmes as p', 'c.programme_id', '=', 'p.id')
-            ->whereIn('c.id', $courseIdsArray)
+            ->whereIn('c.id', $activeCourseIdsArray)
             ->selectRaw(
                 "
                 CASE
@@ -202,7 +225,7 @@
 
         $supportCounts = \Illuminate\Support\Facades\DB::table('user_admission as ua')
             ->join('users as u', 'u.userId', '=', 'ua.user_id')
-            ->whereIn('ua.course_id', $courseIdsArray)
+            ->whereIn('ua.course_id', $activeCourseIdsArray)
             ->whereNotNull('ua.confirmed')
             ->selectRaw(
                 '
@@ -232,7 +255,7 @@
         }
 
         $admittedByCourse = \Illuminate\Support\Facades\DB::table('user_admission')
-            ->whereIn('course_id', $courseIdsArray)
+            ->whereIn('course_id', $activeCourseIdsArray)
             ->whereNotNull('confirmed')
             ->selectRaw('course_id, COUNT(DISTINCT user_id) as total')
             ->groupBy('course_id')
@@ -240,6 +263,7 @@
 
         $topCourses = \Illuminate\Support\Facades\DB::table('courses as c')
             ->where('c.centre_id', $centreId)
+            ->whereIn('c.id', $activeCourseIdsArray)
             ->leftJoin('programmes as p', 'c.programme_id', '=', 'p.id')
             ->select(['c.id', 'c.course_name', 'p.mode_of_delivery'])
             ->get()
@@ -270,6 +294,15 @@
                 ];
             })
             ->sortByDesc('registered_users_count')
+            ->values();
+
+        $deliveryFilterOptions = $topCourses
+            ->map(function ($course) {
+                $mode = trim((string) ($course->mode_of_delivery ?? ''));
+                return $mode !== '' ? $mode : 'Unspecified';
+            })
+            ->unique()
+            ->sort()
             ->values();
     }
 @endphp
@@ -344,7 +377,7 @@
                         <i class="la la-book text-warning"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalCourses) }}</div>
-                    <div class="text-muted small">Ongoing now: {{ number_format($ongoingCourses) }}</div>
+                    <!-- <div class="text-muted small">Ongoing now: {{ number_format($ongoingCourses) }}</div> -->
                 </div>
             </div>
         </div>
@@ -463,8 +496,20 @@
     <div class="row g-3 mb-4">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <strong><i class="la la-book"></i> Courses by Registrations</strong>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small">Mode of Delivery</span>
+                        <select id="deliveryFilter" class="form-select form-select-sm" style="min-width: 180px;">
+                            <option value="">All</option>
+                            @foreach ($deliveryFilterOptions ?? [] as $option)
+                                <option value="{{ $option }}">{{ $option }}</option>
+                            @endforeach
+                            @if (($deliveryFilterOptions ?? collect())->isEmpty())
+                                <option value="Unspecified">Unspecified</option>
+                            @endif
+                        </select>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -567,9 +612,11 @@
 
                 const $el = $(selector);
                 if (!$el.length) return;
-                if ($.fn.DataTable.isDataTable($el[0])) return;
+                if ($.fn.DataTable.isDataTable($el[0])) {
+                    return $el.DataTable();
+                }
 
-                $el.DataTable(Object.assign({
+                return $el.DataTable(Object.assign({
                     pageLength: 10,
                     lengthMenu: [
                         [10, 25, 50, 100],
@@ -586,7 +633,19 @@
             }
 
             document.addEventListener('DOMContentLoaded', function() {
-                safeInitDataTable('#dtTopCourses');
+                const topCoursesTable = safeInitDataTable('#dtTopCourses');
+                const deliveryFilter = document.getElementById('deliveryFilter');
+                if (deliveryFilter && topCoursesTable) {
+                    deliveryFilter.addEventListener('change', function() {
+                        const value = (this.value || '').trim();
+                        if (!value) {
+                            topCoursesTable.column(4).search('').draw();
+                            return;
+                        }
+                        const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        topCoursesTable.column(4).search('^' + escaped + '$', true, false).draw();
+                    });
+                }
                 if (typeof Chart !== 'function') return;
 
                 const genderLabels = @json($genderLabels->values());
