@@ -39,6 +39,7 @@ class Centre extends Model
         'accessibility_rating',
         'pwd_notes',
         'images',
+        'video',
         'gps_location'
     ];
 
@@ -58,6 +59,7 @@ class Centre extends Model
         'accessibility_rating' => 'integer',
         'pwd_notes' => 'string',
         'images' => 'array',
+        'video' => 'string',
         'gps_location' => 'array',
     ];
 

@@ -299,6 +299,14 @@ class CentreCrudController extends CrudController
             value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->coverImage->file ?? '' : '',
         );
 
+        MediaHelper::getMediaSelector(
+            name: 'video',
+            multiple: false,
+            label: 'Centre Video',
+            disk_options: MediaHelper::getVideoDiskOptions(),
+            value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->video ?? '' : '',
+        );
+
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Is PWD Friendly', 'is_pwd_friendly');
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Wheelchair Accessible', 'wheelchair_accessible');
@@ -319,7 +327,7 @@ class CentreCrudController extends CrudController
 
         $this->addFieldsToTab('General', true, [
             'title', 'branch_id', 'constituency_id', 'constituency_dependency_script',
-            'district_id', 'district_dependency_script', 'gps_address', 'pwd_notes', 'images'
+            'district_id', 'district_dependency_script', 'gps_address', 'pwd_notes', 'images', 'video'
         ]);
         $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'status']);
         $this->addFieldsToTab('GPS Location', true, ['gps_location']);

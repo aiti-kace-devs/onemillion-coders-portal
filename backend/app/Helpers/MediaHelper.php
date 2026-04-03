@@ -19,6 +19,7 @@ class MediaHelper
      */
 
     const DISK_ARTICLE_IMAGES = 'article_images';
+    const DISK_CENTRE_VIDEOS = 'centre_videos';
     const DISK_FEATURED_IMAGES = 'article_featured_images';
     const DISK_FORUM_IMAGES = 'forum_images';
     const DISK_ARTICLE_CATEGORY_IMAGES = 'article_category_images';
@@ -319,6 +320,11 @@ class MediaHelper
     public static function getSiteSettingsImagesDiskOptions()
     {
         return self::getDiskOptions([self::DISK_SITE_SETTINGS_IMAGES], self::getImageTypes());
+    }
+
+    public static function getVideoDiskOptions()
+    {
+        return self::getDiskOptions([self::DISK_CENTRE_VIDEOS], self::getVideoTypes());
     }
 
     public static function getTranslationAudioDiskOptions()
