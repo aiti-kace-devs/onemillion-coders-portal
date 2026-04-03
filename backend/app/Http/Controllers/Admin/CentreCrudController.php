@@ -12,12 +12,15 @@ use App\Helpers\CourseFieldHelpers;
 use App\Models\District;
 use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\CentreVisibilityHelper;
+use App\Models\CentreSession;
 use Illuminate\Http\Request;
 use App\Helpers\CrudListHelper;
 use App\Helpers\FilterHelper;
 use App\Helpers\MediaHelper;
 use App\Helpers\WidgetHelper;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
+use Backpack\CRUD\app\Library\Widget;
 
 /**
  * Class CentreCrudController
@@ -67,9 +70,15 @@ class CentreCrudController extends CrudController
         if ($this->isCentreManager()) {
             CRUD::denyAccess(['create', 'update', 'delete']);
         } else {
-            CrudListHelper::editInDropdown();
             WidgetHelper::centreStatisticsWidget();
         }
+        CrudListHelper::editInDropdown(['crud::buttons.centre_add_session']);
+        Widget::add([
+            'name' => 'centre_sessions_modal',
+            'type' => 'view',
+            'view' => 'admin.centre.add_session_modal',
+            'section' => 'after_content',
+        ]);
 
         $this->crud->query->with('districts');
 
@@ -667,6 +676,156 @@ class CentreCrudController extends CrudController
             'message' => 'Centre PWD accessibility updated successfully.',
             'value' => $centre->is_pwd_friendly ? 1 : 0,
         ]);
+    }
+
+    protected function ensureCentreSessionAccess(Centre $centre): void
+    {
+        if (!backpack_user()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        if (!backpack_user()->can('centre.read.all') && !backpack_user()->can('centre.read.self')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $visibleCentreIds = CentreVisibilityHelper::currentAdminVisibleCentreIds();
+        if (is_array($visibleCentreIds) && !in_array($centre->id, $visibleCentreIds, true)) {
+            abort(403, 'Unauthorized action.');
+        }
+    }
+
+    /**
+     * Return existing sessions for a centre in JSON.
+     */
+    public function getCentreSessions($centreId)
+    {
+        $centre = Centre::findOrFail($centreId);
+        $this->ensureCentreSessionAccess($centre);
+
+        $sessions = CentreSession::query()
+            ->where('centre_id', $centre->id)
+            ->select(['id', 'session', 'limit', 'course_time', 'link', 'status'])
+            ->orderBy('id')
+            ->get()
+            ->map(function ($session) {
+                return [
+                    'id' => $session->id,
+                    'session' => $session->session,
+                    'limit' => $session->limit,
+                    'course_time' => $session->course_time,
+                    'link' => $session->link,
+                    'status' => $session->status === null ? true : (bool) $session->status,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'centre_id' => $centre->id,
+            'sessions' => $sessions,
+        ]);
+    }
+
+    /**
+     * Create/update centre sessions from repeatable modal rows.
+     */
+    public function saveCentreSessions($centreId)
+    {
+        $centre = Centre::findOrFail($centreId);
+        $this->ensureCentreSessionAccess($centre);
+
+        $data = request()->validate([
+            'sessions' => 'required|array|min:1',
+            'sessions.*.id' => 'nullable|integer',
+            'sessions.*.session' => 'required|string|in:Morning,Afternoon,Evening,Fullday,Online',
+            'sessions.*.limit' => 'required|integer|min:1|max:100000',
+            'sessions.*.course_time' => 'required|string|max:255',
+            'sessions.*.link' => 'nullable|string|max:255',
+            'sessions.*.status' => 'nullable|boolean',
+        ]);
+
+        $rows = collect($data['sessions'])
+            ->map(function ($row) {
+                return [
+                    'id' => isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null,
+                    'session' => trim((string) ($row['session'] ?? '')),
+                    'limit' => (int) ($row['limit'] ?? 0),
+                    'course_time' => trim((string) ($row['course_time'] ?? '')),
+                    'link' => isset($row['link']) ? trim((string) $row['link']) : null,
+                    'status' => isset($row['status']) ? (bool) $row['status'] : true,
+                ];
+            })
+            ->filter(function ($row) {
+                return $row['session'] !== '' && $row['course_time'] !== '';
+            })
+            ->values();
+
+        if ($rows->isEmpty()) {
+            return redirect()
+                ->back()
+                ->with('error', 'Add at least one valid session row before saving.');
+        }
+
+        $duplicateSessions = $rows->pluck('session')->duplicates();
+        if ($duplicateSessions->isNotEmpty()) {
+            return redirect()
+                ->back()
+                ->with('error', 'Each session (Morning/Afternoon/Evening/Fullday) can only be added once.');
+        }
+
+        try {
+            DB::transaction(function () use ($centre, $rows) {
+                $submittedSessionNames = $rows->pluck('session')->values()->all();
+
+                $existingSessions = CentreSession::query()
+                    ->where('centre_id', $centre->id)
+                    ->get();
+
+                $existingById = $existingSessions->keyBy('id');
+                $existingBySession = $existingSessions->keyBy('session');
+
+                foreach ($rows as $row) {
+                    $payload = [
+                        'centre_id' => $centre->id,
+                        'session' => $row['session'],
+                        'limit' => $row['limit'],
+                        'course_time' => $row['course_time'],
+                        'link' => $row['link'] !== '' ? $row['link'] : null,
+                        'status' => $row['status'] ? '1' : '0',
+                    ];
+
+                    if ($row['id'] && $existingById->has($row['id'])) {
+                        $session = $existingById->get($row['id']);
+                        $session->fill($payload);
+                        $session->save();
+                        continue;
+                    }
+
+                    $session = $existingBySession->get($row['session']);
+                    if ($session) {
+                        $session->fill($payload);
+                        $session->save();
+                        continue;
+                    }
+
+                    CentreSession::create($payload);
+                }
+
+                CentreSession::query()
+                    ->where('centre_id', $centre->id)
+                    ->whereNotIn('session', $submittedSessionNames)
+                    ->delete();
+            });
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()
+                ->back()
+                ->with('error', 'Unable to save centre sessions right now. Please try again.');
+        }
+
+        return redirect()
+            ->back()
+            ->with('success', 'Centre sessions saved successfully.');
     }
 
 

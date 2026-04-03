@@ -88,6 +88,11 @@ class Centre extends Model
             ->withTimestamps();
     }
 
+    public function centreSessions()
+    {
+        return $this->hasMany(CentreSession::class, 'centre_id');
+    }
+
     public function districts()
     {
         return $this->belongsToMany(District::class, 'district_centre', 'centre_id', 'district_id')
