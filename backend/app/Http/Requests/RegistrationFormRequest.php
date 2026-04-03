@@ -31,7 +31,7 @@ class RegistrationFormRequest extends FormRequest
             'schema' => 'sometimes|array',
             'schema.*' => 'required|array',
             'schema.*.title' => 'required|string|max:255',
-            'schema.*.type' => 'required|string|in:text,email,select,phonenumber,select_course,textarea,number,date,file,checkbox,radio',
+            'schema.*.type' => 'required|string|in:text,email,select,phonenumber,password,select_course,textarea,number,date,file,checkbox,radio',
             'schema.*.description' => 'nullable|string|max:500',
             'schema.*.rules' => 'nullable|string|max:1000',
             'schema.*.options' => 'nullable|string|max:1000',
@@ -70,7 +70,7 @@ class RegistrationFormRequest extends FormRequest
             'schema.*.title.required' => 'Each form field must have a title.',
             'schema.*.title.max' => 'Field title cannot exceed 255 characters.',
             'schema.*.type.required' => 'Each form field must have a type.',
-            'schema.*.type.in' => 'Field type must be one of: text, email, select, phonenumber, select_course, textarea, number, date, file, checkbox, radio.',
+            'schema.*.type.in' => 'Field type must be one of: text, email, select, phonenumber, password, select_course, textarea, number, date, file, checkbox, radio.',
             'schema.*.description.max' => 'Field description cannot exceed 500 characters.',
             'schema.*.rules.max' => 'Field rules cannot exceed 1000 characters.',
             'schema.*.options.max' => 'Field options cannot exceed 1000 characters.',
@@ -109,7 +109,7 @@ class RegistrationFormRequest extends FormRequest
         }
 
         $schema = $this->input('schema');
-        
+
         foreach ($schema as $index => $field) {
             // Validate select fields have options
             if (isset($field['type']) && in_array($field['type'], ['select']) && empty($field['options'])) {
@@ -136,7 +136,7 @@ class RegistrationFormRequest extends FormRequest
 
         $schema = $this->input('schema');
         $fieldNames = [];
-        
+
         foreach ($schema as $index => $field) {
             if (isset($field['field_name'])) {
                 if (in_array($field['field_name'], $fieldNames)) {
@@ -157,7 +157,7 @@ class RegistrationFormRequest extends FormRequest
         }
 
         $schema = $this->input('schema');
-        
+
         foreach ($schema as $index => $field) {
             if (isset($field['type']) && $field['type'] === 'select' && isset($field['options'])) {
                 $options = explode(',', $field['options']);

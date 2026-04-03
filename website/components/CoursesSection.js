@@ -67,15 +67,22 @@ const CoursesSection = ({ categories: apiCategories }) => {
     initialFetch();
   }, []);
 
-  // Detect mobile device
+  // Detect mobile device (debounced)
   useEffect(() => {
+    let timeoutId;
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsMobile(window.innerWidth < 768);
+      }, 150);
     };
 
-    checkMobile();
+    setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("resize", checkMobile);
+    };
   }, []);
 
   // Get categories from API (safe when API fails and returns null/undefined)
@@ -227,13 +234,21 @@ const CoursesSection = ({ categories: apiCategories }) => {
 
             {/* Enhanced Category Filter with Horizontal Scroll */}
             <motion.div
-              initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: prefersReducedMotion ? 0.3 : 0.4,
-                delay: prefersReducedMotion ? 0 : 0.1,
-              }}
+              initial="hidden"
+              whileInView="visible"
               viewport={{ once: true }}
+              variants={{
+                hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 15 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: prefersReducedMotion ? 0.3 : 0.4,
+                    delay: prefersReducedMotion ? 0 : 0.1,
+                    staggerChildren: prefersReducedMotion ? 0 : 0.03,
+                  },
+                },
+              }}
               className="relative"
             >
               {/* Scroll container with hidden scrollbars */}
@@ -245,16 +260,10 @@ const CoursesSection = ({ categories: apiCategories }) => {
                   WebkitOverflowScrolling: "touch",
                 }}
               >
-                {categories.map((category, index) => (
+                {categories.map((category) => (
                   <motion.button
                     key={category}
                     variants={categoryVariants}
-                    initial="hidden"
-                    whileInView="visible"
-                    transition={{
-                      delay: prefersReducedMotion ? 0 : index * 0.03,
-                    }}
-                    viewport={{ once: true }}
                     onClick={() => handleCategoryClick(category)}
                     whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
                     whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
