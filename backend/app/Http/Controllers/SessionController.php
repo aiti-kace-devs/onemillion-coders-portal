@@ -20,14 +20,14 @@ class SessionController extends Controller
      */
     public function index()
     {
-        $sessions = CourseSession::get();
+        $sessions = CourseSession::courseType()->get();
 
         return Inertia::render('Session/List');
     }
 
     public function fetch()
     {
-        $data = CourseSession::get(['uuid', 'name', 'limit', 'course_time']);
+        $data = CourseSession::courseType()->get(['uuid', 'name', 'limit', 'course_time']);
         return DataTables::of($data)
             ->addIndexColumn()
             ->editColumn('duration', function ($row){
@@ -88,6 +88,8 @@ class SessionController extends Controller
 
         $validated['name'] = ucwords($name);
         $validated['session'] = ucwords($validated['session']);
+        $validated['session_type'] = CourseSession::TYPE_COURSE;
+        $validated['centre_id'] = null;
 
         CourseSession::create($validated);
 
@@ -136,6 +138,8 @@ class SessionController extends Controller
 
         $validated['name'] = ucwords($name);
         $validated['session'] = ucwords($validated['session']);
+        $validated['session_type'] = CourseSession::TYPE_COURSE;
+        $validated['centre_id'] = null;
 
         $session = CourseSession::where('uuid', $uuid)->first();
 

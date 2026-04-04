@@ -19,6 +19,52 @@
         ->map(fn($id) => (int) $id)
         ->all();
 
+    $centreSessions = \App\Models\CourseSession::centreType()
+        ->where('centre_id', $centreId)
+        ->orderBy('id')
+        ->get();
+    $centreSessionIds = $centreSessions->pluck('id')->map(fn($id) => (int) $id)->values()->all();
+    $centreSessionConfirmed = collect();
+    if (!empty($centreSessionIds)) {
+        $centreSessionConfirmed = \Illuminate\Support\Facades\DB::table('user_admission')
+            ->whereIn('session', $centreSessionIds)
+            ->whereNotNull('confirmed')
+            ->selectRaw('session, COUNT(*) as count')
+            ->groupBy('session')
+            ->pluck('count', 'session');
+    }
+
+    $centreAdmittedStudents = collect();
+    $centreSessionFilterOptions = collect();
+    if (!empty($courseIdsArray)) {
+        $centreAdmittedStudents = \Illuminate\Support\Facades\DB::table('user_admission as ua')
+            ->join('users as u', 'u.userId', '=', 'ua.user_id')
+            ->join('courses as c', 'c.id', '=', 'ua.course_id')
+            ->leftJoin('course_sessions as cs', 'cs.id', '=', 'ua.session')
+            ->whereIn('ua.course_id', $courseIdsArray)
+            ->where('cs.session_type', \App\Models\CourseSession::TYPE_CENTRE)
+            ->whereNotNull('ua.confirmed')
+            ->whereNotNull('ua.session')
+            ->select([
+                'u.userId as user_id',
+                'u.name as user_name',
+                'u.email as user_email',
+                'c.course_name as course_name',
+                'cs.session as session_label',
+                'cs.name as session_name',
+                'ua.confirmed as admitted_at',
+            ])
+            ->orderByDesc('ua.confirmed')
+            ->get();
+
+        $centreSessionFilterOptions = $centreAdmittedStudents
+            ->pluck('session_label')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+    }
+
     $activeCourseIdsArray = \Illuminate\Support\Facades\DB::table('courses as c')
         ->join('admission_batches as ab', 'c.batch_id', '=', 'ab.id')
         ->where('c.centre_id', $centreId)
@@ -492,6 +538,126 @@
 
 
 
+    <div class="row g-3 mb-4">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <strong><i class="la la-users"></i> Admitted Students by Session</strong>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small">Filter Session</span>
+                        <select id="centreSessionFilter" class="form-select form-select-sm" style="min-width: 140px;">
+                            <option value="">All</option>
+                            @foreach ($centreSessionFilterOptions as $option)
+                                <option value="{{ $option }}">{{ $option }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="dtCentreAdmittedStudents" class="table table-striped table-hover table-sm w-100">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Email</th>
+                                    <th>Course</th>
+                                    <th>Session</th>
+                                    <th>Admitted On</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($centreAdmittedStudents as $student)
+                                    <tr>
+                                        <td>{{ $student->user_name ?? 'N/A' }}</td>
+                                        <td>{{ $student->user_email ?? 'N/A' }}</td>
+                                        <td>{{ $student->course_name ?? 'N/A' }}</td>
+                                        <td>
+                                            <div>{{ $student->session_label ?? 'N/A' }}</div>
+                                            @if (!empty($student->session_name))
+                                                <div class="text-muted small">{{ $student->session_name }}</div>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @php
+                                                $admittedAt = null;
+                                                try {
+                                                    $admittedAt = $student->admitted_at
+                                                        ? \Carbon\Carbon::parse($student->admitted_at)
+                                                        : null;
+                                                } catch (\Throwable $e) {
+                                                    $admittedAt = null;
+                                                }
+                                            @endphp
+                                            {{ $admittedAt ? $admittedAt->format('M d, Y') : 'N/A' }}
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">
+                                            No admitted students with sessions found for this centre.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if ($centreAdmittedStudents->isEmpty())
+                        <div class="text-center text-muted py-2">
+                            Filter by session once admissions are assigned.
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <strong><i class="la la-calendar"></i> Centre Sessions</strong>
+                    <span class="text-muted small">Total: {{ number_format($centreSessions->count()) }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="dtCentreSessions" class="table table-striped table-hover table-sm w-100">
+                            <thead>
+                                <tr>
+                                    <th>Session</th>
+                                    <th>Limit</th>
+                                    <th>Course Time</th>
+                                    <th>Slots Left</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($centreSessions as $session)
+                                    @php
+                                        $confirmedCount = (int) ($centreSessionConfirmed[$session->id] ?? 0);
+                                        $limit = (int) ($session->limit ?? 0);
+                                        $slotsLeft = $limit > 0 ? max(0, $limit - $confirmedCount) : null;
+                                    @endphp
+                                    <tr>
+                                        <td>{{ $session->session ?? $session->name ?? 'Session #' . $session->id }}</td>
+                                        <td>{{ $limit ?: '-' }}</td>
+                                        <td>{{ $session->course_time ?? '-' }}</td>
+                                        <td>
+                                            @if ($slotsLeft === null)
+                                                -
+                                            @else
+                                                {{ number_format($slotsLeft) }}
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if ($centreSessions->isEmpty())
+                        <div class="text-center text-muted py-3">No sessions configured for this centre.</div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -644,6 +810,29 @@
                         }
                         const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                         topCoursesTable.column(4).search('^' + escaped + '$', true, false).draw();
+                    });
+                }
+
+                safeInitDataTable('#dtCentreSessions', {
+                    paging: false,
+                    searching: true,
+                    info: false
+                });
+
+                const centreAdmittedTable = safeInitDataTable('#dtCentreAdmittedStudents', {
+                    ordering: false,
+                    pageLength: 10
+                });
+
+                const centreSessionFilter = document.getElementById('centreSessionFilter');
+                if (centreSessionFilter && centreAdmittedTable) {
+                    centreSessionFilter.addEventListener('change', function() {
+                        const value = (this.value || '').trim();
+                        if (!value) {
+                            centreAdmittedTable.column(3).search('').draw();
+                            return;
+                        }
+                        centreAdmittedTable.column(3).search(value).draw();
                     });
                 }
                 if (typeof Chart !== 'function') return;

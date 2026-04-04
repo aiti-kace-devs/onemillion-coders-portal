@@ -99,7 +99,7 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer('vendor.backpack.crud.modals.admit', function ($view) {
             $view->with('courses', \App\Models\Course::pluck('course_name', 'id')->toArray());
-            $view->with('sessions', \App\Models\CourseSession::all());
+            $view->with('sessions', \App\Models\CourseSession::courseType()->get());
         });
 
         // Add Backpack Dashboard link to Statamic navigation

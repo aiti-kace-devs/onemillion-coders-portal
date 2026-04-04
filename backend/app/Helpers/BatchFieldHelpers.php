@@ -554,12 +554,15 @@ trait BatchFieldHelpers
 
                         if ($sourceCourseId) {
                             $sourceSessions = CourseSession::query()
+                                ->courseType()
                                 ->where('course_id', $sourceCourseId)
                                 ->get(['session', 'limit', 'course_time', 'link', 'status']);
 
                             foreach ($sourceSessions as $session) {
                                 CourseSession::create([
                                     'course_id' => $course->id,
+                                    'centre_id' => null,
+                                    'session_type' => CourseSession::TYPE_COURSE,
                                     'session' => $session->session,
                                     'limit' => $session->limit,
                                     'course_time' => $session->course_time,
@@ -671,6 +674,7 @@ trait BatchFieldHelpers
         }
 
         $sessions = CourseSession::query()
+            ->courseType()
             ->where('course_id', $sessionCourseId)
             ->select(['id', 'session', 'limit', 'course_time', 'link', 'status'])
             ->orderBy('id')
@@ -755,6 +759,7 @@ trait BatchFieldHelpers
 
                 foreach ($targetCourseIds as $targetCourseId) {
                     $existingSessions = CourseSession::query()
+                        ->courseType()
                         ->where('course_id', $targetCourseId)
                         ->get();
 
@@ -765,6 +770,8 @@ trait BatchFieldHelpers
                     foreach ($rows as $row) {
                         $payload = [
                             'course_id' => $targetCourseId,
+                            'centre_id' => null,
+                            'session_type' => CourseSession::TYPE_COURSE,
                             'session' => $row['session'],
                             'limit' => $row['limit'],
                             'course_time' => $row['course_time'],

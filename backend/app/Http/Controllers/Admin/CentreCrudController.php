@@ -13,6 +13,7 @@ use App\Models\District;
 use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\CentreVisibilityHelper;
 use App\Models\CentreSession;
+use App\Models\CourseSession;
 use Illuminate\Http\Request;
 use App\Helpers\CrudListHelper;
 use App\Helpers\FilterHelper;
@@ -785,7 +786,9 @@ class CentreCrudController extends CrudController
 
                 foreach ($rows as $row) {
                     $payload = [
+                        'course_id' => null,
                         'centre_id' => $centre->id,
+                        'session_type' => CourseSession::TYPE_CENTRE,
                         'session' => $row['session'],
                         'limit' => $row['limit'],
                         'course_time' => $row['course_time'],
