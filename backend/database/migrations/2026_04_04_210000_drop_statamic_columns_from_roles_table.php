@@ -3,9 +3,9 @@
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
 
-class DropStatamicColumnsFromRolesTable extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      *
@@ -14,9 +14,13 @@ class DropStatamicColumnsFromRolesTable extends Migration
     public function up()
     {
         if (Schema::hasTable('roles')) {
+            if (Schema::hasColumn('roles', 'handle')) {
+                DB::table('roles')->whereNotNull('handle')->delete();
+            }
+
             Schema::table('roles', function (Blueprint $table) {
-                $columns = ['handle', 'title', 'permissions', 'preferences'];
-                foreach ($columns as $column) {
+                $columnsToDrop = ['handle', 'title', 'permissions', 'preferences'];
+                foreach ($columnsToDrop as $column) {
                     if (Schema::hasColumn('roles', $column)) {
                         $table->dropColumn($column);
                     }
@@ -32,9 +36,6 @@ class DropStatamicColumnsFromRolesTable extends Migration
     {
         if (Schema::hasTable('roles')) {
             Schema::table('roles', function (Blueprint $table) {
-                $table->string('name')->nullable()->change();
-                $table->string('guard_name')->nullable()->change();
-
                 $table->string('handle')->nullable()->unique();
                 $table->string('title')->nullable();
                 $table->json('permissions')->nullable();
@@ -42,4 +43,4 @@ class DropStatamicColumnsFromRolesTable extends Migration
             });
         }
     }
-}
+};
