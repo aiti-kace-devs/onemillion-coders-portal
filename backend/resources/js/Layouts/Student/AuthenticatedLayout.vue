@@ -111,7 +111,7 @@ const user = auth?.user || {};
           </SidebarNavLink> -->
 
           <SidebarNavLink
-            v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS && config.SHOW_RESULTS_TO_STUDENTS"
+            v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
             :active="route().current('student.results')"
             :href="route('student.results')"
             :label="'Results'"
