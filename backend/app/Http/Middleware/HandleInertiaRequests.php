@@ -91,7 +91,7 @@ class HandleInertiaRequests extends Middleware
                 'message' => fn() => $request->session()->get('flash'),
                 'key' => fn() => $request->session()->get('key'),
             ],
-            'recaptcha_site_key' => config('services.recaptcha.site_key'),
+            'recaptcha_site_key' => $user ? null : config('services.recaptcha.site_key'),
         ];
     }
 }
