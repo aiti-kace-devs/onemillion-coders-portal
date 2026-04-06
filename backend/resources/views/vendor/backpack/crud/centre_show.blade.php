@@ -149,7 +149,7 @@
             ->count('id');
 
         $admissionsAgg = \Illuminate\Support\Facades\DB::table('user_admission')
-            ->whereIn('course_id', $courseIdsArray)
+            ->whereIn('course_id', $activeCourseIdsArray)
             ->selectRaw(
                 '
                 COUNT(*) as total_count,
@@ -509,6 +509,7 @@
                             {{ number_format($admissionsConfirmed) }}</span>
                         <span class="badge bg-warning text-dark">Pending: {{ number_format($admissionsPending) }}</span>
                     </div>
+                    <div class="text-muted small mt-2">Active course batches only.</div>
                 </div>
             </div>
         </div>
