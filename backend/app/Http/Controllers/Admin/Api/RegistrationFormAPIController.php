@@ -31,7 +31,7 @@ class RegistrationFormAPIController extends Controller
                 'middle_name',
                 'age',
                 'gender',
-                'do_you_require_any_special_support_for_your_training'
+                'do_you_need_any_accessibility_support_pwd'
             ],
 
             'Verification and Identification' => [
@@ -206,39 +206,6 @@ class RegistrationFormAPIController extends Controller
 
 
 
-
-
-    //     public function check_user_by_userID($userID)
-    // {
-    //     $user = User::where('userId', $userID)->first();
-
-    //     if (!$user) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'User not found'
-    //         ], 404);
-    //     }
-
-    //     $admission = UserAdmission::where('user_id', $userID)
-    //         ->whereNotNull('confirmed')
-    //         ->first();
-
-    //     if (!$admission) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'User admission not confirmed'
-    //         ]);
-    //     }
-
-    //     return response()->json([
-    //         'success' => true,
-    //         'message' => 'User admission confirmed',
-    //         'data' => [
-    //             'user' => $user,
-    //             'admission' => $admission
-    //         ]
-    //     ]);
-    // }
 
 
 
