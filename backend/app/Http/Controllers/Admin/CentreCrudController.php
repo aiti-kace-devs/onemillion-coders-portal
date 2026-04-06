@@ -296,7 +296,6 @@ class CentreCrudController extends CrudController
             multiple: true,
             label: 'Centre Images',
             disk_options: MediaHelper::getArticleImagesDiskOptions(),
-            // wrapper_class: 'form-group col-12',
             value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->coverImage->file ?? '' : '',
         );
 
@@ -318,7 +317,10 @@ class CentreCrudController extends CrudController
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
 
-        $this->addFieldsToTab('General', true, ['title', 'branch_id', 'constituency_id', 'district_id', 'gps_address', 'pwd_notes']);
+        $this->addFieldsToTab('General', true, [
+            'title', 'branch_id', 'constituency_id', 'constituency_dependency_script',
+            'district_id', 'district_dependency_script', 'gps_address', 'pwd_notes', 'images'
+        ]);
         $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'status']);
         $this->addFieldsToTab('GPS Location', true, ['gps_location']);
 
