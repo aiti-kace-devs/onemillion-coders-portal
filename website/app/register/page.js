@@ -272,6 +272,13 @@ function RegisterForm() {
           }
         }
 
+        // Password validation
+        if (field.type === "password" && value) {
+          if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,64}$/.test(value)) {
+            errors[field.field_name] = "Password must be at least 6 characters with an uppercase letter, a lowercase letter, and a number.";
+          }
+        }
+
         if (field.type === "file" && value instanceof File && field.options) {
           const allowedExtensions = field.options.split(",").map((ext) => ext.trim().toLowerCase());
           const fileName = value.name || "";
@@ -844,6 +851,16 @@ function RegisterForm() {
                               >
                                 <FiAlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
                                 {formErrors[field.field_name]}
+                              </motion.p>
+                            )}
+                            {field.type === "password" && !formErrors[field.field_name] && formData[field.field_name] && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,64}$/.test(formData[field.field_name]) && (
+                              <motion.p
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-sm text-green-600 flex items-center"
+                              >
+                                <FiCheckCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                                Password is good to go!
                               </motion.p>
                             )}
                             {field.description && !formErrors[field.field_name] && (
