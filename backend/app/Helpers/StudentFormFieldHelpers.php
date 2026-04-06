@@ -92,6 +92,7 @@ trait StudentFormFieldHelpers
                     'text' => 'Text',
                     'email' => 'Email',
                     'phonenumber' => 'Phonenumber',
+                    'password' => 'Password',
                     'textarea' => 'Textarea',
                     'select' => 'Select',
                     'checkbox' => 'Checkbox',
@@ -99,6 +100,7 @@ trait StudentFormFieldHelpers
                     'number' => 'Number',
                     'file' => 'File',
                     'select_course' => 'Course Selection',
+
                 ],
                 'wrapper' => ['class' => 'form-group col-md-6'],
             ],
@@ -189,7 +191,7 @@ trait StudentFormFieldHelpers
             //     'type' => 'tinymce',
             //     'escaped' => false,
             // ]);
-            
+
 
             $this->addFieldsToTab('General', false, [
                 'title',
