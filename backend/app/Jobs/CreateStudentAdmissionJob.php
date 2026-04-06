@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\CourseSession;
 use App\Models\User;
 use App\Models\UserAdmission;
+use App\Services\StudentIdGenerator;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -72,6 +73,15 @@ class CreateStudentAdmissionJob implements ShouldQueue
             $admission = $existingAdmission;
         } else {
             $admission = UserAdmission::create($admissionData);
+        }
+
+        // Generate student ID on admission if not already assigned
+        if (empty($this->student->student_id)) {
+            $studentId = StudentIdGenerator::generate($this->student);
+            if ($studentId) {
+                $this->student->student_id = $studentId;
+                $this->student->saveQuietly();
+            }
         }
 
         if ($this->session) {

@@ -49,7 +49,8 @@ class User extends Authenticatable
         'last_login',
         'student_level',
         'data',
-        'support'
+        'support',
+        'student_id'
     ];
 
     /**
