@@ -333,26 +333,28 @@ class FormResponseController extends Controller
         // Wrap form creation + OTP consumption in a transaction so they
         // either both succeed or both roll back. This prevents a state where
         // the form response is saved but OTP remains unconsumed (or vice versa).
-        $response = DB::transaction(function () use ($form, $responseData, $emailField, $emailValue) {
-            $response = new FormResponse([
-                'form_id' => $form->id,
-                'response_data' => $responseData,
-            ]);
-            $form->responses()->save($response);
 
-            // Consume OTP verification — prevents reuse from Postman/curl etc.
-            // If consumption fails (no row found), throw to roll back the entire transaction.
-            if ($emailField && $emailValue) {
-                $consumed = app(OtpService::class)->consumeVerification($emailValue);
-                if (!$consumed) {
-                    throw new \RuntimeException('Failed to consume OTP verification for: ' . $emailValue);
-                }
+        // Consume OTP verification — prevents reuse from Postman/curl etc.
+        // If consumption fails (no row found), throw to roll back the entire transaction.
+        if ($emailField && $emailValue) {
+            $consumed = app(OtpService::class)->consumeVerification($emailValue);
+            if (!$consumed) {
+                throw new \RuntimeException('Failed to consume OTP verification for: ' . $emailValue);
             }
+        }
+        // $response = DB::transaction(function () use ($form, $responseData, $emailField, $emailValue) {
+            // $response = new FormResponse([
+            //     'form_id' => $form->id,
+            //     'response_data' => $responseData,
+            // ]);
+            // $form->responses()->save($response);
 
-            return $response;
-        });
 
-        FormSubmittedEvent::dispatch($responseData, $response->id, $phoneFieldName);
+
+            // return $response;
+        // });
+
+        FormSubmittedEvent::dispatch($responseData, $phoneFieldName);
 
         return response()->json([
             'success' => true,
