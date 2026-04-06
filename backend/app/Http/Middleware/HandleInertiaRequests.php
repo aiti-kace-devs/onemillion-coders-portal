@@ -48,7 +48,6 @@ class HandleInertiaRequests extends Middleware
         $user = Auth::guard('web')->user();
 
         $configKeys = [
-            SHOW_RESULTS_TO_STUDENTS,
             SHOW_STUDENT_LEVEL,
             SHOW_COURSE_ASSESSMENT_TO_STUDENTS,
             ALLOW_COURSE_CHANGE,
