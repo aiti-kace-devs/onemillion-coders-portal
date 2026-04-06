@@ -33,6 +33,17 @@
             ->groupBy('session')
             ->pluck('count', 'session');
     }
+    $centreSessionChartLabels = $centreSessions
+        ->map(function ($session) {
+            $sessionLabel = trim((string) ($session->session ?? $session->name ?? 'Session #' . $session->id));
+            $courseTime = trim((string) ($session->course_time ?? ''));
+
+            return $courseTime !== '' ? $sessionLabel . ' (' . $courseTime . ')' : $sessionLabel;
+        })
+        ->values();
+    $centreSessionChartValues = $centreSessions
+        ->map(fn($session) => (int) ($centreSessionConfirmed[$session->id] ?? 0))
+        ->values();
 
     $centreAdmittedStudents = collect();
     $centreSessionFilterOptions = collect();
@@ -114,8 +125,6 @@
 
     $genderLabels = collect(['Male', 'Female']);
     $genderValues = collect([0, 0]);
-    $ageLabels = collect();
-    $ageValues = collect();
 
     $topCourses = collect();
 
@@ -129,11 +138,11 @@
             ->count('id');
 
         $totalRegisteredUsers = (int) \Illuminate\Support\Facades\DB::table('users')
-            ->whereIn('registered_course', $courseIdsArray)
+            ->whereIn('registered_course', $activeCourseIdsArray)
             ->count('id');
 
         $totalShortlistedUsers = (int) \Illuminate\Support\Facades\DB::table('users')
-            ->whereIn('registered_course', $courseIdsArray)
+            ->whereIn('registered_course', $activeCourseIdsArray)
             ->where(function ($query) {
                 $query->where('shortlist', 1)->orWhere('shortlist', true);
             })
@@ -145,16 +154,21 @@
                 '
                 COUNT(*) as total_count,
                 SUM(CASE WHEN confirmed IS NOT NULL THEN 1 ELSE 0 END) as confirmed_count,
-                SUM(CASE WHEN confirmed IS NULL THEN 1 ELSE 0 END) as pending_count,
-                COUNT(DISTINCT CASE WHEN confirmed IS NOT NULL THEN user_id END) as admitted_students_count
+                SUM(CASE WHEN confirmed IS NULL THEN 1 ELSE 0 END) as pending_count
             ',
             )
             ->first();
+        $activeAdmittedUsers = \Illuminate\Support\Facades\DB::table('user_admission')
+            ->whereIn('course_id', $activeCourseIdsArray)
+            ->whereNotNull('confirmed')
+            ->select('user_id')
+            ->distinct()
+            ->count('user_id');
 
         $admissionsTotal = (int) ($admissionsAgg->total_count ?? 0);
         $admissionsConfirmed = (int) ($admissionsAgg->confirmed_count ?? 0);
         $admissionsPending = (int) ($admissionsAgg->pending_count ?? 0);
-        $totalAdmittedUsers = (int) ($admissionsAgg->admitted_students_count ?? 0);
+        $totalAdmittedUsers = (int) $activeAdmittedUsers;
 
         $admissionRate = $totalRegisteredUsers > 0 ? round(($totalAdmittedUsers / $totalRegisteredUsers) * 100, 1) : 0;
 
@@ -178,42 +192,6 @@
             ->pluck('total', 'gender_label');
 
         $genderValues = $genderLabels->map(fn($label) => (int) ($genderCounts[$label] ?? 0))->values();
-
-        $ageCounts = \Illuminate\Support\Facades\DB::table('users as u')
-            ->whereIn('u.registered_course', $courseIdsArray)
-            ->selectRaw(
-                "
-                CASE
-                    WHEN u.age IS NULL OR u.age = '' THEN 'Unknown'
-                    WHEN u.age LIKE '%-%' OR u.age LIKE '%–%' OR u.age LIKE '%—%' THEN u.age
-                    WHEN u.age LIKE '%+%' THEN u.age
-                    WHEN u.age REGEXP '^[0-9]+$' THEN
-                        CONCAT(
-                            FLOOR(CAST(u.age AS UNSIGNED) / 10) * 10,
-                            '-',
-                            FLOOR(CAST(u.age AS UNSIGNED) / 10) * 10 + 9
-                        )
-                    ELSE 'Unknown'
-                END AS age_range,
-                COUNT(*) AS total,
-                CASE
-                    WHEN u.age IS NULL OR u.age = '' THEN 9999
-                    WHEN u.age LIKE '%-%' OR u.age LIKE '%–%' OR u.age LIKE '%—%' THEN
-                        CAST(SUBSTRING_INDEX(u.age, '-', 1) AS UNSIGNED)
-                    WHEN u.age LIKE '%+%' THEN
-                        CAST(SUBSTRING_INDEX(u.age, '+', 1) AS UNSIGNED)
-                    WHEN u.age REGEXP '^[0-9]+$' THEN
-                        FLOOR(CAST(u.age AS UNSIGNED) / 10)
-                    ELSE 9999
-                END AS bucket_order
-            ",
-            )
-            ->groupBy('age_range', 'bucket_order')
-            ->orderBy('bucket_order')
-            ->get();
-
-        $ageLabels = $ageCounts->pluck('age_range')->values();
-        $ageValues = $ageCounts->pluck('total')->map(fn($v) => (int) $v)->values();
 
         $registeredByCourse = \Illuminate\Support\Facades\DB::table('users')
             ->whereIn('registered_course', $activeCourseIdsArray)
@@ -384,7 +362,7 @@
                         <i class="la la-users text-primary"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalRegisteredUsers) }}</div>
-                    <div class="text-muted small">Users mapped by registered course in this centre.</div>
+                    <div class="text-muted small">Users mapped by active course batches in this centre.</div>
                 </div>
             </div>
         </div>
@@ -397,7 +375,7 @@
                         <i class="la la-user-check text-info"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalShortlistedUsers) }}</div>
-                    <div class="text-muted small">Shortlist rate: {{ $shortlistRate }}%</div>
+                    <div class="text-muted small">Active batch shortlist rate: {{ $shortlistRate }}%</div>
                 </div>
             </div>
         </div>
@@ -410,7 +388,7 @@
                         <i class="la la-graduation-cap text-success"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalAdmittedUsers) }}</div>
-                    <div class="text-muted small">Admission rate: {{ $admissionRate }}%</div>
+                    <div class="text-muted small">Active batch admission rate: {{ $admissionRate }}%</div>
                 </div>
             </div>
         </div>
@@ -490,7 +468,7 @@
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-lg-4">
+        <!-- <div class="col-lg-4">
             <div class="card h-100">
                 <div class="card-header">
                     <strong><i class="la la-pie-chart"></i> Gender Distribution</strong>
@@ -501,16 +479,16 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> -->
 
-        <div class="col-lg-4">
+        <div class="col-lg-8">
             <div class="card h-100">
                 <div class="card-header">
-                    <strong><i class="la la-bar-chart"></i> Age Group Distribution</strong>
+                    <strong><i class="la la-bar-chart"></i> Admitted Students Session Distribution</strong>
                 </div>
                 <div class="card-body">
-                    <div class="chart-wrap-sm">
-                        <canvas id="ageGroupBarChart"></canvas>
+                    <div class="chart-wrap-session">
+                        <canvas id="admittedStudentsSessionBarChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -746,6 +724,11 @@
             height: 240px;
         }
 
+        .chart-wrap-session {
+            position: relative;
+            height: 280px;
+        }
+
         .dataTables_wrapper .dataTables_length,
         .dataTables_wrapper .dataTables_filter {
             margin-top: 0.5rem;
@@ -839,8 +822,17 @@
 
                 const genderLabels = @json($genderLabels->values());
                 const genderValues = @json($genderValues->map(fn($v) => (int) $v)->values());
-                const ageLabels = @json($ageLabels->values());
-                const ageValues = @json($ageValues->map(fn($v) => (int) $v)->values());
+                const centreSessionChartLabels = @json($centreSessionChartLabels->values());
+                const centreSessionChartValues = @json($centreSessionChartValues->map(fn($v) => (int) $v)->values());
+                const centreSessionChartColors = centreSessionChartLabels.map(function(_, index) {
+                    const total = Math.max(centreSessionChartLabels.length, 1);
+                    const hue = Math.round((index * 360) / total);
+
+                    return {
+                        background: 'hsla(' + hue + ', 68%, 55%, 0.82)',
+                        border: 'hsl(' + hue + ', 68%, 42%)'
+                    };
+                });
 
                 const funnelValues = [
                     {{ (int) $totalRegisteredUsers }},
@@ -880,17 +872,21 @@
                     });
                 }
 
-                const ageCtx = document.getElementById('ageGroupBarChart');
-                if (ageCtx) {
-                    new Chart(ageCtx, {
+                const admittedStudentsSessionCtx = document.getElementById('admittedStudentsSessionBarChart');
+                if (admittedStudentsSessionCtx) {
+                    new Chart(admittedStudentsSessionCtx, {
                         type: 'bar',
                         data: {
-                            labels: ageLabels,
+                            labels: centreSessionChartLabels,
                             datasets: [{
-                                label: 'Users',
-                                data: ageValues,
-                                backgroundColor: 'rgba(25, 135, 84, 0.8)',
-                                borderColor: 'rgba(25, 135, 84, 1)',
+                                label: 'Admitted Students',
+                                data: centreSessionChartValues,
+                                backgroundColor: centreSessionChartColors.map(function(color) {
+                                    return color.background;
+                                }),
+                                borderColor: centreSessionChartColors.map(function(color) {
+                                    return color.border;
+                                }),
                                 borderWidth: 1
                             }]
                         },
@@ -901,6 +897,13 @@
                                 display: false
                             },
                             scales: {
+                                xAxes: [{
+                                    ticks: {
+                                        autoSkip: false,
+                                        maxRotation: 35,
+                                        minRotation: 0
+                                    }
+                                }],
                                 yAxes: [{
                                     ticks: {
                                         beginAtZero: true,
