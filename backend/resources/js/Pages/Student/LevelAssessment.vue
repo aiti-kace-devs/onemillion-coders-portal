@@ -75,7 +75,7 @@ function handleMessage(event) {
         isComplete.value = true;
     } else if (event.data?.type === "LARAVEL_IFRAME_DETECTED") {
         isComplete.value = true;
-        router.visit('/student/change-course');
+        router.visit('/student/choose-course');
     }
 }
 
@@ -85,7 +85,7 @@ function handleIframeLoad() {
         const href = iframeRef.value.contentWindow.location.href;
         const pathname = iframeRef.value.contentWindow.location.pathname;
 
-        if (pathname && (pathname.includes('/student/change-course') || pathname.includes('/student/choose-course'))) {
+        if (pathname && (pathname.includes('/student/choose-course') || pathname.includes('/student/choose-course'))) {
             isComplete.value = true; // Stop tracking violations
             router.visit(pathname);
         }
