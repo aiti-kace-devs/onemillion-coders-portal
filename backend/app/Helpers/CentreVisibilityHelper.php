@@ -18,12 +18,12 @@ final class CentreVisibilityHelper
             return null;
         }
 
-        if (method_exists($admin, 'visibleCentreIds')) {
-            return $admin->visibleCentreIds();
-        }
-
         if (method_exists($admin, 'isSuper') && $admin->isSuper()) {
             return null;
+        }
+
+        if (method_exists($admin, 'visibleCentreIds')) {
+            return $admin->visibleCentreIds();
         }
 
         return $admin->assignedCentres()

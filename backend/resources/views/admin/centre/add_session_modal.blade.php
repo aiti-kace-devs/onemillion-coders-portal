@@ -104,6 +104,20 @@
         }
     }
 
+    function hideModal(modalElement) {
+        if (!modalElement) return;
+
+        if (window.bootstrap && window.bootstrap.Modal) {
+            window.bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+            return;
+        }
+
+        const jq = window.jQuery;
+        if (jq && jq.fn && jq.fn.modal) {
+            jq(modalElement).modal('hide');
+        }
+    }
+
     function getCsrfToken(modalElement) {
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
         const fromMeta = csrfMeta ? csrfMeta.getAttribute('content') : null;
@@ -121,6 +135,97 @@
             return value.toLowerCase() === 'true';
         }
         return false;
+    }
+
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value == null ? '' : String(value);
+        return div.innerHTML;
+    }
+
+    function parseSessionRowsPayload(rawValue) {
+        if (!rawValue || typeof rawValue !== 'string') {
+            return [];
+        }
+
+        try {
+            const parsed = JSON.parse(rawValue);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function renderSessionSummary(summaryEl, rows) {
+        if (!summaryEl) return;
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            summaryEl.innerHTML =
+                '<div class="text-muted small">' + escapeHtml(summaryEl.dataset.emptyText || 'No centre sessions added yet.') + '</div>';
+            return;
+        }
+
+        summaryEl.innerHTML = rows.map((row) => {
+            const sessionLabel = escapeHtml(row.session || 'Session');
+            const timeLabel = row.course_time ? ' <span class="text-muted">(' + escapeHtml(row.course_time) + ')</span>' : '';
+            const limitLabel = escapeHtml(row.limit || '-');
+            const statusActive = row.status === undefined ? true : toBoolean(row.status);
+            const statusClass = statusActive ? 'bg-success' : 'bg-secondary';
+            const statusLabel = statusActive ? 'Active' : 'Inactive';
+
+            return `
+                <div class="border rounded px-3 py-2 mb-2 bg-light">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div><strong>${sessionLabel}</strong>${timeLabel}</div>
+                        <span class="badge ${statusClass}">${statusLabel}</span>
+                    </div>
+                    <div class="text-muted small mt-1">Limit: ${limitLabel}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function syncSessionSummaryFromInput(inputId, summaryId) {
+        if (!inputId || !summaryId) return;
+
+        const inputEl = document.getElementById(inputId);
+        const summaryEl = document.getElementById(summaryId);
+        const rows = parseSessionRowsPayload(inputEl ? inputEl.value : '');
+
+        renderSessionSummary(summaryEl, rows);
+    }
+
+    function setSessionRowsPayload(inputId, summaryId, rows) {
+        if (!inputId) return;
+
+        const inputEl = document.getElementById(inputId);
+        if (!inputEl) return;
+
+        inputEl.value = JSON.stringify(Array.isArray(rows) ? rows : []);
+        if (summaryId) {
+            syncSessionSummaryFromInput(inputId, summaryId);
+        }
+    }
+
+    function fetchExistingSessionRows(fetchUrl) {
+        if (!fetchUrl || !window.fetch) {
+            return Promise.resolve([]);
+        }
+
+        return fetch(fetchUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then((response) => {
+                if (!response.ok) throw new Error('Unable to load sessions.');
+                return response.json();
+            })
+            .then((payload) => {
+                return payload && Array.isArray(payload.sessions) ? payload.sessions : [];
+            });
     }
 
     function createSessionRow(rowData = {}) {
@@ -263,16 +368,35 @@
 
     function submitCentreSessions(modalElement) {
         const actionHolder = document.getElementById('addCentreSessionForm');
+        const mode = actionHolder && actionHolder.dataset ? (actionHolder.dataset.mode || 'ajax') : 'ajax';
         const actionUrl = actionHolder && actionHolder.dataset ? actionHolder.dataset.saveUrl : '';
         if (!actionUrl) {
-            alert('Unable to submit: missing save URL.');
-            return;
+            if (mode !== 'form') {
+                alert('Unable to submit: missing save URL.');
+                return;
+            }
         }
 
         const rows = getSessionRowsData();
         const validationError = validateSessionRows(rows);
         if (validationError) {
             alert(validationError);
+            return;
+        }
+
+        if (mode === 'form') {
+            const inputId = actionHolder && actionHolder.dataset ? actionHolder.dataset.inputId || '' : '';
+            const summaryId = actionHolder && actionHolder.dataset ? actionHolder.dataset.summaryId || '' : '';
+            const inputEl = inputId ? document.getElementById(inputId) : null;
+
+            if (!inputEl) {
+                alert('Unable to store sessions in this form right now.');
+                return;
+            }
+
+            setSessionRowsPayload(inputId, summaryId, rows);
+
+            hideModal(modalElement);
             return;
         }
 
@@ -316,19 +440,33 @@
         const centreNameEl = document.getElementById('centre_session_modal_centre_name');
         const centreIdEl = document.getElementById('centre_session_modal_centre_id');
         const submitBtn = document.getElementById('saveCentreSessionsSubmitBtn');
+        const mode = triggerEl.dataset.sessionMode || 'ajax';
 
         const centreId = triggerEl.dataset.centreId || '';
-        const centreName = triggerEl.dataset.centreName || 'Centre';
+        let centreName = triggerEl.dataset.centreName || 'Centre';
         const fetchUrl = triggerEl.dataset.fetchUrl || '';
         const saveUrl = triggerEl.dataset.saveUrl || '';
+        const inputId = triggerEl.dataset.inputId || '';
+        const summaryId = triggerEl.dataset.summaryId || '';
+
+        if (mode === 'form') {
+            const titleInput = document.querySelector('input[name="title"]');
+            const currentTitle = titleInput ? (titleInput.value || '').trim() : '';
+            if (currentTitle) {
+                centreName = currentTitle;
+            }
+        }
 
         if (actionHolder && actionHolder.dataset) {
+            actionHolder.dataset.mode = mode;
             actionHolder.dataset.fetchUrl = fetchUrl;
             actionHolder.dataset.saveUrl = saveUrl;
+            actionHolder.dataset.inputId = inputId;
+            actionHolder.dataset.summaryId = summaryId;
         }
 
         if (centreIdEl) centreIdEl.value = centreId;
-        if (titleEl) titleEl.textContent = 'Add Session';
+        if (titleEl) titleEl.textContent = mode === 'form' ? 'Manage Centre Sessions' : 'Add Session';
         if (centreNameEl) centreNameEl.textContent = 'Centre: ' + centreName;
 
         const container = document.getElementById('centreSessionRowsContainer');
@@ -337,11 +475,44 @@
         }
 
         if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Loading...';
+            submitBtn.disabled = mode !== 'form';
+            submitBtn.textContent = mode === 'form' ? 'Apply Sessions' : 'Loading...';
         }
 
         showModal(modalElement);
+
+        if (mode === 'form') {
+            const inputEl = inputId ? document.getElementById(inputId) : null;
+            const rows = parseSessionRowsPayload(inputEl ? inputEl.value : '');
+            if (rows.length > 0 || !fetchUrl) {
+                renderSessionRows(rows);
+
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Apply Sessions';
+                }
+
+                return;
+            }
+
+            fetchExistingSessionRows(fetchUrl)
+                .then((fetchedRows) => {
+                    setSessionRowsPayload(inputId, summaryId, fetchedRows);
+                    renderSessionRows(fetchedRows);
+                })
+                .catch(() => {
+                    renderSessionRows([]);
+                    alert('Unable to load existing sessions. You can still add new ones.');
+                })
+                .finally(() => {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Apply Sessions';
+                    }
+                });
+
+            return;
+        }
 
         if (!fetchUrl || !window.fetch) {
             renderSessionRows([]);
@@ -352,19 +523,8 @@
             return;
         }
 
-        fetch(fetchUrl, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-        })
-            .then((response) => {
-                if (!response.ok) throw new Error('Unable to load sessions.');
-                return response.json();
-            })
-            .then((payload) => {
-                const rows = payload && Array.isArray(payload.sessions) ? payload.sessions : [];
+        fetchExistingSessionRows(fetchUrl)
+            .then((rows) => {
                 renderSessionRows(rows);
             })
             .catch(() => {
@@ -399,6 +559,28 @@
                 submitCentreSessions(modalElement);
             });
         }
+
+        const summaryEls = document.querySelectorAll('[data-centre-session-summary]');
+        Array.from(summaryEls).forEach((summaryEl) => {
+            const inputId = summaryEl.dataset.inputId || '';
+            const fetchUrl = summaryEl.dataset.fetchUrl || '';
+            if (!inputId || !summaryEl.id) return;
+
+            const inputEl = document.getElementById(inputId);
+            const rows = parseSessionRowsPayload(inputEl ? inputEl.value : '');
+            if (rows.length > 0 || !fetchUrl) {
+                syncSessionSummaryFromInput(inputId, summaryEl.id);
+                return;
+            }
+
+            fetchExistingSessionRows(fetchUrl)
+                .then((fetchedRows) => {
+                    setSessionRowsPayload(inputId, summaryEl.id, fetchedRows);
+                })
+                .catch(() => {
+                    syncSessionSummaryFromInput(inputId, summaryEl.id);
+                });
+        });
 
         window.openAddCentreSessionModal = function (triggerEl) {
             openSessionModal(triggerEl, modalElement);

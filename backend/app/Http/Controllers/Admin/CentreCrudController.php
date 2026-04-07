@@ -8,19 +8,17 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Models\Branch;
 use App\Models\Centre;
 use App\Models\Constituency;
+use App\Helpers\CentreSessionHelper;
 use App\Helpers\CourseFieldHelpers;
 use App\Models\District;
 use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\CentreVisibilityHelper;
-use App\Models\CentreSession;
-use App\Models\CourseSession;
 use Illuminate\Http\Request;
 use App\Helpers\CrudListHelper;
 use App\Helpers\FilterHelper;
 use App\Helpers\MediaHelper;
 use App\Helpers\WidgetHelper;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\DB;
 use Backpack\CRUD\app\Library\Widget;
 
 /**
@@ -264,7 +262,7 @@ class CentreCrudController extends CrudController
             'wrapper' => ['class' => 'd-none'],
         ]);
 
-        $centre = $this->crud->getCurrentEntry();
+        $centre = $this->resolveCurrentCentreEntry();
         $selectedDistrictId = null;
         if ($centre instanceof Centre) {
             $selectedDistrictId = $centre->districts()->pluck('districts.id')->first();
@@ -300,8 +298,9 @@ class CentreCrudController extends CrudController
             'wrapper' => ['class' => 'd-none'],
         ]);
 
-        $centreEntry = $this->crud->getCurrentEntry();
+        $centreEntry = $this->resolveCurrentCentreEntry();
         $gpsAddressValue = $this->getExistingGpsAddress();
+        $centreSessionsPayload = old('centre_sessions_payload', CentreSessionHelper::getFormPayload($centreEntry));
 
         CRUD::addField([
             'name' => 'gps_address',
@@ -385,7 +384,7 @@ class CentreCrudController extends CrudController
             multiple: true,
             label: 'Centre Images',
             disk_options: MediaHelper::getArticleImagesDiskOptions(),
-            value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->coverImage->file ?? '' : '',
+            value: $centreEntry ? $centreEntry->coverImage->file ?? '' : '',
         );
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Is PWD Friendly', 'is_pwd_friendly');
@@ -406,12 +405,24 @@ class CentreCrudController extends CrudController
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
 
+
+        CRUD::addField([
+            'name' => 'centre_sessions_manager',
+            'type' => 'custom_html',
+            'value' => view('admin.centre.fields.session_manager', [
+                'centreEntry' => $centreEntry,
+                'initialSessionsPayload' => $centreSessionsPayload,
+            ]),
+            'wrapper' => ['class' => 'form-group col-12'],
+        ]);
+
         $this->addFieldsToTab('General', true, [
             'title', 'branch_id', 'constituency_id', 'constituency_dependency_script',
             'district_id', 'district_dependency_script', 'gps_address', 'pwd_notes', 'images'
         ]);
         $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'status']);
         $this->addFieldsToTab('GPS Location', true, ['gps_location']);
+        $this->addFieldsToTab('Sessions', true, ['centre_sessions_manager']);
 
     }
 
@@ -429,16 +440,20 @@ class CentreCrudController extends CrudController
     public function store()
     {
         $this->prepareGpsFields();
+        $centreSessionRows = CentreSessionHelper::extractRowsFromPayload($this->crud->getRequest());
         $response = $this->traitStore();
         $this->syncDistrictSelection();
+        CentreSessionHelper::syncAfterCrud($this->crud->getCurrentEntry(), $centreSessionRows);
         return $response;
     }
 
     public function update()
     {
         $this->prepareGpsFields();
+        $centreSessionRows = CentreSessionHelper::extractRowsFromPayload($this->crud->getRequest());
         $response = $this->traitUpdate();
         $this->syncDistrictSelection();
+        CentreSessionHelper::syncAfterCrud($this->crud->getCurrentEntry(), $centreSessionRows);
         return $response;
     }
 
@@ -469,7 +484,7 @@ class CentreCrudController extends CrudController
 
     protected function getExistingGpsAddress(): string
     {
-        $centre = $this->crud->getCurrentEntry();
+        $centre = $this->resolveCurrentCentreEntry();
         if (! $centre) {
             return '';
         }
@@ -491,6 +506,33 @@ class CentreCrudController extends CrudController
         }
 
         return (string) ($gpsAddress ?? '');
+    }
+
+    protected function resolveCurrentCentreEntry(): ?Centre
+    {
+        $entry = $this->crud->getCurrentEntry();
+        if ($entry instanceof Centre) {
+            return $entry;
+        }
+
+        $entryId = $this->crud->getCurrentEntryId()
+            ?: $this->crud->getRequest()->route('id')
+            ?: $this->crud->getRequest()->route('centreId')
+            ?: $this->crud->getRequest()->route('centre');
+
+        if (! $entryId) {
+            return null;
+        }
+
+        try {
+            $resolvedEntry = $this->crud->getEntry((int) $entryId);
+            if ($resolvedEntry instanceof Centre) {
+                return $resolvedEntry;
+            }
+        } catch (\Throwable $e) {
+        }
+
+        return Centre::find($entryId);
     }
 
     protected function normalizeGpsAddressForCompare(string $address): string
@@ -679,50 +721,17 @@ class CentreCrudController extends CrudController
         ]);
     }
 
-    protected function ensureCentreSessionAccess(Centre $centre): void
-    {
-        if (!backpack_user()) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        if (!backpack_user()->can('centre.read.all') && !backpack_user()->can('centre.read.self')) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        $visibleCentreIds = CentreVisibilityHelper::currentAdminVisibleCentreIds();
-        if (is_array($visibleCentreIds) && !in_array($centre->id, $visibleCentreIds, true)) {
-            abort(403, 'Unauthorized action.');
-        }
-    }
-
     /**
      * Return existing sessions for a centre in JSON.
      */
     public function getCentreSessions($centreId)
     {
         $centre = Centre::findOrFail($centreId);
-        $this->ensureCentreSessionAccess($centre);
-
-        $sessions = CentreSession::query()
-            ->where('centre_id', $centre->id)
-            ->select(['id', 'session', 'limit', 'course_time', 'link', 'status'])
-            ->orderBy('id')
-            ->get()
-            ->map(function ($session) {
-                return [
-                    'id' => $session->id,
-                    'session' => $session->session,
-                    'limit' => $session->limit,
-                    'course_time' => $session->course_time,
-                    'link' => $session->link,
-                    'status' => $session->status === null ? true : (bool) $session->status,
-                ];
-            })
-            ->values();
+        CentreSessionHelper::ensureAccess($centre);
 
         return response()->json([
             'centre_id' => $centre->id,
-            'sessions' => $sessions,
+            'sessions' => CentreSessionHelper::getSessionsCollection($centre),
         ]);
     }
 
@@ -732,92 +741,16 @@ class CentreCrudController extends CrudController
     public function saveCentreSessions($centreId)
     {
         $centre = Centre::findOrFail($centreId);
-        $this->ensureCentreSessionAccess($centre);
-
-        $data = request()->validate([
-            'sessions' => 'required|array|min:1',
-            'sessions.*.id' => 'nullable|integer',
-            'sessions.*.session' => 'required|string|in:Morning,Afternoon,Evening,Fullday,Online',
-            'sessions.*.limit' => 'required|integer|min:1|max:100000',
-            'sessions.*.course_time' => 'required|string|max:255',
-            'sessions.*.link' => 'nullable|string|max:255',
-            'sessions.*.status' => 'nullable|boolean',
-        ]);
-
-        $rows = collect($data['sessions'])
-            ->map(function ($row) {
-                return [
-                    'id' => isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null,
-                    'session' => trim((string) ($row['session'] ?? '')),
-                    'limit' => (int) ($row['limit'] ?? 0),
-                    'course_time' => trim((string) ($row['course_time'] ?? '')),
-                    'link' => isset($row['link']) ? trim((string) $row['link']) : null,
-                    'status' => isset($row['status']) ? (bool) $row['status'] : true,
-                ];
-            })
-            ->filter(function ($row) {
-                return $row['session'] !== '' && $row['course_time'] !== '';
-            })
-            ->values();
-
-        if ($rows->isEmpty()) {
-            return redirect()
-                ->back()
-                ->with('error', 'Add at least one valid session row before saving.');
-        }
-
-        $duplicateSessions = $rows->pluck('session')->duplicates();
-        if ($duplicateSessions->isNotEmpty()) {
-            return redirect()
-                ->back()
-                ->with('error', 'Each session (Morning/Afternoon/Evening/Fullday) can only be added once.');
-        }
+        CentreSessionHelper::ensureAccess($centre);
 
         try {
-            DB::transaction(function () use ($centre, $rows) {
-                $submittedSessionNames = $rows->pluck('session')->values()->all();
-
-                $existingSessions = CentreSession::query()
-                    ->where('centre_id', $centre->id)
-                    ->get();
-
-                $existingById = $existingSessions->keyBy('id');
-                $existingBySession = $existingSessions->keyBy('session');
-
-                foreach ($rows as $row) {
-                    $payload = [
-                        'course_id' => null,
-                        'centre_id' => $centre->id,
-                        'session_type' => CourseSession::TYPE_CENTRE,
-                        'session' => $row['session'],
-                        'limit' => $row['limit'],
-                        'course_time' => $row['course_time'],
-                        'link' => $row['link'] !== '' ? $row['link'] : null,
-                        'status' => $row['status'] ? '1' : '0',
-                    ];
-
-                    if ($row['id'] && $existingById->has($row['id'])) {
-                        $session = $existingById->get($row['id']);
-                        $session->fill($payload);
-                        $session->save();
-                        continue;
-                    }
-
-                    $session = $existingBySession->get($row['session']);
-                    if ($session) {
-                        $session->fill($payload);
-                        $session->save();
-                        continue;
-                    }
-
-                    CentreSession::create($payload);
-                }
-
-                CentreSession::query()
-                    ->where('centre_id', $centre->id)
-                    ->whereNotIn('session', $submittedSessionNames)
-                    ->delete();
-            });
+            $rows = CentreSessionHelper::validateAndNormalizeRows(request()->input('sessions', []));
+            CentreSessionHelper::persist($centre, $rows);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', collect($e->errors())->flatten()->first() ?: 'Please review the submitted centre sessions.');
         } catch (\Throwable $e) {
             report($e);
 
