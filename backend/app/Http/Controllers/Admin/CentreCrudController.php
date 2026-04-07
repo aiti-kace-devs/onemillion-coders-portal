@@ -304,7 +304,7 @@ class CentreCrudController extends CrudController
             name: 'video',
             multiple: false,
             label: 'Centre Video',
-            disk_options: MediaHelper::getVideoDiskOptions(),
+            disk_options: MediaHelper::getCentreVideoDiskOptions(),
             value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->video ?? '' : '',
         );
 
