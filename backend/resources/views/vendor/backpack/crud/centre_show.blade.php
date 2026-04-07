@@ -62,14 +62,25 @@
                 'u.email as user_email',
                 'c.course_name as course_name',
                 'cs.session as session_label',
+                'cs.course_time as session_time',
                 'cs.name as session_name',
                 'ua.confirmed as admitted_at',
             ])
             ->orderByDesc('ua.confirmed')
-            ->get();
+            ->get()
+            ->map(function ($student) {
+                $sessionLabel = trim((string) ($student->session_label ?? ''));
+                $sessionTime = trim((string) ($student->session_time ?? ''));
+
+                $student->session_filter_label = $sessionLabel !== ''
+                    ? $sessionLabel . ($sessionTime !== '' ? ' (' . $sessionTime . ')' : '')
+                    : null;
+
+                return $student;
+            });
 
         $centreSessionFilterOptions = $centreAdmittedStudents
-            ->pluck('session_label')
+            ->pluck('session_filter_label')
             ->filter()
             ->unique()
             ->sort()
@@ -550,8 +561,12 @@
                                         <td>{{ $student->user_name ?? 'N/A' }}</td>
                                         <td>{{ $student->user_email ?? 'N/A' }}</td>
                                         <td>{{ $student->course_name ?? 'N/A' }}</td>
-                                        <td>
-                                            <div>{{ $student->session_label ?? 'N/A' }}</div>
+                                        <td data-search="{{ $student->session_filter_label ?? $student->session_label ?? 'N/A' }}">
+                                            <div>
+                                                {{ !empty($student->session_filter_label)
+                                                    ? $student->session_filter_label
+                                                    : 'N/A' }}
+                                            </div>
                                             @if (!empty($student->session_name))
                                                 <div class="text-muted small">{{ $student->session_name }}</div>
                                             @endif
@@ -816,7 +831,8 @@
                             centreAdmittedTable.column(3).search('').draw();
                             return;
                         }
-                        centreAdmittedTable.column(3).search(value).draw();
+                        const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        centreAdmittedTable.column(3).search('^' + escaped + '$', true, false).draw();
                     });
                 }
                 if (typeof Chart !== 'function') return;
