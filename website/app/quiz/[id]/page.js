@@ -771,7 +771,7 @@ export default function QuizPage({ params }) {
           </motion.button>
 
           <button
-            onClick={() => router.push(`${process.env.NEXT_PUBLIC_PORTAL_URL}`)}
+            onClick={() => window.location.href = process.env.NEXT_PUBLIC_PORTAL_URL || '/'}
             className="mt-5 text-sm text-white/40 hover:text-white/80 transition-colors"
           >
             <FiHome className="inline mr-1 -mt-0.5" size={14} /> Back to Home
@@ -1055,12 +1055,12 @@ export default function QuizPage({ params }) {
 
                     <div className="space-y-2.5">
                       <button
-                        onClick={() =>
-                          router.push(
-                            process.env.NEXT_PUBLIC_PORTAL_URL +
-                              `/student/change-course`,
-                          )
-                        }
+                        onClick={() => {
+                          if (window.parent !== window) {
+                            window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
+                          }
+                          window.location.href = `${process.env.NEXT_PUBLIC_PORTAL_URL}/student/choose-course`;
+                        }}
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
                         Proceed to Course Selection <FiArrowRight size={16} />
@@ -1126,12 +1126,12 @@ export default function QuizPage({ params }) {
                     </div>
                     <div className="space-y-2.5">
                       <button
-                        onClick={() =>
-                          router.push(
-                            process.env.NEXT_PUBLIC_PORTAL_URL +
-                              `/student/change-course`,
-                          )
-                        }
+                        onClick={() => {
+                          if (window.parent !== window) {
+                            window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
+                          }
+                          window.location.href = `${process.env.NEXT_PUBLIC_PORTAL_URL}/student/choose-course`;
+                        }}
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
                         Proceed to Course Selection <FiArrowRight size={16} />

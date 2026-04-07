@@ -17,12 +17,16 @@ class ProfileUpdateRequest extends FormRequest
     {
         $user = $this->user();
 
-        // Always validate separate name fields
         return [
             'first_name' => ['required', 'string', 'max:255'],
             'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user->id)],
+            'gender' => ['required', 'string', Rule::in(['male', 'female'])],
+            'card_type' => ['required', 'string', Rule::in(['ghcard', 'voters_id', 'drivers_license', 'passport'])],
+            'ghcard' => ['required', 'string', 'max:255'],
+            'network_type' => ['required', 'string', Rule::in(['mtn', 'telecel', 'airteltigo'])],
+            'mobile_no' => ['required', 'string', 'max:255'],
         ];
     }
 }

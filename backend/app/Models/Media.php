@@ -11,7 +11,7 @@ class Media extends Model
     use CrudTrait;
     use HasFactory;
 
-    protected $table = 'media_media';
+    // protected $table = 'media';
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
@@ -60,11 +60,6 @@ class Media extends Model
     }
 
 
-    public function articleTranslations()
-    {
-        return $this->hasMany(ArticleTranslation::class);
-    }
-
     protected static function boot()
     {
         parent::boot();
@@ -78,7 +73,17 @@ class Media extends Model
 
     public function getFilePreviewUrlAttribute()
     {
-        return config('filesystems.cdn_url') . '/' . ltrim($this->file, '/');
+        $filePath = trim($this->file ?? '');
+
+        if (empty($filePath)) {
+            return null;
+        }
+
+        if (str_starts_with($filePath, 'http://') || str_starts_with($filePath, 'https://')) {
+            return $filePath;
+        }
+
+        return rtrim(config('filesystems.cdn_url', ''), '/') . '/' . ltrim($filePath, '/');
     }
 
 
