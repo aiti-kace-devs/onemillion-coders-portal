@@ -93,10 +93,13 @@ final class CentreSessionHelper
             ]);
         }
 
-        $duplicateSessions = $normalizedRows->pluck('session')->duplicates();
-        if ($duplicateSessions->isNotEmpty()) {
+        $duplicateSignatures = $normalizedRows
+            ->map(fn ($row) => self::rowSignature($row['session'], $row['course_time']))
+            ->duplicates();
+
+        if ($duplicateSignatures->isNotEmpty()) {
             throw ValidationException::withMessages([
-                'centre_sessions_payload' => 'Each session type can only be added once.',
+                'centre_sessions_payload' => 'A centre session with the same session type and course time can only be added once.',
             ]);
         }
 
@@ -113,14 +116,15 @@ final class CentreSessionHelper
                 return;
             }
 
-            $submittedSessionNames = $rows->pluck('session')->values()->all();
-
             $existingSessions = CentreSession::query()
                 ->where('centre_id', $centre->id)
                 ->get();
 
             $existingById = $existingSessions->keyBy('id');
-            $existingBySession = $existingSessions->keyBy('session');
+            $existingBySignature = $existingSessions->keyBy(function ($session) {
+                return self::rowSignature($session->session, $session->course_time);
+            });
+            $retainedSessionIds = [];
 
             foreach ($rows as $row) {
                 $payload = [
@@ -138,22 +142,27 @@ final class CentreSessionHelper
                     $session = $existingById->get($row['id']);
                     $session->fill($payload);
                     $session->save();
+                    $retainedSessionIds[] = (int) $session->id;
                     continue;
                 }
 
-                $session = $existingBySession->get($row['session']);
+                $session = $existingBySignature->get(self::rowSignature($row['session'], $row['course_time']));
                 if ($session) {
                     $session->fill($payload);
                     $session->save();
+                    $retainedSessionIds[] = (int) $session->id;
                     continue;
                 }
 
-                CentreSession::create($payload);
+                $createdSession = CentreSession::create($payload);
+                $retainedSessionIds[] = (int) $createdSession->id;
             }
 
             CentreSession::query()
                 ->where('centre_id', $centre->id)
-                ->whereNotIn('session', $submittedSessionNames)
+                ->when(! empty($retainedSessionIds), function ($query) use ($retainedSessionIds) {
+                    $query->whereNotIn('id', $retainedSessionIds);
+                })
                 ->delete();
         });
     }
@@ -202,5 +211,13 @@ final class CentreSessionHelper
                 return $row['session'] !== '' && $row['course_time'] !== '';
             })
             ->values();
+    }
+
+    protected static function rowSignature(string $session, string $courseTime): string
+    {
+        $normalizedSession = strtolower(trim($session));
+        $normalizedCourseTime = strtolower(preg_replace('/\s+/', ' ', trim($courseTime)));
+
+        return $normalizedSession . '|' . $normalizedCourseTime;
     }
 }

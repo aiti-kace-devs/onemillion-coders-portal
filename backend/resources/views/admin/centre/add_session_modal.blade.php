@@ -337,6 +337,8 @@
             return 'Add at least one session row before saving.';
         }
 
+        const seenSignatures = new Set();
+
         for (let i = 0; i < rows.length; i += 1) {
             const row = rows[i];
             const rowNo = i + 1;
@@ -353,6 +355,17 @@
             if (!row.course_time) {
                 return 'Session row ' + rowNo + ': enter duration.';
             }
+
+            const signature =
+                String(row.session || '').trim().toLowerCase() +
+                '|' +
+                String(row.course_time || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+            if (seenSignatures.has(signature)) {
+                return 'Session row ' + rowNo + ': the same session type and duration already exists above.';
+            }
+
+            seenSignatures.add(signature);
         }
 
         return '';
