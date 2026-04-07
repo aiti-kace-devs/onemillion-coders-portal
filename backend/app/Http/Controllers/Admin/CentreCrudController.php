@@ -295,8 +295,9 @@ class CentreCrudController extends CrudController
             name: 'images',
             multiple: true,
             label: 'Centre Images',
-            disk_options: MediaHelper::getArticleImagesDiskOptions(),
-            value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->coverImage->file ?? '' : '',
+            disk_options: MediaHelper::getCentreImagesDiskOptions(),
+            // wrapper_class: 'form-group col-12',
+            value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->images ?? '' : '',
         );
 
         MediaHelper::getMediaSelector(
@@ -348,6 +349,7 @@ class CentreCrudController extends CrudController
     public function store()
     {
         $this->prepareGpsFields();
+        $this->normalizeImagesPath();
         $response = $this->traitStore();
         $this->syncDistrictSelection();
         return $response;
@@ -356,6 +358,7 @@ class CentreCrudController extends CrudController
     public function update()
     {
         $this->prepareGpsFields();
+        $this->normalizeImagesPath();
         $response = $this->traitUpdate();
         $this->syncDistrictSelection();
         return $response;
@@ -610,5 +613,80 @@ class CentreCrudController extends CrudController
             ->when($term, fn($q) => $q->where('title', 'like', "%$term%"))
             ->get()
             ->map(fn($centre) => ['id' => $centre->id, 'text' => $centre->title]);
+    }
+
+    protected function normalizeImagesPath()
+    {
+        $request = $this->crud->getRequest();
+        $imagePaths = $request->input('images');
+
+        if (empty($imagePaths)) {
+            return;
+        }
+
+        // Handle if input is a JSON string representing an array
+        if (is_string($imagePaths)) {
+            $decoded = json_decode($imagePaths, true);
+            if (is_array($decoded)) {
+                $imagePaths = $decoded;
+            } else {
+                $imagePaths = [$imagePaths];
+            }
+        }
+
+        if (!is_array($imagePaths)) {
+            return;
+        }
+
+        $normalizedImages = [];
+        foreach ($imagePaths as $imagePath) {
+            if (is_string($imagePath)) {
+                // Check if it's a JSON string of paths
+                $decoded = json_decode($imagePath, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $subPath) {
+                        $normalized = $this->normalizeSingleImagePath($subPath);
+                        if ($normalized) {
+                            $normalizedImages[] = $normalized;
+                        }
+                    }
+                } else {
+                    $normalized = $this->normalizeSingleImagePath($imagePath);
+                    if ($normalized) {
+                        $normalizedImages[] = $normalized;
+                    }
+                }
+            } elseif (is_array($imagePath)) {
+                foreach ($imagePath as $subPath) {
+                    $normalized = $this->normalizeSingleImagePath($subPath);
+                    if ($normalized) {
+                        $normalizedImages[] = $normalized;
+                    }
+                }
+            }
+        }
+
+        $request->merge(['images' => $normalizedImages]);
+    }
+
+    protected function normalizeSingleImagePath($imagePath)
+    {
+        if (empty($imagePath)) {
+            return '';
+        }
+
+        // If it already has https://, don't process further
+        if (strpos($imagePath, 'https://') === 0 || strpos($imagePath, 'http://') === 0) {
+            return $imagePath;
+        }
+
+        // Strip "Google Cloud Storage/" or similar disk aliases
+        if (strpos($imagePath, CLOUD_STORAGE_ALIAS . '/') === 0) {
+            $imagePath = substr($imagePath, strlen(CLOUD_STORAGE_ALIAS . '/'));
+        }
+
+        // Build the full CDN URL
+        $cdnUrl = rtrim(config('filesystems.cdn_url'), '/');
+        return $cdnUrl . '/' . ltrim($imagePath, '/');
     }
 }

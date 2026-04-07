@@ -48,10 +48,10 @@ class AddNewStudentsJob implements ShouldQueue
                 // 'registered_course' => 'nullable|exists:courses,id',
                 'age' => 'required',
                 'userId' => 'required',
-                'password' => 'sometimes',
+                'password' => 'sometimes|nullable|string',
                 'exam_name' => 'sometimes',
                 'ghcard' => 'nullable',
-                'form_response_id' => 'required',
+                // 'form_response_id' => 'required',
                 'data' => 'nullable|array',
                 'pwd' => 'sometimes|boolean',
             ]);
@@ -104,7 +104,7 @@ class AddNewStudentsJob implements ShouldQueue
                 if (!empty($student['ghcard'])) {
                     $std->card_type = 'GHCARD';
                 }
-                $std->form_response_id = $student['form_response_id'];
+                // $std->form_response_id = $student['form_response_id'];
                 $std->save();
 
                 UserRegistered::dispatch($std, $plainPassword);

@@ -59,6 +59,7 @@ function RegisterForm() {
   const [formData, setFormData] = useState({});
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [consentContent, setConsentContent] = useState("");
 
@@ -269,6 +270,15 @@ function RegisterForm() {
             }
           } catch (error) {
             errors[field.field_name] = "Please enter a valid Ghana phone number";
+          }
+        }
+
+        // Password validation
+        if (field.type === "password" && value) {
+          if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,64}$/.test(value)) {
+            errors[field.field_name] = "Password must be at least 6 characters with an uppercase letter, a lowercase letter, and a number.";
+          } else if (value !== confirmPassword) {
+            errors[field.field_name] = "Passwords do not match.";
           }
         }
 
@@ -608,6 +618,78 @@ function RegisterForm() {
       );
     }
 
+    // Password field with validation checklist
+    if (field.type === "password") {
+      const checks = [
+        { label: "At least 6 characters", met: value.length >= 6 },
+        { label: "Contains at least one uppercase letter", met: /[A-Z]/.test(value) },
+        { label: "Contains at least one lowercase letter", met: /[a-z]/.test(value) },
+        { label: "Contains a number", met: /\d/.test(value) },
+      ];
+
+      return (
+        <div>
+          <input
+            type="password"
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+            className={baseClasses}
+            placeholder={placeholder}
+            autoComplete="new-password"
+          />
+          <div className="mt-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Confirm Password <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={`w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 ${
+                confirmPassword && confirmPassword !== value && !value.startsWith(confirmPassword)
+                  ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                  : confirmPassword && confirmPassword === value
+                  ? "border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                  : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
+              } focus:outline-none hover:border-gray-300`}
+              placeholder="Re-enter your password"
+              autoComplete="new-password"
+            />
+            {confirmPassword && confirmPassword !== value && !value.startsWith(confirmPassword) && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <FiAlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                Passwords do not match.
+              </p>
+            )}
+          </div>
+          {value.length > 0 && (
+            <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+              {checks.map((check, i) => (
+                <li key={i} className="flex items-center gap-2 text-xs sm:text-sm">
+                  <span
+                    className={`inline-flex items-center justify-center w-4 h-4 shrink-0 rounded border transition-colors duration-200 ${
+                      check.met
+                        ? "bg-green-500 border-green-500 text-white"
+                        : "border-gray-300 bg-white"
+                    }`}
+                  >
+                    {check.met && (
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </span>
+                  <span className={check.met ? "text-green-600" : "text-gray-500"}>
+                    {check.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      );
+    }
+
     // Standard input field
     return (
       <input
@@ -798,6 +880,24 @@ function RegisterForm() {
                                 <FiAlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
                                 {formErrors[field.field_name]}
                               </motion.p>
+                            )}
+                            {field.type === "password" && !formErrors[field.field_name] && formData[field.field_name] && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,64}$/.test(formData[field.field_name]) && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1"
+                              >
+                                <p className="text-sm text-green-600 flex items-center">
+                                  <FiCheckCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                                  Password is good to go!
+                                </p>
+                                {confirmPassword === formData[field.field_name] && (
+                                  <p className="text-sm text-green-600 flex items-center">
+                                    <FiCheckCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                                    Passwords match!
+                                  </p>
+                                )}
+                              </motion.div>
                             )}
                             {field.description && !formErrors[field.field_name] && (
                               <p className="text-xs text-gray-400 leading-relaxed">
