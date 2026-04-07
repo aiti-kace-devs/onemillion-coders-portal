@@ -39,7 +39,7 @@ class StudentIdGenerator
             $batchNumber = static::deriveBatchNumber($batch);
         }
 
-        $prefix = "Q{$batchNumber}-{$yearSuffix}-";
+        $prefix = "Q{$batchNumber}{$yearSuffix}-";
 
         // Generate a unique 6-digit number (100000–999999)
         $maxAttempts = 20;
