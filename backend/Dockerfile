@@ -1,4 +1,4 @@
-FROM php:8.4-fpm-bookworm
+FROM php:8.3-fpm-bookworm
 
 # Environment variables
 ENV PHP_PM_MAX_CHILDREN=12 \
@@ -9,7 +9,7 @@ ENV PHP_PM_MAX_CHILDREN=12 \
     PHP_DATE_TIMEZONE=UTC \
     PHP_MEMORY_LIMIT=1G \
     NGINX_VERSION=1.25.3 \
-    PHP_VERSION=8.4 \
+    PHP_VERSION=8.3 \
     PHP_OPEN_BASEDIR=/var/www/html:/dev/stdout:/tmp:/var/www:/var/www/.config/gcloud \
     COMPOSER_ALLOW_SUPERUSER=1
 
@@ -83,14 +83,9 @@ COPY auth.json ./auth.json
 # ENV SESSION_DRIVER=memcached
 
 # Run composer install. This layer will only be rebuilt if composer.json/lock changes.
-
+# Add --no-scripts if you don't need composer scripts to run here (e.g., Laravel's post-install-cmd)
 RUN composer install --no-dev --optimize-autoloader --no-scripts \
-    && rm -rf /composer/cache \
-    # Fix elFinder PHP 8.3.30 set_time_limit() TypeError
-    && sed -i 's/\$defLimit = ini_get(.max_execution_time.);/\$defLimit = (int)ini_get("max_execution_time");/' \
-       vendor/studio-42/elfinder/php/elFinder.class.php \
-    && sed -i 's/set_time_limit(\$time);/set_time_limit((int)\$time);/' \
-       vendor/studio-42/elfinder/php/elFinder.class.php
+    && rm -rf /composer/cache
 
 # Install npm dependencies
 RUN npm install
