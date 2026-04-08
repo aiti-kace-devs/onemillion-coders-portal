@@ -84,7 +84,8 @@ class PermissionSeeder extends Seeder
             'page-builder',
             'course-manager',
             'exam-manager',
-            'student-manager'
+            'student-manager',
+            'centre-manager'
         ];
 
         // Create basic permissions for all resources
@@ -190,6 +191,18 @@ class PermissionSeeder extends Seeder
             ['student' => ['shortlist', 'verify'], 'user-admission' => ['pending', 'approved', 'rejected', 'shortlisted']]
         );
         $studentManagerRole->permissions()->sync($studentManagerPermissions->pluck('id')->toArray());
+
+        // CENTRE MANAGER ROLE
+        $centreManagerRole = Role::findByName('centre-manager', 'admin');
+        $centreManagerPermissions = $this->findResourcePermissions(
+            ['centre'],
+            ['read'],
+            ['self']
+        );
+        $centreManagerPermissions = $centreManagerPermissions->merge(
+            $this->findResourcePermissions(['dashboard'], ['read'], ['all'])
+        );
+        $centreManagerRole->permissions()->sync($centreManagerPermissions->pluck('id')->toArray());
 
         // ADMINISTRATOR ROLE
         $administratorRole = Role::findByName('administrator', 'admin');

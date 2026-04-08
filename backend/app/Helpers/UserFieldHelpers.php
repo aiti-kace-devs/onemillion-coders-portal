@@ -24,6 +24,7 @@ trait UserFieldHelpers
     {
         $this->setFirstNameField();
         // $this->setLastNameField();
+        $this->assignedCentre();
         $this->assignedCourses();
         $this->setEmailField();
         if ($showPassword) {
@@ -346,6 +347,21 @@ trait UserFieldHelpers
             'attribute' => 'display_name',
             'pivot' => true,
             'tab' => 'Account Info',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+    }
+
+    public function assignedCentre(): void
+    {
+        CRUD::addField([
+            'name' => 'centres',
+            'type' => 'select2_multiple',
+            'label' => 'Assign Centre',
+            'entity' => 'assignedCentres',
+            'model' => 'App\\Models\\Centre',
+            'attribute' => 'title',
+            'pivot' => true,
+            'tab' => $this->accountInfoTab,
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
     }
