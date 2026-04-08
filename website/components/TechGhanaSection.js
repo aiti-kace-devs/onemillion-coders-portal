@@ -1,7 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FiGlobe, FiZap, FiSearch } from "react-icons/fi";
+import {
+  FiGlobe,
+  FiZap,
+  FiSearch,
+} from "react-icons/fi";
 import Button from "./Button";
 import {
   GhanaGradientBar,
@@ -30,6 +34,7 @@ const REGION_MAP = {
   GHWN: "Western North",
   GHWP: "Western",
 };
+
 
 // Region center coordinates (% of viewBox) for tooltip positioning during auto-cycle
 const REGION_CENTERS = {
@@ -73,22 +78,9 @@ const REGION_COLORS = {
 
 // Region IDs ordered top to bottom by geographic position
 const REGION_ORDER = [
-  "GHUE",
-  "GHUW",
-  "GHNE",
-  "GHNP",
-  "GHSV",
-  "GHOT",
-  "GHBE",
-  "GHBO",
-  "GHAF",
-  "GHAH",
-  "GHEP",
-  "GHTV",
-  "GHWN",
-  "GHAA",
-  "GHCP",
-  "GHWP",
+  "GHUE", "GHUW", "GHNE", "GHNP", "GHSV", "GHOT",
+  "GHBE", "GHBO", "GHAF", "GHAH", "GHEP", "GHTV",
+  "GHWN", "GHAA", "GHCP", "GHWP",
 ];
 
 const TechGhanaSection = () => {
@@ -159,7 +151,7 @@ const TechGhanaSection = () => {
         setLoading(true);
         const response = await fetchBranchesSummary();
         if (response?.success && response?.data) {
-          setBranchesData(response.data);
+setBranchesData(response.data);
         }
       } catch (error) {
         console.error("Failed to load branches data:", error);
@@ -198,9 +190,7 @@ const TechGhanaSection = () => {
     const handleClick = (e) => {
       const path = e.target.closest("#features path");
       if (path && path.id && REGION_MAP[path.id]) {
-        router.push(
-          `/centers?region=${encodeURIComponent(REGION_MAP[path.id])}`,
-        );
+        router.push(`/centers?region=${encodeURIComponent(REGION_MAP[path.id])}`);
       }
     };
 
@@ -225,7 +215,7 @@ const TechGhanaSection = () => {
     if (!mapRef.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => setMapInView(entry.isIntersecting),
-      { threshold: 0.1 },
+      { threshold: 0.1 }
     );
     observer.observe(mapRef.current);
     return () => observer.disconnect();
@@ -294,7 +284,9 @@ const TechGhanaSection = () => {
     return match;
   };
 
-  const hoveredBranchData = hoveredRegion ? getBranchData(hoveredRegion) : null;
+  const hoveredBranchData = hoveredRegion
+    ? getBranchData(hoveredRegion)
+    : null;
 
   return (
     <section className="relative section-spacing bg-white overflow-visible py-20">
@@ -331,8 +323,8 @@ const TechGhanaSection = () => {
               </p>
               <div className="pt-4">
                 <p className="text-sm text-gray-500">
-                  Hover over any region on the map to explore training programs
-                  and available courses
+                  Hover over any region on the map to explore training
+                  programs and available courses
                 </p>
               </div>
             </div>
@@ -365,41 +357,36 @@ const TechGhanaSection = () => {
                 <div
                   ref={tooltipRef}
                   className={`absolute z-[1001] pointer-events-none transition-all duration-500 ease-in-out ${
-                    hoveredRegion && mapInView
-                      ? "opacity-100 scale-100"
-                      : "opacity-0 scale-95"
+                    hoveredRegion && mapInView ? "opacity-100 scale-100" : "opacity-0 scale-95"
                   }`}
                   style={{
                     ...(hoveredRegion ? getTooltipPosition(hoveredRegion) : {}),
                     transform: "translate(-50%, -110%)",
                   }}
                 >
-                  <div className="bg-white rounded-xl px-3 py-2.5 shadow-2xl border border-gray-100 w-52">
-                    <h4 className="font-semibold text-gray-900 text-sm mb-2">
-                      {REGION_MAP[hoveredRegion]} Region
-                    </h4>
+                    <div className="bg-white rounded-xl px-3 py-2.5 shadow-2xl border border-gray-100 w-52">
+                      <h4 className="font-semibold text-gray-900 text-sm mb-2">
+                        {REGION_MAP[hoveredRegion]} Region
+                      </h4>
 
-                    {hoveredBranchData ? (
-                      <>
-                        {/* Stats row */}
-                        <div className="mb-2">
-                          <div className="bg-gray-50 rounded-md px-2 py-1.5 text-center">
-                            <span className="text-sm font-bold text-gray-900">
-                              {hoveredBranchData.total_centres}
-                            </span>
-                            <span className="text-[11px] text-gray-500 ml-1">
-                              center
-                              {hoveredBranchData.total_centres !== 1 ? "s" : ""}
-                            </span>
+                      {hoveredBranchData ? (
+                        <>
+                          {/* Stats row */}
+                          <div className="mb-2">
+                            <div className="bg-gray-50 rounded-md px-2 py-1.5 text-center">
+                              <span className="text-sm font-bold text-gray-900">
+                                {hoveredBranchData.total_centres}
+                              </span>
+                              <span className="text-[11px] text-gray-500 ml-1">
+                                center{hoveredBranchData.total_centres !== 1 ? "s" : ""}
+                              </span>
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Course tags */}
-                        {hoveredBranchData.courses?.length > 0 && (
-                          <div className="grid grid-cols-2 gap-1">
-                            {hoveredBranchData.courses
-                              .slice(0, 4)
-                              .map((course, i) => (
+                          {/* Course tags */}
+                          {hoveredBranchData.courses?.length > 0 && (
+                            <div className="grid grid-cols-2 gap-1">
+                              {hoveredBranchData.courses.slice(0, 4).map((course, i) => (
                                 <span
                                   key={i}
                                   className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium text-center truncate"
@@ -407,20 +394,18 @@ const TechGhanaSection = () => {
                                   {course.title}
                                 </span>
                               ))}
-                            {hoveredBranchData.courses.length > 4 && (
-                              <span className="text-[11px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-center">
-                                +{hoveredBranchData.courses.length - 4} more
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <p className="text-xs text-gray-400">
-                        No active programs
-                      </p>
-                    )}
-                  </div>
+                              {hoveredBranchData.courses.length > 4 && (
+                                <span className="text-[11px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-center">
+                                  +{hoveredBranchData.courses.length - 4} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-xs text-gray-400">No active programs</p>
+                      )}
+                    </div>
                 </div>
               </div>
             </div>

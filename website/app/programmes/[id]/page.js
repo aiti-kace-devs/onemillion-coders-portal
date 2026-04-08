@@ -1,36 +1,36 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
-import {
-  FiArrowLeft,
-  FiClock,
-  FiBookOpen,
-  FiAward,
-  FiUsers,
-  FiCheckCircle,
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
+import { 
+  FiArrowLeft, 
+  FiClock, 
+  FiBookOpen, 
+  FiAward, 
+  FiUsers, 
+  FiCheckCircle, 
   FiTarget,
   FiGlobe,
   FiPlay,
   FiStar,
-  FiLoader,
-} from "react-icons/fi";
-import { getProgrammeData } from "../../../services/pages";
-import Button from "../../../components/Button";
-import ProgrammeDetailsSkeleton from "@/components/ProgrammeDetailsSkeleton";
-import RegistrationDialog from "@/components/RegistrationDialog";
+  FiLoader
+} from 'react-icons/fi';
+import { getProgrammeData } from '../../../services/pages';
+import Button from '../../../components/Button';
+import ProgrammeDetailsSkeleton from '@/components/ProgrammeDetailsSkeleton';
+import RegistrationDialog from '@/components/RegistrationDialog';
 
 export default function CourseDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const userId = searchParams.get("user_id");
-  const courseId = searchParams.get("course_id");
+  const userId = searchParams.get('user_id');
+  const courseId = searchParams.get('course_id');
   const [imageError, setImageError] = useState(false);
-  const centreId = searchParams.get("centre_id");
-  const [activeTab, setActiveTab] = useState("overview");
+  const centreId = searchParams.get('centre_id');
+  const [activeTab, setActiveTab] = useState('overview');
   const [programme, setProgramme] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -45,7 +45,7 @@ export default function CourseDetailsPage() {
         const data = await getProgrammeData(params.id);
         setProgramme(data);
       } catch (err) {
-        console.error("Error fetching programme:", err);
+        console.error('Error fetching programme:', err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -70,10 +70,10 @@ export default function CourseDetailsPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            {error ? "Error Loading Programme" : "Programme Not Found"}
+            {error ? 'Error Loading Programme' : 'Programme Not Found'}
           </h1>
           {error && <p className="text-red-600 mb-4">{error}</p>}
-          <Button onClick={() => router.push("/programmes")} icon={FiArrowLeft}>
+          <Button onClick={() => router.push('/programmes')} icon={FiArrowLeft}>
             Back to Programmes
           </Button>
         </div>
@@ -83,41 +83,36 @@ export default function CourseDetailsPage() {
 
   const getCategoryColor = (categoryTitle) => {
     const colors = {
-      Cybersecurity: "from-red-400 to-rose-500",
-      "DATA Protection": "from-blue-500 to-blue-600",
-      "Data Protection": "from-blue-500 to-blue-600", // Alternative naming
-      "Artificial Intelligence Training": "from-purple-500 to-purple-600",
-      "Mobile Application Development": "from-green-500 to-green-600",
-      "Systems Administration": "from-orange-500 to-orange-600",
-      "Web Application Programming": "from-indigo-500 to-indigo-600",
-      "BPO Training": "from-pink-500 to-pink-600",
-      "Other Special Training Programs": "from-gray-500 to-gray-600",
+      'Cybersecurity': 'from-red-400 to-rose-500',
+      'DATA Protection': 'from-blue-500 to-blue-600',
+      'Data Protection': 'from-blue-500 to-blue-600', // Alternative naming
+      'Artificial Intelligence Training': 'from-purple-500 to-purple-600',
+      'Mobile Application Development': 'from-green-500 to-green-600',
+      'Systems Administration': 'from-orange-500 to-orange-600',
+      'Web Application Programming': 'from-indigo-500 to-indigo-600',
+      'BPO Training': 'from-pink-500 to-pink-600',
+      'Other Special Training Programs': 'from-gray-500 to-gray-600'
     };
-    return colors[categoryTitle] || "from-gray-500 to-gray-600";
+    return colors[categoryTitle] || 'from-gray-500 to-gray-600';
   };
 
   const tabs = [
-    { id: "overview", label: "Overview", icon: FiBookOpen },
-    { id: "curriculum", label: "Curriculum", icon: FiTarget },
-    { id: "certifications", label: "Certifications", icon: FiAward },
-    { id: "prerequisites", label: "Prerequisites", icon: FiCheckCircle },
+    { id: 'overview', label: 'Overview', icon: FiBookOpen },
+    { id: 'curriculum', label: 'Curriculum', icon: FiTarget },
+    { id: 'certifications', label: 'Certifications', icon: FiAward },
+    { id: 'prerequisites', label: 'Prerequisites', icon: FiCheckCircle }
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section
-        className={`relative py-20 bg-gradient-to-br ${getCategoryColor(programme.category?.title)} overflow-hidden`}
-      >
+      <section className={`relative py-20 bg-gradient-to-br ${getCategoryColor(programme.category?.title)} overflow-hidden`}>
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
-              backgroundSize: "20px 20px",
-            }}
-          ></div>
+          <div className="absolute inset-0" style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
+            backgroundSize: '20px 20px'
+          }}></div>
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -129,7 +124,7 @@ export default function CourseDetailsPage() {
             className="mb-8"
           >
             <Button
-              onClick={() => router.push("/programmes")}
+              onClick={() => router.push('/programmes')}
               variant="ghost"
               icon={FiArrowLeft}
               iconPosition="left"
@@ -152,14 +147,12 @@ export default function CourseDetailsPage() {
                 <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
                   {programme.category?.title}
                 </span>
-                <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    isAvailable
-                      ? "bg-green-500/20 text-green-100 border border-green-400/30"
-                      : "bg-orange-500/20 text-orange-100 border border-orange-400/30"
-                  }`}
-                >
-                  {isAvailable ? "Available Now" : "Coming Soon"}
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  isAvailable 
+                    ? 'bg-green-500/20 text-green-100 border border-green-400/30' 
+                    : 'bg-orange-500/20 text-orange-100 border border-orange-400/30'
+                }`}>
+                  {isAvailable ? 'Available Now' : 'Coming Soon'}
                 </span>
               </div>
 
@@ -174,9 +167,7 @@ export default function CourseDetailsPage() {
               )}
 
               <p className="text-lg text-white/80 mb-8 leading-relaxed">
-                {programme.job_responsible ||
-                  programme.description ||
-                  "Professional training program designed to advance your career."}
+                {programme.job_responsible || programme.description || 'Professional training program designed to advance your career.'}
               </p>
 
               {/* Quick Stats */}
@@ -199,9 +190,7 @@ export default function CourseDetailsPage() {
                       <FiBookOpen className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="font-semibold">
-                        {programme.course_modules_count} Modules
-                      </div>
+                      <div className="font-semibold">{programme.course_modules_count} Modules</div>
                       <div className="text-white/70 text-sm">Curriculum</div>
                     </div>
                   </div>
@@ -211,20 +200,19 @@ export default function CourseDetailsPage() {
               {/* CTA Button */}
               <div className="flex">
                 <Button
-                  // onClick={() => isAvailable && setShowRegistrationDialog(true)}
                   onClick={() => {
-                    router.push("/register");
+                    if (userId) {
+                      isAvailable && setShowRegistrationDialog(true);
+                    } else {
+                      router.push('/register');
+                    }
                   }}
                   variant="primary"
                   icon={FiPlay}
                   disabled={!isAvailable}
                   className="!bg-white !text-gray-900 hover:!bg-gray-100"
                 >
-                  {isAvailable
-                    ? userId
-                      ? "Enroll Now"
-                      : "Get Started"
-                    : "Notify When Available"}
+                  {isAvailable ? (userId ? 'Enroll Now' : 'Get Started') : 'Notify When Available'}
                 </Button>
               </div>
             </motion.div>
@@ -284,34 +272,28 @@ export default function CourseDetailsPage() {
                       key={tab.id}
                       ref={(el) => {
                         if (el && activeTab === tab.id) {
-                          el.scrollIntoView({
-                            behavior: "smooth",
-                            block: "nearest",
-                            inline: "center",
-                          });
+                          el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                         }
                       }}
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center space-x-1.5 md:space-x-2 py-3 md:py-4 px-3 md:px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 whitespace-nowrap ${
                         activeTab === tab.id
-                          ? "border-yellow-400 text-yellow-600"
-                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                          ? 'border-yellow-400 text-yellow-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }`}
                     >
                       <tab.icon className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
-                      <span className="hidden sm:inline md:inline">
-                        {tab.label}
-                      </span>
+                      <span className="hidden sm:inline md:inline">{tab.label}</span>
                       {/* Mobile: Show abbreviated labels */}
                       <span className="sm:hidden md:hidden">
-                        {tab.label.split(" ")[0]}
+                        {tab.label.split(' ')[0]}
                       </span>
                     </button>
                   ))}
                 </div>
               </nav>
             </div>
-
+            
             {/* Mobile: Show current tab name */}
             {/* <div className="block md:hidden mt-4 px-4">
               <div className="flex items-center space-x-2 text-sm font-medium text-gray-900">
@@ -332,93 +314,62 @@ export default function CourseDetailsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            {activeTab === "overview" && (
+            {activeTab === 'overview' && (
               <div className="grid lg:grid-cols-3 gap-6 lg:gap-12 px-4 md:px-0">
                 <div className="lg:col-span-2">
-                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">
-                    Programme Overview
-                  </h2>
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Programme Overview</h2>
                   <div className="prose prose-lg max-w-none">
                     <p className="text-gray-600 leading-relaxed mb-4 md:mb-6 text-sm md:text-base">
-                      {programme.job_responsible ||
-                        programme.description ||
-                        "Professional training program designed to advance your career and provide industry-relevant skills."}
+                      {programme.job_responsible || programme.description || 'Professional training program designed to advance your career and provide industry-relevant skills.'}
                     </p>
-
-                    <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4">
-                      What You&apos;ll Learn
-                    </h3>
+                    
+                    <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4">What You&apos;ll Learn</h3>
                     <ul className="space-y-3">
-                      {programme.overview?.what_you_will_learn &&
-                      programme.overview.what_you_will_learn.length > 0
-                        ? programme.overview.what_you_will_learn.map(
-                            (item, index) => (
-                              <li
-                                key={index}
-                                className="flex items-start space-x-3"
-                              >
-                                <FiCheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                                <span className="text-gray-700">{item}</span>
-                              </li>
-                            ),
-                          )
-                        : programme.course_modules
-                            ?.slice(0, 4)
-                            .map((module, index) => (
-                              <li
-                                key={index}
-                                className="flex items-start space-x-3"
-                              >
-                                <FiCheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                                <span className="text-gray-700">
-                                  {module.title}
-                                </span>
-                              </li>
-                            ))}
+                      {programme.overview?.what_you_will_learn && programme.overview.what_you_will_learn.length > 0 ? (
+                        programme.overview.what_you_will_learn.map((item, index) => (
+                          <li key={index} className="flex items-start space-x-3">
+                            <FiCheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-gray-700">{item}</span>
+                          </li>
+                        ))
+                      ) : (
+                        programme.course_modules?.slice(0, 4).map((module, index) => (
+                          <li key={index} className="flex items-start space-x-3">
+                            <FiCheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-gray-700">{module.title}</span>
+                          </li>
+                        ))
+                      )}
                     </ul>
                   </div>
                 </div>
 
                 <div className="space-y-4 md:space-y-6 lg:mt-0">
                   <div className="bg-white rounded-2xl p-4 md:p-6 shadow-lg border border-gray-200">
-                    <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">
-                      Programme Details
-                    </h3>
+                    <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Programme Details</h3>
                     <div className="space-y-3">
                       {programme.duration && (
                         <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                          <span className="text-sm text-gray-500">
-                            Duration
-                          </span>
-                          <span className="text-sm font-medium text-gray-900">
-                            {programme.duration}
-                          </span>
+                          <span className="text-sm text-gray-500">Duration</span>
+                          <span className="text-sm font-medium text-gray-900">{programme.duration}</span>
                         </div>
                       )}
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
                         <span className="text-sm text-gray-500">Modules</span>
-                        <span className="text-sm font-medium text-gray-900">
-                          {programme.course_modules_count || 0}
-                        </span>
+                        <span className="text-sm font-medium text-gray-900">{programme.course_modules_count || 0}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
                         <span className="text-sm text-gray-500">Category</span>
-                        <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">
-                          {programme.category?.title}
-                        </span>
+                        <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">{programme.category?.title}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
                         <span className="text-sm text-gray-500">Level</span>
-                        <span className="text-sm font-medium text-gray-900">
-                          {programme.level || "Professional"}
-                        </span>
+                        <span className="text-sm font-medium text-gray-900">{programme.level || 'Professional'}</span>
                       </div>
                       {programme.mode_of_delivery && (
                         <div className="flex justify-between items-center py-2">
                           <span className="text-sm text-gray-500">Mode</span>
-                          <span className="text-sm font-medium text-gray-900">
-                            {programme.mode_of_delivery}
-                          </span>
+                          <span className="text-sm font-medium text-gray-900">{programme.mode_of_delivery}</span>
                         </div>
                       )}
                     </div>
@@ -427,25 +378,18 @@ export default function CourseDetailsPage() {
                   <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-4 md:p-6 border border-yellow-200">
                     <div className="flex items-center space-x-2 mb-2 md:mb-3">
                       <FiStar className="w-4 h-4 md:w-5 md:h-5 text-yellow-600 flex-shrink-0" />
-                      <h3 className="text-base md:text-lg font-semibold text-gray-900">
-                        Skills and tools you&apos;ll learn
-                      </h3>
+                      <h3 className="text-base md:text-lg font-semibold text-gray-900">Skills and tools you&apos;ll learn</h3>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {programme.overview?.why_choose_this_course &&
-                      programme.overview.why_choose_this_course.length > 0 ? (
-                        programme.overview.why_choose_this_course.map(
-                          (reason, index) => (
-                            <span
-                              key={index}
-                              className="inline-block px-3 py-1.5 text-xs md:text-sm text-gray-700 bg-white border border-gray-200 rounded-full"
-                            >
-                              {reason}
-                            </span>
-                          ),
-                        )
+                      {programme.overview?.why_choose_this_course && programme.overview.why_choose_this_course.length > 0 ? (
+                        programme.overview.why_choose_this_course.map((reason, index) => (
+                          <span key={index} className="inline-block px-3 py-1.5 text-xs md:text-sm text-gray-700 bg-white border border-gray-200 rounded-full">
+                            {reason}
+                          </span>
+                        ))
                       ) : (
-                        <></>
+                        <>
+                        </>
                       )}
                     </div>
                   </div>
@@ -453,13 +397,10 @@ export default function CourseDetailsPage() {
               </div>
             )}
 
-            {activeTab === "curriculum" && (
+            {activeTab === 'curriculum' && (
               <div className="px-4 md:px-0">
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">
-                  Programme Curriculum
-                </h2>
-                {programme.course_modules &&
-                programme.course_modules.length > 0 ? (
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Programme Curriculum</h2>
+                {programme.course_modules && programme.course_modules.length > 0 ? (
                   <div className="space-y-3 md:space-y-4">
                     {programme.course_modules.map((module, index) => (
                       <motion.div
@@ -474,13 +415,9 @@ export default function CourseDetailsPage() {
                             {index + 1}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-base md:text-lg font-semibold text-gray-900">
-                              {module.title}
-                            </h3>
+                            <h3 className="text-base md:text-lg font-semibold text-gray-900">{module.title}</h3>
                             {module.description && (
-                              <p className="text-gray-600 mt-2 text-sm md:text-base">
-                                {module.description}
-                              </p>
+                              <p className="text-gray-600 mt-2 text-sm md:text-base">{module.description}</p>
                             )}
                           </div>
                         </div>
@@ -490,21 +427,16 @@ export default function CourseDetailsPage() {
                 ) : (
                   <div className="text-center py-12">
                     <FiBookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">
-                      Curriculum details will be available soon.
-                    </p>
+                    <p className="text-gray-600">Curriculum details will be available soon.</p>
                   </div>
                 )}
               </div>
             )}
 
-            {activeTab === "certifications" && (
+            {activeTab === 'certifications' && (
               <div className="px-4 md:px-0">
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">
-                  Certifications
-                </h2>
-                {programme.course_certification &&
-                programme.course_certification.length > 0 ? (
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Certifications</h2>
+                {programme.course_certification && programme.course_certification.length > 0 ? (
                   <div className="grid md:grid-cols-2 gap-4 md:gap-6">
                     {programme.course_certification.map((cert, index) => (
                       <motion.div
@@ -519,17 +451,12 @@ export default function CourseDetailsPage() {
                             <FiAward className="w-5 h-5 md:w-6 md:h-6 text-white" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h3 className="text-base md:text-lg font-semibold text-gray-900">
-                              {cert.title}
-                            </h3>
-                            <p className="text-xs md:text-sm text-gray-600 truncate">
-                              {cert.type || "International Certification"}
-                            </p>
+                            <h3 className="text-base md:text-lg font-semibold text-gray-900">{cert.title}</h3>
+                            <p className="text-xs md:text-sm text-gray-600 truncate">{cert.type || 'International Certification'}</p>
                           </div>
                         </div>
                         <p className="text-gray-700 text-xs md:text-sm leading-relaxed">
-                          {cert.description ||
-                            "Industry-recognized certification that validates your skills and expertise."}
+                          {cert.description || 'Industry-recognized certification that validates your skills and expertise.'}
                         </p>
                       </motion.div>
                     ))}
@@ -537,43 +464,32 @@ export default function CourseDetailsPage() {
                 ) : (
                   <div className="text-center py-12">
                     <FiAward className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">
-                      Certification details will be available soon.
-                    </p>
+                    <p className="text-gray-600">Certification details will be available soon.</p>
                   </div>
                 )}
               </div>
             )}
 
-            {activeTab === "prerequisites" && (
+            {activeTab === 'prerequisites' && (
               <div className="px-4 md:px-0">
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">
-                  Prerequisites
-                </h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Prerequisites</h2>
                 <div className="bg-white rounded-xl p-4 md:p-8 shadow-md border border-gray-200">
                   <div className="flex items-start space-x-3 md:space-x-4">
                     <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
                       <FiCheckCircle className="w-5 h-5 md:w-6 md:h-6 text-white" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4">
-                        Entry Requirements
-                      </h3>
+                      <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4">Entry Requirements</h3>
                       <div className="text-gray-700 leading-relaxed text-sm md:text-base">
                         {programme.prerequisites ? (
                           <p>
                             {programme.prerequisites
-                              .replace(/<[^>]*>/g, "") // Strip HTML tags
-                              .replace(/\s+/g, " ") // Normalize whitespace
-                              .trim() ||
-                              "No specific prerequisites required. This programme is designed for beginners and professionals looking to advance their skills."}
+                              .replace(/<[^>]*>/g, '') // Strip HTML tags
+                              .replace(/\s+/g, ' ') // Normalize whitespace
+                              .trim() || 'No specific prerequisites required. This programme is designed for beginners and professionals looking to advance their skills.'}
                           </p>
                         ) : (
-                          <p>
-                            No specific prerequisites required. This programme
-                            is designed for beginners and professionals looking
-                            to advance their skills.
-                          </p>
+                          <p>No specific prerequisites required. This programme is designed for beginners and professionals looking to advance their skills.</p>
                         )}
                       </div>
                     </div>
@@ -590,7 +506,10 @@ export default function CourseDetailsPage() {
         isOpen={showRegistrationDialog}
         onClose={() => setShowRegistrationDialog(false)}
         programme={programme}
+        userId={userId}
+        courseId={courseId}
+        centreId={centreId}
       />
     </div>
   );
-}
+} 

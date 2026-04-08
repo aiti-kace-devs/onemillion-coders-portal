@@ -1,19 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  FiClock,
-  FiArrowRight,
-  FiCheckCircle,
-  FiX,
-  FiLoader,
-  FiGlobe,
-  FiInfo,
-  FiMapPin,
-} from "react-icons/fi";
+import { FiClock, FiArrowRight, FiCheckCircle, FiX, FiLoader, FiGlobe, FiMapPin, FiInfo } from "react-icons/fi";
 import Button from "./Button";
 import { confirmCourse } from "../services/pages";
 
@@ -52,7 +43,7 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
 
   // Category color mapping
   const categoryColors = {
-    Cybersecurity: "bg-red-50 text-red-700 border-red-100",
+    "Cybersecurity": "bg-red-50 text-red-700 border-red-100",
     "Data Protection": "bg-blue-50 text-blue-700 border-blue-100",
     "Artificial Intelligence": "bg-purple-50 text-purple-700 border-purple-100",
     "Software Development": "bg-emerald-50 text-emerald-700 border-emerald-100",
@@ -119,7 +110,9 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
     };
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-200 cursor-pointer group">
+    <div
+      className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-200 cursor-pointer group"
+    >
       {/* Image Container */}
       <div className="relative w-full h-48 bg-gray-100">
         {programme.image && !imageError ? (
@@ -147,14 +140,12 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
             onClick={(e) => {
               e.stopPropagation();
               // Only navigate to category page if we're already on the programmes page
-              if (window.location.pathname.startsWith("/programmes")) {
+              if (window.location.pathname.startsWith('/programmes')) {
                 router.push(`/programmes/category/${programme.category?.id}`);
               }
             }}
-            className={`px-3 py-1 rounded-full text-xs font-medium border cursor-pointer hover:shadow-md transition-shadow ${
-              categoryColors[programme.category?.title] ||
-              "bg-gray-100 text-gray-800 border-gray-200"
-            }`}
+            className={`px-3 py-1 rounded-full text-xs font-medium border cursor-pointer hover:shadow-md transition-shadow ${categoryColors[programme.category?.title] || "bg-gray-100 text-gray-800 border-gray-200"
+              }`}
           >
             {programme.category?.title}
           </span>
@@ -164,27 +155,17 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
       {/* Content */}
       <div className="p-6">
         {/* Title */}
-        <h3 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-1">
-          {programme.title}
-        </h3>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-1">{programme.title}</h3>
         <div className="flex items-center justify-between gap-1 mb-2 transition-colors">
-          <div className="text-sm text-gray-600 mb-4 line-clamp-1">
-            {programme.sub_title}
-          </div>
+          <div className="text-sm text-gray-600 mb-4 line-clamp-1">{programme.sub_title}</div>
           {userId && (
-            <a
-              href={`/programmes/${programme.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 mb-2 transition-colors"
-            >
-              <span className="text-[10px] sm:text-[11px] font-medium text-green-700">
-                View Details
-              </span>
+            <a href={`/programmes/${programme.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 mb-2 transition-colors">
+              <span className="text-[10px] sm:text-[11px] font-medium text-green-700">View Details</span>
               <FiInfo className="w-2.5 h-2.5 text-green-700" />
             </a>
           )}
         </div>
+
 
         {/* Stats */}
         <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
@@ -221,19 +202,54 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
           {programme.job_responsible}
         </p>
 
-        {/* Learn More Button */}
+        {/* Action Button */}
         <Button
           variant="primary"
           size="small"
           icon={FiArrowRight}
           iconPosition="right"
           className="w-full justify-center group-hover:shadow-lg transition-all duration-200"
-          onClick={(e) => {
+          onClick={async (e) => {
             e.stopPropagation();
-            router.push(`/programmes/${programme.id}`);
+            if (userId) {
+              if (programme.mode_of_delivery === "Online") {
+                // Show support/accessibility modal
+                setShowEnrollModal(true);
+                setNeedsSupport(null);
+                setEnrollSuccess(false);
+                setEnrollError(null);
+              } else {
+                // Enroll directly without modal
+                try {
+                  setEnrollSubmitting(true);
+                  setEnrollError(null);
+                  await confirmCourse({
+                    userId,
+                    course_id: programme.course_id || programme.id,
+                    support: false,
+                    ...(centreId && { centre_id: centreId }),
+                  });
+                  setEnrollSuccess(true);
+                  setShowEnrollModal(true);
+                } catch (err) {
+                  const apiErrors = err.response?.data?.errors;
+                  const apiMessage = err.response?.data?.message;
+                  if (apiErrors) {
+                    setEnrollError(Object.values(apiErrors).flat().join(". "));
+                  } else {
+                    setEnrollError(apiMessage || "Failed to enroll. Please try again.");
+                  }
+                  setShowEnrollModal(true);
+                } finally {
+                  setEnrollSubmitting(false);
+                }
+              }
+            } else {
+              router.push(`/programmes/${programme.id}`);
+            }
           }}
         >
-          Learn More
+          {userId ? "Enroll Now" : "Learn More"}
         </Button>
       </div>
 
@@ -247,11 +263,7 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
             onClick={(e) => {
-              if (
-                e.target === e.currentTarget &&
-                !enrollSubmitting &&
-                !enrollSuccess
-              ) {
+              if (e.target === e.currentTarget && !enrollSubmitting && !enrollSuccess) {
                 setShowEnrollModal(false);
               }
             }}
@@ -273,10 +285,7 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
                   </h2>
                   <p className="text-gray-500 text-sm sm:text-base mb-6">
                     You have been successfully enrolled in{" "}
-                    <span className="font-semibold text-gray-700">
-                      {programme.title}
-                    </span>
-                    .
+                    <span className="font-semibold text-gray-700">{programme.title}</span>.
                   </p>
                   <button
                     onClick={() => {
@@ -302,16 +311,12 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
                       One more thing
                     </h2>
                     <p className="text-gray-500 text-xs sm:text-sm">
-                      Enrolling in{" "}
-                      <span className="font-medium text-gray-700">
-                        {programme.title}
-                      </span>
+                      Enrolling in <span className="font-medium text-gray-700">{programme.title}</span>
                     </p>
                   </div>
 
                   <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-4">
-                    Do you require any special support or accessibility
-                    assistance?
+                    Do you require any special support or accessibility assistance?
                   </h3>
 
                   {enrollError && (
@@ -323,21 +328,19 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
                   <div className="grid grid-cols-2 gap-3 mb-6">
                     <button
                       onClick={() => setNeedsSupport(true)}
-                      className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                        needsSupport === true
-                          ? "bg-gray-900 text-white border-gray-900"
-                          : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                      }`}
+                      className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${needsSupport === true
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                        }`}
                     >
                       Yes, I do
                     </button>
                     <button
                       onClick={() => setNeedsSupport(false)}
-                      className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                        needsSupport === false
-                          ? "bg-gray-900 text-white border-gray-900"
-                          : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                      }`}
+                      className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${needsSupport === false
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                        }`}
                     >
                       No, thanks
                     </button>
@@ -353,11 +356,10 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
                     <button
                       onClick={handleEnrollSubmit}
                       disabled={needsSupport === null || enrollSubmitting}
-                      className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${
-                        needsSupport !== null && !enrollSubmitting
-                          ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      }`}
+                      className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${needsSupport !== null && !enrollSubmitting
+                        ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        }`}
                     >
                       {enrollSubmitting ? (
                         <>
@@ -379,4 +381,4 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
   );
 };
 
-export default ProgrammeCard;
+export default ProgrammeCard; 

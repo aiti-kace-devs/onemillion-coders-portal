@@ -25,10 +25,12 @@ import {
 } from "../../../services/api";
 
 // ─── Constants ─────────────────────────────────────────────
+const MAX_VIOLATIONS = 3;
+
 const LEVELS = [
-  { key: "beginner", label: "Beginner", color: "#2e7d32" },
-  { key: "intermediate", label: "Intermediate", color: "#f9a825" },
-  { key: "expert", label: "Expert", color: "#c62828" },
+  { key: "beginner", label: "Step 1", color: "#2e7d32" },
+  { key: "intermediate", label: "Step 2", color: "#f9a825" },
+  { key: "expert", label: "Step 3", color: "#c62828" },
 ];
 
 const ANSWER_COLORS = [
@@ -75,13 +77,13 @@ function requestFullscreen() {
     el.requestFullscreen ||
     el.webkitRequestFullscreen ||
     el.msRequestFullscreen;
-  if (rfs) {
+   if (rfs) {
     rfs.call(el).catch(() => {
       // Fallback: ask parent to do it
-      window.parent.postMessage({ type: "REQUEST_FULLSCREEN" }, "*");
+      window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
     });
   } else {
-    window.parent.postMessage({ type: "REQUEST_FULLSCREEN" }, "*");
+    window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
   }
 }
 
@@ -92,10 +94,10 @@ function exitFullscreen() {
     document.msExitFullscreen;
   if (efs && document.fullscreenElement) {
     efs.call(document).catch(() => {
-      window.parent.postMessage({ type: "EXIT_FULLSCREEN" }, "*");
+      window.parent.postMessage({ type: 'EXIT_FULLSCREEN' }, '*');
     });
   } else {
-    window.parent.postMessage({ type: "EXIT_FULLSCREEN" }, "*");
+    window.parent.postMessage({ type: 'EXIT_FULLSCREEN' }, '*');
   }
 }
 
@@ -233,7 +235,9 @@ function LevelTransition({
             }}
           />
         </div>
-        <p className="text-white/30 text-xs mt-2">Starting next step...</p>
+        <p className="text-white/30 text-xs mt-2">
+          Starting next step...
+        </p>
       </motion.div>
     </motion.div>
   );
@@ -294,7 +298,7 @@ export default function QuizPage({ params }) {
             [q.level || "beginner"]: q.total_level_questions,
           }));
         }
-        if (typeof response?.violation_count === "number") {
+        if (typeof response?.violation_count === 'number') {
           violationsRef.current = response.violation_count;
           setViolations(response.violation_count);
         }
@@ -308,8 +312,10 @@ export default function QuizPage({ params }) {
           response?.user_overall_level || response?.user_level || null,
         );
         setShowLevelEnd(true);
+        return true;
       } else {
         setError(response?.message || "Failed to load assessment.");
+        return false;
       }
     } catch (err) {
       console.error("Error fetching assessment:", err);
@@ -500,7 +506,7 @@ export default function QuizPage({ params }) {
   useEffect(() => {
     if (assessmentComplete) {
       exitFullscreen();
-      window.parent?.postMessage({ type: "ASSESSMENT_COMPLETE" }, "*");
+      window.parent?.postMessage({ type: 'ASSESSMENT_COMPLETE' }, '*');
     }
   }, [assessmentComplete]);
 
@@ -712,9 +718,9 @@ export default function QuizPage({ params }) {
             Level <span className="text-[#f9a825]">Assessment</span>
           </h1>
 
-          <p className="text-white/60 mb-10 max-w-xs mx-auto">
+          {/* <p className="text-white/60 mb-10 max-w-xs mx-auto">
             3 levels. Find out where you stand.
-          </p>
+          </p> */}
 
           {error && (
             <div className="flex items-center gap-2 px-4 py-3 bg-red-500/20 border border-red-500/30 rounded-xl mb-6">
@@ -741,16 +747,10 @@ export default function QuizPage({ params }) {
                   if (rfs) {
                     rfs.call(el).catch(() => {
                       // Fallback: ask parent to do it
-                      window.parent.postMessage(
-                        { type: "REQUEST_FULLSCREEN" },
-                        "*",
-                      );
+                      window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
                     });
                   } else {
-                    window.parent.postMessage(
-                      { type: "REQUEST_FULLSCREEN" },
-                      "*",
-                    );
+                    window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
                   }
                 } catch {
                   // Fullscreen denied — quiz continues without fullscreen enforcement
@@ -771,7 +771,7 @@ export default function QuizPage({ params }) {
           </motion.button>
 
           <button
-            onClick={() => window.location.href = process.env.NEXT_PUBLIC_PORTAL_URL || '/'}
+            onClick={() => router.push(`${process.env.NEXT_PUBLIC_PORTAL_URL}`)}
             className="mt-5 text-sm text-white/40 hover:text-white/80 transition-colors"
           >
             <FiHome className="inline mr-1 -mt-0.5" size={14} /> Back to Home
@@ -811,36 +811,20 @@ export default function QuizPage({ params }) {
     <div className="min-h-screen relative flex flex-col">
       {BG}
 
+      {/* ── Violation Warning Overlay ── */}
+      <AnimatePresence>
+        {showViolation && !assessmentComplete && (
+          <ViolationOverlay
+            violations={violations}
+            maxViolations={MAX_VIOLATIONS}
+            onResume={handleResumeFromViolation}
+          />
+        )}
+      </AnimatePresence>
+
       {/* ── Top Bar ── */}
       <div className="relative z-20 px-4 pt-4 pb-3">
         <div className="max-w-[30rem] mx-auto">
-          {/* Top row: Quit */}
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => {
-                setStarted(false);
-                setQuestion(null);
-                setCurrentLevel("beginner");
-                setSelected(null);
-                setScore(0);
-                setShowLevelEnd(false);
-                setLevelScores({});
-                setPassedLevels({});
-                setAnswered({});
-                setLevelTotals({});
-                setTimeLeft(0);
-                setSubmittingAnswer(false);
-                setAssessmentComplete(false);
-                setOverallLevel(null);
-                setLastResult(null);
-              }}
-              className="text-white/60 hover:text-white text-xs font-semibold transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/10"
-            >
-              <FiX size={14} />
-              Quit
-            </button>
-          </div>
-
           {/* Level progress pills */}
           <div className="flex items-center gap-1 sm:gap-1.5 mb-3">
             {LEVELS.map((level, li) => {
@@ -1071,15 +1055,15 @@ export default function QuizPage({ params }) {
 
                     <div className="space-y-2.5">
                       <button
-                        onClick={() => {
-                          if (window.parent !== window) {
-                            window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
-                          }
-                          window.location.href = `${process.env.NEXT_PUBLIC_PORTAL_URL}/student/choose-course`;
-                        }}
+                        onClick={() =>
+                          router.push(
+                            process.env.NEXT_PUBLIC_PORTAL_URL +
+                              `/student/change-course`,
+                          )
+                        }
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
-                        Proceed to Portal <FiArrowRight size={16} />
+                        Proceed to Course Selection <FiArrowRight size={16} />
                       </button>
                     </div>
                   </div>
@@ -1142,15 +1126,15 @@ export default function QuizPage({ params }) {
                     </div>
                     <div className="space-y-2.5">
                       <button
-                        onClick={() => {
-                          if (window.parent !== window) {
-                            window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
-                          }
-                          window.location.href = `${process.env.NEXT_PUBLIC_PORTAL_URL}/student/choose-course`;
-                        }}
+                        onClick={() =>
+                          router.push(
+                            process.env.NEXT_PUBLIC_PORTAL_URL +
+                              `/student/change-course`,
+                          )
+                        }
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
-                        Proceed to Portal <FiArrowRight size={16} />
+                        Proceed to Course Selection <FiArrowRight size={16} />
                       </button>
                     </div>
                   </div>
