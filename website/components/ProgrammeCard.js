@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,11 +12,12 @@ import {
   FiLoader,
   FiGlobe,
   FiInfo,
+  FiMapPin,
 } from "react-icons/fi";
 import Button from "./Button";
 import { confirmCourse } from "../services/pages";
 
-const ProgrammeCard = ({ programme }) => {
+const ProgrammeCard = ({ programme, userId, centreId }) => {
   const router = useRouter();
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [needsSupport, setNeedsSupport] = useState(null);

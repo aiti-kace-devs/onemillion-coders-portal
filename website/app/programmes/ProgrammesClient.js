@@ -11,6 +11,8 @@ import ProgrammeSkeleton from "../../components/ProgrammeSkeleton";
 export default function ProgrammesClient({ initialCategory }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const userId = searchParams.get("user_id") || searchParams.get("userId") || null;
+  const centreId = searchParams.get("centre_id") || searchParams.get("centreId") || null;
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedDuration, setSelectedDuration] = useState("All");
@@ -494,7 +496,7 @@ export default function ProgrammesClient({ initialCategory }) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  <ProgrammeCard programme={programme} />
+                  <ProgrammeCard programme={programme} userId={userId} centreId={centreId} />
                 </motion.div>
               ))
             )}
