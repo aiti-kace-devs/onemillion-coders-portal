@@ -14,6 +14,8 @@ import {
   FiClock,
   FiUpload,
   FiChevronDown,
+  FiEye,
+  FiEyeOff,
 } from "react-icons/fi";
 import {
   getRegistrationForm,
@@ -66,6 +68,12 @@ function RegisterForm() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [emailFieldName, setEmailFieldName] = useState(null);
   const [phoneFieldName, setPhoneFieldName] = useState(null);
+  const [passwordFieldName, setPasswordFieldName] = useState(null);
+
+  // Confirm password (frontend-only, never sent to API)
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Real-time email availability state
   const [emailAvailability, setEmailAvailability] = useState({ status: null, message: "" });
@@ -87,8 +95,12 @@ function RegisterForm() {
           f.type?.toLowerCase() === "phonenumber" ||
           f.type?.toLowerCase() === "phone"
       );
+      const pwField = formSchema.schema.find(
+        (f) => f.type?.toLowerCase() === "password"
+      );
       setEmailFieldName(eField?.field_name || null);
       setPhoneFieldName(pField?.field_name || null);
+      setPasswordFieldName(pwField?.field_name || null);
     }
   }, [formSchema]);
 
@@ -226,6 +238,10 @@ function RegisterForm() {
         [fieldName]: null,
       }));
     }
+    // If the password field changed, clear any stale confirm-password error
+    if (fieldName === passwordFieldName && formErrors.confirm_password) {
+      setFormErrors((prev) => ({ ...prev, confirm_password: null }));
+    }
     if (error) {
       setError(null);
     }
@@ -281,6 +297,24 @@ function RegisterForm() {
           }
         }
       });
+
+    // Confirm-password check (frontend-only): if this group contains the password
+    // field, require confirmPassword to be present and match.
+    if (passwordFieldName) {
+      const groupHasPassword = group.fields.some(
+        (f) => f.field_name === passwordFieldName
+      );
+      if (groupHasPassword) {
+        const pwValue = formData[passwordFieldName];
+        if (pwValue) {
+          if (!confirmPassword) {
+            errors.confirm_password = "Please confirm your password";
+          } else if (confirmPassword !== pwValue) {
+            errors.confirm_password = "Passwords do not match";
+          }
+        }
+      }
+    }
 
     return errors;
   };
@@ -608,6 +642,34 @@ function RegisterForm() {
       );
     }
 
+    // Password field with show/hide eye toggle
+    if (field.type?.toLowerCase() === "password") {
+      return (
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+            className={`${baseClasses} pr-11`}
+            placeholder={placeholder}
+            autoComplete="new-password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((s) => !s)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? (
+              <FiEyeOff className="w-5 h-5" />
+            ) : (
+              <FiEye className="w-5 h-5" />
+            )}
+          </button>
+        </div>
+      );
+    }
+
     // Standard input field
     return (
       <input
@@ -854,6 +916,57 @@ function RegisterForm() {
                                 }}
                                 emailStatus={emailAvailability.status}
                               />
+                            )}
+
+                            {/* Confirm Password (frontend-only, rendered right after the password field) */}
+                            {passwordFieldName && field.field_name === passwordFieldName && (
+                              <div id="field-confirm_password" className="space-y-1.5 pt-4">
+                                <label className="block text-sm font-medium text-gray-700">
+                                  Confirm Password
+                                  <span className="text-red-500 ml-1" aria-label="required">*</span>
+                                </label>
+                                <div className="relative">
+                                  <input
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    value={confirmPassword}
+                                    onChange={(e) => {
+                                      setConfirmPassword(e.target.value);
+                                      if (formErrors.confirm_password) {
+                                        setFormErrors((prev) => ({ ...prev, confirm_password: null }));
+                                      }
+                                    }}
+                                    className={`w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 pr-11 ${
+                                      formErrors.confirm_password
+                                        ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                                        : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
+                                    } focus:outline-none hover:border-gray-300`}
+                                    placeholder="Re-enter your password"
+                                    autoComplete="new-password"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword((s) => !s)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                  >
+                                    {showConfirmPassword ? (
+                                      <FiEyeOff className="w-5 h-5" />
+                                    ) : (
+                                      <FiEye className="w-5 h-5" />
+                                    )}
+                                  </button>
+                                </div>
+                                {formErrors.confirm_password && (
+                                  <motion.p
+                                    initial={{ opacity: 0, y: -5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="text-sm text-red-600 flex items-center"
+                                  >
+                                    <FiAlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                                    {formErrors.confirm_password}
+                                  </motion.p>
+                                )}
+                              </div>
                             )}
                           </div>
                         ))}
