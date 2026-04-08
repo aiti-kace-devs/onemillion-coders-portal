@@ -272,6 +272,7 @@ export default function QuizPage({ params }) {
             setAssessmentComplete(true);
             setShowLevelEnd(true);
             setSelected(null);
+            setLastResult(null);
             setSubmittingAnswer(false);
           } else if (result?.level_complete) {
             // Current level is done, show transition
@@ -280,6 +281,7 @@ export default function QuizPage({ params }) {
             setPassedLevels((p) => ({ ...p, [currentLevel]: result?.passed_level || false }));
             setShowLevelEnd(true);
             setSelected(null);
+            setLastResult(null);
             setSubmittingAnswer(false);
 
             // Store next question for after the transition
@@ -306,10 +308,12 @@ export default function QuizPage({ params }) {
               setCurrentLevel(nextQ.level);
             }
             setSelected(null);
+            setLastResult(null);
             setSubmittingAnswer(false);
           } else {
             // Fallback: just reset selection
             setSelected(null);
+            setLastResult(null);
             setSubmittingAnswer(false);
           }
         }, 1100);
@@ -318,6 +322,7 @@ export default function QuizPage({ params }) {
         // On error, just advance
         setTimeout(() => {
           setSelected(null);
+          setLastResult(null);
           setSubmittingAnswer(false);
         }, 1100);
       }
