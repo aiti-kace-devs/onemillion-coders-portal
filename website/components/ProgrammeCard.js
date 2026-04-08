@@ -58,17 +58,17 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
 
   // Mode of delivery mapping
   const modeStyles = {
-    "Online": {
+    "Hybrid": {
       color: "bg-blue-50 text-blue-700 border-blue-100",
-      icon: FiMonitor
+      icon: FiGlobe
     },
     "In Person": {
-      color: "bg-green-50 text-green-700 border-green-100",
+      color: "bg-red-50 text-red-700 border-red-100",
       icon: FiMapPin
     },
-    "Hybrid": {
+    "Online": {
       color: "bg-purple-50 text-purple-700 border-purple-100",
-      icon: FiGlobe
+      icon: FiMonitor
     }
   };
 

@@ -4,19 +4,20 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { 
-  FiArrowLeft, 
-  FiClock, 
-  FiBookOpen, 
-  FiAward, 
-  FiUsers, 
-  FiCheckCircle, 
+import {
+  FiArrowLeft,
+  FiClock,
+  FiBookOpen,
+  FiAward,
+  FiUsers,
+  FiCheckCircle,
   FiTarget,
   FiGlobe,
   FiPlay,
   FiStar,
   FiLoader,
-  FiMonitor
+  FiMonitor,
+  FiMapPin
 } from 'react-icons/fi';
 import { getProgrammeData } from '../../../services/pages';
 import Button from '../../../components/Button';
@@ -148,11 +149,10 @@ export default function CourseDetailsPage() {
                 <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
                   {programme.category?.title}
                 </span>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  isAvailable 
-                    ? 'bg-green-500/20 text-green-100 border border-green-400/30' 
-                    : 'bg-orange-500/20 text-orange-100 border border-orange-400/30'
-                }`}>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${isAvailable
+                  ? 'bg-green-500/20 text-green-100 border border-green-400/30'
+                  : 'bg-orange-500/20 text-orange-100 border border-orange-400/30'
+                  }`}>
                   {isAvailable ? 'Available Now' : 'Coming Soon'}
                 </span>
               </div>
@@ -277,11 +277,10 @@ export default function CourseDetailsPage() {
                         }
                       }}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center space-x-1.5 md:space-x-2 py-3 md:py-4 px-3 md:px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 whitespace-nowrap ${
-                        activeTab === tab.id
-                          ? 'border-yellow-400 text-yellow-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
+                      className={`flex items-center space-x-1.5 md:space-x-2 py-3 md:py-4 px-3 md:px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 whitespace-nowrap ${activeTab === tab.id
+                        ? 'border-yellow-400 text-yellow-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
                     >
                       <tab.icon className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
                       <span className="hidden sm:inline md:inline">{tab.label}</span>
@@ -294,7 +293,7 @@ export default function CourseDetailsPage() {
                 </div>
               </nav>
             </div>
-            
+
             {/* Mobile: Show current tab name */}
             {/* <div className="block md:hidden mt-4 px-4">
               <div className="flex items-center space-x-2 text-sm font-medium text-gray-900">
@@ -323,7 +322,7 @@ export default function CourseDetailsPage() {
                     <p className="text-gray-600 leading-relaxed mb-4 md:mb-6 text-sm md:text-base">
                       {programme.job_responsible || programme.description || 'Professional training program designed to advance your career and provide industry-relevant skills.'}
                     </p>
-                    
+
                     <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4">What You&apos;ll Learn</h3>
                     <ul className="space-y-3">
                       {programme.overview?.what_you_will_learn && programme.overview.what_you_will_learn.length > 0 ? (
@@ -370,14 +369,13 @@ export default function CourseDetailsPage() {
                       {programme.mode_of_delivery && (
                         <div className="flex justify-between items-center py-2">
                           <span className="text-sm text-gray-500">Mode</span>
-                          <span className={`text-sm font-medium flex items-center gap-1.5 ${
-                            programme.mode_of_delivery === "Online" ? "text-blue-700" :
-                            programme.mode_of_delivery === "In Person" ? "text-green-700" : "text-purple-700"
-                          }`}>
+                          <span className={`text-sm font-medium flex items-center gap-1.5 ${programme.mode_of_delivery === "Online" ? "text-purple-700" :
+                            programme.mode_of_delivery === "In Person" ? "text-red-700" : "text-blue-700"
+                            }`}>
                             {programme.mode_of_delivery === "Online" ? (
                               <FiMonitor className="w-3.5 h-3.5" />
                             ) : programme.mode_of_delivery === "In Person" ? (
-                              <FiUsers className="w-3.5 h-3.5" />
+                              <FiMapPin className="w-3.5 h-3.5" />
                             ) : (
                               <FiGlobe className="w-3.5 h-3.5" />
                             )}
