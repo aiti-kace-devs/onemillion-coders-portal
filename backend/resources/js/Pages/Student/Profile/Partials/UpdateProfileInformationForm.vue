@@ -123,7 +123,7 @@ const submit = () => {
       <h2 class="text-lg font-medium text-gray-900">Profile Information</h2>
 
       <div class="mt-1">
-        <p v-if="detailsUpdated" class="text-sm text-green-600">
+        <p v-if="detailsUpdated" class="text-sm text-red-600">
           You have already updated your details
         </p>
 
@@ -221,13 +221,12 @@ const submit = () => {
             <div class="flex">
               <span
                 v-if="form.card_type === 'ghcard'"
-                class="inline-flex items-center px-3 border border-r-0 text-sm rounded-l-sm h-10"
+                class="inline-flex items-center px-4 border border-r-0 text-gray-500 font-medium text-sm rounded-l-xl h-11 bg-gray-50 border-gray-200"
                 id="ghcard-addon"
                 :class="{
-                  'text-gray-700 border-green-600': cardVerified,
-                  'border-red-600': !cardVerified,
-                  'cursor-not-allowed bg-gray-200 text-gray-700': detailsUpdated,
+                  'text-green-600 border-green-600': cardVerified,
                   'border-red-600': form.errors.ghcard,
+                  'cursor-not-allowed bg-gray-100 text-gray-400': detailsUpdated,
                 }"
                 >GHA-</span
               >
@@ -239,10 +238,8 @@ const submit = () => {
                 required
                 :disabled="detailsUpdated"
                 :class="{
-                  'border-l-0': form.card_type === 'ghcard',
+                  'border-l-0 rounded-l-none': form.card_type === 'ghcard',
                   'border-green-600': cardVerified,
-                  'border-red-600': !cardVerified,
-                  'rounded-none rounded-r-sm': form.card_type === 'ghcard',
                   'border-red-600': form.errors.ghcard,
                 }"
                 placeholder="123456789-1"

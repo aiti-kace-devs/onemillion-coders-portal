@@ -8,7 +8,9 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Models\Course;
+use App\Models\CourseSession;
 use App\Helpers\CourseFieldHelpers;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class CourseSessionCrudController
@@ -34,6 +36,7 @@ class CourseSessionCrudController extends CrudController
         CRUD::setModel(\App\Models\CourseSession::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-session');
         CRUD::setEntityNameStrings('course session', 'course sessions');
+        CRUD::addClause('where', 'session_type', CourseSession::TYPE_COURSE);
     }
 
     /**
@@ -44,6 +47,7 @@ class CourseSessionCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
         WidgetHelper::courseSessionStatisticsWidget();
 
         CRUD::column('name')->type('textarea');
@@ -111,7 +115,8 @@ class CourseSessionCrudController extends CrudController
     public function ajaxList()
     {
         $courseId = request()->get('course_id');
-        $sessions = \App\Models\CourseSession::select('id', 'name', 'course_id')
+        $sessions = \App\Models\CourseSession::courseType()
+            ->select('id', 'name', 'course_id')
             ->when($courseId, function ($query) use ($courseId) {
                 return $query->where('course_id', $courseId);
             })

@@ -53,6 +53,7 @@ function RegisterPageContent() {
   const [formData, setFormData] = useState({});
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [consentContent, setConsentContent] = useState("");
 
@@ -227,11 +228,15 @@ function RegisterPageContent() {
       setFormErrors((prev) => ({ ...prev, confirm_password: null }));
     }
 
+    // Clear field-level error and top-level error banner when user makes changes
     if (formErrors[fieldName]) {
       setFormErrors((prev) => ({
         ...prev,
         [fieldName]: null,
       }));
+    }
+    if (error) {
+      setError(null);
     }
   };
 
@@ -273,6 +278,24 @@ function RegisterPageContent() {
             }
           } catch (error) {
             errors[field.field_name] = "Please enter a valid Ghana phone number";
+          }
+        }
+
+        // Password validation
+        if (field.type === "password" && value) {
+          if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,64}$/.test(value)) {
+            errors[field.field_name] = "Password must be at least 6 characters with an uppercase letter, a lowercase letter, and a number.";
+          } else if (value !== confirmPassword) {
+            errors[field.field_name] = "Passwords do not match.";
+          }
+        }
+
+        if (field.type === "file" && value instanceof File && field.options) {
+          const allowedExtensions = field.options.split(",").map((ext) => ext.trim().toLowerCase());
+          const fileName = value.name || "";
+          const fileExtension = fileName.split(".").pop()?.toLowerCase();
+          if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+            errors[field.field_name] = `Only ${allowedExtensions.map((e) => e.toUpperCase()).join(", ")} files are allowed`;
           }
         }
       });
@@ -523,7 +546,13 @@ function RegisterPageContent() {
             id={`file-${field.field_name}`}
             type="file"
             className="hidden"
-            accept={field.type === "image" ? "image/*" : undefined}
+            accept={
+              field.type === "image"
+                ? "image/*"
+                : field.options
+                ? field.options.split(",").map((ext) => `.${ext.trim().toLowerCase()}`).join(",")
+                : undefined
+            }
             onChange={(e) => {
               const file = e.target.files[0];
               if (file) {
@@ -540,7 +569,11 @@ function RegisterPageContent() {
                 Drag & drop or click to upload
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                {field.type === "image" ? "PNG, JPG, GIF up to 5MB" : "PDF, DOC up to 10MB"}
+                {field.type === "image"
+                  ? "PNG, JPG, GIF up to 5MB"
+                  : field.options
+                  ? `${field.options.split(",").map((e) => e.trim().toUpperCase()).join(", ")} up to 10MB`
+                  : "PDF, DOC up to 10MB"}
               </p>
             </>
           )}
@@ -630,6 +663,78 @@ function RegisterPageContent() {
       );
     }
 
+    // Password field with validation checklist
+    if (field.type === "password") {
+      const checks = [
+        { label: "At least 6 characters", met: value.length >= 6 },
+        { label: "Contains at least one uppercase letter", met: /[A-Z]/.test(value) },
+        { label: "Contains at least one lowercase letter", met: /[a-z]/.test(value) },
+        { label: "Contains a number", met: /\d/.test(value) },
+      ];
+
+      return (
+        <div>
+          <input
+            type="password"
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+            className={baseClasses}
+            placeholder={placeholder}
+            autoComplete="new-password"
+          />
+          <div className="mt-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Confirm Password <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={`w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 ${
+                confirmPassword && confirmPassword !== value && !value.startsWith(confirmPassword)
+                  ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                  : confirmPassword && confirmPassword === value
+                  ? "border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                  : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
+              } focus:outline-none hover:border-gray-300`}
+              placeholder="Re-enter your password"
+              autoComplete="new-password"
+            />
+            {confirmPassword && confirmPassword !== value && !value.startsWith(confirmPassword) && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <FiAlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                Passwords do not match.
+              </p>
+            )}
+          </div>
+          {value.length > 0 && (
+            <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+              {checks.map((check, i) => (
+                <li key={i} className="flex items-center gap-2 text-xs sm:text-sm">
+                  <span
+                    className={`inline-flex items-center justify-center w-4 h-4 shrink-0 rounded border transition-colors duration-200 ${
+                      check.met
+                        ? "bg-green-500 border-green-500 text-white"
+                        : "border-gray-300 bg-white"
+                    }`}
+                  >
+                    {check.met && (
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </span>
+                  <span className={check.met ? "text-green-600" : "text-gray-500"}>
+                    {check.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      );
+    }
+
     // Standard input field
     return (
       <input
@@ -649,7 +754,7 @@ function RegisterPageContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="bg-white border-b border-gray-200 sticky top-[76px] sm:top-[84px] z-10">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
@@ -699,7 +804,7 @@ function RegisterPageContent() {
                         )}
                       </div>
                       <span
-                        className={`text-[10px] sm:text-xs font-medium transition-colors ${
+                        className={`hidden sm:inline text-xs font-medium transition-colors ${
                           index <= currentGroupIndex ? "text-gray-700" : "text-gray-400"
                         }`}
                       >
@@ -822,6 +927,24 @@ function RegisterPageContent() {
                                 {formErrors[field.field_name]}
                               </motion.p>
                             )}
+                            {field.type === "password" && !formErrors[field.field_name] && formData[field.field_name] && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,64}$/.test(formData[field.field_name]) && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1"
+                              >
+                                <p className="text-sm text-green-600 flex items-center">
+                                  <FiCheckCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                                  Password is good to go!
+                                </p>
+                                {confirmPassword === formData[field.field_name] && (
+                                  <p className="text-sm text-green-600 flex items-center">
+                                    <FiCheckCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                                    Passwords match!
+                                  </p>
+                                )}
+                              </motion.div>
+                            )}
                             {field.description && !formErrors[field.field_name] && (
                               <p className="text-xs text-gray-400 leading-relaxed">
                                 {field.description}
@@ -869,7 +992,12 @@ function RegisterPageContent() {
                                 email={formData[field.field_name] || ""}
                                 phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
                                 formUuid={formSchema.uuid}
-                                onVerified={setOtpVerified}
+                                onVerified={(verified) => {
+                                  setOtpVerified(verified);
+                                  if (verified && formErrors.otp) {
+                                    setFormErrors((prev) => ({ ...prev, otp: null }));
+                                  }
+                                }}
                                 emailStatus={emailAvailability.status}
                               />
                             )}
@@ -960,7 +1088,15 @@ function RegisterPageContent() {
                               <input
                                 type="checkbox"
                                 checked={consentAccepted}
-                                onChange={(e) => setConsentAccepted(e.target.checked)}
+                                onChange={(e) => {
+                                setConsentAccepted(e.target.checked);
+                                if (formErrors.consent) {
+                                  setFormErrors((prev) => ({ ...prev, consent: null }));
+                                }
+                                if (error) {
+                                  setError(null);
+                                }
+                              }}
                                 className="mt-0.5 w-[18px] h-[18px] rounded border-gray-300 text-yellow-500 focus:ring-yellow-500 group-hover:border-yellow-400 transition-colors"
                               />
                               <span className="text-sm text-gray-700">

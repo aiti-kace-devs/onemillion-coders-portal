@@ -17,7 +17,11 @@ class CourseMatch extends Model
         'icon',
         'tag',
         'description',
+        'order',
         'status',
+        'is_multiple_select',
+        'type',
+        'reference_source'
        
     ];
     use CrudTrait;
@@ -25,6 +29,10 @@ class CourseMatch extends Model
 
     protected $casts = [
         'course_match_options' => 'array',
+        'is_multiple_select' => 'boolean',
+        'type' => 'string',
+        'reference_source' => 'string',
+        'order' => 'integer'
     ];
 
     public function courseMatchOptions()

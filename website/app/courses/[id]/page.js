@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
   FiMapPin,
@@ -20,23 +20,28 @@ import {
   FiStar,
   FiSearch,
   FiX,
+  FiGlobe,
+  FiInfo,
 } from "react-icons/fi";
 import {
   getAllRegions,
   getDistrictsByBranch,
   getCentresByDistrict,
+  confirmCourse,
 } from "../../../services/pages";
 import {
   checkUserStatus,
   getCourseMatchQuestions,
   getCourseRecommendations,
+  checkUserRecommendedCourses,
 } from "../../../services/api";
 import Button from "../../../components/Button";
-import { getCourseImage } from "../../../utils/courseImages";
 
 export default function CoursesPage({ params }) {
   const { id } = React.use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
 
   // User verification state
   const [userStatus, setUserStatus] = useState(null);
@@ -46,6 +51,7 @@ export default function CoursesPage({ params }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [imageErrors, setImageErrors] = useState({});
 
   // Location state
   const [allRegions, setAllRegions] = useState(null);
@@ -67,33 +73,166 @@ export default function CoursesPage({ params }) {
   const [recommendations, setRecommendations] = useState([]);
   const [showResults, setShowResults] = useState(false);
 
+  // Previous recommendations state
+  const [previousRecommendations, setPreviousRecommendations] = useState(null);
+  const [checkingRecommendations, setCheckingRecommendations] = useState(true);
+
+  // Enrollment state
+  const [enrollingCourseId, setEnrollingCourseId] = useState(null);
+  const [enrollingCentreId, setEnrollingCentreId] = useState(null);
+  const [needsSupport, setNeedsSupport] = useState(null);
+  const [enrollSubmitting, setEnrollSubmitting] = useState(false);
+  const [enrollSuccess, setEnrollSuccess] = useState(false);
+  const [enrolledCourseName, setEnrolledCourseName] = useState("");
+
+  // Helper to update URL query params without navigation
+  const updateQueryParams = useCallback((params) => {
+    const url = new URL(window.location.href);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        url.searchParams.set(key, value);
+      } else {
+        url.searchParams.delete(key);
+      }
+    });
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
+  // Sync step and selections to query params
+  useEffect(() => {
+    if (!userStatus || step <= 1) return;
+    updateQueryParams({
+      step,
+      region: selectedRegion?.id || null,
+      district: selectedDistrict?.id || null,
+      centre: selectedCentre?.id || null,
+    });
+  }, [
+    step,
+    selectedRegion,
+    selectedDistrict,
+    selectedCentre,
+    userStatus,
+    updateQueryParams,
+  ]);
+
+  // Restore progress from query params
+  const restoreFromParams = async () => {
+    const savedStep = parseInt(searchParams.get("step"));
+    const regionId = searchParams.get("region");
+    const districtId = searchParams.get("district");
+    const centreId = searchParams.get("centre");
+
+    if (!savedStep || savedStep <= 1 || !regionId) return;
+
+    try {
+      // Fetch regions and find the saved one
+      const regions = await getAllRegions(token);
+      setAllRegions(regions);
+      const region = regions?.find((r) => String(r.id) === regionId);
+      if (!region) return;
+      setSelectedRegion(region);
+
+      if (savedStep >= 2) {
+        const districts = await getDistrictsByBranch(region.id, token);
+        setAvailableDistricts(districts);
+
+        if (districtId && savedStep >= 3) {
+          const district = districts?.districts?.find(
+            (d) => String(d.id) === districtId,
+          );
+          if (!district) {
+            setStep(2);
+            return;
+          }
+          setSelectedDistrict(district);
+
+          const centres = await getCentresByDistrict(district.id, token);
+          setAvailableCenters(centres);
+
+          if (centreId && savedStep >= 4) {
+            const centre = centres?.centres?.find(
+              (c) => String(c.id) === centreId,
+            );
+            if (!centre) {
+              setStep(3);
+              return;
+            }
+            setSelectedCentre(centre);
+
+            const data = await getCourseMatchQuestions("Choice", token);
+            setQuestions(data || []);
+          }
+        }
+      }
+
+      setStep(savedStep);
+    } catch {
+      // If restore fails, user starts fresh
+    }
+  };
+
   useEffect(() => {
     const verifyUser = async () => {
       try {
         setVerifying(true);
         setVerificationError(null);
-        const data = await checkUserStatus(id);
+        const data = await checkUserStatus(id, token);
+        if (data?.success === false) {
+          setVerificationError(
+            data.message || "User not found. Please register first.",
+          );
+          setCheckingRecommendations(false);
+          return;
+        }
         setUserStatus(data);
-        fetchAllRegions();
+
+        // Check for previous recommended courses
+        try {
+          setCheckingRecommendations(true);
+          const recData = await checkUserRecommendedCourses(id, token);
+          if (recData?.success && recData?.matches?.length > 0) {
+            setPreviousRecommendations(recData);
+          } else {
+            // No previous recommendations — check for saved progress in query params
+            const hasProgress = searchParams.get("step");
+            if (hasProgress) {
+              await restoreFromParams();
+            } else {
+              fetchAllRegions();
+            }
+          }
+        } catch {
+          // If check fails, just start the normal flow
+          const hasProgress = searchParams.get("step");
+          if (hasProgress) {
+            await restoreFromParams();
+          } else {
+            fetchAllRegions();
+          }
+        } finally {
+          setCheckingRecommendations(false);
+        }
       } catch (err) {
         console.error("Error verifying user:", err);
         setVerificationError(
           err.response?.status === 404
             ? "User not found. Please register first."
-            : "Unable to verify your account. Please try again."
+            : "Unable to verify your account. Please try again.",
         );
+        setCheckingRecommendations(false);
       } finally {
         setVerifying(false);
       }
     };
     verifyUser();
-  }, [id]);
+  }, [id, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAllRegions = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getAllRegions();
+      const data = await getAllRegions(token);
       setAllRegions(data);
     } catch (err) {
       setError("Failed to load regions. Please try again.");
@@ -103,39 +242,45 @@ export default function CoursesPage({ params }) {
     }
   };
 
-  const fetchDistricts = useCallback(async (branchId) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getDistrictsByBranch(branchId);
-      setAvailableDistricts(data);
-    } catch (err) {
-      setError("Failed to load districts. Please try again.");
-      console.error("Error fetching districts:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchDistricts = useCallback(
+    async (branchId) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getDistrictsByBranch(branchId, token);
+        setAvailableDistricts(data);
+      } catch (err) {
+        setError("Failed to load districts. Please try again.");
+        console.error("Error fetching districts:", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token],
+  );
 
-  const fetchCenters = useCallback(async (districtId) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getCentresByDistrict(districtId);
-      setAvailableCenters(data);
-    } catch (err) {
-      setError("Failed to load centers. Please try again.");
-      console.error("Error fetching centers:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchCenters = useCallback(
+    async (districtId) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getCentresByDistrict(districtId, token);
+        setAvailableCenters(data);
+      } catch (err) {
+        setError("Failed to load centers. Please try again.");
+        console.error("Error fetching centers:", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token],
+  );
 
   const fetchQuestions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getCourseMatchQuestions();
+      const data = await getCourseMatchQuestions("Choice", token);
       setQuestions(data || []);
     } catch (err) {
       setError("Failed to load questions. Please try again.");
@@ -143,7 +288,7 @@ export default function CoursesPage({ params }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
   const handleRegionSelect = (region) => {
     setSelectedRegion(region);
@@ -191,16 +336,37 @@ export default function CoursesPage({ params }) {
   };
 
   const handleAnswer = (questionId, optionId) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
-    // Auto-advance after a brief delay so user sees their selection
-    setTimeout(() => {
-      if (currentQuestion < questions.length - 1) {
-        setCurrentQuestion((prev) => prev + 1);
-      } else {
-        generateRecommendations();
-      }
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 300);
+    const question = questions.find((q) => q.id === questionId);
+    if (question?.is_multiple_select) {
+      // Toggle option in array
+      setAnswers((prev) => {
+        const current = prev[questionId] || [];
+        const updated = current.includes(optionId)
+          ? current.filter((id) => id !== optionId)
+          : [...current, optionId];
+        return { ...prev, [questionId]: updated };
+      });
+    } else {
+      setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
+      // Auto-advance after a brief delay so user sees their selection
+      setTimeout(() => {
+        if (currentQuestion < questions.length - 1) {
+          setCurrentQuestion((prev) => prev + 1);
+        } else {
+          generateRecommendations();
+        }
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 300);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion((prev) => prev + 1);
+    } else {
+      generateRecommendations();
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const prevQuestion = () => {
@@ -213,11 +379,13 @@ export default function CoursesPage({ params }) {
     try {
       setSubmitting(true);
       setError(null);
-      const optionIds = Object.values(answers);
+      const optionIds = Object.values(answers).flat();
       const data = await getCourseRecommendations({
         optionIds,
         userId: id,
+        regionId: selectedRegion?.id,
         centreId: selectedCentre?.id,
+        token,
       });
       setRecommendations(data || []);
       setShowResults(true);
@@ -236,18 +404,96 @@ export default function CoursesPage({ params }) {
     setShowResults(false);
   };
 
-  const handleCourseSelect = (course) => {
-    const params = new URLSearchParams({
-      region_id: selectedRegion.id,
-      centre_id: selectedCentre.id,
-      programme_id: course.id,
-    });
-    router.push(`/register?${params.toString()}`);
+  const handleStartQuizFlow = () => {
+    setPreviousRecommendations(null);
+    fetchAllRegions();
+  };
+
+  const handleEnrollClick = async (course) => {
+    const courseId = course.course_id || course.id;
+    const centreId = course.centre_id || selectedCentre?.id;
+    setEnrolledCourseName(course.title);
+
+    if (course.mode_of_delivery === "Online") {
+      // Show support/accessibility modal
+      setEnrollingCourseId(courseId);
+      setEnrollingCentreId(centreId);
+      setNeedsSupport(null);
+    } else {
+      // Enroll directly without modal
+      try {
+        setEnrollSubmitting(true);
+        setError(null);
+        await confirmCourse(
+          {
+            userId: id,
+            course_id: courseId,
+            support: false,
+            ...(centreId && { centre_id: centreId }),
+          },
+          token,
+        );
+        setEnrollSuccess(true);
+        updateQueryParams({
+          step: null,
+          region: null,
+          district: null,
+          centre: null,
+        });
+      } catch (err) {
+        const apiErrors = err.response?.data?.errors;
+        const apiMessage = err.response?.data?.message;
+        if (apiErrors) {
+          setError(Object.values(apiErrors).flat().join(". "));
+        } else {
+          setError(apiMessage || "Failed to enroll. Please try again.");
+        }
+      } finally {
+        setEnrollSubmitting(false);
+      }
+    }
+  };
+
+  const handleEnrollSubmit = async () => {
+    try {
+      setEnrollSubmitting(true);
+      setError(null);
+      const centreId = enrollingCentreId || selectedCentre?.id;
+      await confirmCourse(
+        {
+          userId: id,
+          course_id: enrollingCourseId,
+          support: needsSupport === true,
+          ...(centreId && { centre_id: centreId }),
+        },
+        token,
+      );
+      setEnrollSuccess(true);
+      updateQueryParams({
+        step: null,
+        region: null,
+        district: null,
+        centre: null,
+      });
+      setEnrollingCourseId(null);
+      setEnrollingCentreId(null);
+    } catch (err) {
+      const apiErrors = err.response?.data?.errors;
+      const apiMessage = err.response?.data?.message;
+      if (apiErrors) {
+        setError(Object.values(apiErrors).flat().join(". "));
+      } else {
+        setError(apiMessage || "Failed to enroll. Please try again.");
+      }
+    } finally {
+      setEnrollSubmitting(false);
+    }
   };
 
   const goToStep = (targetStep) => {
     // Allow going forward to step 4 if quiz progress exists
-    const canGoForward = targetStep === 4 && selectedCentre && questions.length > 0;
+    const canGoForward =
+      targetStep === 4 && selectedCentre && questions.length > 0;
     if (targetStep < step || canGoForward) {
       setStep(targetStep);
       setSearchQuery("");
@@ -272,14 +518,17 @@ export default function CoursesPage({ params }) {
   const stepLabels = ["Region", "District", "Center", "Course"];
   const activeQuestion = questions[currentQuestion];
 
-
   // Show verification state before allowing access
-  if (verifying) {
+  if (verifying || checkingRecommendations) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center px-4">
           <div className="w-10 h-10 border-3 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 text-sm">Verifying your account...</p>
+          <p className="text-gray-600 text-sm">
+            {verifying
+              ? "Verifying your account..."
+              : "Checking your courses..."}
+          </p>
         </div>
       </div>
     );
@@ -288,18 +537,14 @@ export default function CoursesPage({ params }) {
   if (verificationError) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-        <div className="h-1.5 w-full bg-gradient-to-r from-red-600 via-yellow-400 to-green-600" />
-        <div className="flex items-center justify-center min-h-[calc(100vh-6px)] px-4">
+        <div className="flex items-center justify-center min-h-screen px-4">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="w-full max-w-md"
           >
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              {/* Top accent strip */}
-              <div className="h-1 bg-gradient-to-r from-red-400 via-orange-400 to-red-400" />
-
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               <div className="px-6 py-8 sm:px-8 sm:py-10 text-center">
                 {/* Icon */}
                 <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-5">
@@ -319,12 +564,6 @@ export default function CoursesPage({ params }) {
                 {/* Actions */}
                 <div className="flex flex-col gap-3">
                   <button
-                    onClick={() => router.push("/register")}
-                    className="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
-                  >
-                    Create an Account
-                  </button>
-                  <button
                     onClick={() => window.location.reload()}
                     className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium text-sm rounded-xl transition-colors"
                   >
@@ -333,13 +572,349 @@ export default function CoursesPage({ params }) {
                 </div>
               </div>
             </div>
-
-            {/* Help text */}
-            <p className="text-center text-xs text-gray-400 mt-4">
-              Already registered? Make sure you&apos;re using the correct link from your email.
-            </p>
           </motion.div>
         </div>
+      </div>
+    );
+  }
+
+  // Show previous recommendations if available
+  if (previousRecommendations) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+        {/* Ghana flag gradient bar */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-red-600 via-yellow-400 to-green-600" />
+
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3 py-3.5 sm:py-4">
+              <Image
+                src="/images/one-million-coders-logo.png"
+                alt="One Million Coders"
+                width={120}
+                height={40}
+                className="h-8 sm:h-10 w-auto flex-shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <h1 className="text-sm sm:text-xl font-bold text-gray-900">
+                  Course Registration
+                </h1>
+                <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">
+                  One Million Coders Programme
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Enrollment Modal */}
+        <AnimatePresence>
+          {(enrollingCourseId || enrollSuccess) && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+              onClick={(e) => {
+                if (
+                  e.target === e.currentTarget &&
+                  !enrollSubmitting &&
+                  !enrollSuccess
+                ) {
+                  setEnrollingCourseId(null);
+                  setEnrollingCentreId(null);
+                  setNeedsSupport(null);
+                }
+              }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ duration: 0.2 }}
+                className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 sm:p-8 relative"
+              >
+                {enrollSuccess ? (
+                  <div className="text-center">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FiCheckCircle className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" />
+                    </div>
+                    <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-2">
+                      You&apos;re enrolled!
+                    </h2>
+                    <p className="text-gray-500 text-sm sm:text-base mb-6">
+                      You have been successfully enrolled in{" "}
+                      <span className="font-semibold text-gray-700">
+                        {enrolledCourseName}
+                      </span>
+                      .
+                    </p>
+                    <button
+                      onClick={() => {
+                        setEnrollSuccess(false);
+                        setEnrollingCourseId(null);
+                        setEnrollingCentreId(null);
+                        setNeedsSupport(null);
+                      }}
+                      className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setEnrollingCourseId(null);
+                        setEnrollingCentreId(null);
+                        setNeedsSupport(null);
+                      }}
+                      className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <FiX className="w-5 h-5" />
+                    </button>
+                    <div className="text-center mb-5">
+                      <h2 className="text-base sm:text-xl font-bold text-gray-900 mb-1">
+                        One more thing
+                      </h2>
+                      <p className="text-gray-500 text-xs sm:text-sm">
+                        Enrolling in{" "}
+                        <span className="font-medium text-gray-700">
+                          {enrolledCourseName}
+                        </span>
+                      </p>
+                    </div>
+
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-4">
+                      Do you require any special support or accessibility
+                      assistance?
+                    </h3>
+
+                    {error && (
+                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+                        <p className="text-red-700 text-sm">{error}</p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                      <button
+                        onClick={() => setNeedsSupport(true)}
+                        className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
+                          needsSupport === true
+                            ? "bg-gray-900 text-white border-gray-900"
+                            : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                        }`}
+                      >
+                        Yes, I do
+                      </button>
+                      <button
+                        onClick={() => setNeedsSupport(false)}
+                        className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
+                          needsSupport === false
+                            ? "bg-gray-900 text-white border-gray-900"
+                            : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                        }`}
+                      >
+                        No, thanks
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          setEnrollingCourseId(null);
+                          setEnrollingCentreId(null);
+                          setNeedsSupport(null);
+                        }}
+                        className="flex-1 py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium text-sm rounded-xl transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleEnrollSubmit}
+                        disabled={needsSupport === null || enrollSubmitting}
+                        className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${
+                          needsSupport !== null && !enrollSubmitting
+                            ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        {enrollSubmitting ? (
+                          <>
+                            <FiLoader className="w-4 h-4 animate-spin" />
+                            Enrolling...
+                          </>
+                        ) : (
+                          "Confirm Enrollment"
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Previous Recommendations Content */}
+        <motion.div
+          className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 lg:py-10"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        >
+          {error && !enrollingCourseId && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-red-700 text-sm font-medium">{error}</p>
+                <button
+                  onClick={() => setError(null)}
+                  className="text-red-600 text-xs sm:text-sm underline mt-1 hover:text-red-800 transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Results header */}
+          <div className="text-center mb-6 sm:mb-10">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-5">
+              <FiCheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
+            </div>
+            <h2 className="text-base sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
+              {previousRecommendations.title}
+            </h2>
+            <p className="text-gray-500 text-xs sm:text-base max-w-lg mx-auto">
+              {previousRecommendations.description ||
+                "Based on your previous preferences, here are recommended courses that best align with your goals"}
+            </p>
+          </div>
+
+          {/* Course cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+            {previousRecommendations.matches.map((course, index) => (
+              <motion.div
+                key={course.id}
+                className="rounded-lg bg-white border border-gray-200 overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{
+                  duration: 0.2,
+                  delay: Math.min(index * 0.04, 0.2),
+                }}
+              >
+                <div className="relative h-28 sm:h-32 bg-gray-100">
+                  {course.image && !imageErrors[course.id] ? (
+                    <Image
+                      src={course.image}
+                      alt={course.title}
+                      fill
+                      className="object-cover"
+                      onError={() =>
+                        setImageErrors((prev) => ({
+                          ...prev,
+                          [course.id]: true,
+                        }))
+                      }
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                      <Image
+                        src="/images/one-million-coders-logo.png"
+                        alt="One Million Coders"
+                        width={80}
+                        height={27}
+                        className="opacity-15"
+                      />
+                    </div>
+                  )}
+                  <div className="absolute top-1.5 left-1.5 bg-gray-900 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[9px] sm:text-[11px] font-bold">
+                    {course.rank || `#${index + 1}`}
+                  </div>
+                  <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+                    {course.match_percentage && (
+                      <span
+                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${
+                          parseInt(course.match_percentage.split("%")[0]) >= 70
+                            ? "bg-green-50/90 text-green-700"
+                            : "bg-yellow-50/90 text-yellow-700"
+                        }`}
+                      >
+                        <FiStar className="w-2.5 h-2.5" />
+                        {course.match_percentage}
+                      </span>
+                    )}
+                    {course.duration && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-gray-600 rounded-full text-[10px] font-medium backdrop-blur-sm">
+                        <FiClock className="w-2.5 h-2.5" />
+                        {course.duration}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="p-2.5 sm:p-3">
+                  <h3 className="text-xs sm:text-sm font-semibold text-gray-900 mb-1 line-clamp-2 leading-tight">
+                    {course.title}
+                  </h3>
+                  {course.sub_title && (
+                    <div className="flex items-center justify-between gap-1 mb-2 transition-colors">
+                      <div className="text-sm text-gray-600 line-clamp-1">
+                        {course.sub_title}
+                      </div>
+                      {userStatus && (
+                        <a
+                          href={`/programmes/${course.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 mb-2 transition-colors"
+                        >
+                          <span className="text-[10px] sm:text-[11px] font-medium text-green-700">
+                            View Details
+                          </span>
+                          <FiInfo className="w-2.5 h-2.5 text-green-700" />
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  {course.mode_of_delivery && (
+                    <div className="flex items-center gap-1 mb-2">
+                      <FiGlobe className="w-2.5 h-2.5 text-blue-600" />
+                      <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">
+                        {course.mode_of_delivery}
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => handleEnrollClick(course)}
+                    disabled={enrollSubmitting}
+                    className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-xs rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    Enroll Now
+                    <FiChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Retake Quiz button */}
+          <div className="mt-8 sm:mt-10 flex justify-center">
+            <button
+              onClick={handleStartQuizFlow}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white font-semibold text-sm rounded-xl transition-colors"
+            >
+              <FiTarget className="w-4 h-4" />
+              Retake Quiz
+            </button>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -387,19 +962,30 @@ export default function CoursesPage({ params }) {
                 <React.Fragment key={num}>
                   <button
                     onClick={() => goToStep(num)}
-                    disabled={num >= step && !(num === 4 && selectedCentre && questions.length > 0)}
+                    disabled={
+                      num >= step &&
+                      !(num === 4 && selectedCentre && questions.length > 0)
+                    }
                     className="flex items-center gap-1 sm:gap-2 group flex-shrink-0"
                   >
                     <div
                       className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${
-                        step > num || (num === 4 && step === 3 && selectedCentre && questions.length > 0)
+                        step > num ||
+                        (num === 4 &&
+                          step === 3 &&
+                          selectedCentre &&
+                          questions.length > 0)
                           ? "bg-green-500 text-white cursor-pointer group-hover:bg-green-600"
                           : step === num
-                          ? "bg-yellow-400 text-gray-900 ring-2 sm:ring-4 ring-yellow-100"
-                          : "bg-gray-200 text-gray-400"
+                            ? "bg-yellow-400 text-gray-900 ring-2 sm:ring-4 ring-yellow-100"
+                            : "bg-gray-200 text-gray-400"
                       }`}
                     >
-                      {step > num || (num === 4 && step === 3 && selectedCentre && questions.length > 0) ? (
+                      {step > num ||
+                      (num === 4 &&
+                        step === 3 &&
+                        selectedCentre &&
+                        questions.length > 0) ? (
                         <FiCheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                       ) : (
                         num
@@ -438,7 +1024,9 @@ export default function CoursesPage({ params }) {
                   className="flex items-center gap-1 sm:gap-1.5 hover:text-yellow-600 transition-colors py-0.5 min-w-0"
                 >
                   <FiMapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
-                  <span className="truncate max-w-[80px] sm:max-w-none">{selectedRegion.title}</span>
+                  <span className="truncate max-w-[80px] sm:max-w-none">
+                    {selectedRegion.title}
+                  </span>
                 </button>
               )}
               {selectedDistrict && (
@@ -448,7 +1036,9 @@ export default function CoursesPage({ params }) {
                     onClick={() => goToStep(2)}
                     className="flex items-center gap-1 sm:gap-1.5 hover:text-yellow-600 transition-colors py-0.5 min-w-0"
                   >
-                    <span className="truncate max-w-[80px] sm:max-w-none">{selectedDistrict.title}</span>
+                    <span className="truncate max-w-[80px] sm:max-w-none">
+                      {selectedDistrict.title}
+                    </span>
                   </button>
                 </>
               )}
@@ -459,7 +1049,9 @@ export default function CoursesPage({ params }) {
                     onClick={() => goToStep(3)}
                     className="flex items-center gap-1 sm:gap-1.5 hover:text-yellow-600 transition-colors py-0.5 min-w-0"
                   >
-                    <span className="truncate max-w-[80px] sm:max-w-none">{selectedCentre.title}</span>
+                    <span className="truncate max-w-[80px] sm:max-w-none">
+                      {selectedCentre.title}
+                    </span>
                   </button>
                 </>
               )}
@@ -546,32 +1138,39 @@ export default function CoursesPage({ params }) {
                   <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
                     {allRegions
                       .filter((region) =>
-                        region.title.toLowerCase().includes(searchQuery.toLowerCase())
+                        region.title
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase()),
                       )
                       .map((region, index) => (
-                    <motion.button
-                      key={region.id}
-                      onClick={() => handleRegionSelect(region)}
-                      className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
-                    >
-                      <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
-                        {region.title}
-                      </h3>
-                    </motion.button>
-                  ))}
-                  {allRegions.filter((region) =>
-                    region.title.toLowerCase().includes(searchQuery.toLowerCase())
-                  ).length === 0 && (
-                    <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
-                      <p className="text-gray-500 text-xs sm:text-sm">
-                        No regions match &ldquo;{searchQuery}&rdquo;
-                      </p>
-                    </div>
-                  )}
-                </div>
+                        <motion.button
+                          key={region.id}
+                          onClick={() => handleRegionSelect(region)}
+                          className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{
+                            duration: 0.15,
+                            delay: Math.min(index * 0.02, 0.15),
+                          }}
+                        >
+                          <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
+                            {region.title}
+                          </h3>
+                        </motion.button>
+                      ))}
+                    {allRegions.filter((region) =>
+                      region.title
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()),
+                    ).length === 0 && (
+                      <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
+                        <p className="text-gray-500 text-xs sm:text-sm">
+                          No regions match &ldquo;{searchQuery}&rdquo;
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </>
               ) : (
                 !loading && (
@@ -651,24 +1250,31 @@ export default function CoursesPage({ params }) {
                   <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
                     {availableDistricts.districts
                       .filter((district) =>
-                        district.title.toLowerCase().includes(searchQuery.toLowerCase())
+                        district.title
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase()),
                       )
                       .map((district, index) => (
-                      <motion.button
-                        key={district.id}
-                        onClick={() => handleDistrictSelect(district)}
-                        className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
-                      >
-                        <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
-                          {district.title}
-                        </h3>
-                      </motion.button>
-                    ))}
+                        <motion.button
+                          key={district.id}
+                          onClick={() => handleDistrictSelect(district)}
+                          className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{
+                            duration: 0.15,
+                            delay: Math.min(index * 0.02, 0.15),
+                          }}
+                        >
+                          <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
+                            {district.title}
+                          </h3>
+                        </motion.button>
+                      ))}
                     {availableDistricts.districts.filter((district) =>
-                      district.title.toLowerCase().includes(searchQuery.toLowerCase())
+                      district.title
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()),
                     ).length === 0 && (
                       <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
                         <p className="text-gray-500 text-xs sm:text-sm">
@@ -700,7 +1306,6 @@ export default function CoursesPage({ params }) {
                   </div>
                 )
               )}
-
             </motion.div>
           )}
 
@@ -779,11 +1384,14 @@ export default function CoursesPage({ params }) {
                     {availableCenters.centres
                       .filter((c) => !filterPwdFriendly || c.is_pwd_friendly)
                       .filter((c) =>
-                        c.title.toLowerCase().includes(searchQuery.toLowerCase())
+                        c.title
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase()),
                       )
                       .map((centre, index) => {
                         const accessibilityFeatures = [
-                          centre.wheelchair_accessible && "Wheelchair accessible",
+                          centre.wheelchair_accessible &&
+                            "Wheelchair accessible",
                           centre.has_access_ramp && "Access ramp",
                           centre.has_accessible_toilet && "Accessible toilet",
                           centre.has_elevator && "Elevator",
@@ -791,7 +1399,9 @@ export default function CoursesPage({ params }) {
                           centre.supports_visually_impaired && "Visual support",
                         ].filter(Boolean);
 
-                        const hasExtras = centre.is_pwd_friendly || accessibilityFeatures.length > 0;
+                        const hasExtras =
+                          centre.is_pwd_friendly ||
+                          accessibilityFeatures.length > 0;
 
                         return (
                           <motion.button
@@ -800,10 +1410,17 @@ export default function CoursesPage({ params }) {
                             className="w-full p-3 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.99] group"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
+                            transition={{
+                              duration: 0.15,
+                              delay: Math.min(index * 0.02, 0.15),
+                            }}
                           >
-                            <div className={`flex justify-between gap-2 ${hasExtras ? "items-start" : "items-center"}`}>
-                              <div className={`flex gap-2.5 sm:gap-3 min-w-0 flex-1 ${hasExtras ? "items-start" : "items-center"}`}>
+                            <div
+                              className={`flex justify-between gap-2 ${hasExtras ? "items-start" : "items-center"}`}
+                            >
+                              <div
+                                className={`flex gap-2.5 sm:gap-3 min-w-0 flex-1 ${hasExtras ? "items-start" : "items-center"}`}
+                              >
                                 {hasExtras ? (
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2">
@@ -818,14 +1435,16 @@ export default function CoursesPage({ params }) {
                                     </div>
                                     {accessibilityFeatures.length > 0 && (
                                       <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-1.5">
-                                        {accessibilityFeatures.map((feature) => (
-                                          <span
-                                            key={feature}
-                                            className="text-[9px] sm:text-[11px] px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full"
-                                          >
-                                            {feature}
-                                          </span>
-                                        ))}
+                                        {accessibilityFeatures.map(
+                                          (feature) => (
+                                            <span
+                                              key={feature}
+                                              className="text-[9px] sm:text-[11px] px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full"
+                                            >
+                                              {feature}
+                                            </span>
+                                          ),
+                                        )}
                                       </div>
                                     )}
                                   </div>
@@ -859,7 +1478,9 @@ export default function CoursesPage({ params }) {
                       availableCenters.centres
                         .filter((c) => !filterPwdFriendly || c.is_pwd_friendly)
                         .filter((c) =>
-                          c.title.toLowerCase().includes(searchQuery.toLowerCase())
+                          c.title
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()),
                         ).length === 0 && (
                         <div className="text-center py-8 bg-white rounded-xl border border-gray-200">
                           <p className="text-gray-500 text-xs sm:text-sm">
@@ -891,7 +1512,6 @@ export default function CoursesPage({ params }) {
                   </div>
                 )
               )}
-
             </motion.div>
           )}
 
@@ -909,7 +1529,8 @@ export default function CoursesPage({ params }) {
                   Let&apos;s match you to a course
                 </h2>
                 <p className="text-gray-500 text-xs sm:text-base mt-0.5 sm:mt-1">
-                  Answer a few questions so we can recommend the right courses for you
+                  Answer a few questions so we can recommend the right courses
+                  for you
                 </p>
               </div>
 
@@ -948,7 +1569,7 @@ export default function CoursesPage({ params }) {
                       </span>
                       <span className="text-[10px] sm:text-xs text-gray-400">
                         {Math.round(
-                          ((currentQuestion + 1) / questions.length) * 100
+                          ((currentQuestion + 1) / questions.length) * 100,
                         )}
                         %
                       </span>
@@ -981,7 +1602,7 @@ export default function CoursesPage({ params }) {
                             {
                               className:
                                 "w-5 h-5 sm:w-6 sm:h-6 text-yellow-600",
-                            }
+                            },
                           )}
                         </div>
                         <h2 className="text-base sm:text-2xl font-bold text-gray-900 mb-1.5 sm:mb-3 leading-tight">
@@ -992,55 +1613,89 @@ export default function CoursesPage({ params }) {
                             {activeQuestion.description}
                           </p>
                         )}
+                        {activeQuestion.is_multiple_select && (
+                          <p className="text-yellow-600 text-[11px] sm:text-sm font-medium mt-2">
+                            Select all that apply
+                          </p>
+                        )}
                       </div>
 
                       {/* Options */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4 max-w-3xl mx-auto">
                         {activeQuestion.course_match_options?.map(
-                          (option, index) => (
-                            <motion.button
-                              key={option.id}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ duration: 0.15, delay: Math.min(index * 0.03, 0.12) }}
-                              onClick={() =>
-                                handleAnswer(activeQuestion.id, option.id)
-                              }
-                              className={`relative p-4 sm:p-6 rounded-xl text-left transition-all duration-200 border-2 ${
-                                answers[activeQuestion.id] === option.id
-                                  ? "bg-gray-900 text-white border-gray-900"
-                                  : "bg-white border-gray-200 hover:border-yellow-400 active:scale-[0.98]"
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="font-semibold text-sm sm:text-base mb-1">
-                                    {option.answer}
-                                  </h3>
-                                  {option.description && (
-                                    <p
-                                      className={`text-xs sm:text-sm leading-relaxed ${
-                                        answers[activeQuestion.id] === option.id
-                                          ? "text-gray-300"
-                                          : "text-gray-500"
-                                      }`}
-                                    >
-                                      {option.description}
-                                    </p>
-                                  )}
+                          (option, index) => {
+                            const isSelected = activeQuestion.is_multiple_select
+                              ? (answers[activeQuestion.id] || []).includes(
+                                  option.id,
+                                )
+                              : answers[activeQuestion.id] === option.id;
+                            return (
+                              <motion.button
+                                key={option.id}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{
+                                  duration: 0.15,
+                                  delay: Math.min(index * 0.03, 0.12),
+                                }}
+                                onClick={() =>
+                                  handleAnswer(activeQuestion.id, option.id)
+                                }
+                                className={`relative p-4 sm:p-6 rounded-xl text-left transition-all duration-200 border-2 ${
+                                  isSelected
+                                    ? "bg-gray-900 text-white border-gray-900"
+                                    : "bg-white border-gray-200 hover:border-yellow-400 active:scale-[0.98]"
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  {/* Checkbox / Radio indicator */}
+                                  <div className="flex-shrink-0 mt-0.5">
+                                    {activeQuestion.is_multiple_select ? (
+                                      <div
+                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
+                                          isSelected
+                                            ? "bg-white border-white"
+                                            : "border-gray-300"
+                                        }`}
+                                      >
+                                        {isSelected && (
+                                          <FiCheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-900" />
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div
+                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                                          isSelected
+                                            ? "border-white"
+                                            : "border-gray-300"
+                                        }`}
+                                      >
+                                        {isSelected && (
+                                          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white" />
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-sm sm:text-base mb-1">
+                                      {option.answer}
+                                    </h3>
+                                    {option.description && (
+                                      <p
+                                        className={`text-xs sm:text-sm leading-relaxed ${
+                                          isSelected
+                                            ? "text-gray-300"
+                                            : "text-gray-500"
+                                        }`}
+                                      >
+                                        {option.description}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
-                                <div
-                                  className={`flex-shrink-0 transition-all duration-200 ${
-                                    answers[activeQuestion.id] === option.id
-                                      ? "opacity-100 scale-100"
-                                      : "opacity-0 scale-75"
-                                  }`}
-                                >
-                                  <FiCheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                                </div>
-                              </div>
-                            </motion.button>
-                          )
+                              </motion.button>
+                            );
+                          },
                         )}
                       </div>
                     </motion.div>
@@ -1059,12 +1714,29 @@ export default function CoursesPage({ params }) {
                     ) : (
                       <div />
                     )}
-                    {submitting && (
+                    {submitting ? (
                       <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
                         <FiLoader className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
                         Getting results...
                       </div>
-                    )}
+                    ) : activeQuestion.is_multiple_select ? (
+                      <button
+                        onClick={handleNextQuestion}
+                        disabled={
+                          (answers[activeQuestion.id] || []).length === 0
+                        }
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                          (answers[activeQuestion.id] || []).length > 0
+                            ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        {currentQuestion < questions.length - 1
+                          ? "Next"
+                          : "Get Results"}
+                        <FiChevronRight className="w-4 h-4" />
+                      </button>
+                    ) : null}
                   </div>
                 </>
               ) : (
@@ -1101,7 +1773,148 @@ export default function CoursesPage({ params }) {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
             >
-              {/* Results header */}
+              {/* Enrollment Modal */}
+              <AnimatePresence>
+                {(enrollingCourseId || enrollSuccess) && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+                    onClick={(e) => {
+                      if (
+                        e.target === e.currentTarget &&
+                        !enrollSubmitting &&
+                        !enrollSuccess
+                      ) {
+                        setEnrollingCourseId(null);
+                        setNeedsSupport(null);
+                      }
+                    }}
+                  >
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                      className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 sm:p-8 relative"
+                    >
+                      {enrollSuccess ? (
+                        <div className="text-center">
+                          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <FiCheckCircle className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" />
+                          </div>
+                          <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-2">
+                            You&apos;re enrolled!
+                          </h2>
+                          <p className="text-gray-500 text-sm sm:text-base mb-6">
+                            You have been successfully enrolled in{" "}
+                            <span className="font-semibold text-gray-700">
+                              {enrolledCourseName}
+                            </span>
+                            .
+                          </p>
+                          <button
+                            onClick={() => {
+                              setEnrollSuccess(false);
+                              setEnrollingCourseId(null);
+                              setNeedsSupport(null);
+                            }}
+                            className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => {
+                              setEnrollingCourseId(null);
+                              setNeedsSupport(null);
+                            }}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            <FiX className="w-5 h-5" />
+                          </button>
+                          <div className="text-center mb-5">
+                            <h2 className="text-base sm:text-xl font-bold text-gray-900 mb-1">
+                              One more thing
+                            </h2>
+                            <p className="text-gray-500 text-xs sm:text-sm">
+                              Enrolling in{" "}
+                              <span className="font-medium text-gray-700">
+                                {enrolledCourseName}
+                              </span>
+                            </p>
+                          </div>
+
+                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-4">
+                            Do you require any special support or accessibility
+                            assistance?
+                          </h3>
+                          <div className="grid grid-cols-2 gap-3 mb-6">
+                            <button
+                              onClick={() => setNeedsSupport(true)}
+                              className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
+                                needsSupport === true
+                                  ? "bg-gray-900 text-white border-gray-900"
+                                  : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                              }`}
+                            >
+                              Yes, I do
+                            </button>
+                            <button
+                              onClick={() => setNeedsSupport(false)}
+                              className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
+                                needsSupport === false
+                                  ? "bg-gray-900 text-white border-gray-900"
+                                  : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                              }`}
+                            >
+                              No, thanks
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => {
+                                setEnrollingCourseId(null);
+                                setNeedsSupport(null);
+                              }}
+                              className="flex-1 py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium text-sm rounded-xl transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleEnrollSubmit}
+                              disabled={
+                                needsSupport === null || enrollSubmitting
+                              }
+                              className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${
+                                needsSupport !== null && !enrollSubmitting
+                                  ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              }`}
+                            >
+                              {enrollSubmitting ? (
+                                <>
+                                  <FiLoader className="w-4 h-4 animate-spin" />
+                                  Enrolling...
+                                </>
+                              ) : (
+                                "Confirm Enrollment"
+                              )}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Results header - course recommendations */}
               <div className="text-center mb-6 sm:mb-10">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-5">
                   <FiCheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
@@ -1116,68 +1929,108 @@ export default function CoursesPage({ params }) {
               </div>
 
               {recommendations.length > 0 ? (
-                <div className="space-y-3 sm:space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                   {recommendations.map((course, index) => (
-                    <motion.button
+                    <motion.div
                       key={course.id}
-                      onClick={() => handleCourseSelect(course)}
-                      className="w-full rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.99] group overflow-hidden"
+                      className="rounded-lg bg-white border border-gray-200 overflow-hidden"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
+                      transition={{
+                        duration: 0.2,
+                        delay: Math.min(index * 0.04, 0.2),
+                      }}
                     >
-                      <div className="flex flex-row">
-                        <div className="relative w-20 sm:w-36 flex-shrink-0">
+                      <div className="relative h-28 sm:h-32 bg-gray-100">
+                        {course.image && !imageErrors[course.id] ? (
                           <Image
-                            src={getCourseImage(course.id)}
+                            src={course.image}
                             alt={course.title}
                             fill
                             className="object-cover"
+                            onError={() =>
+                              setImageErrors((prev) => ({
+                                ...prev,
+                                [course.id]: true,
+                              }))
+                            }
                           />
-                          {/* Match rank badge */}
-                          <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-gray-900 text-white rounded-full w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center text-[9px] sm:text-xs font-bold">
-                            #{index + 1}
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                            <Image
+                              src="/images/one-million-coders-logo.png"
+                              alt="One Million Coders"
+                              width={80}
+                              height={27}
+                              className="opacity-15"
+                            />
                           </div>
+                        )}
+                        <div className="absolute top-1.5 left-1.5 bg-gray-900 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[9px] sm:text-[11px] font-bold">
+                          #{index + 1}
                         </div>
-                        <div className="flex-1 p-3 sm:p-5 min-w-0">
-                          <div className="flex items-start justify-between gap-2 sm:gap-3">
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-sm sm:text-lg font-semibold text-gray-900 group-hover:text-yellow-700 mb-1 sm:mb-1.5 line-clamp-2">
-                                {course.title}
-                              </h3>
-                              {course.sub_title && (
-                                <p className="text-xs sm:text-sm text-gray-500 mb-2 sm:mb-3 line-clamp-1 sm:line-clamp-2">
-                                  {course.sub_title}
-                                </p>
-                              )}
-                              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                {course.match_percentage != null && (
-                                  <span
-                                    className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium ${
-                                      course.match_percentage >= 70
-                                        ? "bg-green-50 text-green-700"
-                                        : "bg-yellow-50 text-yellow-700"
-                                    }`}
-                                  >
-                                    <FiStar className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                    {course.match_percentage}% match
-                                  </span>
-                                )}
-                                {course.duration && (
-                                  <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] sm:text-xs font-medium">
-                                    <FiClock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                    {course.duration}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-yellow-50 flex items-center justify-center group-hover:bg-yellow-100 transition-colors mt-0.5 sm:mt-1">
-                              <FiChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600 transition-transform group-hover:translate-x-0.5" />
-                            </div>
-                          </div>
+                        <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+                          {course.match_percentage != null && (
+                            <span
+                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${
+                                course.match_percentage.split("%")[0] >= 70
+                                  ? "bg-green-50/90 text-green-700"
+                                  : "bg-yellow-50/90 text-yellow-700"
+                              }`}
+                            >
+                              <FiStar className="w-2.5 h-2.5" />
+                              {course.match_percentage}
+                            </span>
+                          )}
+                          {course.duration && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-gray-600 rounded-full text-[10px] font-medium backdrop-blur-sm">
+                              <FiClock className="w-2.5 h-2.5" />
+                              {course.duration}
+                            </span>
+                          )}
                         </div>
                       </div>
-                    </motion.button>
+                      <div className="p-2.5 sm:p-3">
+                        <h3 className="text-xs sm:text-sm font-semibold text-gray-900 mb-1 line-clamp-2 leading-tight">
+                          {course.title}
+                        </h3>
+                        {course.sub_title && (
+                          <p className="text-[11px] sm:text-xs text-gray-500 mb-2 line-clamp-1">
+                            {course.sub_title}
+                          </p>
+                        )}
+                        {course.mode_of_delivery && (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1 mb-2">
+                              <FiGlobe className="w-2.5 h-2.5 text-blue-600" />
+                              <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">
+                                {course.mode_of_delivery}
+                              </span>
+                            </div>
+                            {userStatus && (
+                              <a
+                                href={`/programmes/${course.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 mb-2 transition-colors"
+                              >
+                                <span className="text-[10px] sm:text-[11px] font-medium text-green-700">
+                                  View Details
+                                </span>
+                                <FiInfo className="w-2.5 h-2.5 text-green-700" />
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => handleEnrollClick(course)}
+                          className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-xs rounded-lg transition-colors"
+                        >
+                          Enroll Now
+                          <FiChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </motion.div>
                   ))}
                 </div>
               ) : (
@@ -1202,17 +2055,19 @@ export default function CoursesPage({ params }) {
                 </div>
               )}
 
-              {/* Actions - only show retake when there are results */}
-              {recommendations.length > 0 && (
-                <div className="mt-6 sm:mt-8 flex justify-end">
-                  <button
-                    onClick={resetQuiz}
-                    className="flex items-center gap-2 text-xs sm:text-sm text-yellow-600 hover:text-yellow-700 font-medium transition-colors py-2"
-                  >
-                    Retake Quiz
-                  </button>
-                </div>
-              )}
+              {/* Actions */}
+              <div className="mt-8 sm:mt-10 flex justify-center">
+                <Button
+                  onClick={() =>
+                    router.push(
+                      `/programmes?user_id=${id}${selectedCentre ? `&centre_id=${selectedCentre.id}` : ""}`,
+                    )
+                  }
+                  className="min-h-[44px]"
+                >
+                  View All Courses
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

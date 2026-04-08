@@ -11,13 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('course_batches', function (Blueprint $table) {
+        Schema::create('user_course_recommendations', function (Blueprint $table) {
             $table->id();
+            $table->string('user_id');
             $table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete();
-            $table->foreignId('batch_id')->nullable()->constrained('branches')->nullOnDelete();
+            $table->unsignedSmallInteger('rank')->nullable();
+            $table->unsignedSmallInteger('match_percentage')->nullable();
+            $table->json('option_ids')->nullable();
             $table->timestamps();
-        });
 
+            $table->index('user_id');
+        });
     }
 
     /**
@@ -25,11 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('course_batches');
-
-        Schema::table('course_batches', function (Blueprint $table) {
-            $table->dropForeign(['course_id']);
-            $table->dropForeign(['batch_id']);
-        });
+        Schema::dropIfExists('user_course_recommendations');
     }
 };

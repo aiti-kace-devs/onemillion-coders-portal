@@ -13,4 +13,8 @@ class Oex_question_master extends Model
 
     protected $primaryKey="id";
     protected $fillbale=['exam_id','questions','ans','options','status'];
+
+    protected $casts = [
+        'status' => 'boolean',
+    ];
 }

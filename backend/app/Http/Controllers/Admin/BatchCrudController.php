@@ -14,6 +14,7 @@ use App\Helpers\BatchFieldHelpers;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class BatchCrudController
@@ -68,6 +69,7 @@ class BatchCrudController extends CrudController
     protected function setupListOperation()
     {
         WidgetHelper::admissionBatchStatisticsWidget();
+        CrudListHelper::editInDropdown();
 
         // Check permissions
         if (!backpack_user()->can('batch.read.all')) {
@@ -82,7 +84,7 @@ class BatchCrudController extends CrudController
             'name' => 'status',
             'label' => 'Status',
             'type' => 'view',
-            'view' => 'admin.status_toggle.status_column', 
+            'view' => 'admin.status_toggle.status_column',
         ]);
 
         CRUD::addColumn([
@@ -152,12 +154,22 @@ class BatchCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        // Don't call setupManageStudentShowColumns() - we use custom view instead
-        $this->crud->set('show.setFromDb', false);
-        
-        // Set custom show view
-        $this->crud->setShowView('vendor.backpack.crud.manage_student_show');
+        $this->setupCommonBatchListFields();
 
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
+
+        CRUD::addColumn([
+            'name' => 'completed',
+            'label' => 'Completed',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+            'toggle_url' => 'batch/{id}/toggle-completed',
+        ]);
     }
 
 
@@ -169,14 +181,14 @@ class BatchCrudController extends CrudController
     protected function addCoursesManagementSection()
     {
         $batch = $this->crud->getCurrentEntry();
-        
+
         if (!$batch) {
             // On create, show a message that courses can be added after saving
             CRUD::addField([
                 'name' => 'courses_notice',
                 'type' => 'custom_html',
                 'value' => '<div class="alert alert-info">
-                    <i class="la la-info-circle"></i> 
+                    <i class="la la-info-circle"></i>
                     <strong>Assign Courses:</strong> Save this batch first, then you can assign courses on the edit page.
                 </div>',
                 'tab' => 'Assign Courses',
@@ -275,7 +287,6 @@ class BatchCrudController extends CrudController
         DB::beginTransaction();
 
         try {
-            DB::table('course_batches')->where('batch_id', $id)->update(['batch_id' => null]);
             DB::table('user_admission')->where('batch_id', $id)->update(['batch_id' => null]);
 
             $result = $this->crud->delete($id);

@@ -111,6 +111,7 @@ class FormResponseController extends Controller
         $customMessages = [];
         $attributes = [];
         $phoneFieldName = null;
+        $invalidRuleErrors = [];
 
         foreach ($schema as $field) {
             $fieldName = $field['field_name'];
@@ -139,7 +140,9 @@ class FormResponseController extends Controller
                 case 'file':
                     $rules[] = 'file';
                     $rules[] = 'max:2048';
-                    if (!empty($field['options'])) {
+                    if ($field['field_name'] === 'certificate') {
+                        $rules[] = 'mimes:pdf';
+                    } elseif (!empty($field['options'])) {
                         $allowedMimes = array_map('trim', explode(',', strtolower($field['options'])));
                         $rules[] = 'mimes:' . implode(',', $allowedMimes);
                     }
@@ -154,10 +157,35 @@ class FormResponseController extends Controller
             }
 
             if (!empty($field['rules'])) {
-                $rules[] = $field['rules'];
+                $extraRules = $this->splitRuleString($field['rules']);
+                foreach ($extraRules as $extraRule) {
+                    if ($this->isRegexRule($extraRule)) {
+                        $pattern = $this->extractRegexPattern($extraRule);
+                        if (! $this->isValidRegexPattern($pattern)) {
+                            $invalidRuleErrors[$inputField][] = "{$fieldTitle} has an invalid validation rule configured.";
+                            continue;
+                        }
+                    }
+
+                    $rules[] = $extraRule;
+                }
             }
 
-            $validationRules[$inputField] = implode('|', $rules);
+            $validationRules[$inputField] = $rules;
+        }
+
+        if (!empty($invalidRuleErrors)) {
+            Log::error('Invalid regex validation rule detected in form schema.', [
+                'form_uuid' => $form->uuid ?? null,
+                'form_id' => $form->id ?? null,
+                'errors' => $invalidRuleErrors,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Form validation configuration error. Please contact support.',
+                'errors' => $invalidRuleErrors,
+            ], 422);
         }
 
         $validator = Validator::make($request->all(), $validationRules, $customMessages, $attributes);
@@ -177,6 +205,7 @@ class FormResponseController extends Controller
                 $userFieldMap = [
                     'email' => 'email',
                     'phone' => 'mobile_no',
+                    'ghana_card_number' => 'ghcard',
                 ];
                 $dbColumn = $userFieldMap[$inputField] ?? null;
                 if ($dbColumn && User::where($dbColumn, $value)->exists()) {
@@ -304,31 +333,33 @@ class FormResponseController extends Controller
         // Wrap form creation + OTP consumption in a transaction so they
         // either both succeed or both roll back. This prevents a state where
         // the form response is saved but OTP remains unconsumed (or vice versa).
-        $response = DB::transaction(function () use ($form, $responseData, $emailField, $emailValue) {
-            $response = new FormResponse([
-                'form_id' => $form->id,
-                'response_data' => $responseData,
-            ]);
-            $form->responses()->save($response);
 
-            // Consume OTP verification — prevents reuse from Postman/curl etc.
-            // If consumption fails (no row found), throw to roll back the entire transaction.
-            if ($emailField && $emailValue) {
-                $consumed = app(OtpService::class)->consumeVerification($emailValue);
-                if (!$consumed) {
-                    throw new \RuntimeException('Failed to consume OTP verification for: ' . $emailValue);
-                }
+        // Consume OTP verification — prevents reuse from Postman/curl etc.
+        // If consumption fails (no row found), throw to roll back the entire transaction.
+        if ($emailField && $emailValue) {
+            $consumed = app(OtpService::class)->consumeVerification($emailValue);
+            if (!$consumed) {
+                throw new \RuntimeException('Failed to consume OTP verification for: ' . $emailValue);
             }
+        }
+        // $response = DB::transaction(function () use ($form, $responseData, $emailField, $emailValue) {
+            // $response = new FormResponse([
+            //     'form_id' => $form->id,
+            //     'response_data' => $responseData,
+            // ]);
+            // $form->responses()->save($response);
 
-            return $response;
-        });
 
-        FormSubmittedEvent::dispatch($responseData, $response->id, $phoneFieldName);
+
+            // return $response;
+        // });
+
+        FormSubmittedEvent::dispatch($responseData, $phoneFieldName);
 
         return response()->json([
             'success' => true,
-            'message' => 'Student created successfully',
-            'data' => $response,
+            'message' => 'User created successfully',
+            // 'data' => $response,
         ], 201);
     }
 
@@ -494,5 +525,142 @@ class FormResponseController extends Controller
         $data = FormResponse::where('uuid', $uuid)->first();
 
         $data->delete();
+    }
+
+    private function splitRuleString(string $rules): array
+    {
+        $rules = trim($rules);
+        if ($rules === '') {
+            return [];
+        }
+
+        $tokens = [];
+        $length = strlen($rules);
+        $index = 0;
+
+        while ($index < $length) {
+            while ($index < $length && ctype_space($rules[$index])) {
+                $index++;
+            }
+
+            if ($index >= $length) {
+                break;
+            }
+
+            if ($this->startsWithRegexRule($rules, $index)) {
+                [$token, $nextIndex] = $this->consumeRegexRule($rules, $index);
+                $token = trim($token);
+                if ($token !== '') {
+                    $tokens[] = $token;
+                }
+                $index = $nextIndex;
+                if ($index < $length && $rules[$index] === '|') {
+                    $index++;
+                }
+                continue;
+            }
+
+            $start = $index;
+            while ($index < $length && $rules[$index] !== '|') {
+                $index++;
+            }
+
+            $token = trim(substr($rules, $start, $index - $start));
+            if ($token !== '') {
+                $tokens[] = $token;
+            }
+
+            if ($index < $length && $rules[$index] === '|') {
+                $index++;
+            }
+        }
+
+        return $tokens;
+    }
+
+    private function startsWithRegexRule(string $rules, int $index): bool
+    {
+        return str_starts_with(substr($rules, $index), 'regex:')
+            || str_starts_with(substr($rules, $index), 'not_regex:');
+    }
+
+    private function consumeRegexRule(string $rules, int $index): array
+    {
+        $prefix = str_starts_with(substr($rules, $index), 'regex:') ? 'regex:' : 'not_regex:';
+        $length = strlen($rules);
+        $current = $index + strlen($prefix);
+
+        if ($current >= $length) {
+            return [substr($rules, $index), $length];
+        }
+
+        $delimiter = $rules[$current];
+        $current++;
+        $token = $prefix . $delimiter;
+        $escaped = false;
+
+        while ($current < $length) {
+            $char = $rules[$current];
+            $token .= $char;
+
+            if ($escaped) {
+                $escaped = false;
+            } elseif ($char === '\\') {
+                $escaped = true;
+            } elseif ($char === $delimiter) {
+                $current++;
+                break;
+            }
+
+            $current++;
+        }
+
+        while ($current < $length && ctype_alpha($rules[$current])) {
+            $token .= $rules[$current];
+            $current++;
+        }
+
+        return [$token, $current];
+    }
+
+    private function isRegexRule(string $rule): bool
+    {
+        return str_starts_with($rule, 'regex:') || str_starts_with($rule, 'not_regex:');
+    }
+
+    private function extractRegexPattern(string $rule): string
+    {
+        $position = strpos($rule, ':');
+        if ($position === false) {
+            return '';
+        }
+
+        return substr($rule, $position + 1);
+    }
+
+    private function isValidRegexPattern(string $pattern): bool
+    {
+        if ($pattern === '') {
+            return false;
+        }
+
+        $isValid = true;
+        set_error_handler(function () use (&$isValid) {
+            $isValid = false;
+            return true;
+        }, E_WARNING);
+
+        try {
+            $result = preg_match($pattern, '');
+            if ($result === false) {
+                $isValid = false;
+            }
+        } catch (\Throwable $exception) {
+            $isValid = false;
+        } finally {
+            restore_error_handler();
+        }
+
+        return $isValid;
     }
 }

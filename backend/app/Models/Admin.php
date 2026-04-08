@@ -7,7 +7,6 @@ namespace App\Models;
 use App\Http\Controllers\Traits\CustomTimestamps;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use App\Notifications\ResetPasswordNotification;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Hash;
@@ -28,7 +27,7 @@ class Admin extends Authenticatable
         return (new \Statamic\Auth\Eloquent\User)->model($this);
     }
     use CrudTrait;
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, CustomTimestamps, HasUuids, LogsActivity;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, CustomTimestamps;
     protected $guard = 'admin';
 
     protected $guard_name = 'admin';
@@ -90,7 +89,7 @@ class Admin extends Authenticatable
     {
         return $this->assignedCourses()
             ->pluck('courses.id')
-            ->map(fn ($courseId) => (int) $courseId)
+            ->map(fn($courseId) => (int) $courseId)
             ->all();
     }
 
@@ -104,6 +103,19 @@ class Admin extends Authenticatable
             return null;
         }
 
+        if ($this->hasRole('centre-manager')) {
+            $centreIds = $this->assignedCentreIds();
+            if (empty($centreIds)) {
+                return [];
+            }
+
+            return Course::query()
+                ->whereIn('centre_id', $centreIds)
+                ->pluck('id')
+                ->map(fn ($courseId) => (int) $courseId)
+                ->all();
+        }
+
         return $this->assignedCourseIds();
     }
 
@@ -112,6 +124,41 @@ class Admin extends Authenticatable
         return $this->belongsToMany(Course::class, 'admin_course', 'admin_id', 'course_id')
             ->select(['courses.id', 'courses.course_name', 'courses.centre_id', 'courses.duration', 'courses.status'])
             ->withTimestamps();
+    }
+
+    public function assignedCentres()
+    {
+        return $this->belongsToMany(Centre::class, 'admin_centre', 'admin_id', 'centre_id')
+            ->select(['centres.id', 'centres.title', 'centres.branch_id', 'centres.status'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Return centre IDs explicitly assigned to this admin.
+     */
+    public function assignedCentreIds(): array
+    {
+        return $this->assignedCentres()
+            ->pluck('centres.id')
+            ->map(fn($centreId) => (int) $centreId)
+            ->all();
+    }
+
+    /**
+     * Return visible centre IDs for this admin.
+     * `null` means unrestricted visibility (super admin or non-centre managers).
+     */
+    public function visibleCentreIds(): ?array
+    {
+        if ($this->isSuper()) {
+            return null;
+        }
+
+        if ($this->hasRole('centre-manager')) {
+            return $this->assignedCentreIds();
+        }
+
+        return null;
     }
 
     public function courses()

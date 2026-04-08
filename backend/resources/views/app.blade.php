@@ -8,6 +8,13 @@
     <link rel="icon" type="image/png" href="{{ asset('assets') }}/images/logo-short.png">
     @cspMetaTag(\App\Helpers\BasePolicy::class)
     <meta property="csp-nonce" content="{{ csp_nonce() }}">
+    <script nonce="{{ csp_nonce() }}">
+        // Prevent clickjacking and double-sidebars automatically: 
+        // Break out of iframe if loaded inside one.
+        if (window.self !== window.top) {
+            window.top.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
+        }
+    </script>
     <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
     <!-- Fonts -->

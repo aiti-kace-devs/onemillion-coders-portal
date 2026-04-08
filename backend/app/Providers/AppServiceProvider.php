@@ -9,6 +9,7 @@ use Illuminate\Support\ServiceProvider;
 use Statamic\Facades\CP\Nav;
 use Illuminate\Support\Facades\Validator;
 use App\Rules\Recaptcha;
+use App\Services\JwtService;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -37,6 +38,8 @@ class AppServiceProvider extends ServiceProvider
             \Statamic\Eloquent\Commands\ExportAssets::class,
             \App\Console\Commands\ExportAssetsCommand::class
         );
+
+        $this->app->singleton(JwtService::class, fn() => JwtService::fromConfig());
     }
 
     /**
@@ -56,7 +59,15 @@ class AppServiceProvider extends ServiceProvider
         }
 
         if ($this->app->isProduction()) {
+            URL::forceRootUrl(config('app.url'));
             URL::forceScheme('https');
+            // This fixes the crash during 'php artisan basset:cache'
+            $maxTime = ini_get('max_execution_time');
+
+            // If it's a numeric string (common in GCP/Docker), cast it to int
+            if (is_numeric($maxTime)) {
+                @set_time_limit((int)$maxTime);
+            }
             // Horizon::routeSlackNotificationsTo(env('LOG_SLACK_WEBHOOK_URL', ''),  env('SLACK_CHANNEL', '#general'));
         }
 
@@ -88,7 +99,7 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer('vendor.backpack.crud.modals.admit', function ($view) {
             $view->with('courses', \App\Models\Course::pluck('course_name', 'id')->toArray());
-            $view->with('sessions', \App\Models\CourseSession::all());
+            $view->with('sessions', \App\Models\CourseSession::courseType()->get());
         });
 
         // Add Backpack Dashboard link to Statamic navigation

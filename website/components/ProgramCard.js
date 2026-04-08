@@ -1,25 +1,30 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiUsers, FiClock, FiAward, FiBookOpen, FiChevronRight, FiMapPin } from 'react-icons/fi';
+import { FiClock, FiAward, FiBookOpen, FiChevronRight, FiMapPin, FiGlobe } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Button from './Button';
 
 const ProgramCard = ({ program }) => {
   const router = useRouter();
+  const [imageError, setImageError] = useState(false);
 
   // Get category color
   const getCategoryColor = (category) => {
     const colors = {
-      'Cybersecurity': 'bg-red-100 text-red-800 border-red-200',
-      'DATA Protection': 'bg-blue-100 text-blue-800 border-blue-200',
-      'Artificial Intelligence Training': 'bg-purple-100 text-purple-800 border-purple-200',
-      'Mobile Application Development': 'bg-green-100 text-green-800 border-green-200',
-      'Systems Administration': 'bg-orange-100 text-orange-800 border-orange-200',
-      'Web Application Programming': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      'BPO Training': 'bg-pink-100 text-pink-800 border-pink-200',
-      'Other Special Training Programs': 'bg-gray-100 text-gray-800 border-gray-200'
+      'Cybersecurity': 'bg-red-50 text-red-700 border-red-100',
+      'Data Protection': 'bg-blue-50 text-blue-700 border-blue-100',
+      'Artificial Intelligence': 'bg-purple-50 text-purple-700 border-purple-100',
+      'Software Development': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+      'Cloud Computing': 'bg-orange-50 text-orange-700 border-orange-100',
+      'IT Support': 'bg-indigo-50 text-indigo-700 border-indigo-100',
+      'Data Analyst': 'bg-teal-50 text-teal-700 border-teal-100',
+      'Digital Marketing': 'bg-pink-50 text-pink-700 border-pink-100',
+      'Project Management': 'bg-amber-50 text-amber-700 border-amber-100',
+      'UI / UX Design': 'bg-violet-50 text-violet-700 border-violet-100',
+      'Digital Literacy': 'bg-cyan-50 text-cyan-700 border-cyan-100',
     };
     return colors[category] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
@@ -37,17 +42,30 @@ const ProgramCard = ({ program }) => {
       )}
       {/* Program Image */}
       <div className="relative h-48 bg-gray-100 overflow-hidden">
-        <Image
-          src={program.image || '/images/hero/Certified-Data-Protection-Manager.jpg'}
-          alt={program.job_title}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+        {program.image && !imageError ? (
+          <Image
+            src={program.image}
+            alt={program.job_title}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+            <Image
+              src="/images/one-million-coders-logo.png"
+              alt="One Million Coders"
+              width={120}
+              height={40}
+              className="opacity-15"
+            />
+          </div>
+        )}
         
         {/* Category Badge */}
         <div className="absolute top-4 left-4">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getCategoryColor(program.category)}`}>
-            {program.category}
+          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getCategoryColor(program.category?.title || program.category)}`}>
+            {program.category?.title || program.category}
           </span>
         </div>
 
@@ -60,13 +78,27 @@ const ProgramCard = ({ program }) => {
           </div>
         )}
 
-        {/* Training Duration */}
-        {program.training_duration && (
-          <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center space-x-1">
-            <FiClock className="w-3 h-3 text-gray-600" />
-            <span className="text-xs font-medium text-gray-700">{program.training_duration}</span>
-          </div>
-        )}
+        {/* Training Duration & Mode */}
+        <div className="absolute top-4 right-4 flex flex-col gap-1.5 items-end">
+          {program.training_duration && (
+            <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center space-x-1">
+              <FiClock className="w-3 h-3 text-gray-600" />
+              <span className="text-xs font-medium text-gray-700">{program.training_duration}</span>
+            </div>
+          )}
+          {program.mode_of_delivery && (
+            <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center space-x-1">
+              {program.mode_of_delivery === "Online" ? (
+                <FiGlobe className="w-3 h-3 text-blue-600" />
+              ) : (
+                <FiMapPin className="w-3 h-3 text-orange-600" />
+              )}
+              <span className={`text-xs font-medium ${
+                program.mode_of_delivery === "Online" ? "text-blue-700" : "text-orange-700"
+              }`}>{program.mode_of_delivery}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Card Content */}

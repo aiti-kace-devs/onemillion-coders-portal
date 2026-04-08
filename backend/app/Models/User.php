@@ -44,11 +44,13 @@ class User extends Authenticatable
         'ghcard',
         'gender',
         'network_type',
-        'has_disability',
+        'pwd',
         'registered_course',
         'shortlist',
+        'last_login',
         'student_level',
         'data',
+        'support'
     ];
 
     /**
@@ -58,7 +60,7 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
-        'remember_token',
+        'remember_token'
     ];
 
     /**
@@ -67,13 +69,13 @@ class User extends Authenticatable
      * @var array
      */
     protected $casts = [
-        'email_verified_at' => 'datetime',
         'shortlist' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'status' => 'boolean',
-        'has_disability' => 'boolean',
+        'pwd' => 'boolean',
         'data' => 'array',
+        'support' => 'boolean',
     ];
 
 
@@ -114,7 +116,13 @@ class User extends Authenticatable
         }
     }
 
-
+    /**
+     * Set the email attribute - always store lowercase.
+     */
+    public function setEmailAttribute($value): void
+    {
+        $this->attributes['email'] = is_string($value) ? strtolower($value) : $value;
+    }
 
     public function course()
     {
@@ -160,10 +168,10 @@ class User extends Authenticatable
         return $this->is_super;
     }
 
-    public function formResponse()
-    {
-        return $this->belongsTo(FormResponse::class, 'form_response_id');
-    }
+    // public function formResponse()
+    // {
+    //     return $this->belongsTo(FormResponse::class, 'form_response_id');
+    // }
 
     public function admission()
     {
@@ -206,9 +214,9 @@ class User extends Authenticatable
         return $this->hasMany(Attendance::class, 'user_id', 'userId');
     }
 
-    public function hasAttendance()
+    public function hasAttendance(): bool
     {
-        return $this->hasMany(Attendance::class, 'user_id', 'userId');
+        return $this->attendances()->exists();
     }
 
     public function getNameWithEmail()
@@ -297,5 +305,42 @@ class User extends Authenticatable
             ->useLogName('student')
             ->setDescriptionForEvent(fn(string $event) => "Student {$event}")
             ->dontLogIfAttributesChangedOnly(['last_login']);
+    }
+
+    public function userAssessment()
+    {
+        return $this->hasOne(UserAssessment::class);
+    }
+
+    /**
+     * Get the student's full name (alias for frontend consistency)
+     */
+    public function getStudentNameAttribute()
+    {
+        return $this->full_name;
+    }
+
+    /**
+     * Get the name of the course the student is admitted to
+     */
+    public function getCourseNameAttribute()
+    {
+        return $this->admission?->course?->course_name;
+    }
+
+    /**
+     * Get the session name (e.g., Morning, Evening)
+     */
+    public function getSelectedSessionAttribute()
+    {
+        return $this->admission?->courseSession?->session;
+    }
+
+    /**
+     * Get the date the admission was confirmed (used as verification date)
+     */
+    public function getVerificationDateAttribute()
+    {
+        return $this->admission?->confirmed;
     }
 }

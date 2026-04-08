@@ -51,6 +51,7 @@ const Footer = ({ data }) => {
       copyrights: raw.copyrights ?? null,
       collaborators: raw.collaborators ?? null,
       socialMedia: raw.social_media?.social_media ?? [],
+      backgroundImage: raw.contact_us?.image?.[0]?.url ?? null,
     };
   }, [data]);
 
@@ -82,7 +83,7 @@ const Footer = ({ data }) => {
     : `© ${new Date().getFullYear()} One Million Coders Ghana. All rights reserved.`;
 
   const footerLinks = hasData && footerData.copyrights?.footer_links?.length
-    ? footerData.copyrights.footer_links
+    ? footerData.copyrights.footer_links.filter((l) => !/powered|gi-kace/i.test(l.name))
     : [
         { name: "Terms of Service & Privacy Policy", url: "/terms-and-privacy" },
       ];
@@ -107,6 +108,19 @@ const Footer = ({ data }) => {
   return (
     <footer className="bg-gray-900 text-white relative overflow-hidden">
       <GhanaGradientBar height="1px" position="top" />
+
+      {/* Background image overlay */}
+      {footerData?.backgroundImage && (
+        <div className="absolute inset-0">
+          <Image
+            src={footerData.backgroundImage}
+            alt=""
+            fill
+            className="object-cover opacity-[0.06]"
+            sizes="100vw"
+          />
+        </div>
+      )}
 
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-20 right-20 w-64 h-64">

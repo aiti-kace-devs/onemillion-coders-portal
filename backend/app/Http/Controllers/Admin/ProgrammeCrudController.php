@@ -9,8 +9,11 @@ use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\ProgrammeFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
+use App\Helpers\MediaHelper;
 use App\Models\CourseModule;
 use App\Models\CourseCertification;
+use App\Helpers\CrudListHelper;
+use App\Models\Programme;
 
 /**
  * Class ProgrammeCrudController
@@ -51,9 +54,13 @@ class ProgrammeCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
         WidgetHelper::programmeStatisticsWidget();
 
         CRUD::column('title')->type('textarea');
+        CRUD::column('mode_of_delivery')->type('text');
+        CRUD::column('level')->type('text');
+        CRUD::column('provider')->type('text');
         FilterHelper::addGenericRelationshipColumn('category', 'Course Category', 'course-category', 'title');
         CRUD::column('duration');
         CRUD::column('start_date');
@@ -66,6 +73,23 @@ class ProgrammeCrudController extends CrudController
         ]);
         FilterHelper::addDateRangeFilter('start_date', 'Start Date');
         $this->addOngoingCoursesFilter('Ongoing Programmes');
+        $deliveryModes = Programme::query()
+            ->whereNotNull('mode_of_delivery')
+            ->select('mode_of_delivery')
+            ->distinct()
+            ->orderBy('mode_of_delivery')
+            ->pluck('mode_of_delivery', 'mode_of_delivery')
+            ->toArray();
+
+        $programmeLevel = Programme::query()
+            ->whereNotNull('level')
+            ->select('level')
+            ->distinct()
+            ->orderBy('level')
+            ->pluck('level', 'level')
+            ->toArray();
+        FilterHelper::addSelectFilter('mode_of_delivery', 'Mode of Delivery', $deliveryModes, 'select2');
+        FilterHelper::addSelectFilter('level', 'Level', $programmeLevel, 'select2');
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addTagsFilter('programmeTags', 'Tags');
         FilterHelper::addDateRangeFilter('end_date', 'End Date');
@@ -76,7 +100,24 @@ class ProgrammeCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        $this->setupShowCommonFields();
+        // $this->setupShowCommonFields();
+        CRUD::column('title')->type('textarea');
+        FilterHelper::addGenericRelationshipColumn('category', 'Course Category', 'course-category', 'title');
+        CRUD::column('duration');
+        CRUD::column('start_date');
+        CRUD::column('end_date');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
+        MediaHelper::previewMediaImagesFile('image', 'Image');
+        FilterHelper::addDateRangeFilter('start_date', 'Start Date');
+        $this->addOngoingCoursesFilter('Ongoing Programmes');
+        FilterHelper::addBooleanFilter('status', 'Status');
+        FilterHelper::addTagsFilter('programmeTags', 'Tags');
+        FilterHelper::addDateRangeFilter('end_date', 'End Date');
     }
 
     /**
@@ -127,6 +168,7 @@ class ProgrammeCrudController extends CrudController
     public function store()
     {
         $this->crud->setRequest($this->handleOverviewData());
+        $this->normalizeImagePath();
         $response = $this->traitStore();
         $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
         $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
@@ -146,6 +188,7 @@ class ProgrammeCrudController extends CrudController
 
         $programme = $this->crud->getCurrentEntry();
         $this->handleProgrammeTags($programme, $data['tags']);
+        $this->normalizeImagePath();
         $response = $this->traitUpdate();
         $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
         $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
@@ -197,7 +240,31 @@ class ProgrammeCrudController extends CrudController
         $programme->tags()->sync($tags);
     }
 
+    protected function normalizeImagePath()
+    {
+        $request = $this->crud->getRequest();
+        $imagePath = $request->input('image');
 
+        if (empty($imagePath)) {
+            return;
+        }
+
+        // If it already has https://, don't process further
+        if (strpos($imagePath, 'https://') === 0 || strpos($imagePath, 'http://') === 0) {
+            return;
+        }
+
+        // Strip "Google Cloud Storage/" or similar disk aliases
+        if (strpos($imagePath, CLOUD_STORAGE_ALIAS . '/') === 0) {
+            $imagePath = substr($imagePath, strlen(CLOUD_STORAGE_ALIAS . '/'));
+        }
+
+        // Build the full CDN URL
+        $cdnUrl = rtrim(config('filesystems.cdn_url'), '/');
+        $fullUrl = $cdnUrl . '/' . ltrim($imagePath, '/');
+
+        $request->merge(['image' => $fullUrl]);
+    }
 
     protected function handleOverviewData()
     {

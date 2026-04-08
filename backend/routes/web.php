@@ -15,6 +15,7 @@ use App\Http\Controllers\Traits\AttendanceViewRemoveTrait;
 // use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CentreController;
+use App\Http\Controllers\Admin\ConstituencyCrudController;
 use App\Http\Controllers\Admin\Api\FormPreviewController;
 use App\Http\Controllers\Admin\Api\CourseProgrammeController;
 use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
@@ -47,10 +48,14 @@ use Illuminate\Support\Str;
 |
 */
 
+Route::redirect('/', 'login');
+
 
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
 Route::post('/api/add-student', [FormResponseController::class, 'store']);
-Route::get('/api/check-user/{userID}', [RegistrationFormAPIController::class, 'check_user_by_userID']);
+Route::get('/api/constituencies/{constituency}/metrics', [ConstituencyCrudController::class, 'metrics']);
+Route::get('/api/check-user/{userID}', [RegistrationFormAPIController::class, 'check_user_by_userID'])->middleware('user.token');
+Route::post('/api/confirm-course', [RegistrationFormAPIController::class, 'confirmCourse'])->middleware('user.token');
 
 
 // OTP verification routes for registration
@@ -66,14 +71,14 @@ Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
 
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
 Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
-Route::get('/api/programmes-with-course-match', action: [CourseMatchAPIController::class, 'allProgrammesWithCourseMatch']);
-Route::get('/api/programmes', [CourseProgrammeController::class, 'index']);
+Route::get('/api/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
 Route::get('/api/programmes-with-batches', [CourseProgrammeController::class, 'programmeWithBatch']);
 Route::get('/api/programme/{id}', [CourseProgrammeController::class, 'show']);
 Route::get('/api/programmes/category/{categoryId}', [CourseProgrammeController::class, 'programmesByCategory']);
 
 Route::get('/api/programmes/{programme}/locations', [CourseProgrammeController::class, 'programmeLocations']);
 Route::get('/api/centre/{centre}/programmes', [CourseProgrammeController::class, 'programmesByCentre']);
+Route::get('/api/centres-by-id/{centre}', [CourseProgrammeController::class, 'centreById']);
 Route::get('/api/categories', [CourseProgrammeController::class, 'getCourseCategory']);
 Route::get('/api/branches', [CourseProgrammeController::class, 'getBranch']);
 Route::get('/api/branches/summary', [CourseProgrammeController::class, 'getBranchSummary']);
@@ -81,6 +86,7 @@ Route::get('admin/forms/preview/{form}', [FormPreviewController::class, 'preview
 Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'centresByBranch']);
 Route::get('/api/districts-by-branch', [CourseProgrammeController::class, 'districtsByBranch']);
 Route::get('/api/centres-by-district', [CourseProgrammeController::class, 'centresByDistrict']);
+Route::get('/api/constituencies-by-branch', [CourseProgrammeController::class, 'constituencyByRegion']);
 
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
@@ -179,7 +185,7 @@ Route::prefix('admins')
         Route::middleware(['auth:admin'])->group(function () {
             // Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
             // Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
-
+    
             Route::middleware('permission:category.read')
                 ->name('category.')
                 ->group(function () {
@@ -382,7 +388,7 @@ Route::prefix('admins')
                     ->middleware('permission:branch.status');
             });
             // end of manage branch routes
-
+    
             // manage centre routes
             Route::prefix('manage-centre')
                 ->middleware('permission:centre.read')
@@ -404,7 +410,7 @@ Route::prefix('admins')
                     ->middleware('permission:centre.delete');
             });
             // end of manage centre routes
-
+    
             // manage programme routes
             Route::prefix('manage-programme')
                 ->middleware('permission:programme.read')
@@ -428,7 +434,7 @@ Route::prefix('admins')
                     ->middleware('permission:programme.delete');
             });
             // end of manage programme routes
-
+    
             // manage course routes
             Route::prefix('manage-course')
                 ->middleware('permission:course.read')
@@ -450,7 +456,7 @@ Route::prefix('admins')
                 Route::get('/fetch/centre', [CourseController::class, 'fetchCentre'])->name('fetch.centre');
             });
             // end of manage course routes
-
+    
             // manage session routes
             Route::prefix('sessions')
                 ->middleware('permission:session.read')
@@ -475,7 +481,7 @@ Route::prefix('admins')
                     ->middleware('permission:session.delete');
             });
             // end of manage period routes
-
+    
             // manage class schedule routes
             Route::prefix('manage-class-schedule')
                 ->name('class.schedule.')
@@ -487,7 +493,7 @@ Route::prefix('admins')
                 Route::get('/{course}/delete', [ClassScheduleController::class, 'destroy'])->name('destroy');
             });
             // end of manage class schedule routes
-
+    
             // manage sms_template routes
             Route::prefix('manage-sms-template')
                 ->middleware('permission:sms-template.read')
@@ -514,7 +520,7 @@ Route::prefix('admins')
                     ->middleware('permission:student.bulk-sms');
             });
             // end of manage sms_template routes
-
+    
             // manage email_template routes
             Route::prefix('manage-email-template')
                 ->middleware('permission:email-template.read')
@@ -576,6 +582,7 @@ Route::prefix('student')->name('student.')->group(function () {
 
         // Application status route
         Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
+        Route::get('/level-assessment', [StudentOperation::class, 'level_assessment'])->name('level-assessment');
 
         // Results route
         Route::get('/results', [StudentOperation::class, 'results'])->name('results');
@@ -584,6 +591,7 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::get('/course', [StudentOperation::class, 'change_course'])->name('course.index');
         Route::get('/course/select-center/{branch_id}', [StudentOperation::class, 'select_center'])->name('course.select-center');
         Route::get('/course/select-course', [StudentOperation::class, 'select_course'])->name('course.select-course');
+        Route::get('/choose-course', [StudentOperation::class, 'change_course'])->name('change-course');
         Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course');
 
         // Notifications

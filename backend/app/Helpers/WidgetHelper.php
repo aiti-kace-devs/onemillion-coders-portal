@@ -530,11 +530,11 @@ class WidgetHelper
 
     public static function courseSessionStatisticsWidget()
     {
-        $totalSessions = CourseSession::count();
-        $activeSessions = CourseSession::where('status', 1)->count();
-        $inactiveSessions = CourseSession::where('status', 0)->count();
+        $totalSessions = CourseSession::courseType()->count();
+        $activeSessions = CourseSession::courseType()->where('status', 1)->count();
+        $inactiveSessions = CourseSession::courseType()->where('status', 0)->count();
 
-        $upcomingSessions = CourseSession::where('course_time', '>', now())->count();
+        $upcomingSessions = CourseSession::courseType()->where('course_time', '>', now())->count();
 
         $getPercent = function ($count) use ($totalSessions) {
             return $totalSessions > 0 ? round(($count / $totalSessions) * 100) : 0;

@@ -81,6 +81,153 @@ const priorityClass = (priority) => {
       return "bg-blue-100 text-blue-700";
   }
 };
+
+const sanitizeHtml = (html) => {
+  if (!html) return "";
+  if (typeof document === "undefined") {
+    return html
+      .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "");
+  }
+
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  const allowedTags = new Set([
+    "A",
+    "P",
+    "BR",
+    "STRONG",
+    "EM",
+    "B",
+    "I",
+    "UL",
+    "OL",
+    "LI",
+    "DIV",
+    "SPAN",
+    "H1",
+    "H2",
+    "H3",
+    "H4",
+    "H5",
+    "H6",
+  ]);
+
+  const walker = document.createTreeWalker(
+    template.content,
+    NodeFilter.SHOW_ELEMENT
+  );
+  const toRemove = [];
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (!allowedTags.has(node.tagName)) {
+      toRemove.push(node);
+      continue;
+    }
+
+    [...node.attributes].forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      if (name === "href") {
+        const value = attr.value.trim();
+        if (value.startsWith("javascript:")) {
+          node.removeAttribute(attr.name);
+        }
+        return;
+      }
+      if (name === "target" || name === "rel" || name === "style") {
+        return;
+      }
+      node.removeAttribute(attr.name);
+    });
+
+    if (node.tagName === "A") {
+      node.setAttribute("target", "_blank");
+      node.setAttribute("rel", "noopener noreferrer");
+    }
+  }
+
+  toRemove.forEach((node) => {
+    node.replaceWith(...node.childNodes);
+  });
+
+  return template.innerHTML;
+};
+
+const formatNotificationHtml = (message) => {
+  if (!message) return "";
+  let content = message;
+
+  // Convert [component] mail::button to a styled link
+  content = content.replace(
+    /\[component\]:\s?#\s?\(\s*['"]mail::button['"]\s*,\s*\[\s*['"]url['"]\s*=>\s*['"]([^'"]+)['"]\s*\]\s*\)\s*([\s\S]*?)\s*\[endcomponent\]:\s?#/gi,
+    (_, url, label) =>
+      `<p><a href="${url}" style="display:inline-block;padding:10px 20px;background:#1d4ed8;color:#fff;border-radius:6px;text-decoration:none;">${label.trim()}</a></p>`
+  );
+
+  // Convert @component mail::button to a styled link
+  content = content.replace(
+    /@component\(\s*['"]mail::button['"]\s*,\s*\[\s*['"]url['"]\s*=>\s*['"]([^'"]+)['"]\s*\]\s*\)\s*([\s\S]*?)\s*@endcomponent/gi,
+    (_, url, label) =>
+      `<p><a href="${url}" style="display:inline-block;padding:10px 20px;background:#1d4ed8;color:#fff;border-radius:6px;text-decoration:none;">${label.trim()}</a></p>`
+  );
+
+  // Convert [component] mail::panel to a styled panel
+  content = content.replace(
+    /\[component\]:\s?#\s?\(\s*['"]mail::panel['"]\s*\)\s*([\s\S]*?)\s*\[endcomponent\]:\s?#/gi,
+    (_, body) =>
+      `<div style="padding:12px 16px;background:#f3f4f6;border-radius:8px;margin:8px 0;">${body.trim()}</div>`
+  );
+
+  // Convert @component mail::panel to a styled panel
+  content = content.replace(
+    /@component\(\s*['"]mail::panel['"]\s*\)\s*([\s\S]*?)\s*@endcomponent/gi,
+    (_, body) =>
+      `<div style="padding:12px 16px;background:#f3f4f6;border-radius:8px;margin:8px 0;">${body.trim()}</div>`
+  );
+
+  // Remove mail::message wrappers and any leftover component tags
+  content = content.replace(
+    /\[component\]:\s?#\s?\(\s*['"]mail::message['"]\s*\)\s*/gi,
+    ""
+  );
+  content = content.replace(
+    /@component\(\s*['"]mail::message['"]\s*\)\s*/gi,
+    ""
+  );
+  content = content.replace(/\[endcomponent\]:\s?#/gi, "");
+  content = content.replace(/@endcomponent/gi, "");
+  content = content.replace(/@component\([^\)]*\)/gi, "");
+  content = content.replace(/\[component\]:\s?#\s?\([^\)]*\)/gi, "");
+
+  // Clean up invalid paragraph wrapping around block elements
+  content = content.replace(/<p>\s*(<div[^>]*>)/gi, "$1");
+  content = content.replace(/(<\/div>)\s*<\/p>/gi, "$1");
+
+  return sanitizeHtml(content);
+};
+
+const stripHtml = (html) => {
+  if (!html) return "";
+  if (typeof document === "undefined") {
+    return html.replace(/<[^>]*>/g, " ");
+  }
+  const temp = document.createElement("div");
+  temp.innerHTML = html;
+  return temp.textContent || temp.innerText || "";
+};
+
+const formatNotificationPreview = (message) => {
+  const html = formatNotificationHtml(message);
+  return stripHtml(html).replace(/\s+/g, " ").trim();
+};
+
+const selectedNotificationHtml = computed(() =>
+  selectedNotification.value
+    ? formatNotificationHtml(selectedNotification.value.message)
+    : ""
+);
 </script>
 
 <template>
@@ -147,7 +294,7 @@ const priorityClass = (priority) => {
             </div>
 
             <p class="text-sm text-gray-600 line-clamp-2">
-              {{ notification.message }}
+              {{ formatNotificationPreview(notification.message) }}
             </p>
 
             <div class="flex items-center gap-3 mt-2">
@@ -254,7 +401,7 @@ const priorityClass = (priority) => {
           <!-- Body -->
           <div
             class="px-6 py-4 overflow-y-auto text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none"
-            v-html="selectedNotification.message"
+            v-html="selectedNotificationHtml"
           ></div>
 
           <!-- Footer -->

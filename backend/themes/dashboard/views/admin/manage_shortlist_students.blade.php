@@ -371,65 +371,7 @@
 
 
 
-    <div class="modal fade" id="admitModal" role="dialog">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title">Admit Student</h4>
-                    <button type="button" class="close" data-dismiss="modal">×</button>
-                </div>
-                <div class="modal-body">
-                    <form action="{{ url('/admin/admit') }}" name="admit_form" method="POST">
-                        {{ csrf_field() }}
-                        <input id="user_id" name="user_id" type="hidden" class="form-control" required>
-                        {{-- <input name="user_ids[]" type="hidden" class="form-control"> --}}
-
-                        <input id="change" name="change" value="false" type="hidden" class="form-control"
-                            required>
-                        <div class="form-group">
-                            <label for="course_id" class="form-label">Select Course</label>
-                            <select id="course_id" name="course_id" class="form-control" required>
-                                <option value="">Choose One Course</option>
-                                @foreach ($courses as $id => $name)
-                                    <option value="{{ $id }}">{{ $name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-
-                        <div class="form-group">
-                            <label for="session_id" class="form-label">Choose Session</label>
-                            <select id="session_id" name="session_id" class="form-control"
-                                @if (empty($sessions)) disabled @endif>
-                                @if (empty($sessions))
-                                    <option value="">No sessions available</option>
-                                @else
-                                    <option value="">Choose One Session</option>
-                                    @foreach ($sessions as $session)
-                                        <option data-course="{{ $session->course_id }}" value="{{ $session->id }}">
-                                            {{ $session->name }}</option>
-                                    @endforeach
-                                @endif
-                            </select>
-                            @if (empty($sessions))
-                                <small class="text-muted">Sessions are not configured. Please contact support.</small>
-                            @endif
-                        </div>
-                        <div class="form-group">
-                            <button class="btn btn-primary"
-                                @if (empty($sessions)) disabled @endif>Admit</button>
-                        </div>
-
-
-                        {{-- <div class="form-group">
-                            <button class="btn btn-primary" @if (empty($sessions)) disabled @endif>Admit</button>
-                        </div> --}}
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    @include('vendor.backpack.crud.modals.admit', ['form_action' => url('/admin/admit')])
 
 
     <x-modal id="bulk-sms-modal" title="Send Bulk SMS TESTING" size="modal-lg">
@@ -496,6 +438,9 @@
                     });
 
                     $('#admitModal').modal('show');
+                    $('#admitModal').one('shown.bs.modal', function() {
+                        if (typeof window.initAdmitSelect2 === 'function') window.initAdmitSelect2(this);
+                    });
                 } catch (e) {
                     console.error('Error opening modal:', e);
                 }

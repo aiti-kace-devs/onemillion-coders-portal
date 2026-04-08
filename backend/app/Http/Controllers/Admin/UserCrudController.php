@@ -106,19 +106,18 @@ class UserCrudController extends CrudController
         $this->addConfirmedAdmissionColumn();
         View::share('mailable', \App\Helpers\MailerHelper::getMailableClasses());
         $this->setupStudentColumns();
-        CRUD::addButtonFromView('top', 'student_views_dropdown', 'student_views_dropdown', 'beginning');
-        CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
-        CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'beginning');
-        CRUD::addButtonFromView('line', 'show_activities', 'show_activities', 'end');
+        // CRUD::addButtonFromView('top', 'student_views_dropdown', 'student_views_dropdown', 'beginning');
+        // CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
+        // CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'beginning');
 
         // Add userId column to the list view
-        CRUD::addColumn([
-            'name' => 'userId',
-            'label' => 'User ID',
-            'type' => 'text',
-        ]);
-        CRUD::enableBulkActions();
-        CRUD::enableExportButtons();
+        // CRUD::addColumn([
+        //     'name' => 'userId',
+        //     'label' => 'User ID',
+        //     'type' => 'text',
+        // ]);
+        // CRUD::enableBulkActions();
+        // CRUD::enableExportButtons();
 
         CRUD::removeButton('update', 'line');
         CRUD::removeButton('delete', 'line');

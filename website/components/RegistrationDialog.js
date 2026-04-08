@@ -23,14 +23,19 @@ import {
 } from "../services/pages";
 import Button from "./Button";
 import OtpVerification from "./OtpVerification";
-import { getCourseImage } from "../utils/courseImages";
 import GhanaGradientText from "./GhanaGradients/GhanaGradientText";
-import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
-
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
 const RegistrationDialog = ({ isOpen, onClose, programme }) => {
-  const { executeRecaptcha} = useGoogleReCaptcha();
-  
+  const { executeRecaptcha } = useGoogleReCaptcha();
+
+  // Enrollment mode state (when userId is present)
+  const [needsSupport, setNeedsSupport] = useState(null);
+  const [supportDetails, setSupportDetails] = useState("");
+  const [enrollSubmitting, setEnrollSubmitting] = useState(false);
+  const [enrollSuccess, setEnrollSuccess] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
   // State management
   const [step, setStep] = useState(1); // 1: location, 2: form, 3: success
   const [loading, setLoading] = useState(false);
@@ -56,19 +61,22 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
 
   // Real-time email availability state
   // status: null | "checking" | "available" | "registered" | "used" | "otp_active" | "error"
-  const [emailAvailability, setEmailAvailability] = useState({ status: null, message: "" });
+  const [emailAvailability, setEmailAvailability] = useState({
+    status: null,
+    message: "",
+  });
   const emailCheckTimerRef = React.useRef(null);
 
   // Detect email and phone fields from form schema (case-insensitive)
   useEffect(() => {
     if (formSchema?.schema) {
       const eField = formSchema.schema.find(
-        (f) => f.type?.toLowerCase() === "email"
+        (f) => f.type?.toLowerCase() === "email",
       );
       const pField = formSchema.schema.find(
         (f) =>
           f.type?.toLowerCase() === "phonenumber" ||
-          f.type?.toLowerCase() === "phone"
+          f.type?.toLowerCase() === "phone",
       );
       setEmailFieldName(eField?.field_name || null);
       setPhoneFieldName(pField?.field_name || null);
@@ -107,7 +115,7 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
       setEmailAvailability({ status: null, message: "" });
       fetchLocations();
     }
-  }, [isOpen, programme?.id, fetchLocations]);
+  }, [isOpen, programme?.id, fetchLocations, userId]);
 
   // Fetch consent content when form step is shown
   useEffect(() => {
@@ -122,58 +130,65 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
       .catch(() => {
         if (!cancelled) setConsentContent("");
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [step, isOpen]);
 
   // Debounced real-time email availability check
-  const checkEmailAvailabilityDebounced = useCallback(
-    (emailValue) => {
-      if (emailCheckTimerRef.current) {
-        clearTimeout(emailCheckTimerRef.current);
-        emailCheckTimerRef.current = null;
-      }
+  const checkEmailAvailabilityDebounced = useCallback((emailValue) => {
+    if (emailCheckTimerRef.current) {
+      clearTimeout(emailCheckTimerRef.current);
+      emailCheckTimerRef.current = null;
+    }
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailValue || !emailRegex.test(emailValue.trim())) {
-        setEmailAvailability({ status: null, message: "" });
-        return;
-      }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailValue || !emailRegex.test(emailValue.trim())) {
+      setEmailAvailability({ status: null, message: "" });
+      return;
+    }
 
-      setEmailAvailability({ status: "checking", message: "Checking email availability..." });
+    setEmailAvailability({
+      status: "checking",
+      message: "Checking email availability...",
+    });
 
-      emailCheckTimerRef.current = setTimeout(async () => {
-        try {
-          const result = await checkEmailAvailability(emailValue.trim());
-          if (result?.available) {
-            setEmailAvailability({ status: "available", message: "Email is available." });
-          } else if (result?.reason === "registered") {
-            setEmailAvailability({
-              status: "registered",
-              message: result?.message || "This email is already registered.",
-            });
-          } else if (result?.reason === "used") {
-            setEmailAvailability({
-              status: "used",
-              message: result?.message || "This email has already been used for registration.",
-            });
-          } else if (result?.reason === "otp_active") {
-            setEmailAvailability({
-              status: "otp_active",
-              message: "A verification code was already sent to this email.",
-            });
-          } else {
-            setEmailAvailability({
-              status: "error",
-              message: result?.message || "Email is not available.",
-            });
-          }
-        } catch {
-          setEmailAvailability({ status: null, message: "" });
+    emailCheckTimerRef.current = setTimeout(async () => {
+      try {
+        const result = await checkEmailAvailability(emailValue.trim());
+        if (result?.available) {
+          setEmailAvailability({
+            status: "available",
+            message: "Email is available.",
+          });
+        } else if (result?.reason === "registered") {
+          setEmailAvailability({
+            status: "registered",
+            message: result?.message || "This email is already registered.",
+          });
+        } else if (result?.reason === "used") {
+          setEmailAvailability({
+            status: "used",
+            message:
+              result?.message ||
+              "This email has already been used for registration.",
+          });
+        } else if (result?.reason === "otp_active") {
+          setEmailAvailability({
+            status: "otp_active",
+            message: "A verification code was already sent to this email.",
+          });
+        } else {
+          setEmailAvailability({
+            status: "error",
+            message: result?.message || "Email is not available.",
+          });
         }
-      }, 600);
-    },
-    []
-  );
+      } catch {
+        setEmailAvailability({ status: null, message: "" });
+      }
+    }, 600);
+  }, []);
 
   // Cleanup email check timer on unmount
   useEffect(() => {
@@ -272,9 +287,11 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
           if (!emailRegex.test(value)) {
             errors[field.field_name] = "Please enter a valid email address";
           } else if (emailAvailability.status === "registered") {
-            errors[field.field_name] = "This email is already registered. Please use a different email.";
+            errors[field.field_name] =
+              "This email is already registered. Please use a different email.";
           } else if (emailAvailability.status === "used") {
-            errors[field.field_name] = "This email has already been used for registration. Please use a different email.";
+            errors[field.field_name] =
+              "This email has already been used for registration. Please use a different email.";
           }
         }
 
@@ -288,12 +305,14 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
       });
 
     if (!consentAccepted) {
-      errors.consent = "You must accept the terms and privacy policy to register.";
+      errors.consent =
+        "You must accept the terms and privacy policy to register.";
     }
 
     // OTP verification check — email must be verified before submission
     if (emailFieldName && !otpVerified) {
-      errors.otp = "Please verify your email address with the OTP code before submitting.";
+      errors.otp =
+        "Please verify your email address with the OTP code before submitting.";
     }
 
     return errors;
@@ -318,7 +337,7 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
       return;
     }
 
-    const token = await executeRecaptcha('register_form');
+    const token = await executeRecaptcha("register_form");
 
     try {
       setSubmitting(true);
@@ -331,7 +350,7 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
         region_id: selectedRegion.id,
         centre_id: selectedCentre.id,
         form_uuid: formSchema.uuid,
-        recaptcha_token: token, 
+        recaptcha_token: token,
       };
 
       await submitRegistration(submissionData);
@@ -425,6 +444,53 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
       );
     }
 
+    // Password field with validation checklist
+    if (field.type === "password") {
+      const checks = [
+        { label: "At least 6 characters", met: value.length >= 6 },
+        { label: "Contains at least one uppercase letter", met: /[A-Z]/.test(value) },
+        { label: "Contains at least one lowercase letter", met: /[a-z]/.test(value) },
+        { label: "Contains a number", met: /\d/.test(value) },
+      ];
+
+      return (
+        <div>
+          <input
+            type="password"
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+            className={baseClasses}
+            placeholder={placeholder}
+            autoComplete="new-password"
+          />
+          {value.length > 0 && (
+            <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+              {checks.map((check, i) => (
+                <li key={i} className="flex items-center gap-2 text-xs sm:text-sm">
+                  <span
+                    className={`inline-flex items-center justify-center w-4 h-4 shrink-0 rounded border transition-colors duration-200 ${
+                      check.met
+                        ? "bg-green-500 border-green-500 text-white"
+                        : "border-gray-300 bg-white"
+                    }`}
+                  >
+                    {check.met && (
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </span>
+                  <span className={check.met ? "text-green-600" : "text-gray-500"}>
+                    {check.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      );
+    }
+
     // Standard input field
     return (
       <input
@@ -439,6 +505,239 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
   };
 
   if (!isOpen) return null;
+
+  // Simplified enrollment view when userId is present
+  if (userId) {
+    return (
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+
+          {/* Dialog */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="relative bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+          >
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 z-50 p-2 bg-white/90 hover:bg-white text-gray-600 hover:text-gray-900 rounded-full shadow-lg backdrop-blur-sm transition-all duration-200 hover:shadow-xl"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            <div className="flex max-h-[90vh]">
+              {/* Left Side - Course Image */}
+              <div className="hidden md:block w-1/2 relative bg-gray-100">
+                {programme?.image && !imageError ? (
+                  <Image
+                    src={programme?.image}
+                    alt={programme?.title}
+                    fill
+                    className="object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                    <Image
+                      src="/images/one-million-coders-logo.png"
+                      alt="One Million Coders"
+                      width={120}
+                      height={40}
+                      className="opacity-15"
+                    />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-transparent" />
+
+                {/* Course Info Overlay */}
+                <div className="absolute inset-0 flex flex-col justify-end p-8">
+                  <div className="text-white">
+                    <div className="mb-4">
+                      <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
+                        {programme?.category?.title}
+                      </span>
+                    </div>
+                    <h3 className="text-2xl font-bold mb-3 leading-tight">
+                      {programme?.title}
+                    </h3>
+                    <p className="text-white/90 text-sm leading-relaxed">
+                      {programme?.sub_title ||
+                        "Professional certification program"}
+                    </p>
+                    {programme?.duration && (
+                      <div className="flex items-center space-x-2 mt-4 text-white/80">
+                        <FiClock className="w-4 h-4" />
+                        <span className="text-sm">{programme.duration}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side - Support Question */}
+              <div className="w-full md:w-1/2 flex flex-col">
+                {/* Mobile Header */}
+                <div className="md:hidden p-6 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        Enroll
+                      </h2>
+                      <p className="text-sm text-gray-600">
+                        {programme?.title}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desktop Header */}
+                <div className="hidden md:block p-6 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    <GhanaGradientText variant="red-yellow-green">
+                      Enroll in Programme
+                    </GhanaGradientText>
+                  </h2>
+                  <p className="text-gray-600">
+                    {enrollSuccess
+                      ? "Enrollment submitted successfully!"
+                      : "Just one quick question before you enroll"}
+                  </p>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  {error && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-3">
+                      <FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                      <p className="text-red-700">{error}</p>
+                    </div>
+                  )}
+
+                  {enrollSuccess ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <FiCheckCircle className="w-8 h-8 text-green-600" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                        Enrollment Successful!
+                      </h3>
+                      <p className="text-gray-600 mb-6 leading-relaxed">
+                        You have been enrolled in{" "}
+                        <span className="font-semibold">
+                          {programme?.title}
+                        </span>
+                        . Further details will be sent to you.
+                      </p>
+                      <Button onClick={onClose} variant="primary">
+                        Close
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          Would you like access to a training centre?
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Our training centres provide computers, internet
+                          access, and other resources to support your learning.
+                          Let us know if you&apos;d like to visit a centre to
+                          use these resources.
+                        </p>
+
+                        <div className="grid gap-3">
+                          <button
+                            onClick={() => setNeedsSupport(true)}
+                            className={`p-4 rounded-lg border-2 text-left transition-all duration-200 ${
+                              needsSupport === true
+                                ? "border-yellow-400 bg-yellow-50"
+                                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div
+                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                  needsSupport === true
+                                    ? "border-yellow-400"
+                                    : "border-gray-300"
+                                }`}
+                              >
+                                {needsSupport === true && (
+                                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                                )}
+                              </div>
+                              <span className="font-medium text-gray-900">
+                                Yes
+                              </span>
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => setNeedsSupport(false)}
+                            className={`p-4 rounded-lg border-2 text-left transition-all duration-200 ${
+                              needsSupport === false
+                                ? "border-yellow-400 bg-yellow-50"
+                                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div
+                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                  needsSupport === false
+                                    ? "border-yellow-400"
+                                    : "border-gray-300"
+                                }`}
+                              >
+                                {needsSupport === false && (
+                                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                                )}
+                              </div>
+                              <span className="font-medium text-gray-900">
+                                No
+                              </span>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
+                      <div className="pt-4">
+                        <Button
+                          onClick={handleEnrollSubmit}
+                          disabled={needsSupport === null || enrollSubmitting}
+                          icon={enrollSubmitting ? FiLoader : FiCheckCircle}
+                          className="w-full"
+                        >
+                          {enrollSubmitting
+                            ? "Submitting..."
+                            : "Confirm Enrollment"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
 
   return (
     <AnimatePresence>
@@ -474,18 +773,26 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
 
           <div className="flex max-h-[90vh]">
             {/* Left Side - Course Image (Half of dialog) */}
-            <div className="hidden md:block w-1/2 relative">
-              <Image
-                // TEMPORARY: Commented out API image, using static image for consistency
-                // src={
-                //   programme?.image ||
-                //   "/images/hero/Certified-Data-Protection-Manager.jpg"
-                // }
-                src={getCourseImage(programme?.id)}
-                alt={programme?.title}
-                fill
-                className="object-cover"
-              />
+            <div className="hidden md:block w-1/2 relative bg-gray-100">
+              {programme?.image && !imageError ? (
+                <Image
+                  src={programme?.image}
+                  alt={programme?.title}
+                  fill
+                  className="object-cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                  <Image
+                    src="/images/one-million-coders-logo.png"
+                    alt="One Million Coders"
+                    width={120}
+                    height={40}
+                    className="opacity-15"
+                  />
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-transparent" />
 
               {/* Course Info Overlay */}
@@ -593,8 +900,8 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
                   {step === 1
                     ? "Choose your preferred training location"
                     : step === 2
-                    ? "Complete your registration details"
-                    : "Registration completed successfully!"}
+                      ? "Complete your registration details"
+                      : "Registration completed successfully!"}
                 </p>
               </div>
 
@@ -609,8 +916,8 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
                   {step === 1
                     ? "Choose your preferred training location"
                     : step === 2
-                    ? "Complete your registration details"
-                    : "Registration completed successfully!"}
+                      ? "Complete your registration details"
+                      : "Registration completed successfully!"}
                 </p>
               </div>
 
@@ -672,7 +979,9 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
                                     </h4>
                                     <p className="text-sm text-gray-500">
                                       {region.centres.length} centre
-                                      {region.centres.length !== 1 ? "s" : ""}{" "}
+                                      {region.centres.length !== 1
+                                        ? "s"
+                                        : ""}{" "}
                                       available
                                     </p>
                                   </div>
@@ -797,37 +1106,44 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
                                 )}
 
                               {/* Real-time email availability indicator */}
-                              {field.type?.toLowerCase() === "email" && emailAvailability.status && (
-                                <motion.div
-                                  initial={{ opacity: 0, y: -5 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  className={`flex items-center gap-2 text-sm mt-1 ${
-                                    emailAvailability.status === "checking"
-                                      ? "text-gray-500"
-                                      : emailAvailability.status === "available"
-                                      ? "text-green-600"
-                                      : emailAvailability.status === "otp_active"
-                                      ? "text-amber-600"
-                                      : "text-red-600"
-                                  }`}
-                                >
-                                  {emailAvailability.status === "checking" && (
-                                    <FiLoader className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
-                                  )}
-                                  {emailAvailability.status === "available" && (
-                                    <FiCheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                                  )}
-                                  {emailAvailability.status === "otp_active" && (
-                                    <FiClock className="w-3.5 h-3.5 flex-shrink-0" />
-                                  )}
-                                  {(emailAvailability.status === "registered" ||
-                                    emailAvailability.status === "used" ||
-                                    emailAvailability.status === "error") && (
-                                    <FiAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                                  )}
-                                  <span>{emailAvailability.message}</span>
-                                </motion.div>
-                              )}
+                              {field.type?.toLowerCase() === "email" &&
+                                emailAvailability.status && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: -5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className={`flex items-center gap-2 text-sm mt-1 ${
+                                      emailAvailability.status === "checking"
+                                        ? "text-gray-500"
+                                        : emailAvailability.status ===
+                                            "available"
+                                          ? "text-green-600"
+                                          : emailAvailability.status ===
+                                              "otp_active"
+                                            ? "text-amber-600"
+                                            : "text-red-600"
+                                    }`}
+                                  >
+                                    {emailAvailability.status ===
+                                      "checking" && (
+                                      <FiLoader className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                                    )}
+                                    {emailAvailability.status ===
+                                      "available" && (
+                                      <FiCheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                                    )}
+                                    {emailAvailability.status ===
+                                      "otp_active" && (
+                                      <FiClock className="w-3.5 h-3.5 flex-shrink-0" />
+                                    )}
+                                    {(emailAvailability.status ===
+                                      "registered" ||
+                                      emailAvailability.status === "used" ||
+                                      emailAvailability.status === "error") && (
+                                      <FiAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                                    )}
+                                    <span>{emailAvailability.message}</span>
+                                  </motion.div>
+                                )}
 
                               {/* OTP Verification — auto-injected after the email field.
                                   Hidden when email is already registered or used.
@@ -835,14 +1151,18 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
                               {field.type?.toLowerCase() === "email" &&
                                 emailAvailability.status !== "registered" &&
                                 emailAvailability.status !== "used" && (
-                                <OtpVerification
-                                  email={formData[field.field_name] || ""}
-                                  phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
-                                  formUuid={formSchema.uuid}
-                                  onVerified={setOtpVerified}
-                                  emailStatus={emailAvailability.status}
-                                />
-                              )}
+                                  <OtpVerification
+                                    email={formData[field.field_name] || ""}
+                                    phone={
+                                      phoneFieldName
+                                        ? formData[phoneFieldName] || ""
+                                        : ""
+                                    }
+                                    formUuid={formSchema.uuid}
+                                    onVerified={setOtpVerified}
+                                    emailStatus={emailAvailability.status}
+                                  />
+                                )}
                             </div>
                           ))}
 
@@ -850,14 +1170,16 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
                         {formErrors.otp && (
                           <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
                             <FiAlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                            <p className="text-sm text-amber-700 font-medium">{formErrors.otp}</p>
+                            <p className="text-sm text-amber-700 font-medium">
+                              {formErrors.otp}
+                            </p>
                           </div>
                         )}
 
                         {/* Consent block */}
                         <div className="space-y-3 pt-4 border-t border-gray-200">
                           <p className="text-sm text-gray-700 leading-relaxed">
-                            I have read the {" "}
+                            I have read the{" "}
                             <Link
                               href="/terms-and-privacy"
                               className="text-yellow-600 hover:text-yellow-700 font-medium underline underline-offset-2"
@@ -868,14 +1190,20 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
                             </Link>
                             {consentContent ? " " : ""}
                             {consentContent ? (
-                              <span dangerouslySetInnerHTML={{ __html: consentContent }} />
+                              <span
+                                dangerouslySetInnerHTML={{
+                                  __html: consentContent,
+                                }}
+                              />
                             ) : null}
                           </p>
                           <label className="flex items-start gap-3 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={consentAccepted}
-                              onChange={(e) => setConsentAccepted(e.target.checked)}
+                              onChange={(e) =>
+                                setConsentAccepted(e.target.checked)
+                              }
                               className="mt-1 w-4 h-4 rounded border-gray-300 text-yellow-500 focus:ring-yellow-500"
                             />
                             <span className="text-sm text-gray-700">
@@ -901,15 +1229,17 @@ const RegistrationDialog = ({ isOpen, onClose, programme }) => {
                           </Button>
                           <Button
                             type="submit"
-                            disabled={submitting || (emailFieldName && !otpVerified)}
+                            disabled={
+                              submitting || (emailFieldName && !otpVerified)
+                            }
                             icon={submitting ? FiLoader : FiCheckCircle}
                             className="flex-1"
                           >
                             {submitting
                               ? "Submitting..."
                               : emailFieldName && !otpVerified
-                              ? "Verify Email to Submit"
-                              : "Submit Registration"}
+                                ? "Verify Email to Submit"
+                                : "Submit Registration"}
                           </Button>
                         </div>
                       </form>

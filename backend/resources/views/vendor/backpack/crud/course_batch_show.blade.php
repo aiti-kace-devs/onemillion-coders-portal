@@ -5,28 +5,22 @@
     $course = $entry;
     $courseId = $course->getKey();
 
-    $course->loadMissing([
-        'batch',
-        'centre.branch',
-        'programme',
-        'sessions',
-        'assignedAdmins',
-    ]);
+    $course->loadMissing(['batch', 'centre.branch', 'programme', 'sessions', 'assignedAdmins']);
 
     $batch = $course->batch;
     $centre = $course->centre;
     $branch = $centre?->branch;
     $programme = $course->programme;
+    $programmeDelivery = strtolower(trim((string) ($programme?->mode_of_delivery)));
+    $isOnlineProgramme = in_array($programmeDelivery, ['online', 'online for all'], true);
     $admins = $course->assignedAdmins ?? collect();
     $sessions = $course->sessions ?? collect();
 
     $backToCourseUrl = backpack_url('course/');
-    $backUrl = $course->batch_id
-        ? backpack_url('batch/' . $course->batch_id . '/edit')
-        : backpack_url('batch');
+    $backUrl = $course->batch_id ? backpack_url('batch/' . $course->batch_id . '/edit') : backpack_url('batch');
 
-    $startRaw = $course->start_date ?: ($batch?->start_date);
-    $endRaw = $course->end_date ?: ($batch?->end_date);
+    $startRaw = $course->start_date ?: $batch?->start_date;
+    $endRaw = $course->end_date ?: $batch?->end_date;
 
     $startDate = null;
     $endDate = null;
@@ -50,16 +44,14 @@
         [$startDate, $endDate] = [$endDate, $startDate];
     }
 
-    $totalCourseDays = ($startDate && $endDate) ? ($startDate->diffInDays($endDate) + 1) : 0;
-    $dateRangeLabel = ($startDate && $endDate)
-        ? $startDate->format('M d, Y') . ' - ' . $endDate->format('M d, Y')
-        : 'Not set';
+    $totalCourseDays = $startDate && $endDate ? $startDate->diffInDays($endDate) + 1 : 0;
+    $dateRangeLabel =
+        $startDate && $endDate ? $startDate->format('M d, Y') . ' - ' . $endDate->format('M d, Y') : 'Not set';
 
     $metricsCacheTtl = now()->addMinutes(2);
     $metricsCacheKeyPrefix = 'course_batch_show:' . $courseId . ':';
 
-    $admissionsBase = \App\Models\UserAdmission::query()
-        ->where('course_id', $courseId);
+    $admissionsBase = \App\Models\UserAdmission::query()->where('course_id', $courseId);
 
     $admissionsAgg = \Illuminate\Support\Facades\Cache::remember(
         $metricsCacheKeyPrefix . 'admissions_agg:v1',
@@ -67,13 +59,15 @@
         function () use ($courseId) {
             return \Illuminate\Support\Facades\DB::table('user_admission')
                 ->where('course_id', $courseId)
-                ->selectRaw('
+                ->selectRaw(
+                    '
                     COUNT(*) as total_count,
                     SUM(CASE WHEN confirmed IS NOT NULL THEN 1 ELSE 0 END) as confirmed_count,
                     COUNT(DISTINCT CASE WHEN confirmed IS NOT NULL THEN user_id END) as admitted_students_count
-                ')
+                ',
+                )
                 ->first();
-        }
+        },
     );
 
     $admissionsTotal = (int) ($admissionsAgg->total_count ?? 0);
@@ -81,9 +75,54 @@
     $admissionsPending = max(0, $admissionsTotal - $admissionsConfirmed);
     $admittedStudentsCount = (int) ($admissionsAgg->admitted_students_count ?? 0);
 
+    $supportAgg = \Illuminate\Support\Facades\Cache::remember(
+        $metricsCacheKeyPrefix . 'support_agg:v1',
+        $metricsCacheTtl,
+        function () use ($courseId) {
+            return \Illuminate\Support\Facades\DB::table('user_admission as ua')
+                ->join('users as u', 'u.userId', '=', 'ua.user_id')
+                ->where('ua.course_id', $courseId)
+                ->whereNotNull('ua.confirmed')
+                ->selectRaw('
+                    COUNT(DISTINCT CASE WHEN u.support = 1 THEN ua.user_id END) as support_yes,
+                    COUNT(DISTINCT CASE WHEN u.support = 0 THEN ua.user_id END) as support_no,
+                    COUNT(DISTINCT CASE WHEN u.support IS NULL THEN ua.user_id END) as support_unknown
+                ')
+                ->first();
+        }
+    );
+
+    $supportYes = (int) ($supportAgg->support_yes ?? 0);
+    $supportNo = (int) ($supportAgg->support_no ?? 0);
+    $supportUnknown = (int) ($supportAgg->support_unknown ?? 0);
+
+    $userAgg = \Illuminate\Support\Facades\Cache::remember(
+        $metricsCacheKeyPrefix . 'user_agg:v1',
+        $metricsCacheTtl,
+        function () use ($courseId) {
+            return \Illuminate\Support\Facades\DB::table('users')
+                ->where('registered_course', $courseId)
+                ->selectRaw('
+                    COUNT(*) as total_registered,
+                    SUM(CASE WHEN shortlist = 1 OR shortlist = true THEN 1 ELSE 0 END) as total_shortlisted
+                ')
+                ->first();
+        }
+    );
+
+    $totalRegisteredUsers = (int) ($userAgg->total_registered ?? 0);
+    $totalShortlistedUsers = (int) ($userAgg->total_shortlisted ?? 0);
+    $totalAdmittedUsers = $admittedStudentsCount;
+
+    $shortlistRate = $totalRegisteredUsers > 0
+        ? round(($totalShortlistedUsers / $totalRegisteredUsers) * 100, 1)
+        : 0;
+    $admissionRate = $totalRegisteredUsers > 0
+        ? round(($totalAdmittedUsers / $totalRegisteredUsers) * 100, 1)
+        : 0;
+
     // Attendance
-    $attendanceBase = \App\Models\Attendance::query()
-        ->where('course_id', $courseId);
+    $attendanceBase = \App\Models\Attendance::query()->where('course_id', $courseId);
 
     // Treat missing/unknown status as "present", because attendance recording currently stores a row without status.
     $attendanceAgg = \Illuminate\Support\Facades\Cache::remember(
@@ -92,16 +131,18 @@
         function () use ($courseId) {
             return \Illuminate\Support\Facades\DB::table('attendances')
                 ->where('course_id', $courseId)
-                ->selectRaw("
+                ->selectRaw(
+                    "
                     COUNT(*) as total,
                     COUNT(DISTINCT user_id) as unique_students,
                     SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) IN ('absent','late','excused') THEN 0 ELSE 1 END) as present,
                     SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'absent' THEN 1 ELSE 0 END) as absent,
                     SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'late' THEN 1 ELSE 0 END) as late,
                     SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'excused' THEN 1 ELSE 0 END) as excused
-                ")
+                ",
+                )
                 ->first();
-        }
+        },
     );
 
     $attendanceTotal = (int) ($attendanceAgg->total ?? 0);
@@ -123,43 +164,53 @@
                 ->where('course_id', $courseId)
                 ->orderByDesc('date')
                 ->value('date');
-        }
+        },
     );
-    $attendanceWindowEnd = $attendanceWindowEndRaw ? \Carbon\Carbon::parse($attendanceWindowEndRaw) : \Carbon\Carbon::today();
+    $attendanceWindowEnd = $attendanceWindowEndRaw
+        ? \Carbon\Carbon::parse($attendanceWindowEndRaw)
+        : \Carbon\Carbon::today();
     $attendanceWindowStart = $attendanceWindowEnd->copy()->subDays($attendanceWindowDays - 1);
 
     $attendanceByDayRaw = \Illuminate\Support\Facades\Cache::remember(
-        $metricsCacheKeyPrefix . 'attendance_by_day:v1:' . $attendanceWindowStart->toDateString() . ':' . $attendanceWindowEnd->toDateString(),
+        $metricsCacheKeyPrefix .
+            'attendance_by_day:v1:' .
+            $attendanceWindowStart->toDateString() .
+            ':' .
+            $attendanceWindowEnd->toDateString(),
         now()->addMinutes(1),
         function () use ($courseId, $attendanceWindowStart, $attendanceWindowEnd) {
             return \Illuminate\Support\Facades\DB::table('attendances')
                 ->where('course_id', $courseId)
                 ->whereBetween('date', [$attendanceWindowStart->toDateString(), $attendanceWindowEnd->toDateString()])
-                ->selectRaw("date as day,
+                ->selectRaw(
+                    "date as day,
                     SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) IN ('absent','late','excused') THEN 0 ELSE 1 END) as present,
                     SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'absent' THEN 1 ELSE 0 END) as absent,
                     SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'late' THEN 1 ELSE 0 END) as late,
                     SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'excused' THEN 1 ELSE 0 END) as excused,
-                    COUNT(*) as total")
+                    COUNT(*) as total",
+                )
                 ->groupBy('day')
                 ->orderBy('day')
                 ->get()
                 ->keyBy('day');
-        }
+        },
     );
 
     $attendanceByDay = collect();
     for ($d = $attendanceWindowStart->copy(); $d->lte($attendanceWindowEnd); $d->addDay()) {
         $key = $d->toDateString();
         $row = $attendanceByDayRaw->get($key);
-        $attendanceByDay->push((object) [
-            'day' => $key,
-            'present' => (int) ($row->present ?? 0),
-            'absent' => (int) ($row->absent ?? 0),
-            'late' => (int) ($row->late ?? 0),
-            'excused' => (int) ($row->excused ?? 0),
-            'total' => (int) ($row->total ?? 0),
-        ]);
+        $attendanceByDay->push(
+            (object) [
+                'day' => $key,
+                'present' => (int) ($row->present ?? 0),
+                'absent' => (int) ($row->absent ?? 0),
+                'late' => (int) ($row->late ?? 0),
+                'excused' => (int) ($row->excused ?? 0),
+                'total' => (int) ($row->total ?? 0),
+            ],
+        );
     }
 
     $attendanceWindowPresent = (int) $attendanceByDay->sum('present');
@@ -167,13 +218,16 @@
     $attendanceWindowLate = (int) $attendanceByDay->sum('late');
     $attendanceWindowExcused = (int) $attendanceByDay->sum('excused');
 
-    $attendanceChartLabels = $attendanceByDay->pluck('day')->map(function ($d) {
-        try {
-            return \Carbon\Carbon::parse($d)->format('M d');
-        } catch (\Throwable $e) {
-            return (string) $d;
-        }
-    })->values();
+    $attendanceChartLabels = $attendanceByDay
+        ->pluck('day')
+        ->map(function ($d) {
+            try {
+                return \Carbon\Carbon::parse($d)->format('M d');
+            } catch (\Throwable $e) {
+                return (string) $d;
+            }
+        })
+        ->values();
     $attendanceChartLabelsFull = $attendanceByDay->pluck('day')->map(fn($d) => (string) $d)->values();
 
     // Exams (oex_results uses users.id; admissions uses users.userId)
@@ -186,15 +240,17 @@
                 ->join('user_admission as ua', 'ua.user_id', '=', 'u.userId')
                 ->where('ua.course_id', $courseId)
                 ->whereNotNull('ua.confirmed')
-                ->selectRaw('
+                ->selectRaw(
+                    '
                     COUNT(*) as total,
                     COUNT(DISTINCT r.user_id) as students,
                     AVG(CASE WHEN (r.yes_ans+r.no_ans) > 0 THEN (r.yes_ans/(r.yes_ans+r.no_ans))*100 ELSE NULL END) as avg_score,
                     SUM(CASE WHEN (r.yes_ans+r.no_ans) > 0 AND (r.yes_ans/(r.yes_ans+r.no_ans))*100 >= 50 THEN 1 ELSE 0 END) as passed,
                     SUM(CASE WHEN (r.yes_ans+r.no_ans) > 0 AND (r.yes_ans/(r.yes_ans+r.no_ans))*100 < 50 THEN 1 ELSE 0 END) as failed
-                ')
+                ',
+                )
                 ->first();
-        }
+        },
     );
 
     $examTotal = (int) ($examAgg->total ?? 0);
@@ -215,44 +271,46 @@
                 ->where('ua.course_id', $courseId)
                 ->whereNotNull('ua.confirmed')
                 ->whereNotNull('r.created_at')
-                ->selectRaw("DATE(r.created_at) as day,
-                    AVG(CASE WHEN (r.yes_ans+r.no_ans) > 0 THEN (r.yes_ans/(r.yes_ans+r.no_ans))*100 ELSE NULL END) as avg_score")
+                ->selectRaw(
+                    "DATE(r.created_at) as day,
+                    AVG(CASE WHEN (r.yes_ans+r.no_ans) > 0 THEN (r.yes_ans/(r.yes_ans+r.no_ans))*100 ELSE NULL END) as avg_score",
+                )
                 ->groupBy('day')
                 ->orderByDesc('day')
                 ->limit(30)
                 ->get()
                 ->reverse()
                 ->values();
-        }
+        },
     );
 @endphp
 
 @section('content')
-    @parent
+    {{-- @parent --}}
 
     <div class="mb-3 d-flex align-items-start justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-start gap-2">
-            <a href="{{ $backToCourseUrl }}" class="btn btn-sm btn-outline-secondary" title="Back to Batch Edit">
+            {{-- <a href="{{ $backToCourseUrl }}" class="btn btn-sm btn-outline-secondary" title="Back to Batch Edit">
                 <i class="la la-arrow-left"></i>
-            </a>
-            <div>
+            </a> --}}
+            {{-- <div>
                 <h4 class="mb-0">Course Batch Metrics</h4>
                 <div class="text-muted">
                     {{ $course->course_name ?? 'Course' }}
-                    @if($centre?->title)
+                    @if ($centre?->title)
                         • {{ $centre->title }}
                     @endif
-                    @if($batch?->title)
+                    @if ($batch?->title)
                         • {{ $batch->title }}
                     @endif
                 </div>
                 <div class="text-muted small">
                     <i class="la la-calendar"></i> {{ $dateRangeLabel }}
-                    @if($course->duration)
+                    @if ($course->duration)
                         • <i class="la la-clock"></i> {{ $course->duration }}
                     @endif
                 </div>
-            </div>
+            </div> --}}
         </div>
 
         <div class="d-flex align-items-center gap-2">
@@ -271,8 +329,8 @@
             </div>
 
             <!-- <a href="{{ backpack_url('course/' . $courseId . '/edit') }}" class="btn btn-sm btn-primary">
-                <i class="la la-edit"></i> Edit Course
-            </a> -->
+                            <i class="la la-edit"></i> Edit Course
+                        </a> -->
         </div>
     </div>
 
@@ -281,13 +339,11 @@
             <div class="card metric-card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
-                        <div class="text-muted">Admitted Students</div>
+                        <div class="text-muted">Total Registered Users</div>
                         <i class="la la-users text-primary"></i>
                     </div>
-                    <div class="metric-value">{{ number_format($admissionsTotal) }}</div>
-                    <div class="text-muted small">
-                        Confirmed: {{ number_format($admissionsConfirmed) }} • Pending: {{ number_format($admissionsPending) }}
-                    </div>
+                    <div class="metric-value">{{ number_format($totalRegisteredUsers) }}</div>
+                    <div class="text-muted small">Users registered for this course.</div>
                 </div>
             </div>
         </div>
@@ -296,16 +352,79 @@
             <div class="card metric-card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
-                        <div class="text-muted">Attendance Records</div>
-                        <i class="la la-calendar-check text-success"></i>
+                        <div class="text-muted">Total Shortlisted Users</div>
+                        <i class="la la-user-check text-info"></i>
                     </div>
-                    <div class="metric-value">{{ number_format($attendanceTotal) }}</div>
+                    <div class="metric-value">{{ number_format($totalShortlistedUsers) }}</div>
+                    <div class="text-muted small">Shortlist rate: {{ $shortlistRate }}%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="text-muted">Total Admitted Users</div>
+                        <i class="la la-graduation-cap text-success"></i>
+                    </div>
+                    <div class="metric-value">{{ number_format($totalAdmittedUsers) }}</div>
+                    <div class="text-muted small">Admission rate: {{ $admissionRate }}%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="text-muted">Admissions</div>
+                        <i class="la la-users text-primary"></i>
+                    </div>
+                    <div class="metric-value">{{ number_format($admissionsTotal) }}</div>
                     <div class="text-muted small">
-                        Rate: {{ $attendanceRate }}% • Students: {{ number_format($attendanceUniqueStudents) }}
+                        Confirmed: {{ number_format($admissionsConfirmed) }} • Pending:
+                        {{ number_format($admissionsPending) }}
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        @if($isOnlineProgramme)
+            <div class="col-md-3">
+                <div class="card metric-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-muted">Total Users Needing Support</div>
+                            <i class="la la-hands-helping text-warning"></i>
+                        </div>
+                        <div class="metric-value">{{ number_format($supportYes) }}</div>
+                        <div class="text-muted small">
+                            @if($supportUnknown > 0)
+                                Not indicated: {{ number_format($supportUnknown) }}
+                            @else
+                                Admitted users needing support.
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card metric-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="text-muted">Total Users Not Needing Support</div>
+                            <i class="la la-user text-secondary"></i>
+                        </div>
+                        <div class="metric-value">{{ number_format($supportUnknown) }}</div>
+                        <div class="text-muted small">Admitted users not needing support.</div>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         <div class="col-md-3">
             <div class="card metric-card h-100">
@@ -317,7 +436,8 @@
                     <div class="metric-value">{{ number_format($examTotal) }}</div>
                     <div class="text-muted small">
                         <!-- Avg: {{ $avgScore }}% • Pass Rate: {{ $passRate }}% -->
-                        Students: {{ number_format($examStudents) }} • Pass: {{ number_format($passedCount) }} • Fail: {{ number_format($failedCount) }}
+                        Students: {{ number_format($examStudents) }} • Pass: {{ number_format($passedCount) }} • Fail:
+                        {{ number_format($failedCount) }}
                     </div>
                 </div>
             </div>
@@ -355,8 +475,9 @@
                         <tr>
                             <td class="text-muted">Programme</td>
                             <td>
-                                @if($programme?->id)
-                                    <a href="{{ backpack_url('programme/' . $programme->id . '/show') }}">{{ $programme->title }}</a>
+                                @if ($programme?->id)
+                                    <a
+                                        href="{{ backpack_url('programme/' . $programme->id . '/show') }}">{{ $programme->title }}</a>
                                 @else
                                     N/A
                                 @endif
@@ -365,8 +486,9 @@
                         <tr>
                             <td class="text-muted">Training Centre</td>
                             <td>
-                                @if($centre?->id)
-                                    <a href="{{ backpack_url('centre/' . $centre->id . '/show') }}">{{ $centre->title }}</a>
+                                @if ($centre?->id)
+                                    <a
+                                        href="{{ backpack_url('centre/' . $centre->id . '/show') }}">{{ $centre->title }}</a>
                                 @else
                                     N/A
                                 @endif
@@ -379,7 +501,7 @@
                         <tr>
                             <td class="text-muted">Batch</td>
                             <td>
-                                @if($batch?->id)
+                                @if ($batch?->id)
                                     <a href="{{ backpack_url('batch/' . $batch->id . '/edit') }}">{{ $batch->title }}</a>
                                 @else
                                     N/A
@@ -421,8 +543,10 @@
                         <canvas id="attendanceStackedChart"></canvas>
                     </div>
                     <div class="mt-3 d-flex flex-wrap gap-2">
-                        <span class="badge bg-success text-dark">Present: {{ number_format($attendanceWindowPresent) }}</span>
-                        <span class="badge bg-warning text-dark">Absent: {{ number_format($attendanceWindowAbsent) }}</span>
+                        <span class="badge bg-success text-dark">Present:
+                            {{ number_format($attendanceWindowPresent) }}</span>
+                        <span class="badge bg-warning text-dark">Absent:
+                            {{ number_format($attendanceWindowAbsent) }}</span>
                     </div>
                 </div>
             </div>
@@ -442,7 +566,8 @@
                     </div>
                     <div class="mt-3 d-flex flex-wrap gap-2">
                         <span class="badge bg-info text-dark">Total: {{ number_format($admissionsTotal) }}</span>
-                        <span class="badge bg-success text-dark">Confirmed: {{ number_format($admissionsConfirmed) }}</span>
+                        <span class="badge bg-success text-dark">Confirmed:
+                            {{ number_format($admissionsConfirmed) }}</span>
                         <span class="badge bg-warning text-dark">Pending: {{ number_format($admissionsPending) }}</span>
                     </div>
                 </div>
@@ -450,21 +575,21 @@
         </div>
 
         <!-- <div class="col-lg-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <strong><i class="la la-pie-chart"></i> Attendance Status</strong>
-                </div>
-                <div class="card-body">
-                    <div class="chart-wrap-sm">
-                        <canvas id="attendanceStatusDoughnut"></canvas>
-                    </div>
-                    <div class="mt-3 d-flex flex-wrap gap-2">
-                        <span class="badge bg-success text-dark">Present: {{ number_format($presentCount) }}</span>
-                        <span class="badge bg-info text-dark">Absent: {{ number_format($absentCount) }}</span>
-                    </div>
-                </div>
-            </div>
-        </div> -->
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <strong><i class="la la-pie-chart"></i> Attendance Status</strong>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-wrap-sm">
+                                    <canvas id="attendanceStatusDoughnut"></canvas>
+                                </div>
+                                <div class="mt-3 d-flex flex-wrap gap-2">
+                                    <span class="badge bg-success text-dark">Present: {{ number_format($presentCount) }}</span>
+                                    <span class="badge bg-info text-dark">Absent: {{ number_format($absentCount) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div> -->
 
         <div class="col-lg-6">
             <div class="card h-100">
@@ -491,18 +616,18 @@
                                         ->pluck('count', 'session');
                                 @endphp
 
-                                @foreach($sessions as $session)
+                                @foreach ($sessions as $session)
                                     @php
                                         $confirmedCount = (int) ($confirmedBySession[$session->id] ?? 0);
                                         $limit = (int) ($session->limit ?? 0);
                                         $slotsLeft = $limit > 0 ? max(0, $limit - $confirmedCount) : null;
                                     @endphp
                                     <tr>
-                                        <td>{{ $session->name ?? ('Session #' . $session->id) }}</td>
+                                        <td>{{ $session->name ?? 'Session #' . $session->id }}</td>
                                         <td>{{ $limit ?: '-' }}</td>
-                                        <td>{{ $session->course_time ?? ('Session #' . $session->id) }}</td>
+                                        <td>{{ $session->course_time ?? 'Session #' . $session->id }}</td>
                                         <td>
-                                            @if($slotsLeft === null)
+                                            @if ($slotsLeft === null)
                                                 -
                                             @else
                                                 {{ number_format($slotsLeft) }}
@@ -514,7 +639,7 @@
                         </table>
                     </div>
 
-                    @if($sessions->isEmpty())
+                    @if ($sessions->isEmpty())
                         <div class="text-center text-muted py-3">No sessions configured for this course.</div>
                     @endif
                 </div>
@@ -553,7 +678,7 @@
                         </table>
                     </div>
 
-                    @if($admissionsConfirmed === 0)
+                    @if ($admissionsConfirmed === 0)
                         <div class="text-center text-muted py-3">No admitted students found for this course batch.</div>
                     @endif
                 </div>
@@ -584,7 +709,7 @@
                         </table>
                     </div>
 
-                    @if($attendanceTotal === 0)
+                    @if ($attendanceTotal === 0)
                         <div class="text-center text-muted py-3">No attendance records found for this course batch.</div>
                     @endif
                 </div>
@@ -607,13 +732,15 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($admins as $admin)
+                                @foreach ($admins as $admin)
                                     <tr>
                                         <td>{{ $admin->name ?? 'N/A' }}</td>
                                         <td>{{ $admin->email ?? 'N/A' }}</td>
                                         <td>
                                             @php
-                                                $roles = method_exists($admin, 'getRoleNames') ? $admin->getRoleNames()->implode(', ') : '';
+                                                $roles = method_exists($admin, 'getRoleNames')
+                                                    ? $admin->getRoleNames()->implode(', ')
+                                                    : '';
                                             @endphp
                                             {{ $roles ?: '-' }}
                                         </td>
@@ -623,7 +750,7 @@
                         </table>
                     </div>
 
-                    @if($admins->isEmpty())
+                    @if ($admins->isEmpty())
                         <div class="text-center text-muted py-3">No admins assigned to this course batch.</div>
                     @endif
                 </div>
@@ -631,17 +758,20 @@
         </div>
     </div>
 
-    <div class="modal fade" id="examResultModal" tabindex="-1" aria-labelledby="examResultModalLabel" aria-hidden="true">
+    <div class="modal fade" id="examResultModal" tabindex="-1" aria-labelledby="examResultModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header d-flex align-items-center">
                     <h5 class="modal-title" id="examResultModalLabel">Exam Result</h5>
-                    <button type="button" class="close ms-auto ml-auto" style="margin-left:auto" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close ms-auto ml-auto" style="margin-left:auto" data-dismiss="modal"
+                        data-bs-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body p-0">
-                    <iframe id="examResultFrame" src="about:blank" style="width:100%;height:75vh;border:0;" loading="lazy"></iframe>
+                    <iframe id="examResultFrame" src="about:blank" style="width:100%;height:75vh;border:0;"
+                        loading="lazy"></iframe>
                 </div>
             </div>
         </div>
@@ -658,17 +788,27 @@
             line-height: 1.1;
             margin-top: 0.35rem;
         }
+
         .chart-wrap {
             position: relative;
             height: 320px;
         }
+
         .chart-wrap-sm {
             position: relative;
             height: 220px;
         }
+
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            margin-top: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+
         .dataTables_wrapper .dataTables_filter input {
             margin-left: .5rem;
         }
+
         .dataTables_wrapper .dataTables_length select {
             margin: 0 .25rem;
         }
@@ -684,7 +824,7 @@
     <script src="{{ asset('assets/plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
 
     <script>
-        (function () {
+        (function() {
             "use strict";
 
             function showModal(modalId) {
@@ -696,7 +836,10 @@
                 }
 
                 if (window.bootstrap && window.bootstrap.Modal) {
-                    window.bootstrap.Modal.getOrCreateInstance(el, { backdrop: true, keyboard: true }).show();
+                    window.bootstrap.Modal.getOrCreateInstance(el, {
+                        backdrop: true,
+                        keyboard: true
+                    }).show();
                     return;
                 }
 
@@ -723,16 +866,22 @@
 
                 $el.DataTable(Object.assign({
                     pageLength: 10,
-                    lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                    lengthMenu: [
+                        [10, 25, 50, 100],
+                        [10, 25, 50, 100]
+                    ],
                     responsive: true,
                     deferRender: true,
-                    language: { search: "", searchPlaceholder: "Search..." },
+                    language: {
+                        search: "",
+                        searchPlaceholder: "Search..."
+                    },
                 }, options || {}));
             }
 
-            document.addEventListener('DOMContentLoaded', function () {
+            document.addEventListener('DOMContentLoaded', function() {
                 // Open exam result in modal (works for server-side DataTable rows).
-                document.addEventListener('click', function (e) {
+                document.addEventListener('click', function(e) {
                     const trigger = e.target.closest('.js-view-result-modal');
                     if (!trigger) return;
                     e.preventDefault();
@@ -742,7 +891,7 @@
 
                 const examModal = document.getElementById('examResultModal');
                 if (examModal) {
-                    const resetFrame = function () {
+                    const resetFrame = function() {
                         const frame = document.getElementById('examResultFrame');
                         if (frame) frame.setAttribute('src', 'about:blank');
                     };
@@ -767,16 +916,33 @@
                         url: @json(backpack_url('course-batch/' . $courseId . '/admitted-students-data')),
                         type: 'GET',
                     },
-                    columns: [
-                        { data: 'index' },
-                        { data: 'student' },
-                        { data: 'email' },
-                        { data: 'session' },
-                        { data: 'admission' },
-                        { data: 'exam' },
-                        { data: 'score' },
-                        { data: 'result' },
-                        { data: 'actions' },
+                    columns: [{
+                            data: 'index'
+                        },
+                        {
+                            data: 'student'
+                        },
+                        {
+                            data: 'email'
+                        },
+                        {
+                            data: 'session'
+                        },
+                        {
+                            data: 'admission'
+                        },
+                        {
+                            data: 'exam'
+                        },
+                        {
+                            data: 'score'
+                        },
+                        {
+                            data: 'result'
+                        },
+                        {
+                            data: 'actions'
+                        },
                     ],
                 });
 
@@ -788,15 +954,28 @@
                         url: @json(backpack_url('course-batch/' . $courseId . '/attendance-history-data')),
                         type: 'GET',
                     },
-                    columns: [
-                        { data: 'date' },
-                        { data: 'student' },
-                        { data: 'course' },
+                    columns: [{
+                            data: 'date'
+                        },
+                        {
+                            data: 'student'
+                        },
+                        {
+                            data: 'course'
+                        },
                     ],
                 });
 
-                safeInitDataTable('#dtSessions', { paging: false, searching: true, info: false });
-                safeInitDataTable('#dtAdmins', { paging: false, searching: true, info: false });
+                safeInitDataTable('#dtSessions', {
+                    paging: false,
+                    searching: true,
+                    info: false
+                });
+                safeInitDataTable('#dtAdmins', {
+                    paging: false,
+                    searching: true,
+                    info: false
+                });
 
                 if (typeof Chart !== 'function') return;
 
@@ -814,24 +993,46 @@
                         type: 'bar',
                         data: {
                             labels: attendanceLabels,
-                            datasets: [
-                                { label: 'Present', data: attendancePresent, backgroundColor: 'rgba(25, 135, 84, 0.8)' },
-                                { label: 'Absent', data: attendanceAbsent, backgroundColor: 'rgba(255, 193, 7, 0.85)' },
+                            datasets: [{
+                                    label: 'Present',
+                                    data: attendancePresent,
+                                    backgroundColor: 'rgba(25, 135, 84, 0.8)'
+                                },
+                                {
+                                    label: 'Absent',
+                                    data: attendanceAbsent,
+                                    backgroundColor: 'rgba(255, 193, 7, 0.85)'
+                                },
                             ]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
                             scales: {
-                                xAxes: [{ stacked: true, ticks: { autoSkip: false, maxRotation: 0, minRotation: 0 } }],
-                                yAxes: [{ stacked: true, ticks: { beginAtZero: true } }]
+                                xAxes: [{
+                                    stacked: true,
+                                    ticks: {
+                                        autoSkip: false,
+                                        maxRotation: 0,
+                                        minRotation: 0
+                                    }
+                                }],
+                                yAxes: [{
+                                    stacked: true,
+                                    ticks: {
+                                        beginAtZero: true
+                                    }
+                                }]
                             },
-                            legend: { position: 'bottom' },
+                            legend: {
+                                position: 'bottom'
+                            },
                             tooltips: {
                                 callbacks: {
-                                    title: function (items) {
+                                    title: function(items) {
                                         const idx = items && items.length ? items[0].index : null;
-                                        return idx !== null && attendanceLabelsFull[idx] ? attendanceLabelsFull[idx] : '';
+                                        return idx !== null && attendanceLabelsFull[idx] ?
+                                            attendanceLabelsFull[idx] : '';
                                     }
                                 }
                             }
@@ -843,7 +1044,7 @@
                 const admissionsCtx = document.getElementById('admissionsDoughnut');
                 if (admissionsCtx && ({{ $admissionsTotal }} > 0)) {
                     const centerTextPlugin = {
-                        beforeDraw: function (chart) {
+                        beforeDraw: function(chart) {
                             const opts = chart?.config?.options?.centerText;
                             if (!opts) return;
 
@@ -859,11 +1060,13 @@
                             ctx.textBaseline = 'middle';
 
                             ctx.fillStyle = opts.color || '#111';
-                            ctx.font = `600 ${opts.valueFontSize || 20}px ${opts.fontFamily || 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif'}`;
+                            ctx.font =
+                                `600 ${opts.valueFontSize || 20}px ${opts.fontFamily || 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif'}`;
                             ctx.fillText(line2, width / 2, height / 2 + (opts.valueOffsetY || 6));
 
                             ctx.fillStyle = opts.labelColor || '#6c757d';
-                            ctx.font = `500 ${opts.labelFontSize || 12}px ${opts.fontFamily || 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif'}`;
+                            ctx.font =
+                                `500 ${opts.labelFontSize || 12}px ${opts.fontFamily || 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif'}`;
                             ctx.fillText(line1, width / 2, height / 2 - (opts.labelOffsetY || 12));
 
                             ctx.restore();
@@ -876,14 +1079,18 @@
                             labels: ['Confirmed', 'Pending'],
                             datasets: [{
                                 data: [{{ $admissionsConfirmed }}, {{ $admissionsPending }}],
-                                backgroundColor: ['rgba(25, 135, 84, 0.85)', 'rgba(255, 193, 7, 0.85)'],
+                                backgroundColor: ['rgba(25, 135, 84, 0.85)',
+                                    'rgba(255, 193, 7, 0.85)'
+                                ],
                                 borderWidth: 1
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            legend: { position: 'bottom' },
+                            legend: {
+                                position: 'bottom'
+                            },
                             centerText: {
                                 line1: 'Total',
                                 line2: ({{ $admissionsTotal }}).toLocaleString(),
@@ -901,7 +1108,9 @@
                         data: {
                             labels: ['Present', 'Absent', 'Late', 'Excused'],
                             datasets: [{
-                                data: [{{ $presentCount }}, {{ $absentCount }}, {{ $lateCount }}, {{ $excusedCount }}],
+                                data: [{{ $presentCount }}, {{ $absentCount }},
+                                    {{ $lateCount }}, {{ $excusedCount }}
+                                ],
                                 backgroundColor: [
                                     'rgba(25, 135, 84, 0.85)',
                                     'rgba(220, 53, 69, 0.85)',
@@ -914,7 +1123,9 @@
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            legend: { position: 'bottom' }
+                            legend: {
+                                position: 'bottom'
+                            }
                         }
                     });
                 }
@@ -948,11 +1159,15 @@
                                     ticks: {
                                         beginAtZero: true,
                                         max: 100,
-                                        callback: function (value) { return value + '%'; }
+                                        callback: function(value) {
+                                            return value + '%';
+                                        }
                                     }
                                 }]
                             },
-                            legend: { position: 'bottom' }
+                            legend: {
+                                position: 'bottom'
+                            }
                         }
                     });
                 }

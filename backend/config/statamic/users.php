@@ -131,7 +131,7 @@ return [
     'tables' => [
         'users' => 'admins',
         'role_user' => 'role_admin',
-        'roles' => 'roles',
+        'roles' => 'statamic_roles',
         'group_user' => 'group_admin',
         'groups' => 'groups',
     ],

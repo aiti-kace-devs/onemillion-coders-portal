@@ -23,9 +23,9 @@ const CoursesSection = ({ categories: apiCategories }) => {
   // Fetch programmes data
   const fetchProgrammes = async (categoryId = null) => {
     try {
-      let url = "/programmes";
+      let url = "/programmes?sort=title&order=asc&limit=9";
       if (categoryId) {
-        url = `/programmes/category/${categoryId}`;
+        url = `/programmes/category/${categoryId}?sort=title&order=asc&limit=9`;
       }
 
       const data = await getProgrammesData(url);
@@ -67,15 +67,22 @@ const CoursesSection = ({ categories: apiCategories }) => {
     initialFetch();
   }, []);
 
-  // Detect mobile device
+  // Detect mobile device (debounced)
   useEffect(() => {
+    let timeoutId;
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsMobile(window.innerWidth < 768);
+      }, 150);
     };
 
-    checkMobile();
+    setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("resize", checkMobile);
+    };
   }, []);
 
   // Get categories from API (safe when API fails and returns null/undefined)
@@ -119,20 +126,19 @@ const CoursesSection = ({ categories: apiCategories }) => {
     }
   };
 
-  // Category color mapping
+  // Category color mapping (matte tones)
   const categoryColors = {
-    Cybersecurity: "bg-red-100 text-red-800 border-red-200",
-    "DATA Protection": "bg-blue-100 text-blue-800 border-blue-200",
-    "Artificial Intelligence Training":
-      "bg-purple-100 text-purple-800 border-purple-200",
-    "Mobile Application Development":
-      "bg-green-100 text-green-800 border-green-200",
-    "Systems Administration": "bg-orange-100 text-orange-800 border-orange-200",
-    "Web Application Programming":
-      "bg-indigo-100 text-indigo-800 border-indigo-200",
-    "BPO Training": "bg-pink-100 text-pink-800 border-pink-200",
-    "Other Special Training Programs":
-      "bg-gray-100 text-gray-800 border-gray-200",
+    "Cybersecurity": "bg-red-50 text-red-700 border-red-100",
+    "Data Protection": "bg-blue-50 text-blue-700 border-blue-100",
+    "Artificial Intelligence": "bg-purple-50 text-purple-700 border-purple-100",
+    "Software Development": "bg-emerald-50 text-emerald-700 border-emerald-100",
+    "Cloud Computing": "bg-orange-50 text-orange-700 border-orange-100",
+    "IT Support": "bg-indigo-50 text-indigo-700 border-indigo-100",
+    "Data Analyst": "bg-teal-50 text-teal-700 border-teal-100",
+    "Digital Marketing": "bg-pink-50 text-pink-700 border-pink-100",
+    "Project Management": "bg-amber-50 text-amber-700 border-amber-100",
+    "UI / UX Design": "bg-violet-50 text-violet-700 border-violet-100",
+    "Digital Literacy": "bg-cyan-50 text-cyan-700 border-cyan-100",
   };
 
   // Enhanced animation variants
@@ -228,13 +234,21 @@ const CoursesSection = ({ categories: apiCategories }) => {
 
             {/* Enhanced Category Filter with Horizontal Scroll */}
             <motion.div
-              initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: prefersReducedMotion ? 0.3 : 0.4,
-                delay: prefersReducedMotion ? 0 : 0.1,
-              }}
+              initial="hidden"
+              whileInView="visible"
               viewport={{ once: true }}
+              variants={{
+                hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 15 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: prefersReducedMotion ? 0.3 : 0.4,
+                    delay: prefersReducedMotion ? 0 : 0.1,
+                    staggerChildren: prefersReducedMotion ? 0 : 0.03,
+                  },
+                },
+              }}
               className="relative"
             >
               {/* Scroll container with hidden scrollbars */}
@@ -246,16 +260,10 @@ const CoursesSection = ({ categories: apiCategories }) => {
                   WebkitOverflowScrolling: "touch",
                 }}
               >
-                {categories.map((category, index) => (
+                {categories.map((category) => (
                   <motion.button
                     key={category}
                     variants={categoryVariants}
-                    initial="hidden"
-                    whileInView="visible"
-                    transition={{
-                      delay: prefersReducedMotion ? 0 : index * 0.03,
-                    }}
-                    viewport={{ once: true }}
                     onClick={() => handleCategoryClick(category)}
                     whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
                     whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}

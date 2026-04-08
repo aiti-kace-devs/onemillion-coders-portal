@@ -20,7 +20,18 @@ const toggleSidebar = () => {
 };
 
 // Get the current route name for active link highlighting
-const { auth, component } = usePage().props;
+const { auth, config, component } = usePage().props;
+
+const props = defineProps({
+    fullHeight: {
+        type: Boolean,
+        default: false,
+    },
+    hideGradient: {
+        type: Boolean,
+        default: false,
+    },
+});
 
 const user = auth?.user || {};
 </script>
@@ -91,27 +102,27 @@ const user = auth?.user || {};
                     <SidebarNavLink
                         :active="route().current('student.dashboard')"
                         :href="route('student.dashboard')"
-                        :label="'Overview'"
+                        :label="'Dashboard'"
                     >
                         <span class="material-symbols-outlined">dashboard</span>
                     </SidebarNavLink>
 
-                    <SidebarNavLink
-                        :active="route().current('student.exam.index')"
-                        :href="route('student.exam.index')"
-                        :label="'Exam'"
-                    >
-                        <span class="material-symbols-outlined">quiz</span>
-                    </SidebarNavLink>
+                    <!--           <SidebarNavLink
+            :active="route().current('student.exam.index')"
+            :href="route('student.exam.index')"
+            :label="'Exam'"
+          >
+            <span class="material-symbols-outlined">quiz</span>
+          </SidebarNavLink> -->
 
-                    <SidebarNavLink
-                        v-if="user.isAdmitted"
-                        :active="route().current('student.results')"
-                        :href="route('student.results')"
-                        :label="'Results'"
-                    >
-                        <span class="material-symbols-outlined">task</span>
-                    </SidebarNavLink>
+          <SidebarNavLink
+            v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
+            :active="route().current('student.results')"
+            :href="route('student.results')"
+            :label="'Results'"
+          >
+            <span class="material-symbols-outlined">task</span>
+          </SidebarNavLink>
 
                     <SidebarNavLink
                         :active="route().current('student.profile.edit')"
@@ -135,13 +146,21 @@ const user = auth?.user || {};
                     </SidebarNavLink>
 
                     <SidebarNavLink
-                        v-if="user.hasAdmission"
-                        :href="route('student.course.index')"
-                        :active="route().current('student.course.*')"
-                        :label="'Change Course'"
+                        v-if="
+                            !user.isAdmitted &&
+                            !user.shortlist &&
+                            user.assessment_completed
+                        "
+                        :href="route('student.change-course')"
+                        :active="route().current('student.change-course')"
+                        :label="
+                            user.registered_course
+                                ? 'Change Course'
+                                : 'Choose Course'
+                        "
                     >
                         <span class="material-symbols-outlined">
-                            change_circle
+                            swap_horiz
                         </span>
                     </SidebarNavLink>
 
@@ -165,6 +184,7 @@ const user = auth?.user || {};
                         </SidebarNavLink>
 
                         <SidebarNavLink
+                            v-if="config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
                             :active="route().current('student.assessment.*')"
                             :href="route('student.assessment.index')"
                             :label="'Course Assessment'"
@@ -188,10 +208,20 @@ const user = auth?.user || {};
         </div>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col md:ml-[70px] bg-gray-100">
+        <div
+            class="flex-1 flex flex-col md:ml-[70px] bg-[#f8f9fa] relative overflow-hidden"
+        >
+            <!-- Background Accents -->
+            <div
+                class="absolute top-0 right-0 w-[500px] h-[500px] bg-[#f9a825]/5 rounded-full blur-[100px] -mr-64 -mt-64 pointer-events-none"
+            ></div>
+            <div
+                class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#f9a825]/3 rounded-full blur-[80px] -ml-48 -mb-48 pointer-events-none"
+            ></div>
+
             <!-- Top Nav -->
             <header
-                class="sticky top-0 h-16 bg-white flex items-center justify-between px-4 lg:px-8 shadow-sm z-10"
+                class="sticky top-0 h-16 bg-white/80 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 border-b border-gray-100/50 z-50 transition-all duration-300"
                 role="banner"
             >
                 <div class="flex items-center gap-x-3">
@@ -246,9 +276,13 @@ const user = auth?.user || {};
                     </span>
                 </Link>
             </header>
+            <div
+                v-if="!hideGradient"
+                class="h-1.5 w-full bg-gradient-to-r from-red-600 via-yellow-400 to-green-600 z-40 sticky top-16"
+            ></div>
 
             <!-- Page content -->
-            <main class="py-6 px-4 lg:px-8">
+            <main :class="props.fullHeight ? '' : 'py-6 px-4 lg:px-8'">
                 <slot />
             </main>
         </div>

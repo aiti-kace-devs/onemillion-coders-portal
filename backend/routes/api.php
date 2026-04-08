@@ -20,9 +20,11 @@ use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
 |
 */
 Route::post('batch/add-courses/{batch}', [BatchCrudController::class, 'addCourses'])
-       ->name('batch.add-courses');
-Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
-Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
+    ->name('batch.add-courses');
+Route::post('/recommend/courses', [CourseMatchAPIController::class, 'recommendCourses']);
+// Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
+// Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
+
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -39,10 +41,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // Route::post('/api/add-student', [CreateStudentAPIController::class, 'store'])->middleware('api'); // This applies the api middleware group
 
 
-// Tiered Assessment endpoints (External API)
-Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->group(function () {
+// Tiered Assessment endpoints (External API) — user resolved from JWT (Bearer, token, or user_id param)
+Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->middleware('user.token')->group(function () {
     Route::get('/fetch', [StudentOperation::class, 'fetch_assessment_question'])->name('fetch');
     Route::post('/submit', [StudentOperation::class, 'submit_assessment_answer'])->name('submit');
+    Route::post('/record-violation', [StudentOperation::class, 'record_assessment_violation'])->name('record-violation');
 });
 /*
 |--------------------------------------------------------------------------
@@ -54,6 +57,9 @@ Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->group(functi
 */
 Route::get('/pages/footer', [StatamicEntryApiController::class, 'footer']);
 Route::get('/pages/{slug}', [StatamicEntryApiController::class, 'showPageBySlug']);
+
+Route::get('/forms/{handle}', [StatamicEntryApiController::class, 'showFormByHandle']);
+Route::post('/forms/{handle}', [StatamicEntryApiController::class, 'saveFormByHandle']);
 
 
 Route::name('custom.')->group(function () {

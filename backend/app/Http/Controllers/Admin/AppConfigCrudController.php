@@ -8,6 +8,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Illuminate\Http\Request;
 use App\Models\AppConfig;
 use App\Helpers\GeneralFieldsAndColumns;
+use App\Helpers\CrudListHelper;
 use App\Helpers\FilterHelper;
 /**
  * Class AppConfigCrudController
@@ -43,13 +44,15 @@ class AppConfigCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
+
         CRUD::column('key')->type('textarea')->label('Name');
         CRUD::column('type')->type('text')->label('Type');
         CRUD::addColumn([
             'name' => 'value',
             'label' => 'Value',
             'type' => 'view',
-            'view' => 'admin.app_config.value_column', 
+            'view' => 'admin.app_config.value_column',
         ]);
         FilterHelper::addBooleanColumn('is_cached', 'Is Cached');
         CRUD::column('created_at');
@@ -112,14 +115,14 @@ class AppConfigCrudController extends CrudController
     public function toggleValue(Request $request, $id)
     {
         $config = AppConfig::findOrFail($id);
-        
+
         if($config->type !== 'boolean') {
             return response()->json(['status' => 'error', 'message' => 'Not a boolean config'], 400);
         }
-        
+
         $config->value = $request->input('value');
         $config->save();
-        
+
         return response()->json(['status' => 'success', 'message' => 'Updated successfully']);
     }
 }

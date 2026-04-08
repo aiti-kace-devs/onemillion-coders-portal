@@ -11,9 +11,11 @@ use App\Models\Centre;
 use App\Models\District;
 use App\Models\Course;
 use App\Models\Batch;
+use App\Models\Constituency;
 use App\Models\CourseBatch;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class CourseProgrammeController extends Controller
 {
@@ -49,111 +51,36 @@ class CourseProgrammeController extends Controller
 
 
 
-    // public function programmeWithBatch(Request $request)
-    //     {
-    //         $query = Batch::with([
-    //                 'courseBatches.course.programme' => function ($q) {
-    //                     $q->with(['category', 'courseCertification', 'courseModules'])
-    //                         ->withCount('courseModules');
-    //                 }
-    //             ])
-    //             ->whereHas('courseBatches');
 
-    //         $today = Carbon::today();
+    public function programmeWithBatch(Request $request)
+    {
+        $filter = $request->query('filter');
+        $sort = $request->query('sort');
+        $order = strtolower((string) $request->query('order', 'asc'));
+        $limit = $request->query('limit');
 
-    //         if ($request->has('batch')) {
-    //             $filter = $request->filter;
+        if (is_string($sort) && str_starts_with($sort, '-')) {
+            $sort = ltrim($sort, '-');
+            $order = 'desc';
+        }
 
-    //             if ($filter === 'ongoing') {
-    //                 $query->where('start_date', '<=', $today)
-    //                     ->where('end_date', '>=', $today)
-    //                     ->where('completed', false)
-    //                     ->where('status', true);
-    //             }
+        $limit = is_numeric($limit) ? (int) $limit : null;
+        if ($limit !== null && $limit <= 0) {
+            $limit = null;
+        }
 
-    //             if ($filter === 'upcoming') {
-    //                 $query->where('start_date', '>', $today)
-    //                     ->where('completed', false)
-    //                     ->where('status', true);
-    //             }
+        $cacheKey = 'programme_with_batch:' . ($filter ? (string) $filter : 'all')
+            . ':sort:' . ($sort ? (string) $sort : 'none')
+            . ':order:' . ($order === 'desc' ? 'desc' : 'asc')
+            . ':limit:' . ($limit !== null ? (string) $limit : 'none');
 
-    //             if ($filter === 'passed') {
-    //                 $query->where('end_date', '<', $today)
-    //                     ->orWhere('completed', true);
-    //             }
-    //         }
-
-    //         $batches = $query->get()
-    //             ->map(function ($batch) {
-    //                 $courseBatches = $batch->courseBatches->map(function ($cb) {
-    //                     return [
-    //                         'id' => $cb->id,
-    //                         'course_id' => $cb->course_id,
-    //                         'batch_id' => $cb->batch_id,
-    //                         'duration' => $cb->duration,
-    //                         'start_date' => $cb->start_date,
-    //                         'end_date' => $cb->end_date,
-    //                         'course' => $cb->course ? [
-    //                             'id' => $cb->course->id,
-    //                             'programme_id' => $cb->course->programme_id,
-    //                             'programme' => $cb->course->programme ? [
-    //                                 'id' => $cb->course->programme->id,
-    //                                 'title' => $cb->course->programme->title,
-    //                                 'description' => $cb->course->programme->description,
-    //                                 'course_category_id' => $cb->course->programme->course_category_id,
-    //                                 'cover_image_id' => $cb->course->programme->cover_image_id,
-    //                                 'sub_title' => $cb->course->programme->sub_title,
-    //                                 'level' => $cb->course->programme->level,
-    //                                 'job_responsible' => $cb->course->programme->job_responsible,
-    //                                 'image' => $cb->course->programme->image,
-    //                                 'overview' => $cb->course->programme->overview,
-    //                                 'prerequisites' => $cb->course->programme->prerequisites,
-    //                                 'course_modules_count' => $cb->course->programme->course_modules_count,
-    //                                 'category' => $cb->course->programme->category,
-    //                                 'courseCertification' => $cb->course->programme->courseCertification,
-    //                                 'courseModules' => $cb->course->programme->courseModules,
-    //                                 'courseModules_count' => $cb->course->programme->courseModules_count,
-    //                             ] : null,
-    //                         ] : null,
-    //                     ];
-    //                 });
-
-    //                 return [
-    //                     'id' => $batch->id,
-    //                     'title' => $batch->title,
-    //                     'description' => $batch->description,
-    //                     'start_date' => $batch->start_date,
-    //                     'end_date' => $batch->end_date,
-    //                     'status' => $batch->status,
-    //                     'completed' => $batch->completed,
-    //                     'course_batches' => $courseBatches,
-    //                     'programmes' => $courseBatches
-    //                         ->pluck('course.programme')
-    //                         ->filter()
-    //                         ->unique('id')
-    //                         ->values(),
-    //                 ];
-    //             });
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'data' => $batches
-    //         ]);
-    //     }
-
-
-
-
-        public function programmeWithBatch(Request $request)
-        {
+        $programmes = Cache::remember($cacheKey, 600, function () use ($filter, $sort, $order, $limit) {
             $today = Carbon::today();
 
             $batchQuery = Batch::where('completed', false)
                 ->where('status', true);
 
-            if ($request->has('filter')) {
-                $filter = $request->filter;
-
+            if ($filter) {
                 if ($filter === 'ongoing') {
                     $batchQuery->where('start_date', '<=', $today)
                         ->where('end_date', '>=', $today);
@@ -175,28 +102,74 @@ class CourseProgrammeController extends Controller
                 ->with(['programme.category', 'programme.coverImage', 'programme.courseCertification', 'programme.courseModules'])
                 ->get();
 
-            $programmes = $courses->map(function ($course) {
+            $items = $courses->unique('programme_id')->map(function ($course) {
                 $programme = $course->programme;
                 if ($programme) {
-                    $programmeData = $programme->toArray();
-                    $programmeData['course_id'] = $course->id;
-                    $programmeData['centre_id'] = $course->centre_id;
-                    $programmeData['duration'] = $course->duration;
-                    $programmeData['start_date'] = $course->start_date;
-                    $programmeData['end_date'] = $course->end_date;
-                    $programmeData['status'] = $course->status ?? true;
-                    return $programmeData;
+                    return [
+                        'id' => $programme->id,
+                        'title' => $programme->title,
+                        'duration' => $course->duration ?? $programme->duration,
+                        // 'status' => $course->status ?? $programme->status ?? true,
+                        'description' => $programme->description,
+                        'sub_title' => $programme->sub_title,
+                        'level' => $programme->level,
+                        'mode_of_delivery' => $programme->mode_of_delivery,
+                        // 'provider' => $programme->provider,
+                        'job_responsible' => $programme->job_responsible,
+                        'image' => $programme->image,
+                        'category' => $programme->category
+                            ? [
+                                'id' => $programme->category->id,
+                                'title' => $programme->category->title,
+                            ]
+                            : null,
+                        'course_certification' => $programme->courseCertification
+                            ? $programme->courseCertification
+                            ->map(fn($cert) => [
+                                'title' => $cert->title,
+                                'description' => $cert->description,
+                                'type' => $cert->type,
+                                'status' => $cert->status,
+                            ])
+                            ->values()
+                            : [],
+                        'course_id' => $course->id,
+                        'centre_id' => $course->centre_id,
+                    ];
                 }
                 return null;
-            })->filter()->unique(function ($item) {
-                return $item['centre_id'] . '-' . $item['id'];
-            })->values();
+            })->filter()->values();
 
-            return response()->json([
-                'success' => true,
-                'data' => $programmes
-            ]);
-        }
+            if ($sort) {
+                $allowedSorts = [
+                    'id',
+                    'title',
+                    'duration',
+                    'sub_title',
+                    'level',
+                    'mode_of_delivery',
+                    'course_id',
+                    'centre_id',
+                ];
+
+                if (in_array($sort, $allowedSorts, true)) {
+                    $descending = $order === 'desc';
+                    $items = $items->sortBy($sort, SORT_NATURAL | SORT_FLAG_CASE, $descending)->values();
+                }
+            }
+
+            if ($limit !== null) {
+                $items = $items->take($limit)->values();
+            }
+
+            return $items;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $programmes
+        ]);
+    }
 
 
 
@@ -298,11 +271,11 @@ class CourseProgrammeController extends Controller
     public function programmesByBatch($batchId, Request $request)
     {
         $query = Batch::with([
-                'courses.programme' => function ($q) {
-                    $q->with(['category', 'courseCertification', 'courseModules'])
+            'courses.programme' => function ($q) {
+                $q->with(['category', 'courseCertification', 'courseModules'])
                     ->withCount('courseModules');
-                }
-            ])
+            }
+        ])
             ->whereHas('courses.programme');
 
         // Apply optional filters
@@ -329,9 +302,9 @@ class CourseProgrammeController extends Controller
             'start_date'  => $batch->start_date,
             'end_date'    => $batch->end_date,
             'programmes'  => $batch->courses
-                                ->pluck('programme')
-                                ->unique('id')
-                                ->values(),
+                ->pluck('programme')
+                ->unique('id')
+                ->values(),
         ];
 
         return response()->json([
@@ -382,7 +355,10 @@ class CourseProgrammeController extends Controller
 
     public function getCourseCategory()
     {
-        $courseCategory = CourseCategory::all();
+        $courseCategory = Cache::remember('course_categories', 600, function () {
+            return CourseCategory::orderBy('title')
+                ->get(['id', 'title', 'description', 'status', 'icon']);
+        });
 
         return response()->json([
             'success' => true,
@@ -391,11 +367,33 @@ class CourseProgrammeController extends Controller
     }
 
 
-
-
-    public function getBranch()
+    public function getBranch(Request $request)
     {
-        $branch = Branch::where('status', 1)->get();
+        $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
+        $cacheKey = 'branches:' . ($addCentreCount ? 'with_centres' : 'basic');
+
+        $branch = Cache::remember($cacheKey, 600, function () use ($addCentreCount) {
+            $branchQuery = Branch::where('status', 1)->orderBy('title');
+            if ($addCentreCount) {
+                $branchQuery->withCount('centre');
+            }
+
+            return $branchQuery->get(['id', 'title', 'status'])
+                ->map(function ($branch) use ($addCentreCount) {
+                    $payload = [
+                        'id' => $branch->id,
+                        'title' => $branch->title,
+                        'status' => $branch->status,
+                    ];
+
+                    if ($addCentreCount) {
+                        $payload['total_centres'] = (int) $branch->centre_count;
+                    }
+
+                    return $payload;
+                })
+                ->values();
+        });
 
         return response()->json([
             'success' => true,
@@ -408,15 +406,25 @@ class CourseProgrammeController extends Controller
 
     public function getBranchSummary()
     {
+        $today = Carbon::today()->toDateString();
         $branches = Branch::withCount('centre')
             ->with(['centre'])
             ->get()
-            ->map(function ($branch) {
+            ->map(function ($branch) use ($today) {
 
-                $centreIds = $branch->centre->pluck('id');
-                $courses = Course::whereIn('centre_id', $centreIds)->get();
-                $ProgrammeIds = $courses->pluck('programme_id');
-                $programmes = Programme::whereIn('id', $ProgrammeIds)->get();
+                $courses = Course::join('centres', 'courses.centre_id', '=', 'centres.id')
+                    ->join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
+                    ->where('centres.branch_id', $branch->id)
+                    ->whereNotNull('courses.programme_id')
+                    ->where('courses.status', 1)
+                    ->where('admission_batches.start_date', '<=', $today)
+                    ->where('admission_batches.end_date', '>=', $today)
+                    ->where('admission_batches.completed', false)
+                    ->where('admission_batches.status', true)
+                    ->get(['courses.id', 'courses.programme_id', 'courses.centre_id']);
+
+                $programmeIds = $courses->pluck('programme_id')->unique()->values();
+                $programmes = Programme::whereIn('id', $programmeIds)->get(['title', 'sub_title']);
                 $courseIds = $courses->pluck('id');
                 $admittedUsersCount = UserAdmission::whereIn('course_id', $courseIds)
                     ->whereNotNull('confirmed')
@@ -426,7 +434,15 @@ class CourseProgrammeController extends Controller
                     'branch_id' => $branch->id,
                     'branch_title' => $branch->title,
                     'total_centres' => $branch->centre_count,
+                    'total_courses' => $courses->count(),
                     'total_trained_coders' => $admittedUsersCount,
+                    'centres' => $branch->centre
+                        ->map(fn($centre) => [
+                            'id' => $centre->id,
+                            'title' => $centre->title,
+                            'gps_location' => $centre->gps_location ?? [],
+                        ])
+                        ->values(),
                     'courses' => $programmes,
                 ];
             });
@@ -450,8 +466,10 @@ class CourseProgrammeController extends Controller
             $branch = $centres->first()->branch;
 
             $cleanCentres = $centres->map(function ($centre) {
-                unset($centre->branch);
-                return $centre;
+                $centreData = $centre->toArray();
+                unset($centreData['branch']);
+                $centreData['gps_location'] = $centre->gps_location ?? [];
+                return $centreData;
             })->values();
 
             return [
@@ -501,14 +519,33 @@ class CourseProgrammeController extends Controller
         return response()->json([
             'centre_id' => $centre->id,
             'centre' => $centre->title,
+            'gps_location' => $centre->gps_location ?? [],
             'programmes' => $programmes,
+        ]);
+    }
+
+    public function centreById(Centre $centre)
+    {
+        $centreData = $centre->toArray();
+        $centreData['gps_location'] = $centre->gps_location ?? [];
+
+        return response()->json([
+            'success' => true,
+            'data' => $centreData,
         ]);
     }
 
 
     public function centresByBranch(Branch $branch)
     {
-        $centres = $branch->centre()->get();
+        $centres = $branch->centre()
+            ->get()
+            ->map(function ($centre) {
+                $centreData = $centre->toArray();
+                $centreData['gps_location'] = $centre->gps_location ?? [];
+                return $centreData;
+            })
+            ->values();
 
         return response()->json([
             'region' => $branch->title,
@@ -524,16 +561,86 @@ class CourseProgrammeController extends Controller
 
         $branch = Branch::query()->findOrFail($data['branch_id']);
 
-        $districts = District::query()
-            ->where('branch_id', $branch->id)
-            ->orderBy('title')
-            ->get();
+        $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
+        $cacheKey = 'districts_by_branch:' . $branch->id . ':' . ($addCentreCount ? 'with_centres' : 'basic') . ':has_centres';
+
+        $districts = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($branch, $addCentreCount) {
+            $districtQuery = District::query()
+                ->where('branch_id', $branch->id)
+                ->whereHas('centres')
+                ->orderBy('title');
+
+            if ($addCentreCount) {
+                $districtQuery->withCount('centres');
+            }
+
+            return $districtQuery->get(['id', 'title'])
+                ->map(function ($district) use ($addCentreCount) {
+                    $payload = [
+                        'id' => $district->id,
+                        'title' => $district->title,
+                    ];
+
+                    if ($addCentreCount) {
+                        $payload['total_centres'] = (int) $district->centres_count;
+                    }
+
+                    return $payload;
+                })
+                ->values();
+        });
 
         return response()->json([
             'success' => true,
             'branch_id' => $branch->id,
             'branch' => $branch->title,
             'districts' => $districts,
+        ]);
+    }
+
+
+
+    public function constituencyByRegion(Request $request)
+    {
+        $data = $request->validate([
+            'branch_id' => 'required|integer|exists:branches,id',
+        ]);
+
+        $branch = Branch::query()->findOrFail($data['branch_id']);
+
+        $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
+        $cacheKey = 'constituencies_by_branch:' . $branch->id . ':' . ($addCentreCount ? 'with_centres' : 'basic');
+
+        $constituencies = Cache::remember($cacheKey, 600, function () use ($branch, $addCentreCount) {
+            $constituencyQuery = Constituency::query()
+                ->where('branch_id', $branch->id)
+                ->orderBy('title');
+
+            if ($addCentreCount) {
+                $constituencyQuery->withCount('centres');
+            }
+
+            return $constituencyQuery->get(['id', 'title'])
+                ->map(function ($constituency) use ($addCentreCount) {
+                    $payload = [
+                        'id' => $constituency->id,
+                        'title' => $constituency->title,
+                    ];
+
+                    if ($addCentreCount) {
+                        $payload['total_centres'] = (int) $constituency->centres_count;
+                    }
+
+                    return $payload;
+                })
+                ->values();
+        });
+
+        return response()->json([
+            'success' => true,
+            'branch_id' => $branch->id,
+            'branch' => $branch->title,
+            'constituencies' => $constituencies,
         ]);
     }
 
@@ -553,9 +660,28 @@ class CourseProgrammeController extends Controller
             'success' => true,
             'district_id' => $district->id,
             'district' => $district->title,
-            'centres' => $district->centres->values(),
+            'centres' => $district->centres
+                ->map(function ($centre) {
+                    return [
+                        'id' => $centre->id,
+                        'title' => $centre->title,
+                        'is_pwd_friendly' => $centre->is_pwd_friendly,
+                        'status' => $centre->status,
+                        'gps_location' => $centre->gps_location ?? [],
+                        'gps_address' => $centre->gps_address,
+                        'wheelchair_accessible' => $centre->wheelchair_accessible,
+                        'has_access_ramp' => $centre->has_access_ramp,
+                        'has_accessible_toilet' => $centre->has_accessible_toilet,
+                        'has_elevator' => $centre->has_elevator,
+                        'supports_hearing_impaired' => $centre->supports_hearing_impaired,
+                        'supports_visually_impaired' => $centre->supports_visually_impaired,
+                        'staff_trained_for_pwd' => $centre->staff_trained_for_pwd,
+                        'accessibility_rating' => $centre->accessibility_rating,
+                        'pwd_notes' => $centre->pwd_notes,
+                        'images' => $centre->images ?? []
+                    ];
+                })
+                ->values(),
         ]);
     }
-
-
 }

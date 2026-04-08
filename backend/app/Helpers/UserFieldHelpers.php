@@ -4,7 +4,6 @@ namespace App\Helpers;
 
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Helpers\FilterHelper;
-use App\Models\Admin;
 use App\Models\Course;
 use App\Helpers\CourseFieldHelpers;
 trait UserFieldHelpers
@@ -25,6 +24,7 @@ trait UserFieldHelpers
     {
         $this->setFirstNameField();
         // $this->setLastNameField();
+        $this->assignedCentre();
         $this->assignedCourses();
         $this->setEmailField();
         if ($showPassword) {
@@ -70,37 +70,11 @@ trait UserFieldHelpers
     }
 
     /**
-     * Return course IDs visible to the current admin.
-     * `null` means unrestricted visibility (super admin or non-admin contexts).
-     */
-    protected function currentAdminVisibleCourseIds(): ?array
-    {
-        $admin = backpack_user();
-
-        if (! $admin instanceof Admin) {
-            return null;
-        }
-
-        if (method_exists($admin, 'visibleCourseIds')) {
-            return $admin->visibleCourseIds();
-        }
-
-        if ($admin->isSuper()) {
-            return null;
-        }
-
-        return $admin->assignedCourses()
-            ->pluck('courses.id')
-            ->map(fn ($courseId) => (int) $courseId)
-            ->all();
-    }
-
-    /**
      * Restrict user list queries by the current admin's assigned courses.
      */
     public function applyCurrentAdminUserCourseScope(): void
     {
-        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
 
         if ($visibleCourseIds === null) {
             return;
@@ -120,7 +94,7 @@ trait UserFieldHelpers
     public function addCurrentAdminCourseFilter(string $columnName = 'registered_course', string $label = 'Course'): void
     {
         $coursesQuery = Course::query()->orderBy('course_name');
-        $visibleCourseIds = $this->currentAdminVisibleCourseIds();
+        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
 
         if (is_array($visibleCourseIds)) {
             if (empty($visibleCourseIds)) {
@@ -373,6 +347,21 @@ trait UserFieldHelpers
             'attribute' => 'display_name',
             'pivot' => true,
             'tab' => 'Account Info',
+            'wrapper' => ['class' => 'form-group col-6'],
+        ]);
+    }
+
+    public function assignedCentre(): void
+    {
+        CRUD::addField([
+            'name' => 'centres',
+            'type' => 'select2_multiple',
+            'label' => 'Assign Centre',
+            'entity' => 'assignedCentres',
+            'model' => 'App\\Models\\Centre',
+            'attribute' => 'title',
+            'pivot' => true,
+            'tab' => $this->accountInfoTab,
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
     }

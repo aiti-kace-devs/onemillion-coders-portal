@@ -26,7 +26,7 @@ class Course extends Model
         'centre_id',
         'programme_id',
         'course_name',
-        'location',
+        // 'location',
         'duration',
         'start_date',
         'batch_id',
@@ -48,13 +48,31 @@ class Course extends Model
      */
     public function getDisplayNameAttribute()
     {
-        $centreTitle = $this->centre?->title ?? 'Unknown Centre';
-        return $this->course_name ? "{$this->course_name} - {$centreTitle}" : $centreTitle;
+        return $this->course_name ?: ($this->centre?->title ?? 'Unknown Centre');
     }
 
     public function programme()
     {
         return $this->belongsTo(Programme::class);
+    }
+
+    public function isOnlineProgramme(): bool
+    {
+        $mode = $this->programme?->mode_of_delivery;
+        return strtolower(trim((string) $mode)) === 'online';
+    }
+
+    public function siblingCourseIdsForProgrammeBatch(): array
+    {
+        if (!$this->programme_id || !$this->batch_id) {
+            return $this->id ? [$this->id] : [];
+        }
+
+        return self::query()
+            ->where('programme_id', $this->programme_id)
+            ->where('batch_id', $this->batch_id)
+            ->pluck('id')
+            ->all();
     }
 
     public function batch()
@@ -64,7 +82,7 @@ class Course extends Model
 
     public function batches()
     {
-        return $this->belongsToMany(Batch::class, 'course_batches', 'course_id', 'batch_id');
+        return $this->belongsTo(Batch::class, 'batch_id');
     }
 
     public function assignedAdmins()
@@ -113,7 +131,6 @@ class Course extends Model
             // Ensure dependent records are removed first (FK constraints are restrict in the DB).
             $course->sessions()->delete();
             $course->assignedAdmins()->detach();
-            $course->batches()->detach();
         });
 
         static::saving(function ($course) {
@@ -141,11 +158,20 @@ class Course extends Model
             $centre = $course->centre()->with('branch')->first();
             $branch = $centre?->branch;
 
-            $course->course_name = $programme && $branch
-                ? "{$programme->title} - ({$branch->title})"
+            $course->course_name = $programme && $centre
+                ? "{$programme->title} - ({$centre->title})"
                 : $course->course_name;
 
-            $course->location = $branch?->title;
+            // $course->location = $branch?->title;
+        });
+
+        static::saved(function ($course) {
+            if ($course->wasChanged(['course_name'])) {
+                $course->sessions()->get()->each(function ($session) {
+                    $session->setSessionName();
+                    $session->save();
+                });
+            }
         });
     }
 }
