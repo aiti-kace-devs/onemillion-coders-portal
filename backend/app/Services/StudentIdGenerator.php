@@ -11,8 +11,8 @@ class StudentIdGenerator
     /**
      * Generate a student ID for a user being admitted.
      *
-     * Format: Q{batch_number}-{YY}-{NNNNNN}
-     * Example: Q1-26-100980
+     * Format: OMCP-{batch_number}{YY}{NNNNNN}
+     * Example: OMCP-126100980
      *
      * @param  User  $user
      * @return string|null  Returns null if batch info is unavailable.
@@ -39,7 +39,7 @@ class StudentIdGenerator
             $batchNumber = static::deriveBatchNumber($batch);
         }
 
-        $prefix = "Q{$batchNumber}{$yearSuffix}-";
+        $prefix = "OMCP-{$batchNumber}{$yearSuffix}";
 
         // Generate a unique 6-digit number (100000–999999)
         $maxAttempts = 20;
