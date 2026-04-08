@@ -27,6 +27,7 @@ class Centre extends Model
         'branch_id',
         'constituency_id',
         'status',
+        'is_ready',
         'gps_address',
         'is_pwd_friendly',
         'wheelchair_accessible',
@@ -47,6 +48,7 @@ class Centre extends Model
     protected $casts = [
         'constituency_id' => 'integer',
         'status' => 'boolean',
+        'is_ready' => 'boolean',
         'is_pwd_friendly' => 'boolean',
         'wheelchair_accessible' => 'boolean',
         'has_access_ramp' => 'boolean',

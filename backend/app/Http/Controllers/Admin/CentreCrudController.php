@@ -149,6 +149,14 @@ class CentreCrudController extends CrudController
                 'toggle_url' => 'centre/{id}/toggle-is-pwd-friendly',
             ]);
             CRUD::addColumn([
+                'name' => 'is_ready',
+                'label' => 'Is Ready',
+                'type' => 'view',
+                'view' => 'admin.status_toggle.status_column',
+                'toggleable' => true,
+                'toggle_url' => 'centre/{id}/toggle-is-ready',
+            ]);
+            CRUD::addColumn([
                 'name' => 'status',
                 'label' => 'Status',
                 'type' => 'view',
@@ -170,6 +178,7 @@ class CentreCrudController extends CrudController
                 'select2'
             );
         }
+        FilterHelper::addBooleanFilter('is_ready');
         FilterHelper::addBooleanFilter('status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
@@ -412,6 +421,8 @@ class CentreCrudController extends CrudController
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Staff Trained for PWDs', 'staff_trained_for_pwd');
 
+        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Is Ready', 'is_ready');
+
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
 
 
@@ -429,7 +440,7 @@ class CentreCrudController extends CrudController
             'title', 'branch_id', 'constituency_id', 'constituency_dependency_script',
             'district_id', 'district_dependency_script', 'gps_address', 'pwd_notes', 'images', 'video'
         ]);
-        $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'status']);
+        $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'is_ready', 'status']);
         $this->addFieldsToTab('GPS Location', true, ['gps_location']);
         $this->addFieldsToTab('Sessions', true, ['centre_sessions_manager']);
 
@@ -731,6 +742,25 @@ class CentreCrudController extends CrudController
             'status' => 'success',
             'message' => 'Centre PWD accessibility updated successfully.',
             'value' => $centre->is_pwd_friendly ? 1 : 0,
+        ]);
+    }
+
+    public function toggleIsReady(Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $centre = Centre::findOrFail($id);
+        $centre->is_ready = (bool) $data['value'];
+        $centre->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Centre ready status updated successfully.',
+            'value' => $centre->is_ready ? 1 : 0,
         ]);
     }
 

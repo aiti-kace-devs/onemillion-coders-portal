@@ -553,6 +553,10 @@ class StudentOperation extends Controller
     public function change_course()
     {
         $user = Auth::guard('web')->user();
+        $branches = Branch::query()
+            ->where('status', 1)
+            ->orderBy('title')
+            ->get(['id', 'title']);
 
         if ($user->shortlist) {
             return redirect()

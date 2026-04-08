@@ -48,6 +48,7 @@ Route::group([
     Route::crud('centre', 'CentreCrudController');
     Route::post('centre/{id}/toggle', 'CentreCrudController@toggleStatus');
     Route::post('centre/{id}/toggle-is-pwd-friendly', 'CentreCrudController@toggleIsPwdFriendly');
+    Route::post('centre/{id}/toggle-is-ready', 'CentreCrudController@toggleIsReady');
     Route::get('centre/{centreId}/sessions', [CentreCrudController::class, 'getCentreSessions']);
     Route::post('centre/{centreId}/sessions', [CentreCrudController::class, 'saveCentreSessions']);
     Route::crud('course', 'CourseCrudController');
