@@ -15,6 +15,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 
 class CreateStudentAdmissionJob implements ShouldQueue
 {
@@ -34,6 +35,12 @@ class CreateStudentAdmissionJob implements ShouldQueue
     public function handle(): void
     {
         if (!$this->student) return;
+
+        $lockKey = 'admission-lock-' . $this->student->id;
+        if (!Cache::lock($lockKey, 30)->get()) {
+            \Log::info('[ADMISSION] Duplicate dispatch skipped', ['user_id' => $this->student->id]);
+            return;
+        }
 
         $course = $this->course ?? Course::find($this->student->registered_course);
         if (!$course) return;
@@ -75,13 +82,11 @@ class CreateStudentAdmissionJob implements ShouldQueue
             $admission = UserAdmission::create($admissionData);
         }
 
-        // Generate student ID on admission if not already assigned
-        if (empty($this->student->student_id)) {
-            $studentId = StudentIdGenerator::generate($this->student);
-            if ($studentId) {
-                $this->student->student_id = $studentId;
-                $this->student->saveQuietly();
-            }
+        // Generate a new student ID on every admission
+        $studentId = StudentIdGenerator::generate($this->student, $course);
+        if ($studentId) {
+            $this->student->student_id = $studentId;
+            $this->student->saveQuietly();
         }
 
         if ($this->session) {

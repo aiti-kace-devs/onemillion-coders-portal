@@ -17,9 +17,9 @@ class StudentIdGenerator
      * @param  User  $user
      * @return string|null  Returns null if batch info is unavailable.
      */
-    public static function generate(User $user): ?string
+    public static function generate(User $user, ?Course $course = null): ?string
     {
-        $course = Course::find($user->registered_course);
+        $course = $course ?? Course::find($user->registered_course);
 
         if (!$course || !$course->batch_id) {
             return null;
@@ -62,7 +62,8 @@ class StudentIdGenerator
             ? ((int) substr($lastId, -6)) + 1
             : 100000;
 
-        return $prefix . str_pad((string) $nextNumber, 6, '0', STR_PAD_LEFT);
+        $finalId = $prefix . str_pad((string) $nextNumber, 6, '0', STR_PAD_LEFT);
+        return $finalId;
     }
 
     /**
