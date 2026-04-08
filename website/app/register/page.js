@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -14,6 +14,8 @@ import {
   FiClock,
   FiUpload,
   FiChevronDown,
+  FiEye,
+  FiEyeOff,
 } from "react-icons/fi";
 import {
   getRegistrationForm,
@@ -29,7 +31,7 @@ import parsePhoneNumberFromString from "libphonenumber-js";
 
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { executeRecaptcha } = useGoogleReCaptcha();
@@ -58,6 +60,12 @@ export default function RegisterPage() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [emailFieldName, setEmailFieldName] = useState(null);
   const [phoneFieldName, setPhoneFieldName] = useState(null);
+  const [passwordFieldName, setPasswordFieldName] = useState(null);
+
+  // Confirm password — frontend only, never sent to API
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Real-time email availability state
   const [emailAvailability, setEmailAvailability] = useState({ status: null, message: "" });
@@ -79,8 +87,12 @@ export default function RegisterPage() {
           f.type?.toLowerCase() === "phonenumber" ||
           f.type?.toLowerCase() === "phone"
       );
+      const pwField = formSchema.schema.find(
+        (f) => f.type?.toLowerCase() === "password"
+      );
       setEmailFieldName(eField?.field_name || null);
       setPhoneFieldName(pField?.field_name || null);
+      setPasswordFieldName(pwField?.field_name || null);
     }
   }, [formSchema]);
 
@@ -211,6 +223,10 @@ export default function RegisterPage() {
       checkEmailAvailabilityDebounced(value);
     }
 
+    if (fieldName === passwordFieldName) {
+      setFormErrors((prev) => ({ ...prev, confirm_password: null }));
+    }
+
     if (formErrors[fieldName]) {
       setFormErrors((prev) => ({
         ...prev,
@@ -260,6 +276,19 @@ export default function RegisterPage() {
           }
         }
       });
+
+    // Confirm password check (frontend-only field)
+    const groupHasPassword = group.fields.some(
+      (f) => f.field_name === passwordFieldName
+    );
+    if (groupHasPassword && passwordFieldName) {
+      const pwValue = formData[passwordFieldName];
+      if (pwValue && !confirmPassword) {
+        errors.confirm_password = "Please confirm your password";
+      } else if (pwValue && confirmPassword !== pwValue) {
+        errors.confirm_password = "Passwords do not match";
+      }
+    }
 
     return errors;
   };
@@ -539,6 +568,30 @@ export default function RegisterPage() {
     const placeholder =
       field.description || `Enter your ${field.title.toLowerCase()}`;
 
+    // Password field with show/hide toggle
+    if (field.type === "password") {
+      return (
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            value={value}
+            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+            className={`${baseClasses} pr-11`}
+            placeholder={placeholder}
+            autoComplete="new-password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            tabIndex={-1}
+          >
+            {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+          </button>
+        </div>
+      );
+    }
+
     // Special handling for phone numbers
     if (field.type === "phonenumber") {
       return (
@@ -745,7 +798,8 @@ export default function RegisterPage() {
                       {currentGroup.fields
                         .filter((field) => field.field_name !== "course")
                         .map((field) => (
-                          <div key={field.field_name} id={`field-${field.field_name}`} className="space-y-1.5">
+                          <React.Fragment key={field.field_name}>
+                          <div id={`field-${field.field_name}`} className="space-y-1.5">
                             <label className="block text-sm font-medium text-gray-700">
                               {field.title}
                               {(field.required === "1" || field.validators?.required) && (
@@ -820,6 +874,54 @@ export default function RegisterPage() {
                               />
                             )}
                           </div>
+
+                          {/* Confirm password — rendered immediately after the password field */}
+                          {field.field_name === passwordFieldName && (
+                            <div id="field-confirm_password" className="space-y-1.5">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Confirm Password
+                                <span className="text-red-500 ml-1" aria-label="required">*</span>
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type={showConfirmPassword ? "text" : "password"}
+                                  value={confirmPassword}
+                                  onChange={(e) => {
+                                    setConfirmPassword(e.target.value);
+                                    if (formErrors.confirm_password) {
+                                      setFormErrors((prev) => ({ ...prev, confirm_password: null }));
+                                    }
+                                  }}
+                                  className={`w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 pr-11 focus:outline-none hover:border-gray-300 ${
+                                    formErrors.confirm_password
+                                      ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                                      : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
+                                  }`}
+                                  placeholder="Re-enter your password"
+                                  autoComplete="new-password"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowConfirmPassword((v) => !v)}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                  tabIndex={-1}
+                                >
+                                  {showConfirmPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                </button>
+                              </div>
+                              {formErrors.confirm_password && (
+                                <motion.p
+                                  initial={{ opacity: 0, y: -5 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="text-sm text-red-600 flex items-center"
+                                >
+                                  <FiAlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+                                  {formErrors.confirm_password}
+                                </motion.p>
+                              )}
+                            </div>
+                          )}
+                          </React.Fragment>
                         ))}
 
                       {/* Consent + OTP errors on last step */}
@@ -988,5 +1090,13 @@ export default function RegisterPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400" /></div>}>
+      <RegisterPageContent />
+    </Suspense>
   );
 }
