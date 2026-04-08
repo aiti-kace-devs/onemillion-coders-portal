@@ -47,7 +47,7 @@ class CentreCrudController extends CrudController
      */
     public function setup()
     {
-        CRUD::setModel(\App\Models\Centre::class);
+        CRUD::setModel(Centre::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/centre');
         CRUD::setEntityNameStrings('centre', 'centres');
 
@@ -388,6 +388,14 @@ class CentreCrudController extends CrudController
             value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->images ?? '' : '',
         );
 
+        MediaHelper::getMediaSelector(
+            name: 'video',
+            multiple: false,
+            label: 'Centre Video',
+            disk_options: MediaHelper::getCentreVideoDiskOptions(),
+            value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->video ?? '' : '',
+        );
+
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Is PWD Friendly', 'is_pwd_friendly');
 
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Wheelchair Accessible', 'wheelchair_accessible');
@@ -419,7 +427,7 @@ class CentreCrudController extends CrudController
 
         $this->addFieldsToTab('General', true, [
             'title', 'branch_id', 'constituency_id', 'constituency_dependency_script',
-            'district_id', 'district_dependency_script', 'gps_address', 'pwd_notes', 'images'
+            'district_id', 'district_dependency_script', 'gps_address', 'pwd_notes', 'images', 'video'
         ]);
         $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'status']);
         $this->addFieldsToTab('GPS Location', true, ['gps_location']);
@@ -441,6 +449,8 @@ class CentreCrudController extends CrudController
     public function store()
     {
         $this->prepareGpsFields();
+        $this->normalizeImagesPath();
+        $this->normalizeVideoPath();
         $centreSessionRows = CentreSessionHelper::extractRowsFromPayload($this->crud->getRequest());
         $response = $this->traitStore();
         $this->syncDistrictSelection();
@@ -451,6 +461,8 @@ class CentreCrudController extends CrudController
     public function update()
     {
         $this->prepareGpsFields();
+        $this->normalizeImagesPath();
+        $this->normalizeVideoPath();
         $centreSessionRows = CentreSessionHelper::extractRowsFromPayload($this->crud->getRequest());
         $response = $this->traitUpdate();
         $this->syncDistrictSelection();
@@ -853,4 +865,86 @@ class CentreCrudController extends CrudController
         $cdnUrl = rtrim(config('filesystems.cdn_url'), '/');
         return $cdnUrl . '/' . ltrim($imagePath, '/');
     }
+
+
+
+
+    protected function normalizeVideoPath()
+    {
+        $request = $this->crud->getRequest();
+        $videoPaths = $request->input('video');
+
+        if (empty($videoPaths)) {
+            return;
+        }
+
+        // Handle if input is a JSON string representing an array
+        if (is_string($videoPaths)) {
+            $decoded = json_decode($videoPaths, true);
+            if (is_array($decoded)) {
+                $videoPaths = $decoded;
+            } else {
+                $videoPaths = [$videoPaths];
+            }
+        }
+
+        if (!is_array($videoPaths)) {
+            return;
+        }
+
+        $normalizedVideo = null;
+        foreach ($videoPaths as $videoPath) {
+            if (is_string($videoPath)) {
+                // Check if it's a JSON string of paths
+                $decoded = json_decode($videoPath, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $subPath) {
+                        $normalized = $this->normalizeSingleVideoPath($subPath);
+                        if ($normalized) {
+                            $normalizedVideo = $normalized;
+                            break 2;
+                        }
+                    }
+                } else {
+                    $normalized = $this->normalizeSingleVideoPath($videoPath);
+                    if ($normalized) {
+                        $normalizedVideo = $normalized;
+                        break;
+                    }
+                }
+            } elseif (is_array($videoPath)) {
+                foreach ($videoPath as $subPath) {
+                    $normalized = $this->normalizeSingleVideoPath($subPath);
+                    if ($normalized) {
+                        $normalizedVideo = $normalized;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        $request->merge(['video' => $normalizedVideo]);
+    }
+
+    protected function normalizeSingleVideoPath($videoPath)
+    {
+        if (empty($videoPath)) {
+            return '';
+        }
+
+        // If it already has https://, don't process further
+        if (strpos($videoPath, 'https://') === 0 || strpos($videoPath, 'http://') === 0) {
+            return $videoPath;
+        }
+
+        // Strip "Google Cloud Storage/" or similar disk aliases
+        if (strpos($videoPath, CLOUD_STORAGE_ALIAS . '/') === 0) {
+            $videoPath = substr($videoPath, strlen(CLOUD_STORAGE_ALIAS . '/'));
+        }
+
+        // Build the full CDN URL
+        $cdnUrl = rtrim(config('filesystems.cdn_url'), '/');
+        return $cdnUrl . '/' . ltrim($videoPath, '/');
+    }
+
 }

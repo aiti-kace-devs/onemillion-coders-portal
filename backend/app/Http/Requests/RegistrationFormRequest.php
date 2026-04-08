@@ -177,19 +177,164 @@ class RegistrationFormRequest extends FormRequest
             return;
         }
 
-    //     $schema = $this->input('schema');
+        $schema = $this->input('schema');
 
-    //     foreach ($schema as $index => $field) {
-    //         if (isset($field['rules']) && !empty($field['rules'])) {
-    //             $rules = explode('|', $field['rules']);
-    //             foreach ($rules as $rule) {
-    //                 $rule = trim($rule);
-    //                 if (!empty($rule) && !preg_match('/^[a-zA-Z0-9:,\s\-_\/\^\\\pL]+$/', $rule)) {
-    //                     $validator->errors()->add("schema.{$index}.rules", "Invalid rule format: {$rule}");
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+        foreach ($schema as $index => $field) {
+            if (!isset($field['rules']) || trim((string) $field['rules']) === '') {
+                continue;
+            }
+
+            $rules = $this->splitRuleString((string) $field['rules']);
+
+            foreach ($rules as $rule) {
+                if ($this->isRegexRule($rule)) {
+                    $pattern = $this->extractRegexPattern($rule);
+                    if (!$this->isValidRegexPattern($pattern)) {
+                        $validator->errors()->add(
+                            "schema.{$index}.rules",
+                            "Invalid regex rule. Ensure it has valid delimiters (e.g. regex:/^...$/)."
+                        );
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private function isRegexRule(string $rule): bool
+    {
+        return str_starts_with($rule, 'regex:') || str_starts_with($rule, 'not_regex:');
+    }
+
+    private function extractRegexPattern(string $rule): string
+    {
+        $position = strpos($rule, ':');
+        if ($position === false) {
+            return '';
+        }
+
+        return substr($rule, $position + 1);
+    }
+
+    private function isValidRegexPattern(string $pattern): bool
+    {
+        if ($pattern === '') {
+            return false;
+        }
+
+        $isValid = true;
+        set_error_handler(function () use (&$isValid) {
+            $isValid = false;
+            return true;
+        }, E_WARNING);
+
+        try {
+            $result = preg_match($pattern, '');
+            if ($result === false) {
+                $isValid = false;
+            }
+        } catch (\Throwable $exception) {
+            $isValid = false;
+        } finally {
+            restore_error_handler();
+        }
+
+        return $isValid;
+    }
+
+    private function splitRuleString(string $rules): array
+    {
+        $rules = trim($rules);
+        if ($rules === '') {
+            return [];
+        }
+
+        $tokens = [];
+        $length = strlen($rules);
+        $index = 0;
+
+        while ($index < $length) {
+            while ($index < $length && ctype_space($rules[$index])) {
+                $index++;
+            }
+
+            if ($index >= $length) {
+                break;
+            }
+
+            if ($this->startsWithRegexRule($rules, $index)) {
+                [$token, $nextIndex] = $this->consumeRegexRule($rules, $index);
+                $token = trim($token);
+                if ($token !== '') {
+                    $tokens[] = $token;
+                }
+                $index = $nextIndex;
+                if ($index < $length && $rules[$index] === '|') {
+                    $index++;
+                }
+                continue;
+            }
+
+            $start = $index;
+            while ($index < $length && $rules[$index] !== '|') {
+                $index++;
+            }
+
+            $token = trim(substr($rules, $start, $index - $start));
+            if ($token !== '') {
+                $tokens[] = $token;
+            }
+
+            if ($index < $length && $rules[$index] === '|') {
+                $index++;
+            }
+        }
+
+        return $tokens;
+    }
+
+    private function startsWithRegexRule(string $rules, int $index): bool
+    {
+        return str_starts_with(substr($rules, $index), 'regex:')
+            || str_starts_with(substr($rules, $index), 'not_regex:');
+    }
+
+    private function consumeRegexRule(string $rules, int $index): array
+    {
+        $prefix = str_starts_with(substr($rules, $index), 'regex:') ? 'regex:' : 'not_regex:';
+        $length = strlen($rules);
+        $current = $index + strlen($prefix);
+
+        if ($current >= $length) {
+            return [substr($rules, $index), $length];
+        }
+
+        $delimiter = $rules[$current];
+        $current++;
+        $token = $prefix . $delimiter;
+        $escaped = false;
+
+        while ($current < $length) {
+            $char = $rules[$current];
+            $token .= $char;
+
+            if ($escaped) {
+                $escaped = false;
+            } elseif ($char === '\\') {
+                $escaped = true;
+            } elseif ($char === $delimiter) {
+                $current++;
+                break;
+            }
+
+            $current++;
+        }
+
+        while ($current < $length && ctype_alpha($rules[$current])) {
+            $token .= $rules[$current];
+            $current++;
+        }
+
+        return [$token, $current];
     }
 }

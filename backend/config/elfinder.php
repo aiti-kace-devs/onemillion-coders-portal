@@ -123,7 +123,7 @@ return [
     */
     'root_options' => [
         'uploadDeny'    => ['all'],
-        'uploadAllow'   => ['image', 'text/plain', 'application/pdf'],
+        'uploadAllow'   => ['image', 'text/plain', 'application/pdf', 'video'],
         'uploadOrder'   => ['deny', 'allow'],
         'acceptedName'  => '/^[^\.].*$/',
     ],

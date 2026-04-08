@@ -21,6 +21,7 @@ class MediaHelper
     const DISK_PROGRAMME_IMAGES = 'course-images';
     const DISK_CENTRE_IMAGES = 'centre-images';
     const DISK_CERTIFICATE_FILES = 'certificates';
+    const DISK_CENTRE_VIDEOS = 'centre-videos';
 
     public static function resolveMediaIdFromPath(Request &$request, string $columnName, $getId = false)
     {
@@ -342,6 +343,11 @@ class MediaHelper
         return self::getDiskOptions([self::DISK_CENTRE_IMAGES], self::getImageTypes());
     }
 
+
+    public static function getCentreVideoDiskOptions()
+    {
+        return self::getDiskOptions([self::DISK_CENTRE_VIDEOS], self::getVideoTypes());
+    }
     public static function getCertificateFilesDiskOptions()
     {
         return self::getDiskOptions([self::DISK_CERTIFICATE_FILES], self::getDocumentTypes());

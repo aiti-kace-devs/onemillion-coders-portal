@@ -24,7 +24,7 @@ use App\Http\Controllers\Admin\UtilitiesController;
 Route::group([
     'prefix' => config('backpack.base.route_prefix', 'admin'),
     'middleware' =>
-        config('backpack.base.middleware_key', 'admin'),
+    config('backpack.base.middleware_key', 'admin'),
     'namespace' => 'App\Http\Controllers\Admin',
 ], function () { // custom admin routes
     Route::crud('admin', 'AdminCrudController');
@@ -52,14 +52,14 @@ Route::group([
     Route::post('centre/{centreId}/sessions', [CentreCrudController::class, 'saveCentreSessions']);
     Route::crud('course', 'CourseCrudController');
     Route::crud('batch', 'BatchCrudController');
-    Route::crud('tag', 'TagCrudController');
-    Route::crud('tag-type', 'TagTypeCrudController');
     Route::post('batch/add-courses/{batchId}', [BatchCrudController::class, 'addCourses']);
     Route::post('batch/update-course/{courseId}', [BatchCrudController::class, 'updateCourse']);
     Route::get('batch/course/{courseId}/sessions', [BatchCrudController::class, 'getCourseSessions']);
     Route::post('batch/course/{courseId}/sessions', [BatchCrudController::class, 'saveCourseSessions']);
     Route::post('batch/{id}/toggle', [BatchCrudController::class, 'toggleStatus']);
     Route::post('batch/{id}/toggle-completed', [BatchCrudController::class, 'toggleCompleted']);
+    Route::crud('tag', 'TagCrudController');
+    Route::crud('tag-type', 'TagTypeCrudController');
     Route::crud('course-session', 'CourseSessionCrudController');
     Route::crud('email-template', 'EmailTemplateCrudController');
     Route::crud('form', 'FormCrudController');
@@ -149,7 +149,7 @@ Route::group([
     Route::post('course-match/{id}/toggle', 'CourseMatchCrudController@toggleStatus');
     Route::crud('course-match-option', 'CourseMatchOptionCrudController');
     Route::post('course-match-option/{id}/toggle', 'CourseMatchOptionCrudController@toggleStatus');
-    
+
 
     // Utilities dashboard (super-admin only)
     Route::get('utilities', [UtilitiesController::class, 'index'])->name('admin.utilities.index');

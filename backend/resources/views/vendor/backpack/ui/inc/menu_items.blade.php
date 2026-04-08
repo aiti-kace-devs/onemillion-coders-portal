@@ -139,7 +139,9 @@
     </x-backpack::menu-dropdown>
 @endif
 
-@if (auth()->user()->can('app-config.read.all') || auth()->user()->can('app-config.update'))
+@if (auth()->user()->can('app-config.read.all') ||
+        auth()->user()->can('app-config.update') ||
+        auth()->user()->can('admin.read.all'))
     <x-backpack::menu-dropdown title="System Settings" icon="la la-cogs">
         @can('app-config.read.all')
             <x-backpack::menu-dropdown-item title="App Configs" icon="la la-cog" :link="backpack_url('app-config')" />

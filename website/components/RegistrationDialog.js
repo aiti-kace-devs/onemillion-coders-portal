@@ -438,53 +438,6 @@ const RegistrationDialog = ({ isOpen, onClose, programme, userId, courseId, cent
       );
     }
 
-    // Password field with validation checklist
-    if (field.type === "password") {
-      const checks = [
-        { label: "At least 6 characters", met: value.length >= 6 },
-        { label: "Contains at least one uppercase letter", met: /[A-Z]/.test(value) },
-        { label: "Contains at least one lowercase letter", met: /[a-z]/.test(value) },
-        { label: "Contains a number", met: /\d/.test(value) },
-      ];
-
-      return (
-        <div>
-          <input
-            type="password"
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
-            className={baseClasses}
-            placeholder={placeholder}
-            autoComplete="new-password"
-          />
-          {value.length > 0 && (
-            <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
-              {checks.map((check, i) => (
-                <li key={i} className="flex items-center gap-2 text-xs sm:text-sm">
-                  <span
-                    className={`inline-flex items-center justify-center w-4 h-4 shrink-0 rounded border transition-colors duration-200 ${
-                      check.met
-                        ? "bg-green-500 border-green-500 text-white"
-                        : "border-gray-300 bg-white"
-                    }`}
-                  >
-                    {check.met && (
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </span>
-                  <span className={check.met ? "text-green-600" : "text-gray-500"}>
-                    {check.label}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      );
-    }
-
     // Standard input field
     return (
       <input

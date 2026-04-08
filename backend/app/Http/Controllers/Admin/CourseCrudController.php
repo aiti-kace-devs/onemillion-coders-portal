@@ -80,7 +80,7 @@ class CourseCrudController extends CrudController
         // CRUD::column('programme_id')->label('Programme')->linkTo('programme.show');
         // $this->addBatchFilter('batch_id');
         $this->addCurrentAdminCourseFilter('id');
-        
+
         if ($currentAdmin instanceof Admin && $currentAdmin->isSuper()) {
             FilterHelper::addDateRangeFilter('start_date', 'Start Date');
             FilterHelper::addDateRangeFilter('end_date', 'End Date');
@@ -145,11 +145,11 @@ class CourseCrudController extends CrudController
             if ($batch) {
                 // Pre-fill batch_id
                 CRUD::field('batch_id')->value($batchId);
-                
+
                 // Pre-fill start_date and end_date from batch
                 CRUD::field('start_date')->value($batch->start_date);
                 CRUD::field('end_date')->value($batch->end_date);
-                
+
                 // Get the branch from the batch's courses if available, or set from first course's centre
                 $firstCourse = $batch->courses->first();
                 if ($firstCourse && $firstCourse->centre) {
