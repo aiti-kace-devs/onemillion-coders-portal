@@ -19,7 +19,98 @@
         ->map(fn($id) => (int) $id)
         ->all();
 
-    $totalCourses = count($courseIdsArray);
+    $centreSessions = \App\Models\CourseSession::centreType()
+        ->where('centre_id', $centreId)
+        ->orderBy('id')
+        ->get();
+    $centreSessionIds = $centreSessions->pluck('id')->map(fn($id) => (int) $id)->values()->all();
+    $centreSessionConfirmed = collect();
+    if (!empty($centreSessionIds)) {
+        $centreSessionConfirmed = \Illuminate\Support\Facades\DB::table('user_admission')
+            ->whereIn('session', $centreSessionIds)
+            ->whereNotNull('confirmed')
+            ->selectRaw('session, COUNT(*) as count')
+            ->groupBy('session')
+            ->pluck('count', 'session');
+    }
+    $centreSessionChartLabels = $centreSessions
+        ->map(function ($session) {
+            $sessionLabel = trim((string) ($session->session ?? $session->name ?? 'Session #' . $session->id));
+            $courseTime = trim((string) ($session->course_time ?? ''));
+
+            return $courseTime !== '' ? $sessionLabel . ' (' . $courseTime . ')' : $sessionLabel;
+        })
+        ->values();
+    $centreSessionChartValues = $centreSessions
+        ->map(fn($session) => (int) ($centreSessionConfirmed[$session->id] ?? 0))
+        ->values();
+
+    $centreAdmittedStudents = collect();
+    $centreSessionFilterOptions = collect();
+    if (!empty($courseIdsArray)) {
+        $centreAdmittedStudents = \Illuminate\Support\Facades\DB::table('user_admission as ua')
+            ->join('users as u', 'u.userId', '=', 'ua.user_id')
+            ->join('courses as c', 'c.id', '=', 'ua.course_id')
+            ->leftJoin('course_sessions as cs', 'cs.id', '=', 'ua.session')
+            ->whereIn('ua.course_id', $courseIdsArray)
+            ->where('cs.session_type', \App\Models\CourseSession::TYPE_CENTRE)
+            ->whereNotNull('ua.confirmed')
+            ->whereNotNull('ua.session')
+            ->select([
+                'u.userId as user_id',
+                'u.name as user_name',
+                'u.email as user_email',
+                'c.course_name as course_name',
+                'cs.session as session_label',
+                'cs.course_time as session_time',
+                'cs.name as session_name',
+                'ua.confirmed as admitted_at',
+            ])
+            ->orderByDesc('ua.confirmed')
+            ->get()
+            ->map(function ($student) {
+                $sessionLabel = trim((string) ($student->session_label ?? ''));
+                $sessionTime = trim((string) ($student->session_time ?? ''));
+
+                $student->session_filter_label = $sessionLabel !== ''
+                    ? $sessionLabel . ($sessionTime !== '' ? ' (' . $sessionTime . ')' : '')
+                    : null;
+
+                return $student;
+            });
+
+        $centreSessionFilterOptions = $centreAdmittedStudents
+            ->pluck('session_filter_label')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+    }
+
+    $activeCourseIdsArray = \Illuminate\Support\Facades\DB::table('courses as c')
+        ->join('admission_batches as ab', 'c.batch_id', '=', 'ab.id')
+        ->where('c.centre_id', $centreId)
+        ->where('ab.completed', 0)
+        ->where('ab.status', 1)
+        ->pluck('c.id')
+        ->map(fn($id) => (int) $id)
+        ->unique()
+        ->values()
+        ->all();
+
+    $totalCourses = 0;
+    if (!empty($activeCourseIdsArray)) {
+        $totalCourses = \Illuminate\Support\Facades\DB::table('admission_batches as ab')
+            ->join('courses as c2', 'c2.batch_id', '=', 'ab.id')
+            ->where('c2.centre_id', $centreId)
+            ->where('ab.completed', 0)
+            ->where('ab.status', 1)
+            ->select('ab.id')
+            ->selectRaw('COUNT(DISTINCT c2.programme_id) as courses_count')
+            ->groupBy('ab.id')
+            ->get()
+            ->sum('courses_count');
+    }
     $ongoingCourses = 0;
     $totalRegisteredUsers = 0;
     $totalShortlistedUsers = 0;
@@ -45,14 +136,12 @@
 
     $genderLabels = collect(['Male', 'Female']);
     $genderValues = collect([0, 0]);
-    $ageLabels = collect();
-    $ageValues = collect();
 
     $topCourses = collect();
 
     if (!empty($courseIdsArray)) {
         $ongoingCourses = (int) \Illuminate\Support\Facades\DB::table('courses')
-            ->whereIn('id', $courseIdsArray)
+            ->whereIn('id', $activeCourseIdsArray)
             ->whereNotNull('start_date')
             ->whereNotNull('end_date')
             ->whereDate('start_date', '<=', $today)
@@ -60,32 +149,37 @@
             ->count('id');
 
         $totalRegisteredUsers = (int) \Illuminate\Support\Facades\DB::table('users')
-            ->whereIn('registered_course', $courseIdsArray)
+            ->whereIn('registered_course', $activeCourseIdsArray)
             ->count('id');
 
         $totalShortlistedUsers = (int) \Illuminate\Support\Facades\DB::table('users')
-            ->whereIn('registered_course', $courseIdsArray)
+            ->whereIn('registered_course', $activeCourseIdsArray)
             ->where(function ($query) {
                 $query->where('shortlist', 1)->orWhere('shortlist', true);
             })
             ->count('id');
 
         $admissionsAgg = \Illuminate\Support\Facades\DB::table('user_admission')
-            ->whereIn('course_id', $courseIdsArray)
+            ->whereIn('course_id', $activeCourseIdsArray)
             ->selectRaw(
                 '
                 COUNT(*) as total_count,
                 SUM(CASE WHEN confirmed IS NOT NULL THEN 1 ELSE 0 END) as confirmed_count,
-                SUM(CASE WHEN confirmed IS NULL THEN 1 ELSE 0 END) as pending_count,
-                COUNT(DISTINCT CASE WHEN confirmed IS NOT NULL THEN user_id END) as admitted_students_count
+                SUM(CASE WHEN confirmed IS NULL THEN 1 ELSE 0 END) as pending_count
             ',
             )
             ->first();
+        $activeAdmittedUsers = \Illuminate\Support\Facades\DB::table('user_admission')
+            ->whereIn('course_id', $activeCourseIdsArray)
+            ->whereNotNull('confirmed')
+            ->select('user_id')
+            ->distinct()
+            ->count('user_id');
 
         $admissionsTotal = (int) ($admissionsAgg->total_count ?? 0);
         $admissionsConfirmed = (int) ($admissionsAgg->confirmed_count ?? 0);
         $admissionsPending = (int) ($admissionsAgg->pending_count ?? 0);
-        $totalAdmittedUsers = (int) ($admissionsAgg->admitted_students_count ?? 0);
+        $totalAdmittedUsers = (int) $activeAdmittedUsers;
 
         $admissionRate = $totalRegisteredUsers > 0 ? round(($totalAdmittedUsers / $totalRegisteredUsers) * 100, 1) : 0;
 
@@ -110,50 +204,14 @@
 
         $genderValues = $genderLabels->map(fn($label) => (int) ($genderCounts[$label] ?? 0))->values();
 
-        $ageCounts = \Illuminate\Support\Facades\DB::table('users as u')
-            ->whereIn('u.registered_course', $courseIdsArray)
-            ->selectRaw(
-                "
-                CASE
-                    WHEN u.age IS NULL OR u.age = '' THEN 'Unknown'
-                    WHEN u.age LIKE '%-%' OR u.age LIKE '%–%' OR u.age LIKE '%—%' THEN u.age
-                    WHEN u.age LIKE '%+%' THEN u.age
-                    WHEN u.age REGEXP '^[0-9]+$' THEN
-                        CONCAT(
-                            FLOOR(CAST(u.age AS UNSIGNED) / 10) * 10,
-                            '-',
-                            FLOOR(CAST(u.age AS UNSIGNED) / 10) * 10 + 9
-                        )
-                    ELSE 'Unknown'
-                END AS age_range,
-                COUNT(*) AS total,
-                CASE
-                    WHEN u.age IS NULL OR u.age = '' THEN 9999
-                    WHEN u.age LIKE '%-%' OR u.age LIKE '%–%' OR u.age LIKE '%—%' THEN
-                        CAST(SUBSTRING_INDEX(u.age, '-', 1) AS UNSIGNED)
-                    WHEN u.age LIKE '%+%' THEN
-                        CAST(SUBSTRING_INDEX(u.age, '+', 1) AS UNSIGNED)
-                    WHEN u.age REGEXP '^[0-9]+$' THEN
-                        FLOOR(CAST(u.age AS UNSIGNED) / 10)
-                    ELSE 9999
-                END AS bucket_order
-            ",
-            )
-            ->groupBy('age_range', 'bucket_order')
-            ->orderBy('bucket_order')
-            ->get();
-
-        $ageLabels = $ageCounts->pluck('age_range')->values();
-        $ageValues = $ageCounts->pluck('total')->map(fn($v) => (int) $v)->values();
-
         $registeredByCourse = \Illuminate\Support\Facades\DB::table('users')
-            ->whereIn('registered_course', $courseIdsArray)
+            ->whereIn('registered_course', $activeCourseIdsArray)
             ->selectRaw('registered_course as course_id, COUNT(id) as total')
             ->groupBy('registered_course')
             ->pluck('total', 'course_id');
 
         $shortlistedByCourse = \Illuminate\Support\Facades\DB::table('users')
-            ->whereIn('registered_course', $courseIdsArray)
+            ->whereIn('registered_course', $activeCourseIdsArray)
             ->where(function ($query) {
                 $query->where('shortlist', 1)->orWhere('shortlist', true);
             })
@@ -163,7 +221,7 @@
 
         $supportByCourse = \Illuminate\Support\Facades\DB::table('user_admission as ua')
             ->join('users as u', 'u.userId', '=', 'ua.user_id')
-            ->whereIn('ua.course_id', $courseIdsArray)
+            ->whereIn('ua.course_id', $activeCourseIdsArray)
             ->whereNotNull('ua.confirmed')
             ->selectRaw(
                 '
@@ -182,7 +240,7 @@
 
         $deliveryCounts = \Illuminate\Support\Facades\DB::table('courses as c')
             ->join('programmes as p', 'c.programme_id', '=', 'p.id')
-            ->whereIn('c.id', $courseIdsArray)
+            ->whereIn('c.id', $activeCourseIdsArray)
             ->selectRaw(
                 "
                 CASE
@@ -202,7 +260,7 @@
 
         $supportCounts = \Illuminate\Support\Facades\DB::table('user_admission as ua')
             ->join('users as u', 'u.userId', '=', 'ua.user_id')
-            ->whereIn('ua.course_id', $courseIdsArray)
+            ->whereIn('ua.course_id', $activeCourseIdsArray)
             ->whereNotNull('ua.confirmed')
             ->selectRaw(
                 '
@@ -232,7 +290,7 @@
         }
 
         $admittedByCourse = \Illuminate\Support\Facades\DB::table('user_admission')
-            ->whereIn('course_id', $courseIdsArray)
+            ->whereIn('course_id', $activeCourseIdsArray)
             ->whereNotNull('confirmed')
             ->selectRaw('course_id, COUNT(DISTINCT user_id) as total')
             ->groupBy('course_id')
@@ -240,6 +298,7 @@
 
         $topCourses = \Illuminate\Support\Facades\DB::table('courses as c')
             ->where('c.centre_id', $centreId)
+            ->whereIn('c.id', $activeCourseIdsArray)
             ->leftJoin('programmes as p', 'c.programme_id', '=', 'p.id')
             ->select(['c.id', 'c.course_name', 'p.mode_of_delivery'])
             ->get()
@@ -270,6 +329,15 @@
                 ];
             })
             ->sortByDesc('registered_users_count')
+            ->values();
+
+        $deliveryFilterOptions = $topCourses
+            ->map(function ($course) {
+                $mode = trim((string) ($course->mode_of_delivery ?? ''));
+                return $mode !== '' ? $mode : 'Unspecified';
+            })
+            ->unique()
+            ->sort()
             ->values();
     }
 @endphp
@@ -305,7 +373,7 @@
                         <i class="la la-users text-primary"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalRegisteredUsers) }}</div>
-                    <div class="text-muted small">Users mapped by registered course in this centre.</div>
+                    <div class="text-muted small">Users mapped by active course batches in this centre.</div>
                 </div>
             </div>
         </div>
@@ -318,7 +386,7 @@
                         <i class="la la-user-check text-info"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalShortlistedUsers) }}</div>
-                    <div class="text-muted small">Shortlist rate: {{ $shortlistRate }}%</div>
+                    <div class="text-muted small">Active batch shortlist rate: {{ $shortlistRate }}%</div>
                 </div>
             </div>
         </div>
@@ -331,7 +399,7 @@
                         <i class="la la-graduation-cap text-success"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalAdmittedUsers) }}</div>
-                    <div class="text-muted small">Admission rate: {{ $admissionRate }}%</div>
+                    <div class="text-muted small">Active batch admission rate: {{ $admissionRate }}%</div>
                 </div>
             </div>
         </div>
@@ -344,7 +412,7 @@
                         <i class="la la-book text-warning"></i>
                     </div>
                     <div class="metric-value">{{ number_format($totalCourses) }}</div>
-                    <div class="text-muted small">Ongoing now: {{ number_format($ongoingCourses) }}</div>
+                    <!-- <div class="text-muted small">Ongoing now: {{ number_format($ongoingCourses) }}</div> -->
                 </div>
             </div>
         </div>
@@ -411,7 +479,7 @@
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-lg-4">
+        <!-- <div class="col-lg-4">
             <div class="card h-100">
                 <div class="card-header">
                     <strong><i class="la la-pie-chart"></i> Gender Distribution</strong>
@@ -422,16 +490,16 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> -->
 
-        <div class="col-lg-4">
+        <div class="col-lg-8">
             <div class="card h-100">
                 <div class="card-header">
-                    <strong><i class="la la-bar-chart"></i> Age Group Distribution</strong>
+                    <strong><i class="la la-bar-chart"></i> Admitted Students Session Distribution</strong>
                 </div>
                 <div class="card-body">
-                    <div class="chart-wrap-sm">
-                        <canvas id="ageGroupBarChart"></canvas>
+                    <div class="chart-wrap-session">
+                        <canvas id="admittedStudentsSessionBarChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -452,6 +520,7 @@
                             {{ number_format($admissionsConfirmed) }}</span>
                         <span class="badge bg-warning text-dark">Pending: {{ number_format($admissionsPending) }}</span>
                     </div>
+                    <div class="text-muted small mt-2">Active course batches only.</div>
                 </div>
             </div>
         </div>
@@ -459,12 +528,148 @@
 
 
 
+    <div class="row g-3 mb-4">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <strong><i class="la la-users"></i> Admitted Students by Session</strong>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small">Filter Session</span>
+                        <select id="centreSessionFilter" class="form-select form-select-sm" style="min-width: 140px;">
+                            <option value="">All</option>
+                            @foreach ($centreSessionFilterOptions as $option)
+                                <option value="{{ $option }}">{{ $option }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="dtCentreAdmittedStudents" class="table table-striped table-hover table-sm w-100">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Email</th>
+                                    <th>Course</th>
+                                    <th>Session</th>
+                                    <th>Admitted On</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($centreAdmittedStudents as $student)
+                                    <tr>
+                                        <td>{{ $student->user_name ?? 'N/A' }}</td>
+                                        <td>{{ $student->user_email ?? 'N/A' }}</td>
+                                        <td>{{ $student->course_name ?? 'N/A' }}</td>
+                                        <td data-search="{{ $student->session_filter_label ?? $student->session_label ?? 'N/A' }}">
+                                            <div>
+                                                {{ !empty($student->session_filter_label)
+                                                    ? $student->session_filter_label
+                                                    : 'N/A' }}
+                                            </div>
+                                            @if (!empty($student->session_name))
+                                                <div class="text-muted small">{{ $student->session_name }}</div>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @php
+                                                $admittedAt = null;
+                                                try {
+                                                    $admittedAt = $student->admitted_at
+                                                        ? \Carbon\Carbon::parse($student->admitted_at)
+                                                        : null;
+                                                } catch (\Throwable $e) {
+                                                    $admittedAt = null;
+                                                }
+                                            @endphp
+                                            {{ $admittedAt ? $admittedAt->format('M d, Y') : 'N/A' }}
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">
+                                            No admitted students with sessions found for this centre.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if ($centreAdmittedStudents->isEmpty())
+                        <div class="text-center text-muted py-2">
+                            Filter by session once admissions are assigned.
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <strong><i class="la la-calendar"></i> Centre Sessions</strong>
+                    <span class="text-muted small">Total: {{ number_format($centreSessions->count()) }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="dtCentreSessions" class="table table-striped table-hover table-sm w-100">
+                            <thead>
+                                <tr>
+                                    <th>Session</th>
+                                    <th>Limit</th>
+                                    <th>Course Time</th>
+                                    <th>Slots Left</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($centreSessions as $session)
+                                    @php
+                                        $confirmedCount = (int) ($centreSessionConfirmed[$session->id] ?? 0);
+                                        $limit = (int) ($session->limit ?? 0);
+                                        $slotsLeft = $limit > 0 ? max(0, $limit - $confirmedCount) : null;
+                                    @endphp
+                                    <tr>
+                                        <td>{{ $session->session ?? $session->name ?? 'Session #' . $session->id }}</td>
+                                        <td>{{ $limit ?: '-' }}</td>
+                                        <td>{{ $session->course_time ?? '-' }}</td>
+                                        <td>
+                                            @if ($slotsLeft === null)
+                                                -
+                                            @else
+                                                {{ number_format($slotsLeft) }}
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if ($centreSessions->isEmpty())
+                        <div class="text-center text-muted py-3">No sessions configured for this centre.</div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="row g-3 mb-4">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <strong><i class="la la-book"></i> Courses by Registrations</strong>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small">Mode of Delivery</span>
+                        <select id="deliveryFilter" class="form-select form-select-sm" style="min-width: 180px;">
+                            <option value="">All</option>
+                            @foreach ($deliveryFilterOptions ?? [] as $option)
+                                <option value="{{ $option }}">{{ $option }}</option>
+                            @endforeach
+                            @if (($deliveryFilterOptions ?? collect())->isEmpty())
+                                <option value="Unspecified">Unspecified</option>
+                            @endif
+                        </select>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -535,6 +740,11 @@
             height: 240px;
         }
 
+        .chart-wrap-session {
+            position: relative;
+            height: 280px;
+        }
+
         .dataTables_wrapper .dataTables_length,
         .dataTables_wrapper .dataTables_filter {
             margin-top: 0.5rem;
@@ -567,9 +777,11 @@
 
                 const $el = $(selector);
                 if (!$el.length) return;
-                if ($.fn.DataTable.isDataTable($el[0])) return;
+                if ($.fn.DataTable.isDataTable($el[0])) {
+                    return $el.DataTable();
+                }
 
-                $el.DataTable(Object.assign({
+                return $el.DataTable(Object.assign({
                     pageLength: 10,
                     lengthMenu: [
                         [10, 25, 50, 100],
@@ -586,13 +798,58 @@
             }
 
             document.addEventListener('DOMContentLoaded', function() {
-                safeInitDataTable('#dtTopCourses');
+                const topCoursesTable = safeInitDataTable('#dtTopCourses');
+                const deliveryFilter = document.getElementById('deliveryFilter');
+                if (deliveryFilter && topCoursesTable) {
+                    deliveryFilter.addEventListener('change', function() {
+                        const value = (this.value || '').trim();
+                        if (!value) {
+                            topCoursesTable.column(4).search('').draw();
+                            return;
+                        }
+                        const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        topCoursesTable.column(4).search('^' + escaped + '$', true, false).draw();
+                    });
+                }
+
+                safeInitDataTable('#dtCentreSessions', {
+                    paging: false,
+                    searching: true,
+                    info: false
+                });
+
+                const centreAdmittedTable = safeInitDataTable('#dtCentreAdmittedStudents', {
+                    ordering: false,
+                    pageLength: 10
+                });
+
+                const centreSessionFilter = document.getElementById('centreSessionFilter');
+                if (centreSessionFilter && centreAdmittedTable) {
+                    centreSessionFilter.addEventListener('change', function() {
+                        const value = (this.value || '').trim();
+                        if (!value) {
+                            centreAdmittedTable.column(3).search('').draw();
+                            return;
+                        }
+                        const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        centreAdmittedTable.column(3).search('^' + escaped + '$', true, false).draw();
+                    });
+                }
                 if (typeof Chart !== 'function') return;
 
                 const genderLabels = @json($genderLabels->values());
                 const genderValues = @json($genderValues->map(fn($v) => (int) $v)->values());
-                const ageLabels = @json($ageLabels->values());
-                const ageValues = @json($ageValues->map(fn($v) => (int) $v)->values());
+                const centreSessionChartLabels = @json($centreSessionChartLabels->values());
+                const centreSessionChartValues = @json($centreSessionChartValues->map(fn($v) => (int) $v)->values());
+                const centreSessionChartColors = centreSessionChartLabels.map(function(_, index) {
+                    const total = Math.max(centreSessionChartLabels.length, 1);
+                    const hue = Math.round((index * 360) / total);
+
+                    return {
+                        background: 'hsla(' + hue + ', 68%, 55%, 0.82)',
+                        border: 'hsl(' + hue + ', 68%, 42%)'
+                    };
+                });
 
                 const funnelValues = [
                     {{ (int) $totalRegisteredUsers }},
@@ -632,17 +889,21 @@
                     });
                 }
 
-                const ageCtx = document.getElementById('ageGroupBarChart');
-                if (ageCtx) {
-                    new Chart(ageCtx, {
+                const admittedStudentsSessionCtx = document.getElementById('admittedStudentsSessionBarChart');
+                if (admittedStudentsSessionCtx) {
+                    new Chart(admittedStudentsSessionCtx, {
                         type: 'bar',
                         data: {
-                            labels: ageLabels,
+                            labels: centreSessionChartLabels,
                             datasets: [{
-                                label: 'Users',
-                                data: ageValues,
-                                backgroundColor: 'rgba(25, 135, 84, 0.8)',
-                                borderColor: 'rgba(25, 135, 84, 1)',
+                                label: 'Admitted Students',
+                                data: centreSessionChartValues,
+                                backgroundColor: centreSessionChartColors.map(function(color) {
+                                    return color.background;
+                                }),
+                                borderColor: centreSessionChartColors.map(function(color) {
+                                    return color.border;
+                                }),
                                 borderWidth: 1
                             }]
                         },
@@ -653,6 +914,13 @@
                                 display: false
                             },
                             scales: {
+                                xAxes: [{
+                                    ticks: {
+                                        autoSkip: false,
+                                        maxRotation: 35,
+                                        minRotation: 0
+                                    }
+                                }],
                                 yAxes: [{
                                     ticks: {
                                         beginAtZero: true,

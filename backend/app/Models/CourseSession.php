@@ -14,6 +14,9 @@ class CourseSession extends Model
     use CrudTrait;
     use HasFactory, LogsActivity;
 
+    public const TYPE_COURSE = 'course';
+    public const TYPE_CENTRE = 'centre';
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -28,6 +31,8 @@ class CourseSession extends Model
     protected $fillable = [
         'name',
         'course_id',
+        'centre_id',
+        'session_type',
         'limit',
         'course_time',
         'session',
@@ -53,20 +58,42 @@ class CourseSession extends Model
                 $model->uuid = (string) Str::uuid();
             }
 
+            if (empty($model->session_type)) {
+                $model->session_type = self::TYPE_COURSE;
+            }
+
             $model->setSessionName();
         });
 
         static::updating(function ($model) {
+            if (empty($model->session_type)) {
+                $model->session_type = self::TYPE_COURSE;
+            }
+
             $model->setSessionName();
         });
     }
 
     public function setSessionName()
     {
+        if ($this->session_type && $this->session_type !== self::TYPE_COURSE) {
+            return;
+        }
+
         $course = $this->course()->first();
         if ($course) {
             $this->name = "{$course->course_name} - {$this->session} Session";
         }
+    }
+
+    public function scopeCourseType($query)
+    {
+        return $query->where('session_type', self::TYPE_COURSE);
+    }
+
+    public function scopeCentreType($query)
+    {
+        return $query->where('session_type', self::TYPE_CENTRE);
     }
 
     public function slotLeft()

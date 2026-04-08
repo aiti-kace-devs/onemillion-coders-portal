@@ -147,6 +147,7 @@ class AdminCrudController extends CrudController
         if (request()->has('courses')) {
             $admin->assignedCourses()->sync(request()->input('courses'));
         }
+        $this->syncAssignedCentres($admin);
 
         return $response;
     }
@@ -168,6 +169,7 @@ class AdminCrudController extends CrudController
         if (request()->has('courses')) {
             $admin->assignedCourses()->sync(request()->input('courses'));
         }
+        $this->syncAssignedCentres($admin);
 
         return $response;
     }
@@ -191,6 +193,7 @@ class AdminCrudController extends CrudController
             $admin = Admin::findOrFail($id);
 
             $admin->assignedCourses()->detach();
+            $admin->assignedCentres()->detach();
 
             $admin->delete();
 
@@ -237,5 +240,29 @@ class AdminCrudController extends CrudController
         $admin = \App\Models\Admin::find($request->admin_id);
         $admin->assignedCourses()->sync($request->courses);
         return response()->json(['success' => true]);
+    }
+
+    private function syncAssignedCentres(Admin $admin): void
+    {
+        $hasCentres = request()->has('centres') || request()->exists('centres');
+        $hasCentreId = request()->has('centre_id') || request()->exists('centre_id');
+
+        if (! $hasCentres && ! $hasCentreId) {
+            return;
+        }
+
+        $centreIds = request()->input('centres');
+        if ($centreIds === null) {
+            $centreIds = request()->input('centre_id');
+        }
+
+        if (!is_array($centreIds)) {
+            $centreIds = $centreIds ? [$centreIds] : [];
+        }
+
+        $centreIds = array_values(array_filter($centreIds, fn ($id) => (string) $id !== ''));
+        $centreIds = array_map('intval', $centreIds);
+
+        $admin->assignedCentres()->sync($centreIds);
     }
 }
