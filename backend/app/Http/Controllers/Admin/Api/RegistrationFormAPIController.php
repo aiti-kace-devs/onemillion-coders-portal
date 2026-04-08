@@ -31,13 +31,7 @@ class RegistrationFormAPIController extends Controller
                 'middle_name',
                 'age',
                 'gender',
-                'do_you_require_any_special_support_for_your_training'
-            ],
-
-            'Verification and Identification' => [
-                'email',
-                'phone',
-                'ghana_card_number'
+                'do_you_need_any_accessibility_support_pwd'
             ],
 
             'Educational Information' => [
@@ -45,6 +39,15 @@ class RegistrationFormAPIController extends Controller
                 'certificate',
                 'password',
             ],
+
+            'Verification and Password' => [
+                'email',
+                'phone',
+                'ghana_card_number',
+                'password',
+            ],
+
+
         ];
 
 
@@ -156,7 +159,6 @@ class RegistrationFormAPIController extends Controller
         $validator = Validator::make($request->all(), [
             'userId' => 'required|exists:users,userId',
             'course_id' => 'required|integer|exists:courses,id',
-            'centre_id' => 'required|integer|exists:centres,id',
             'support' => 'required|boolean',
         ]);
 
@@ -171,7 +173,7 @@ class RegistrationFormAPIController extends Controller
         $data = $validator->validated();
 
         $user = User::where('userId', $data['userId'])->first();
-        
+
         if (!$user) {
             return response()->json([
                 'success' => false,
@@ -179,14 +181,11 @@ class RegistrationFormAPIController extends Controller
             ]);
         }
         
-        $course = Course::with('programme')
-            ->where('id', $data['course_id'])
-            ->where('centre_id', $data['centre_id'])
-            ->first();
+        $course = Course::with('programme')->find($data['course_id']);
         if (!$course) {
             return response()->json([
                 'success' => false,
-                'message' => 'Course not found for the selected centre.'
+                'message' => 'Course not found'
             ], 404);
         }
 
@@ -207,39 +206,6 @@ class RegistrationFormAPIController extends Controller
 
 
 
-
-
-    //     public function check_user_by_userID($userID)
-    // {
-    //     $user = User::where('userId', $userID)->first();
-
-    //     if (!$user) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'User not found'
-    //         ], 404);
-    //     }
-
-    //     $admission = UserAdmission::where('user_id', $userID)
-    //         ->whereNotNull('confirmed')
-    //         ->first();
-
-    //     if (!$admission) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'User admission not confirmed'
-    //         ]);
-    //     }
-
-    //     return response()->json([
-    //         'success' => true,
-    //         'message' => 'User admission confirmed',
-    //         'data' => [
-    //             'user' => $user,
-    //             'admission' => $admission
-    //         ]
-    //     ]);
-    // }
 
 
 

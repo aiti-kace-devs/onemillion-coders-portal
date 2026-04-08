@@ -31,12 +31,18 @@ class AdminRequest extends FormRequest
             'name' => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z0-9\s.,_\'"-]+$/'],
             'email' => 'required|string|email|max:255|unique:admins',
             'password' => 'required|string|min:8|confirmed',
+            'centre_id' => 'nullable|integer|exists:centres,id',
+            'centres' => 'nullable|array',
+            'centres.*' => 'integer|exists:centres,id',
         ];
 
         if ($isUpdate && $adminId) {
             $rules = [
                 'name' => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z0-9\s.,_\'"-]+$/'],
                 'email' => 'required|string|email|max:255|unique:admins,email,' . $adminId,
+                'centre_id' => 'nullable|integer|exists:centres,id',
+                'centres' => 'nullable|array',
+                'centres.*' => 'integer|exists:centres,id',
             ];
             
             // Only require password if it's being updated

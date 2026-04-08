@@ -63,7 +63,7 @@ trait StudentFormFieldHelpers
 
         MediaHelper::getMediaSelector(
             name: 'image',
-            disk_options: MediaHelper::getArticleImagesDiskOptions(),
+            disk_options: MediaHelper::getCertificateFilesDiskOptions(),
             label: 'Cover Image',
             value: $entry->coverImage->file ?? '',
         );
@@ -100,6 +100,7 @@ trait StudentFormFieldHelpers
                     'number' => 'Number',
                     'file' => 'File',
                     'select_course' => 'Course Selection',
+
                 ],
                 'wrapper' => ['class' => 'form-group col-md-6'],
             ],
@@ -190,7 +191,7 @@ trait StudentFormFieldHelpers
             //     'type' => 'tinymce',
             //     'escaped' => false,
             // ]);
-            
+
 
             $this->addFieldsToTab('General', false, [
                 'title',

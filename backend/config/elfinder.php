@@ -32,7 +32,7 @@ return [
         ],
         'gcs' => [
             'URL' => env('GOOGLE_CLOUD_STORAGE_API_URI'),
-            'alias' => 'Google Cloud Storage',
+            'alias' => CLOUD_STORAGE_ALIAS,
         ],
     ],
 
@@ -123,7 +123,7 @@ return [
     */
     'root_options' => [
         'uploadDeny'    => ['all'],
-        'uploadAllow'   => ['image', 'text/plain', 'application/pdf'],
+        'uploadAllow'   => ['image', 'text/plain', 'application/pdf', 'video'],
         'uploadOrder'   => ['deny', 'allow'],
         'acceptedName'  => '/^[^\.].*$/',
     ],

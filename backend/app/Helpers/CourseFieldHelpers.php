@@ -297,7 +297,7 @@ CRUD::addField([
             'type' => 'closure',
             'function' => function ($entry) {
                 if ($entry->course) {
-                    $url = backpack_url('course/' . $entry->course->id . '/show');
+                    $url = backpack_url('course-batch/' . $entry->course->id . '/show');
                     return '<a href="' . $url . '">' . e($entry->course->course_name) . '</a>';
                 }
                 return '-';

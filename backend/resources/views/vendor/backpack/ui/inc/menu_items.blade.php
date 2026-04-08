@@ -41,11 +41,11 @@
 @endcan
 
 
-@can('centre.read.all')
-<x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
-<x-backpack::menu-item title="Manage Districts" icon="la la-question" :link="backpack_url('district')" />
-<x-backpack::menu-item title="Constituencies" icon="la la-question" :link="backpack_url('constituency')" />
-@endcan
+@canany(['centre.read.all', 'centre.read.self'])
+    <x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
+    {{-- <x-backpack::menu-item title="Manage Districts" icon="la la-question" :link="backpack_url('district')" /> --}}
+    {{-- <x-backpack::menu-item title="Constituencies" icon="la la-question" :link="backpack_url('constituency')" /> --}}
+@endcanany
 
 @can('programme.read.all')
     <x-backpack::menu-item title="Programmes" icon="la la-graduation-cap" :link="backpack_url('programme')" />
@@ -139,17 +139,9 @@
     </x-backpack::menu-dropdown>
 @endif
 
-@php
-    $adminUser = backpack_user();
-    $canAppConfigRead = $adminUser && $adminUser->can('app-config.read.all');
-    $canAppConfigUpdate = $adminUser && $adminUser->can('app-config.update');
-    $canAdminReadAll = $adminUser && $adminUser->can('admin.read.all');
-    $canManageStudent = $adminUser && $adminUser->can('manage-student.read.all');
-    $isSuperAdmin = $adminUser && method_exists($adminUser, 'isSuper') && $adminUser->isSuper();
-    $showSystemSettings = $canAppConfigRead || $canAppConfigUpdate || $canAdminReadAll || $isSuperAdmin || $canManageStudent;
-    $canPartnerIntegration = $canAppConfigRead || $isSuperAdmin || $canManageStudent;
-@endphp
-@if ($showSystemSettings)
+@if (auth()->user()->can('app-config.read.all') ||
+        auth()->user()->can('app-config.update') ||
+        auth()->user()->can('admin.read.all'))
     <x-backpack::menu-dropdown title="System Settings" icon="la la-cogs">
         @can('app-config.read.all')
             <x-backpack::menu-dropdown-item title="App Configs" icon="la la-cog" :link="backpack_url('app-config')" />

@@ -1,28 +1,17 @@
 <script setup>
-import { usePage, Link } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { Link } from "@inertiajs/vue3";
 
-const user = usePage().props.auth?.user || {};
-
-const levelDeterminationTestUrl = computed(() => {
-    const baseUrl = usePage().props.quiz_frontend_url;
-    const token = usePage().props.quiz_jwt_token;
-    const userId = user?.userId ?? "";
-    if (!token) return `${baseUrl}/quiz`;
-    return `${baseUrl}/quiz/${userId}?token=${token}`;
-});
 </script>
 
 <template>
-    <Link
-        :href="route('student.level-assessment')"
-        class="block h-full"
-    >
+    <Link :href="route('student.level-assessment')" class="block h-full">
         <div
             class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
         >
             <!-- Hover Accent Line -->
-            <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+            <div
+                class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"
+            ></div>
             <!-- Icon and Title -->
             <div class="flex items-center gap-3 mb-2">
                 <span

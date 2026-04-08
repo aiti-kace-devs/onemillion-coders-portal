@@ -246,7 +246,7 @@
                         </tr>
                         <tr>
                             <td class="text-muted">Last Login</td>
-                            <td>{{ $entry->last_login_at ? $entry->last_login_at->format('Y-m-d') : 'Never' }}</td>
+                                    <td>{{ $entry->last_login ? \Carbon\Carbon::parse($entry->last_login)->format('Y-m-d H:i:s') : 'Never' }}</td>
                         </tr>
                     </table>
                 </div>

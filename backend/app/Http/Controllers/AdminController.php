@@ -559,7 +559,7 @@ class AdminController extends Controller
         $data['exam'] = Oex_exam_master::all();
         $data['exams'] = Oex_exam_master::where('status', '1')->get()->toArray();
         $data['courses'] = Course::pluck('course_name', 'id')->toArray();
-        $data['sessions'] = CourseSession::all();
+        $data['sessions'] = CourseSession::courseType()->get();
 
         if ($request->ajax()) {
             $baseQuery = user_exam::with('result')
@@ -626,7 +626,7 @@ class AdminController extends Controller
     {
         $data['users'] = User::select('users.*', 'user_admission.id as admitted', 'courses.course_name', 'course_sessions.name as session_name', 'user_admission.session as session_id', 'courses.id as course_id')->leftJoin('user_admission', 'users.userId', '=', 'user_admission.user_id')->leftJoin('courses', 'user_admission.course_id', '=', 'courses.id')->leftJoin('course_sessions', 'user_admission.session', '=', 'course_sessions.id')->paginate(15);
         $courses = Course::all();
-        $sessions = CourseSession::all();
+        $sessions = CourseSession::courseType()->get();
         $data['courses'] = $courses;
         $data['sessions'] = $sessions;
 

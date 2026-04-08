@@ -170,7 +170,7 @@ class ManageStudentCrudController extends CrudController
             ->get()
             ->mapWithKeys(fn(Course $course) => [$course->id => $course->display_name]);
 
-        $sessionsQuery = CourseSession::query();
+        $sessionsQuery = CourseSession::courseType();
         if (is_array($visibleCourseIds)) {
             $sessionsQuery->whereIn('course_id', $visibleCourseIds);
         }
@@ -588,7 +588,8 @@ class ManageStudentCrudController extends CrudController
             return response()->json([]);
         }
 
-        $sessions = CourseSession::where('course_id', $courseId)
+        $sessions = CourseSession::courseType()
+            ->where('course_id', $courseId)
             ->select('id', 'name', 'course_id')
             ->get();
         return response()->json($sessions);

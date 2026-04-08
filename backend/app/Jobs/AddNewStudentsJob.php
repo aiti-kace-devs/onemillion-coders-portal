@@ -48,10 +48,10 @@ class AddNewStudentsJob implements ShouldQueue
                 // 'registered_course' => 'nullable|exists:courses,id',
                 'age' => 'required',
                 'userId' => 'required',
-                'password' => 'sometimes',
+                'password' => 'sometimes|nullable|string',
                 'exam_name' => 'sometimes',
                 'ghcard' => 'nullable',
-                'form_response_id' => 'required',
+                // 'form_response_id' => 'required',
                 'data' => 'nullable|array',
                 'pwd' => 'sometimes|boolean',
             ]);
@@ -59,7 +59,7 @@ class AddNewStudentsJob implements ShouldQueue
             if ($validator->fails()) {
                 $errors[] = "Error creating student with email " . $student['email'];
                 $errors[] = $validator->errors()->all();
-                break;
+                continue;
             }
 
             $plainPassword = $student['password'] ?? str()->random(8);
@@ -73,15 +73,14 @@ class AddNewStudentsJob implements ShouldQueue
                     $exam = Oex_exam_master::where('title', $student['exam_name'])->first();
                 }
                 if ($exam == null) {
-                    abort(422, 'Exam not found');
+                    $errors[] = "Error creating student with email " . $student['email'] . ": Exam not found";
+                    continue;
                 }
                 $student['exam'] = $exam->id;
             }
 
             // Check for existing user
             $existingUser = User::where('email', $student['email'])->first();
-            $std = $existingUser;
-
             if ($existingUser == null) {
                 // Create a new student
                 $std = new User();
@@ -104,7 +103,7 @@ class AddNewStudentsJob implements ShouldQueue
                 if (!empty($student['ghcard'])) {
                     $std->card_type = 'GHCARD';
                 }
-                $std->form_response_id = $student['form_response_id'];
+                // $std->form_response_id = $student['form_response_id'];
                 $std->save();
 
                 UserRegistered::dispatch($std, $plainPassword);

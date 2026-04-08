@@ -14,6 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Permission\Traits\HasRoles;
+use App\Models\Notification;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 
@@ -62,7 +63,7 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
-        'remember_token',
+        'remember_token'
     ];
 
     /**
@@ -170,10 +171,10 @@ class User extends Authenticatable
         return $this->is_super;
     }
 
-    public function formResponse()
-    {
-        return $this->belongsTo(FormResponse::class, 'form_response_id');
-    }
+    // public function formResponse()
+    // {
+    //     return $this->belongsTo(FormResponse::class, 'form_response_id');
+    // }
 
     public function partnerProgress()
     {
@@ -221,9 +222,9 @@ class User extends Authenticatable
         return $this->hasMany(Attendance::class, 'user_id', 'userId');
     }
 
-    public function hasAttendance()
+    public function hasAttendance(): bool
     {
-        return $this->hasMany(Attendance::class, 'user_id', 'userId');
+        return $this->attendances()->exists();
     }
 
     public function getNameWithEmail()
@@ -339,5 +340,37 @@ class User extends Authenticatable
         }
 
         return trim((string) ($this->userId ?? ''));
+    }
+  
+     /* 
+       Get the student's full name (alias for frontend consistency)
+     */
+    public function getStudentNameAttribute()
+    {
+        return $this->full_name;
+    }
+
+    /**
+     * Get the name of the course the student is admitted to
+     */
+    public function getCourseNameAttribute()
+    {
+        return $this->admission?->course?->course_name;
+    }
+
+    /**
+     * Get the session name (e.g., Morning, Evening)
+     */
+    public function getSelectedSessionAttribute()
+    {
+        return $this->admission?->courseSession?->session;
+    }
+
+    /**
+     * Get the date the admission was confirmed (used as verification date)
+     */
+    public function getVerificationDateAttribute()
+    {
+        return $this->admission?->confirmed;
     }
 }

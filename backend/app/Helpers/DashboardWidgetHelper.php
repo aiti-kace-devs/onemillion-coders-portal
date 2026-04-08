@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\DB;
 class DashboardWidgetHelper
 {
     
+    private static function isCentreManager(): bool
+    {
+        $admin = backpack_user();
+
+        return $admin && method_exists($admin, 'hasRole') && $admin->hasRole('centre-manager');
+    }
+
     /**
      * Render a widget with the given type and parameters.
      *
@@ -55,11 +62,40 @@ class DashboardWidgetHelper
         $query->whereIn($column, $visibleCourseIds);
     }
 
+    /**
+     * Centre managers should only see dashboard counts for active course batches.
+     */
+    public static function dashboardCountVisibleCourseIds(?array $visibleCourseIds): ?array
+    {
+        if (! self::isCentreManager()) {
+            return $visibleCourseIds;
+        }
+
+        if (is_array($visibleCourseIds) && empty($visibleCourseIds)) {
+            return [];
+        }
+
+        $query = DB::table('courses as c')
+            ->join('admission_batches as ab', 'c.batch_id', '=', 'ab.id')
+            ->where('ab.completed', 0)
+            ->where('ab.status', 1)
+            ->select('c.id');
+
+        if (is_array($visibleCourseIds)) {
+            $query->whereIn('c.id', $visibleCourseIds);
+        }
+
+        return $query->pluck('c.id')
+            ->map(fn ($courseId) => (int) $courseId)
+            ->values()
+            ->all();
+    }
+
 
     public static function dashboardCountStatisticsWidget()
     {
-        $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
-        $cacheKey = 'dashboard_count_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
+        $visibleCourseIds = self::dashboardCountVisibleCourseIds(CourseVisibilityHelper::currentAdminVisibleCourseIds());
+        $cacheKey = 'dashboard_count_statistics_v3_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
         $dasboardCountStatistics = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($visibleCourseIds) {
             $baseUserQuery = User::query();
@@ -68,23 +104,65 @@ class DashboardWidgetHelper
             $courseQuery = Course::query();
             self::applyCourseScope($courseQuery, $visibleCourseIds, 'id');
 
+            $scopeSuffix = self::scopeCacheKeySuffix($visibleCourseIds);
+            $shortlistedCacheKey = 'shortlistedUsers_v2_' . $scopeSuffix;
+            $admittedCacheKey = 'admittedUsers_v2_' . $scopeSuffix;
+
+            $totalCourses = $courseQuery->count();
+            if (is_array($visibleCourseIds) && empty($visibleCourseIds)) {
+                $totalCourses = 0;
+            } else {
+                $batchCoursesQuery = DB::table('admission_batches as ab')
+                    ->join('courses as c2', 'c2.batch_id', '=', 'ab.id')
+                    ->where('ab.completed', 0)
+                    ->where('ab.status', 1);
+
+                if (is_array($visibleCourseIds)) {
+                    $batchCoursesQuery->whereIn('c2.id', $visibleCourseIds);
+                }
+
+                $totalCourses = $batchCoursesQuery
+                    ->select('ab.id')
+                    ->selectRaw('COUNT(DISTINCT c2.programme_id) as courses_count')
+                    ->groupBy('ab.id')
+                    ->get()
+                    ->sum('courses_count');
+            }
+
             return [
                 'userCount' => (clone $baseUserQuery)->count(),
-                // cache shortlistedUsers
-                'shortlistedUsers' => Cache::remember('shortlistedUsers', 60 * 60, function () use ($baseUserQuery) {
-                    return (clone $baseUserQuery)->where('shortlist', 1)->count();
+                'shortlistedUsers' => Cache::flexible($shortlistedCacheKey, \cache_flexible_ttl(), function () use ($baseUserQuery) {
+                    return (clone $baseUserQuery)
+                        ->where(function ($query) {
+                            $query->where('shortlist', 1)->orWhere('shortlist', true);
+                        })
+                        ->count();
                 }),
-                'admittedUsers' => Cache::remember('admittedUsers', 60 * 60, function () use ($baseUserQuery) {
+                'admittedUsers' => Cache::flexible($admittedCacheKey, \cache_flexible_ttl(), function () use ($baseUserQuery, $visibleCourseIds) {
                     return (clone $baseUserQuery)->whereExists(function ($query) {
                         $query->select(\DB::raw(1))
                             ->from('user_admission')
                             ->whereColumn('user_admission.user_id', 'users.userId')
                             ->whereNotNull('user_admission.confirmed');
+                    })->when(is_array($visibleCourseIds), function ($query) use ($visibleCourseIds) {
+                        $query->whereExists(function ($admissionQuery) use ($visibleCourseIds) {
+                            $admissionQuery->select(\DB::raw(1))
+                                ->from('user_admission')
+                                ->whereColumn('user_admission.user_id', 'users.userId')
+                                ->whereNotNull('user_admission.confirmed');
+
+                            self::applyCourseScope($admissionQuery, $visibleCourseIds, 'user_admission.course_id');
+                        });
                     })->count();
                 }),
-                'courses' => $courseQuery->count(),
+                'courses' => $totalCourses,
             ];
         });
+
+        $coursesHint = 'Courses in active or ongoing batches.';
+        $usersHint = self::isCentreManager() ? 'Users registered for active course batches.' : 'All registered users.';
+        $shortlistedHint = self::isCentreManager() ? 'Shortlisted users for active course batches.' : 'All shortlisted students.';
+        $admittedHint = self::isCentreManager() ? 'Admitted students for active course batches.' : 'All admitted students.';
 
         Widget::add([
             'type' => 'div',
@@ -98,7 +176,7 @@ class DashboardWidgetHelper
                     'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                    'hint' => 'All registered users.',
+                    'hint' => $usersHint,
                     'permission' => 'dashboard.read.all ',
                 ],
                 [
@@ -109,7 +187,7 @@ class DashboardWidgetHelper
                     'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                    'hint' => 'All Shortlisted Students.',
+                    'hint' => $shortlistedHint,
                     'permission' => 'dashboard.read.all ',
                 ],
                 [
@@ -120,7 +198,7 @@ class DashboardWidgetHelper
                     'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                    'hint' => 'All Admitted Students',
+                    'hint' => $admittedHint,
                     'permission' => 'dashboard.read.all ',
                 ],
                 [
@@ -131,7 +209,7 @@ class DashboardWidgetHelper
                     'wrapper' => [
                         'style' => 'background-color:rgb(40, 127, 167);',
                     ],
-                    'hint' => 'All Courses in the system',
+                    'hint' => $coursesHint,
                     'permission' => 'dashboard.read.all ',
                 ],
             ]
@@ -178,6 +256,10 @@ class DashboardWidgetHelper
 
     public static function dashboardBatchStatisticsWidget()
     {
+        if (self::isCentreManager()) {
+            return;
+        }
+
         $visibleCourseIds = CourseVisibilityHelper::currentAdminVisibleCourseIds();
         $cacheKey = 'dashboard_table_statistics_' . self::scopeCacheKeySuffix($visibleCourseIds);
 
@@ -270,6 +352,38 @@ class DashboardWidgetHelper
 
     public static function dashboardStudentStatisticsWidget()
     {
+        if (self::isCentreManager()) {
+            Widget::add([
+                'type' => 'div',
+                'class' => 'row mb-4',
+                'icon' => 'la la-home',
+                'link' => backpack_url('dashboard'),
+                'content' => [
+                    [
+                        'type'       => 'chart',
+                        'controller' => \App\Http\Controllers\Admin\Charts\DashboardAdmissionsDistributionChartController::class,
+                        'class'      => 'card mb-2',
+                        'wrapper'    => ['class' => 'col-md-6'],
+                        'content'    => [
+                            'header' => 'Admissions Distribution',
+                            'body'   => 'Doughnut chart showing confirmed vs pending admissions.',
+                        ]
+                    ],
+                    [
+                        'type'       => 'chart',
+                        'controller' => \App\Http\Controllers\Admin\Charts\DashboardAgeGroupBarChartController::class,
+                        'class'      => 'card mb-2',
+                        'wrapper'    => ['class' => 'col-md-6'],
+                        'content'    => [
+                            'header' => 'Age Group Distribution',
+                            'body'   => 'Bar chart showing student counts by age group.',
+                        ]
+                    ],
+                ],
+            ]);
+            return;
+        }
+
         Widget::add([
             'type' => 'div',
             'class' => 'row mb-4',
