@@ -21,6 +21,7 @@ use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Helpers\CourseVisibilityHelper;
 use App\Services\PartnerProgressSyncService;
+use App\Services\PartnerProgressVisualizationService;
 use Illuminate\Support\Facades\View;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\GetsFilteredQuery;
@@ -179,12 +180,14 @@ class ManageStudentCrudController extends CrudController
         $activities = $entry->actions()->latest()->get();
         $progressState = app(PartnerProgressSyncService::class)->getSnapshotForPreview($entry);
         $progressHistory = collect();
+        $partnerProgressActivities = [];
         if (!empty($progressState['snapshot'])) {
-            $progressHistory = StudentPartnerProgressHistory::query()
-                ->where('student_partner_progress_id', $progressState['snapshot']->id)
-                ->orderBy('captured_at')
-                ->limit(120)
-                ->get();
+            $progressHistory = StudentPartnerProgressHistory::combinedSeriesForSnapshot(
+                (int) $progressState['snapshot']->id,
+                120
+            );
+            $partnerProgressActivities = app(PartnerProgressVisualizationService::class)
+                ->buildStudentProgressPayload($progressState['snapshot'], $progressHistory)['activities'];
         }
 
         View::share([
@@ -194,7 +197,9 @@ class ManageStudentCrudController extends CrudController
             'partnerProgressEligible' => (bool) ($progressState['eligible'] ?? false),
             'partnerProgressSnapshot' => $progressState['snapshot'] ?? null,
             'partnerProgressStatus' => $progressState['status'] ?? 'not_eligible',
+            'partnerProgressMessage' => $progressState['message'] ?? null,
             'partnerProgressHistory' => $progressHistory,
+            'partnerProgressActivities' => $partnerProgressActivities,
         ]);
     }
     /**
@@ -675,7 +680,9 @@ class ManageStudentCrudController extends CrudController
 
         $user = User::findOrFail($userId);
         $force = (bool) $request->boolean('force', true);
-        RefreshPartnerProgressJob::dispatch($user->id, $force);
+        $mapping = app(\App\Services\PartnerCourseEligibilityService::class)->resolveAnyMappingForUser($user);
+        $partnerCode = $mapping ? (string) $mapping->partner_code : null;
+        RefreshPartnerProgressJob::dispatch($user->id, $force, $partnerCode);
 
         return response()->json([
             'message' => 'Partner progress sync has been queued.',

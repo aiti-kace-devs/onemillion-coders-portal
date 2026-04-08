@@ -42,9 +42,9 @@
 
 
 @can('centre.read.all')
-    <x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
-    {{-- <x-backpack::menu-item title="Manage Districts" icon="la la-question" :link="backpack_url('district')" /> --}}
-    {{-- <x-backpack::menu-item title="Constituencies" icon="la la-question" :link="backpack_url('constituency')" /> --}}
+<x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
+<x-backpack::menu-item title="Manage Districts" icon="la la-question" :link="backpack_url('district')" />
+<x-backpack::menu-item title="Constituencies" icon="la la-question" :link="backpack_url('constituency')" />
 @endcan
 
 @can('programme.read.all')
@@ -139,11 +139,24 @@
     </x-backpack::menu-dropdown>
 @endif
 
-@if (auth()->user()->can('app-config.read.all') || auth()->user()->can('app-config.update'))
+@php
+    $adminUser = backpack_user();
+    $canAppConfigRead = $adminUser && $adminUser->can('app-config.read.all');
+    $canAppConfigUpdate = $adminUser && $adminUser->can('app-config.update');
+    $canAdminReadAll = $adminUser && $adminUser->can('admin.read.all');
+    $canManageStudent = $adminUser && $adminUser->can('manage-student.read.all');
+    $isSuperAdmin = $adminUser && method_exists($adminUser, 'isSuper') && $adminUser->isSuper();
+    $showSystemSettings = $canAppConfigRead || $canAppConfigUpdate || $canAdminReadAll || $isSuperAdmin || $canManageStudent;
+    $canPartnerIntegration = $canAppConfigRead || $isSuperAdmin || $canManageStudent;
+@endphp
+@if ($showSystemSettings)
     <x-backpack::menu-dropdown title="System Settings" icon="la la-cogs">
         @can('app-config.read.all')
             <x-backpack::menu-dropdown-item title="App Configs" icon="la la-cog" :link="backpack_url('app-config')" />
         @endcan
+        @if ($canPartnerIntegration)
+            <x-backpack::menu-dropdown-item title="Partner integrations" icon="la la-plug" :link="backpack_url('partner-integration')" />
+        @endif
         @can('app-config.update')
             <x-backpack::menu-dropdown-item title="App Maintenance" icon="la la-tools" :link="backpack_url('utilities')" />
         @endcan

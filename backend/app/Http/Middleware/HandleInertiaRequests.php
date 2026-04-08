@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\AppConfig;
 use App\Services\JwtService;
 use App\Services\PartnerCourseEligibilityService;
+use App\Services\Partners\PartnerRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -66,8 +67,13 @@ class HandleInertiaRequests extends Middleware
         $hasPartnerProgressMenu = false;
         if ($user) {
             $quizJwtToken = app(JwtService::class)->generate($user->id);
-            $hasPartnerProgressMenu = (bool) config('services.partner_startocode.enable_student_progress_menu', true)
-                && app(PartnerCourseEligibilityService::class)->resolveStartocodeMappingForUser($user) !== null;
+            $mapping = app(PartnerCourseEligibilityService::class)->resolveAnyMappingForUser($user);
+            if ($mapping) {
+                $partnerCode = (string) $mapping->partner_code;
+                $registry = app(PartnerRegistry::class);
+                $hasPartnerProgressMenu = $registry->has($partnerCode)
+                    && (bool) config('services.partner_progress.enable_student_progress_menu', true);
+            }
         }
 
         return [

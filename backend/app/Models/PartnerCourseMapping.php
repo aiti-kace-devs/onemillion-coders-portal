@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PartnerCodeNormalizer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -26,5 +27,12 @@ class PartnerCourseMapping extends Model
     public function course()
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function setPartnerCodeAttribute(mixed $value): void
+    {
+        $this->attributes['partner_code'] = is_string($value)
+            ? PartnerCodeNormalizer::normalize($value)
+            : $value;
     }
 }

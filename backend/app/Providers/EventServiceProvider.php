@@ -44,5 +44,6 @@ class EventServiceProvider extends ServiceProvider
         \App\Models\Programme::observe(\App\Observers\ProgrammeObserver::class);
         \App\Models\Branch::observe(\App\Observers\BranchObserver::class);
         \App\Models\CourseCategory::observe(\App\Observers\CourseCategoryObserver::class);
+        \App\Models\PartnerIntegration::observe(\App\Observers\PartnerIntegrationObserver::class);
     }
 }

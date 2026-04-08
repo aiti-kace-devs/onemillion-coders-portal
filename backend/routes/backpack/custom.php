@@ -41,6 +41,12 @@ Route::group([
     Route::crud('admission-rejection', 'AdmissionRejectionCrudController');
     Route::post('app-config/{id}/toggle', 'AppConfigCrudController@toggleValue');
     Route::crud('app-config', 'AppConfigCrudController');
+    Route::crud('partner-integration', 'PartnerIntegrationCrudController');
+    Route::get('partner-integration/schema-tables', 'PartnerIntegrationCrudController@schemaTables')->name('partner-integration.schema-tables');
+    Route::get('partner-integration/schema-columns', 'PartnerIntegrationCrudController@schemaColumns')->name('partner-integration.schema-columns');
+    Route::post('partner-integration/{id}/test-connection', 'PartnerIntegrationCrudController@testConnection')->name('partner-integration.test-connection');
+    Route::post('partner-integration/{id}/test-parse-single', 'PartnerIntegrationCrudController@testParseSingle')->name('partner-integration.test-parse-single');
+    Route::post('partner-integration/{id}/test-parse-bulk', 'PartnerIntegrationCrudController@testParseBulk')->name('partner-integration.test-parse-bulk');
     Route::crud('attendance', 'AttendanceCrudController');
     Route::crud('branch', 'BranchCrudController');
     Route::post('branch/{id}/toggle', 'BranchCrudController@toggleStatus');

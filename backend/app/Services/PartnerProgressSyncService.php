@@ -3,62 +3,139 @@
 namespace App\Services;
 
 use App\Jobs\RefreshPartnerProgressJob;
+use App\Models\PartnerIntegration;
 use App\Models\PartnerProgressSyncAudit;
 use App\Models\StudentPartnerProgress;
 use App\Models\StudentPartnerProgressHistory;
 use App\Models\User;
-use App\Services\Partners\Startocode\PartnerProgressClient;
+use App\Support\PartnerCodeNormalizer;
+use App\Support\StartocodePartnerCode;
+use App\Services\Partners\PartnerProgressPayloadValidator;
+use App\Services\Partners\PartnerRegistry;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class PartnerProgressSyncService
 {
     public function __construct(
         private readonly PartnerCourseEligibilityService $eligibilityService,
-        private readonly PartnerProgressClient $client
+        private readonly PartnerRegistry $partners,
+        private readonly PartnerProgressPayloadValidator $payloadValidator
     ) {
     }
 
-    private function partnerCode(): string
+    private function resolveMapping(User $user, ?string $partnerCode = null)
     {
-        return (string) config('services.partner_startocode.code', 'startocode');
+        if (is_string($partnerCode) && trim($partnerCode) !== '') {
+            return $this->eligibilityService->resolveMappingForUser($user, trim($partnerCode));
+        }
+
+        return $this->eligibilityService->resolveAnyMappingForUser($user);
     }
 
-    public function getSnapshotForPreview(User $user): array
+    private function partnerConfig(string $partnerCode, string $key, mixed $default = null): mixed
     {
-        $mapping = $this->eligibilityService->resolveStartocodeMappingForUser($user);
+        if ($key === 'stale_after_days') {
+            $fromApp = config('PARTNER_PROGRESS_STALE_AFTER_DAYS');
+            if ($fromApp !== null && $fromApp !== '') {
+                return (int) $fromApp;
+            }
+        }
+
+        if (! $this->partners->has($partnerCode)) {
+            return $default;
+        }
+
+        return config("services.partner_progress.{$key}", $default);
+    }
+
+    public function getSnapshotForPreview(User $user, ?string $partnerCode = null): array
+    {
+        $mapping = $this->resolveMapping($user, $partnerCode);
         if (!$mapping) {
             return [
                 'eligible' => false,
                 'snapshot' => null,
                 'status' => 'not_eligible',
                 'course_id' => null,
+                'partner_code' => null,
+                'mapping_id' => null,
+                'message' => null,
             ];
         }
 
         $courseId = $mapping->course_id ?: $user->registered_course;
+        if (!$courseId) {
+            return [
+                'eligible' => false,
+                'snapshot' => null,
+                'status' => 'not_eligible',
+                'course_id' => null,
+                'partner_code' => $partnerCode,
+                'mapping_id' => $mapping->id,
+                'message' => 'Missing course mapping for partner progress.',
+            ];
+        }
+        $partnerCode = (string) $mapping->partner_code;
+
+        if (!$this->partners->has($partnerCode)) {
+            return [
+                'eligible' => false,
+                'snapshot' => null,
+                'status' => 'not_eligible',
+                'course_id' => $courseId,
+                'partner_code' => $partnerCode,
+                'mapping_id' => $mapping->id,
+                'message' => "Partner driver not configured for '{$partnerCode}'.",
+            ];
+        }
+
         $snapshot = StudentPartnerProgress::query()
             ->where('user_id', $user->id)
-            ->where('partner_code', $this->partnerCode())
+            ->where('partner_code', $partnerCode)
             ->where('course_id', $courseId)
             ->latest('id')
             ->first();
 
         if (!$snapshot) {
-            RefreshPartnerProgressJob::dispatch($user->id);
+            RefreshPartnerProgressJob::dispatch($user->id, false, $partnerCode);
             return [
                 'eligible' => true,
                 'snapshot' => null,
                 'status' => 'syncing',
                 'course_id' => $courseId,
+                'partner_code' => $partnerCode,
+                'mapping_id' => $mapping->id,
+                'message' => null,
             ];
         }
 
-        $refreshMinutes = (int) config('services.partner_startocode.preview_refresh_minutes', 30);
-        $lastSyncAgeTooOld = !$snapshot->last_synced_at || $snapshot->last_synced_at->lt(now()->subMinutes($refreshMinutes));
-        if ($lastSyncAgeTooOld) {
-            RefreshPartnerProgressJob::dispatch($user->id);
+        $refreshMinutes = (int) $this->partnerConfig($partnerCode, 'preview_refresh_minutes', 30);
+        $syncAttemptAgeTooOld = !$snapshot->last_sync_attempt_at || $snapshot->last_sync_attempt_at->lt(now()->subMinutes($refreshMinutes));
+
+        if (!$snapshot->last_synced_at) {
+            if ($syncAttemptAgeTooOld) {
+                RefreshPartnerProgressJob::dispatch($user->id, false, $partnerCode);
+            }
+
+            $hasError = (string) ($snapshot->last_sync_error ?? '') !== '';
+
+            return [
+                'eligible' => true,
+                'snapshot' => $snapshot,
+                'status' => $hasError ? 'failed' : 'syncing',
+                'course_id' => $courseId,
+                'partner_code' => $partnerCode,
+                'mapping_id' => $mapping->id,
+                'message' => $hasError ? (string) $snapshot->last_sync_error : null,
+            ];
+        }
+
+        $lastSyncAgeTooOld = $snapshot->last_synced_at->lt(now()->subMinutes($refreshMinutes));
+        if ($lastSyncAgeTooOld && $syncAttemptAgeTooOld) {
+            RefreshPartnerProgressJob::dispatch($user->id, false, $partnerCode);
         }
 
         return [
@@ -66,25 +143,36 @@ class PartnerProgressSyncService
             'snapshot' => $snapshot,
             'status' => 'ready',
             'course_id' => $courseId,
+            'partner_code' => $partnerCode,
+            'mapping_id' => $mapping->id,
+            'message' => null,
         ];
     }
 
-    public function syncUser(User $user, bool $force = false): array
+    public function syncUser(User $user, bool $force = false, ?string $partnerCode = null): array
     {
-        $mapping = $this->eligibilityService->resolveStartocodeMappingForUser($user);
+        $mapping = $this->resolveMapping($user, $partnerCode);
         if (!$mapping) {
             return ['status' => 'not_eligible'];
         }
 
+        $partnerCode = (string) $mapping->partner_code;
+        if (!$this->partners->has($partnerCode)) {
+            return ['status' => 'not_eligible', 'message' => "Partner driver not configured for '{$partnerCode}'."];
+        }
+
         $courseId = $mapping->course_id ?: $user->registered_course;
-        $omcpId = trim((string) ($user->userId ?? ''));
+        if (!$courseId) {
+            return ['status' => 'not_eligible', 'message' => 'missing_course_id'];
+        }
+        $omcpId = trim((string) $user->partnerProgressExternalIdentifier($partnerCode));
         if ($omcpId === '') {
             return ['status' => 'missing_omcp_id'];
         }
 
         $existing = StudentPartnerProgress::query()
             ->where('user_id', $user->id)
-            ->where('partner_code', $this->partnerCode())
+            ->where('partner_code', $partnerCode)
             ->where('course_id', $courseId)
             ->latest('id')
             ->first();
@@ -94,9 +182,10 @@ class PartnerProgressSyncService
             $updatedSince = $existing->last_synced_at;
         }
 
-        $result = $this->client->fetchStudentProgress($omcpId, $updatedSince);
+        $driver = $this->partners->get($partnerCode);
+        $result = $driver->fetchStudentProgress($omcpId, $updatedSince);
         if (!$result['ok']) {
-            $this->saveSyncFailure($user, $mapping->learning_path_id, $courseId, $omcpId, (string) $result['message']);
+            $this->saveSyncFailure($user, $partnerCode, $mapping->learning_path_id, $courseId, $omcpId, (string) $result['message']);
             return [
                 'status' => 'failed',
                 'message' => (string) $result['message'],
@@ -104,36 +193,65 @@ class PartnerProgressSyncService
             ];
         }
 
-        $payload = $result['payload'] ?? [];
-        $data = $payload['data'] ?? [];
-        $progress = $data['progress'] ?? [];
-        $learningPaths = is_array($progress['learning_paths'] ?? null) ? $progress['learning_paths'] : [];
-        $courses = is_array($progress['courses'] ?? null) ? $progress['courses'] : [];
-        $allUnits = array_merge($learningPaths, $courses);
+        $payload = is_array($result['payload'] ?? null) ? $result['payload'] : [];
 
-        $selected = $this->pickProgressUnit($allUnits, $mapping->learning_path_id);
-        $lastActivity = $this->extractLastActivity($allUnits, $selected);
+        $integration = PartnerIntegration::query()->where('partner_code', $partnerCode)->first();
+        $contract = is_array($integration?->validation_contract_json ?? null) ? $integration->validation_contract_json : null;
+
+        try {
+            $normalized = $driver->normalizeSinglePayload($payload);
+        } catch (\Throwable $e) {
+            $this->auditContractFailure($partnerCode, $omcpId, 'normalize_exception', [
+                'exception' => $e->getMessage(),
+            ]);
+            $this->saveSyncFailure($user, $partnerCode, $mapping->learning_path_id, $courseId, $omcpId, 'Progress normalize failed: '.$e->getMessage());
+
+            return [
+                'status' => 'failed',
+                'message' => 'Progress normalize failed: '.$e->getMessage(),
+                'http_status' => 0,
+            ];
+        }
+
+        $validationError = $this->payloadValidator->validateSingleNormalized($normalized, $contract);
+        if ($validationError !== null) {
+            $this->auditContractFailure($partnerCode, $omcpId, 'contract_validation_failed', [
+                'message' => $validationError,
+                'normalized' => $normalized,
+            ]);
+            $this->saveSyncFailure($user, $partnerCode, $mapping->learning_path_id, $courseId, $omcpId, $validationError);
+
+            return [
+                'status' => 'failed',
+                'message' => $validationError,
+                'http_status' => 0,
+            ];
+        }
+
+        $units = is_array($normalized['units'] ?? null) ? $normalized['units'] : [];
+
+        $selected = $this->pickProgressUnit($units, $mapping->learning_path_id);
+        $lastActivity = $this->extractLastActivity($units, $selected);
         $overall = $this->calculateOverall($selected);
 
+        $summaryBase = is_array($normalized['summary'] ?? null) ? $normalized['summary'] : [];
         $summary = [
+            ...$summaryBase,
             'selected' => $selected,
-            'learning_paths_count' => count($learningPaths),
-            'courses_count' => count($courses),
-            'learning_paths' => $learningPaths,
-            'courses' => $courses,
         ];
 
-        $staleDays = (int) config('services.partner_startocode.stale_after_days', 7);
+        $staleDays = (int) $this->partnerConfig($partnerCode, 'stale_after_days', 7);
         $staleAfter = $lastActivity ? $lastActivity->copy()->addDays($staleDays) : now()->addDays($staleDays);
 
         $record = $this->persistSnapshot(
             user: $user,
+            partnerCode: $partnerCode,
             courseId: $courseId,
             omcpId: $omcpId,
             learningPathId: $mapping->learning_path_id,
-            partnerStudentRef: $data['partner_student_ref'] ?? null,
+            partnerStudentRef: $normalized['partner_student_ref'] ?? null,
             summary: $summary,
-            rawData: $data,
+            rawData: is_array($normalized['raw'] ?? null) ? $normalized['raw'] : [],
             selected: $selected,
             overall: $overall,
             lastActivity: $lastActivity,
@@ -142,63 +260,94 @@ class PartnerProgressSyncService
 
         Log::info('Partner progress synced', [
             'user_id' => $user->id,
-            'partner_code' => $this->partnerCode(),
+            'partner_code' => $partnerCode,
             'course_id' => $courseId,
         ]);
 
         return ['status' => 'synced', 'snapshot' => $record];
     }
 
-    public function syncBulkItem(string $programSlug, array $item): array
+    public function syncBulkItem(string $programSlug, array $item, string $partnerCode): array
     {
-        $omcpId = trim((string) ($item['omcp_id'] ?? $item['external_student_id'] ?? ''));
+        if (!$this->partners->has($partnerCode)) {
+            return ['status' => 'not_eligible', 'reason' => 'partner_driver_missing'];
+        }
+
+        $driver = $this->partners->get($partnerCode);
+
+        $integration = PartnerIntegration::query()->where('partner_code', $partnerCode)->first();
+        $contract = is_array($integration?->validation_contract_json ?? null) ? $integration->validation_contract_json : null;
+
+        try {
+            $normalized = $driver->normalizeBulkItem($item, $programSlug);
+        } catch (\Throwable $e) {
+            $this->auditContractFailure($partnerCode, (string) ($item['omcp_id'] ?? $item['external_student_id'] ?? ''), 'bulk_normalize_exception', [
+                'exception' => $e->getMessage(),
+                'item' => $item,
+            ]);
+
+            return ['status' => 'unresolved', 'reason' => 'normalize_exception'];
+        }
+
+        $bulkValidationError = $this->payloadValidator->validateBulkNormalized($normalized, $contract);
+        if ($bulkValidationError !== null) {
+            $this->auditContractFailure($partnerCode, (string) ($normalized['omcp_id'] ?? ''), 'bulk_contract_validation_failed', [
+                'message' => $bulkValidationError,
+                'normalized' => $normalized,
+            ]);
+
+            return ['status' => 'unresolved', 'reason' => 'contract_validation_failed'];
+        }
+
+        $omcpId = trim((string) ($normalized['omcp_id'] ?? ''));
         if ($omcpId === '') {
-            $this->auditUnresolved($programSlug, $item, 'missing_omcp_id');
+            $this->auditUnresolved($partnerCode, $programSlug, $item, 'missing_omcp_id');
             return ['status' => 'unresolved', 'reason' => 'missing_omcp_id'];
         }
 
-        $user = User::query()->where('userId', $omcpId)->first();
-        if (!$user) {
-            $this->auditUnresolved($programSlug, $item, 'user_not_found');
+        $user = $this->findUserForPartnerBulkOmcpId($partnerCode, $omcpId);
+        if (! $user) {
+            $this->auditUnresolved($partnerCode, $programSlug, $item, 'user_not_found');
             return ['status' => 'unresolved', 'reason' => 'user_not_found'];
         }
 
-        $mapping = $this->eligibilityService->resolveStartocodeMappingForUser($user);
+        $mapping = $this->eligibilityService->resolveMappingForUser($user, $partnerCode);
         if (!$mapping) {
             return ['status' => 'not_eligible'];
         }
 
-        $entryProgress = is_array($item['progress'] ?? null) ? $item['progress'] : [];
-        $progressUnits = array_merge(
-            is_array($entryProgress['learning_paths'] ?? null) ? $entryProgress['learning_paths'] : [],
-            is_array($entryProgress['courses'] ?? null) ? $entryProgress['courses'] : []
-        );
-        $selected = $this->pickProgressUnit($progressUnits, $mapping->learning_path_id);
+        $units = is_array($normalized['units'] ?? null) ? $normalized['units'] : [];
+        $selected = $this->pickProgressUnit($units, $mapping->learning_path_id);
 
         if ($selected === []) {
-            $this->auditUnresolved($programSlug, $item, 'missing_progress_data');
+            $this->auditUnresolved($partnerCode, $programSlug, $item, 'missing_progress_data');
             return ['status' => 'unresolved', 'reason' => 'missing_progress_data'];
         }
 
+        $summaryBase = is_array($normalized['summary'] ?? null) ? $normalized['summary'] : [];
         $summary = [
+            ...$summaryBase,
             'selected' => $selected,
-            'bulk_program_slug' => $programSlug,
-            'learning_paths_count' => is_array($entryProgress['learning_paths'] ?? null) ? count($entryProgress['learning_paths']) : 0,
-            'courses_count' => is_array($entryProgress['courses'] ?? null) ? count($entryProgress['courses']) : 0,
         ];
         $overall = $this->calculateOverall($selected);
-        $lastActivity = $this->extractLastActivity($progressUnits, $selected);
-        $staleDays = (int) config('services.partner_startocode.stale_after_days', 7);
+        $lastActivity = $this->extractLastActivity($units, $selected);
+        $staleDays = (int) $this->partnerConfig($partnerCode, 'stale_after_days', 7);
         $staleAfter = $lastActivity ? $lastActivity->copy()->addDays($staleDays) : now()->addDays($staleDays);
+
+        $courseId = $mapping->course_id ?: $user->registered_course;
+        if (!$courseId) {
+            return ['status' => 'not_eligible', 'reason' => 'missing_course_id'];
+        }
 
         $snapshot = $this->persistSnapshot(
             user: $user,
-            courseId: $mapping->course_id ?: $user->registered_course,
+            partnerCode: $partnerCode,
+            courseId: $courseId,
             omcpId: $omcpId,
             learningPathId: $mapping->learning_path_id,
-            partnerStudentRef: (string) ($item['partner_student_ref'] ?? ''),
+            partnerStudentRef: (string) ($normalized['partner_student_ref'] ?? ''),
             summary: $summary,
-            rawData: $item,
+            rawData: is_array($normalized['raw'] ?? null) ? $normalized['raw'] : [],
             selected: $selected,
             overall: $overall,
             lastActivity: $lastActivity,
@@ -208,12 +357,12 @@ class PartnerProgressSyncService
         return ['status' => 'synced', 'snapshot_id' => $snapshot->id];
     }
 
-    private function saveSyncFailure(User $user, ?int $learningPathId, ?int $courseId, string $omcpId, string $error): void
+    private function saveSyncFailure(User $user, string $partnerCode, ?int $learningPathId, ?int $courseId, string $omcpId, string $error): void
     {
         StudentPartnerProgress::updateOrCreate(
             [
                 'user_id' => $user->id,
-                'partner_code' => $this->partnerCode(),
+                'partner_code' => $partnerCode,
                 'omcp_id' => $omcpId,
                 'course_id' => $courseId,
             ],
@@ -226,7 +375,7 @@ class PartnerProgressSyncService
 
         Log::warning('Partner progress sync failed', [
             'user_id' => $user->id,
-            'partner_code' => $this->partnerCode(),
+            'partner_code' => $partnerCode,
             'course_id' => $courseId,
             'error' => $error,
         ]);
@@ -309,7 +458,7 @@ class PartnerProgressSyncService
             ->latest('captured_at')
             ->first();
 
-        $historyGapHours = (int) config('services.partner_startocode.history_min_gap_hours', 12);
+        $historyGapHours = (int) config('services.partner_progress.history_min_gap_hours', 12);
         $isTimeGapSatisfied = !$latest || $latest->captured_at->lte(now()->subHours($historyGapHours));
         $prevMetrics = $latest ? $this->percentageCompleteSlice(
             is_array($latest->payload_json['selected_metrics'] ?? null) ? $latest->payload_json['selected_metrics'] : []
@@ -330,10 +479,12 @@ class PartnerProgressSyncService
             'course_id' => $snapshot->course_id,
             'captured_at' => now(),
             'overall_progress_percent' => $snapshot->overall_progress_percent,
-            'video_percentage_complete' => (float) ($selected['video_percentage_complete'] ?? 0),
-            'quiz_percentage_complete' => (float) ($selected['quiz_percentage_complete'] ?? 0),
-            'project_percentage_complete' => (float) ($selected['project_percentage_complete'] ?? 0),
-            'task_percentage_complete' => (float) ($selected['task_percentage_complete'] ?? 0),
+            // Legacy fixed metric columns are intentionally left null.
+            // Canonical analytics and charting now use payload_json.selected_metrics only.
+            'video_percentage_complete' => null,
+            'quiz_percentage_complete' => null,
+            'project_percentage_complete' => null,
+            'task_percentage_complete' => null,
             'payload_json' => [
                 'selected_metrics' => $selected,
                 'raw' => $raw,
@@ -343,6 +494,7 @@ class PartnerProgressSyncService
 
     private function persistSnapshot(
         User $user,
+        string $partnerCode,
         ?int $courseId,
         string $omcpId,
         ?int $learningPathId,
@@ -354,11 +506,11 @@ class PartnerProgressSyncService
         ?Carbon $lastActivity,
         Carbon $staleAfter
     ): StudentPartnerProgress {
-        return DB::transaction(function () use ($user, $courseId, $omcpId, $learningPathId, $partnerStudentRef, $summary, $rawData, $selected, $overall, $lastActivity, $staleAfter) {
+        return DB::transaction(function () use ($user, $partnerCode, $courseId, $omcpId, $learningPathId, $partnerStudentRef, $summary, $rawData, $selected, $overall, $lastActivity, $staleAfter) {
             $snapshot = StudentPartnerProgress::updateOrCreate(
                 [
                     'user_id' => $user->id,
-                    'partner_code' => $this->partnerCode(),
+                    'partner_code' => $partnerCode,
                     'omcp_id' => $omcpId,
                     'course_id' => $courseId,
                 ],
@@ -382,14 +534,62 @@ class PartnerProgressSyncService
         });
     }
 
-    private function auditUnresolved(string $programSlug, array $payload, string $reason): void
+    private function auditUnresolved(string $partnerCode, string $programSlug, array $payload, string $reason): void
     {
         PartnerProgressSyncAudit::create([
-            'partner_code' => $this->partnerCode(),
+            'partner_code' => $partnerCode,
             'context' => "program:{$programSlug}",
             'omcp_id' => (string) ($payload['omcp_id'] ?? $payload['external_student_id'] ?? ''),
             'reason' => $reason,
             'payload_json' => $payload,
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payloadJson
+     */
+    private function auditContractFailure(string $partnerCode, string $omcpId, string $reason, array $payloadJson): void
+    {
+        PartnerProgressSyncAudit::create([
+            'partner_code' => $partnerCode,
+            'context' => 'contract',
+            'omcp_id' => $omcpId,
+            'reason' => $reason,
+            'payload_json' => $payloadJson,
+        ]);
+    }
+
+    /**
+     * Resolve bulk-feed learner id to a User. Prefer {@code userId}; for Startocode also match {@code student_id} or numeric {@code id}.
+     */
+    private function findUserForPartnerBulkOmcpId(string $partnerCode, string $omcpId): ?User
+    {
+        $code = PartnerCodeNormalizer::normalize($partnerCode);
+        $omcpId = trim($omcpId);
+        if ($omcpId === '') {
+            return null;
+        }
+
+        $byUserId = User::query()->where('userId', $omcpId)->first();
+        if ($byUserId) {
+            return $byUserId;
+        }
+
+        if (! StartocodePartnerCode::matches($partnerCode)) {
+            return null;
+        }
+
+        if (Schema::hasColumn('users', 'student_id')) {
+            $byStudentId = User::query()->where('student_id', $omcpId)->first();
+            if ($byStudentId) {
+                return $byStudentId;
+            }
+        }
+
+        if (ctype_digit($omcpId)) {
+            return User::query()->where('id', (int) $omcpId)->first();
+        }
+
+        return null;
     }
 }

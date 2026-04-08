@@ -3,7 +3,10 @@
 namespace App\Models;
 
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
+use App\Support\PartnerCodeNormalizer;
+use App\Support\StartocodePartnerCode;
 use App\Notifications\ResetPasswordNotification;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Hash;
@@ -314,5 +317,27 @@ class User extends Authenticatable
     public function userAssessment()
     {
         return $this->hasOne(UserAssessment::class);
+    }
+
+    /**
+     * External learner key sent to partner progress APIs ({@code omcp_id} path segments, etc.).
+     * Partner-specific: Startocode uses {@code student_id} when set, otherwise {@code users.id};
+     * other partners default to {@code userId} (OMCP learner id).
+     */
+    public function partnerProgressExternalIdentifier(string $partnerCode): string
+    {
+        $code = PartnerCodeNormalizer::normalize($partnerCode);
+        if (StartocodePartnerCode::matches($partnerCode)) {
+            if (Schema::hasColumn($this->getTable(), 'student_id')) {
+                $sid = trim((string) ($this->student_id ?? ''));
+                if ($sid !== '') {
+                    return $sid;
+                }
+            }
+
+            return (string) $this->getKey();
+        }
+
+        return trim((string) ($this->userId ?? ''));
     }
 }

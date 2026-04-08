@@ -27,13 +27,25 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('email:sendFeedback')->everyTenMinutes();
         $schedule->command('partner:send-stale-progress-reminders')->hourly();
-        $schedule->command(sprintf(
-            'partner:sync-program-progress %s --per-page=%d --updated-since=%s',
-            (string) config('services.partner_startocode.program_slug', 'gh-program'),
-            (int) config('services.partner_startocode.bulk_per_page', 100),
-            now()->subHours(2)->toIso8601String()
-        ))
-            ->hourly()
+        $registry = $this->app->make(\App\Services\Partners\PartnerRegistry::class);
+        foreach (array_keys($registry->all()) as $partnerCode) {
+            $programSlug = \App\Support\PartnerProgramSettings::programSlugForPartner((string) $partnerCode);
+            $schedule->command(sprintf(
+                'partner:sync-program-progress %s %s --per-page=%d --updated-since=%s',
+                $partnerCode,
+                $programSlug,
+                (int) config('services.partner_progress.bulk_per_page', 100),
+                now()->subHours(2)->toIso8601String()
+            ))
+                ->hourly()
+                ->withoutOverlapping(120);
+        }
+        $schedule->command('partner:monitor-sync-health')
+            ->everyFifteenMinutes()
+            ->withoutOverlapping();
+
+        $schedule->command('partner:prune-history')
+            ->dailyAt('02:30')
             ->withoutOverlapping();
 
         $schedule->command('horizon:snapshot')->everyFiveMinutes();

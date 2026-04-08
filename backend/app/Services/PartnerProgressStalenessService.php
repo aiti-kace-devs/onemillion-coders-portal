@@ -27,11 +27,25 @@ class PartnerProgressStalenessService
             return false;
         }
 
-        $cooldownHours = (int) config('services.partner_startocode.reminder_cooldown_hours', 24);
+        $cooldownHours = $this->reminderCooldownHours();
         if (!$progress->last_reminder_sent_at) {
             return true;
         }
 
         return $progress->last_reminder_sent_at->copy()->addHours($cooldownHours)->lte(now());
+    }
+
+    /**
+     * Admin App Config {@see PARTNER_PROGRESS_REMINDER_COOLDOWN_HOURS} overrides
+     * {@see config('services.partner_progress.reminder_cooldown_hours')} / env.
+     */
+    private function reminderCooldownHours(): int
+    {
+        $fromApp = config('PARTNER_PROGRESS_REMINDER_COOLDOWN_HOURS');
+        if ($fromApp !== null && $fromApp !== '') {
+            return (int) $fromApp;
+        }
+
+        return (int) config('services.partner_progress.reminder_cooldown_hours', 24);
     }
 }

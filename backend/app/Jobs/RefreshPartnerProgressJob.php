@@ -8,6 +8,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Queue\SerializesModels;
 
 class RefreshPartnerProgressJob implements ShouldQueue
@@ -19,8 +20,16 @@ class RefreshPartnerProgressJob implements ShouldQueue
 
     public function __construct(
         public int $userId,
-        public bool $force = false
+        public bool $force = false,
+        public ?string $partnerCode = null
     ) {
+    }
+
+    public function middleware(): array
+    {
+        return [
+            new RateLimited('partner-progress-refresh'),
+        ];
     }
 
     public function handle(PartnerProgressSyncService $syncService): void
@@ -30,6 +39,6 @@ class RefreshPartnerProgressJob implements ShouldQueue
             return;
         }
 
-        $syncService->syncUser($user, $this->force);
+        $syncService->syncUser($user, $this->force, $this->partnerCode);
     }
 }

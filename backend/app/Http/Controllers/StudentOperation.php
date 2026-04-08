@@ -39,6 +39,7 @@ use App\Models\StudentPartnerProgress;
 use App\Models\StudentPartnerProgressHistory;
 use App\Services\PartnerProgressSyncService;
 use App\Services\PartnerProgressVisualizationService;
+use App\Services\Partners\PartnerRegistry;
 
 class StudentOperation extends Controller
 {
@@ -60,7 +61,11 @@ class StudentOperation extends Controller
 
         $snapshot = $state['snapshot'] ?? null;
         if (!$snapshot && !empty($state['course_id'])) {
-            $partnerCode = (string) config('services.partner_startocode.code', 'startocode');
+            $partnerCode = (string) ($state['partner_code'] ?? '');
+            if ($partnerCode === '') {
+                $codes = array_keys(app(PartnerRegistry::class)->all());
+                $partnerCode = $codes[0] ?? '';
+            }
             $snapshot = StudentPartnerProgress::query()
                 ->where('user_id', $user->id)
                 ->where('partner_code', $partnerCode)
@@ -71,11 +76,7 @@ class StudentOperation extends Controller
 
         $history = collect();
         if ($snapshot) {
-            $history = StudentPartnerProgressHistory::query()
-                ->where('student_partner_progress_id', $snapshot->id)
-                ->orderBy('captured_at')
-                ->limit(180)
-                ->get();
+            $history = StudentPartnerProgressHistory::combinedSeriesForSnapshot((int) $snapshot->id);
         }
 
         $payload = $visualizationService->buildStudentProgressPayload($snapshot, $history);
@@ -85,6 +86,9 @@ class StudentOperation extends Controller
                 'eligible' => (bool) ($state['eligible'] ?? false),
                 'status' => $state['status'] ?? 'not_eligible',
                 'course_id' => $state['course_id'] ?? null,
+                'partner_code' => $state['partner_code'] ?? null,
+                'mapping_id' => $state['mapping_id'] ?? null,
+                'message' => $state['message'] ?? null,
             ],
             'progressData' => $payload,
         ]);

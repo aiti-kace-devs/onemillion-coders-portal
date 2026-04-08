@@ -20,14 +20,37 @@ class AppConfigRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array
+     * @return array<string, mixed>
      */
     public function rules()
     {
+        $type = $this->input('type');
+
+        $valueRules = ['required'];
+        switch ($type) {
+            case 'integer':
+                $valueRules[] = 'integer';
+                break;
+            case 'boolean':
+                $valueRules[] = 'boolean';
+                break;
+            case 'json':
+                $valueRules[] = 'json';
+                break;
+            case 'array':
+                $valueRules[] = 'array';
+                break;
+            case 'string':
+            default:
+                $valueRules[] = 'string';
+                $valueRules[] = 'max:65535';
+                break;
+        }
+
         return [
             'key' => 'required|string|min:3|max:255',
-            'value' => 'required|integer',
-            'type' => 'required|string|in:string,integer,boolean,array,json', // optionally restrict to known types
+            'value' => $valueRules,
+            'type' => 'required|string|in:string,integer,boolean,array,json',
             'is_cached' => 'nullable|boolean',
         ];
     }

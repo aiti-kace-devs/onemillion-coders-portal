@@ -23,7 +23,7 @@ class PartnerProgressStalenessServiceTest extends TestCase
 
     public function test_it_respects_reminder_cooldown(): void
     {
-        config()->set('services.partner_startocode.reminder_cooldown_hours', 24);
+        config()->set('services.partner_progress.reminder_cooldown_hours', 24);
 
         $service = new PartnerProgressStalenessService();
         $user = new User(['email' => 'student@example.com']);

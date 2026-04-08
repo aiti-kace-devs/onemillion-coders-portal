@@ -696,98 +696,121 @@
     @if ($partnerProgressEligible ?? false)
         <div class="row mb-4">
             <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header d-flex align-items-center justify-content-between">
-                        <strong><i class="la la-signal"></i> Partner Learning Progress</strong>
+                <div class="card partner-progress-card">
+                    <div class="card-header d-flex align-items-center justify-content-between partner-progress-card-header">
+                        <strong class="partner-progress-title"><i class="la la-signal"></i> Learning Progress</strong>
                         <div class="d-flex align-items-center gap-2">
                             @if ($partnerSnapshot)
-                                <span class="badge {{ $partnerStale ? 'bg-warning text-dark' : 'bg-success' }}">
+                                <span class="badge {{ $partnerStale ? 'bg-warning text-dark' : 'bg-success text-white' }}">
                                     {{ $partnerStale ? 'Stale' : 'Fresh' }}
                                 </span>
                             @elseif (($partnerProgressStatus ?? '') === 'syncing')
                                 <span class="badge bg-info text-dark">Syncing...</span>
                             @endif
-                            <button type="button" class="btn btn-sm btn-outline-primary js-refresh-partner-progress">
+                            <button type="button" class="btn btn-sm btn-outline-primary partner-progress-refresh js-refresh-partner-progress">
                                 <i class="la la-refresh"></i> Refresh Progress
                             </button>
                         </div>
                     </div>
-                    <div class="card-body">
-                        @if ($partnerSnapshot)
-                            <div class="row mb-3">
-                                <div class="col-md-3">
-                                    <div class="text-muted small">Overall Completion</div>
-                                    <div class="h4 mb-0">{{ number_format($partnerOverall, 1) }}%</div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="text-muted small">Last Activity</div>
-                                    <div>{{ $partnerLastActivity ? $partnerLastActivity->format('Y-m-d H:i') : 'N/A' }}</div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="text-muted small">Last Synced</div>
-                                    <div>{{ $partnerLastSynced ? $partnerLastSynced->format('Y-m-d H:i') : 'N/A' }}</div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="text-muted small">Completion Flags</div>
-                                    <div class="d-flex gap-1 flex-wrap">
-                                        <span class="badge {{ !empty($partnerSelected['has_completed_all_quiz']) ? 'bg-success' : 'bg-secondary' }}">Quiz</span>
-                                        <span class="badge {{ !empty($partnerSelected['has_completed_all_project']) ? 'bg-success' : 'bg-secondary' }}">Project</span>
-                                        <span class="badge {{ !empty($partnerSelected['has_completed_all_task']) ? 'bg-success' : 'bg-secondary' }}">Task</span>
+                    <div class="card-body partner-progress-card-body">
+                        @if (($partnerProgressStatus ?? '') === 'failed' && !empty($partnerProgressMessage ?? null))
+                            <div class="alert alert-warning d-flex align-items-start gap-2 partner-progress-alert">
+                                <i class="la la-exclamation-triangle mt-1 partner-progress-alert-icon"></i>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold partner-progress-alert-title">Partner progress sync failed</div>
+                                    <div class="small partner-progress-alert-message">{{ $partnerProgressMessage }}</div>
+                                    <div class="small mt-2 partner-progress-alert-hint">
+                                        Fix: open Admin → Partner integrations, enable the row whose <code class="partner-progress-code">partner_code</code> matches this student’s mapping and your registered driver, set base URL and auth (and endpoints if needed), save — then reload. Operational tuning uses <code class="partner-progress-code">PARTNER_PROGRESS_*</code> env keys; optional per-partner program slugs via <code class="partner-progress-code">PARTNER_PROGRESS_PROGRAM_SLUGS_JSON</code>.
                                     </div>
                                 </div>
                             </div>
-                            <div class="row g-3">
-                                <div class="col-lg-6">
-                                    <div class="text-muted small mb-2">Activity histogram over time</div>
-                                    <div id="partnerActivityLegend" class="d-flex flex-wrap gap-2 mb-2"></div>
-                                    <div class="chart-wrap-sm">
-                                        <canvas id="partnerActivityHistogramChart"></canvas>
-                                    </div>
-                                    <div class="mt-3">
-                                        <div class="text-muted small mb-2">Component trend indicators (latest window)</div>
-                                        <div class="small text-muted mb-2">
-                                            Indicator logic:
-                                            <span class="badge bg-success">Increasing</span> (&gt; +0.5 pts),
-                                            <span class="badge bg-danger">Decreasing</span> (&lt; -0.5 pts),
-                                            <span class="badge bg-warning text-dark">Stable / stale</span> (between -0.5 and +0.5 pts),
-                                            <span class="badge bg-secondary">No progress</span> (current value near 0).
-                                        </div>
-                                        <div id="partnerBarTrendIndicators" class="d-flex flex-wrap gap-2"></div>
+                        @endif
+                        @if ($partnerSnapshot)
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <div class="partner-progress-muted small">Overall Completion</div>
+                                    <div class="h4 mb-0 partner-progress-stat-value">{{ number_format($partnerOverall, 1) }}%</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="partner-progress-muted small">Last Activity</div>
+                                    <div class="partner-progress-stat-value">{{ $partnerLastActivity ? $partnerLastActivity->format('Y-m-d H:i') : 'N/A' }}</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="partner-progress-muted small">Last Synced</div>
+                                    <div class="partner-progress-stat-value">{{ $partnerLastSynced ? $partnerLastSynced->format('Y-m-d H:i') : 'N/A' }}</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="partner-progress-muted small">Completion Flags</div>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        @php
+                                            $completionFlags = collect($partnerSelected ?? [])->filter(fn ($v, $k) => is_string($k) && str_starts_with($k, 'has_completed'));
+                                        @endphp
+                                        @forelse ($completionFlags as $flagKey => $flagOn)
+                                            @php
+                                                $flagLabel = \Illuminate\Support\Str::of((string) $flagKey)->after('has_completed_')->replace('_', ' ')->trim()->title();
+                                            @endphp
+                                            <span class="badge {{ !empty($flagOn) ? 'bg-success text-white' : 'bg-secondary text-white' }}" title="{{ $flagKey }}">{{ $flagLabel !== '' ? $flagLabel : 'Flag' }}</span>
+                                        @empty
+                                            <span class="partner-progress-empty-hint small">None reported</span>
+                                        @endforelse
                                     </div>
                                 </div>
-                                <div class="col-lg-6">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <div class="text-muted small">Activity line trends over time</div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="btn-group btn-group-sm" role="group" aria-label="Trend range">
-                                                <button type="button" class="btn btn-outline-secondary js-trend-range"
-                                                    data-range="7">7d</button>
-                                                <button type="button" class="btn btn-outline-secondary js-trend-range"
-                                                    data-range="14">14d</button>
-                                                <button type="button" class="btn btn-outline-secondary js-trend-range"
-                                                    data-range="30">30d</button>
-                                                <button type="button" class="btn btn-outline-secondary js-trend-range active"
-                                                    data-range="all">All</button>
+                            </div>
+                            {{-- High-contrast chart surface: fixed light background + dark chart ink regardless of Backpack skin --}}
+                            <div class="partner-progress-chart-surface">
+                                <div class="row g-3">
+                                    <div class="col-lg-6">
+                                        <div class="partner-progress-chart-surface-label small mb-2">Activity histogram over time</div>
+                                        <div id="partnerActivityLegend" class="d-flex flex-wrap gap-2 mb-2"></div>
+                                        <div class="chart-wrap-sm">
+                                            <canvas id="partnerActivityHistogramChart"></canvas>
+                                        </div>
+                                        <div class="mt-3">
+                                            <div class="partner-progress-chart-surface-label small mb-2">Component trend indicators (latest window)</div>
+                                            <div class="small partner-progress-chart-surface-legend mb-2">
+                                                Indicator logic:
+                                                <span class="badge bg-success text-white">Increasing</span> (&gt; +0.5 pts),
+                                                <span class="badge bg-danger text-white">Decreasing</span> (&lt; -0.5 pts),
+                                                <span class="badge bg-warning text-dark">Stable / stale</span> (between -0.5 and +0.5 pts),
+                                                <span class="badge bg-secondary text-white">No progress</span> (current value near 0).
                                             </div>
-                                            <span id="partnerTrendDeltaBadge"
-                                                class="badge {{ $partnerTrendDelta >= 0 ? 'bg-success' : 'bg-danger' }}">
-                                                {{ $partnerTrendDelta >= 0 ? '+' : '' }}{{ $partnerTrendDelta }} pts
-                                            </span>
+                                            <div id="partnerBarTrendIndicators" class="d-flex flex-wrap gap-2"></div>
                                         </div>
                                     </div>
-                                    <div class="text-muted small mb-2">
-                                        Range is day-based: <strong>7d</strong> = last 7 days, <strong>14d</strong> = last 14 days,
-                                        <strong>30d</strong> = last 30 days, <strong>All</strong> = full available history to date.
-                                    </div>
-                                    <div class="chart-wrap-sm">
-                                        <canvas id="partnerProgressTrendChart"></canvas>
+                                    <div class="col-lg-6">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <div class="partner-progress-chart-surface-label small">Activity line trends over time</div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="btn-group btn-group-sm" role="group" aria-label="Trend range">
+                                                    <button type="button" class="btn btn-sm partner-trend-range js-trend-range"
+                                                        data-range="7">7d</button>
+                                                    <button type="button" class="btn btn-sm partner-trend-range js-trend-range"
+                                                        data-range="14">14d</button>
+                                                    <button type="button" class="btn btn-sm partner-trend-range js-trend-range"
+                                                        data-range="30">30d</button>
+                                                    <button type="button" class="btn btn-sm partner-trend-range js-trend-range active"
+                                                        data-range="all">All</button>
+                                                </div>
+                                                <span id="partnerTrendDeltaBadge"
+                                                    class="badge text-white {{ $partnerTrendDelta >= 0 ? 'bg-success' : 'bg-danger' }}">
+                                                    {{ $partnerTrendDelta >= 0 ? '+' : '' }}{{ $partnerTrendDelta }} pts
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="small mb-2 partner-progress-chart-surface-hint">
+                                            Range is day-based: <strong>7d</strong> = last 7 days, <strong>14d</strong> = last 14 days,
+                                            <strong>30d</strong> = last 30 days, <strong>All</strong> = full available history to date.
+                                        </div>
+                                        <div class="chart-wrap-sm">
+                                            <canvas id="partnerProgressTrendChart"></canvas>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         @else
-                            <div class="text-center text-muted py-4">
-                                <i class="la la-spinner fa-spin fa-2x mb-2"></i>
-                                <div>Partner progress is being synchronized. Refresh shortly.</div>
+                            <div class="text-center py-4 partner-progress-sync-notice">
+                                <i class="la la-spinner fa-spin fa-2x mb-2 partner-progress-sync-icon"></i>
+                                <div class="partner-progress-sync-text">Partner progress is being synchronized. Refresh shortly.</div>
                             </div>
                         @endif
                     </div>
@@ -899,6 +922,189 @@
                 background-color: transparent;
                 border-bottom: 1px solid rgba(0, 0, 0, 0.05);
                 padding: 1rem 1.25rem;
+            }
+
+            /*
+             | Learning Progress card — all copy readable on light + dark Backpack themes
+             | (scoped under .partner-progress-card so other cards are unchanged)
+             */
+            .partner-progress-card {
+                --pp-text: #111827;
+                --pp-text-soft: #1f2937;
+                --pp-muted: #374151;
+                --pp-hint: #4b5563;
+                --pp-border: rgba(15, 23, 42, 0.12);
+                --pp-code-bg: rgba(15, 23, 42, 0.06);
+                --pp-icon: #4b5563;
+            }
+
+            html[data-bs-theme="dark"] .partner-progress-card,
+            body.dark-layout .partner-progress-card,
+            body.skin.dark .partner-progress-card,
+            .dark .partner-progress-card {
+                --pp-text: #f9fafb;
+                --pp-text-soft: #e5e7eb;
+                --pp-muted: #e5e7eb;
+                --pp-hint: #d1d5db;
+                --pp-border: rgba(248, 250, 252, 0.14);
+                --pp-code-bg: rgba(248, 250, 252, 0.12);
+                --pp-icon: #d1d5db;
+            }
+
+            .partner-progress-card .partner-progress-card-header {
+                border-bottom: 1px solid var(--pp-border) !important;
+            }
+
+            .partner-progress-card .partner-progress-title,
+            .partner-progress-card .partner-progress-card-header strong {
+                color: var(--pp-text) !important;
+                font-weight: 700;
+            }
+
+            .partner-progress-card .partner-progress-card-body {
+                color: var(--pp-text-soft) !important;
+            }
+
+            .partner-progress-card .partner-progress-muted {
+                color: var(--pp-muted) !important;
+                font-weight: 600;
+            }
+
+            .partner-progress-card .partner-progress-stat-value {
+                color: var(--pp-text) !important;
+                font-weight: 600;
+            }
+
+            .partner-progress-card .partner-progress-empty-hint {
+                color: var(--pp-hint) !important;
+                font-weight: 500;
+            }
+
+            .partner-progress-card .partner-progress-indicator-legend {
+                color: var(--pp-hint) !important;
+                line-height: 1.6;
+            }
+
+            .partner-progress-card .partner-progress-alert-title {
+                color: var(--pp-text) !important;
+            }
+
+            .partner-progress-card .partner-progress-alert-message {
+                color: var(--pp-text-soft) !important;
+            }
+
+            .partner-progress-card .partner-progress-alert-hint {
+                color: var(--pp-hint) !important;
+            }
+
+            .partner-progress-card .partner-progress-alert-icon {
+                color: var(--pp-icon) !important;
+            }
+
+            .partner-progress-card .partner-progress-code {
+                background: var(--pp-code-bg) !important;
+                color: var(--pp-text) !important;
+                padding: 0.12rem 0.4rem;
+                border-radius: 0.25rem;
+                font-size: 0.85em;
+                border: 1px solid var(--pp-border);
+            }
+
+            .partner-progress-card .partner-progress-sync-notice .partner-progress-sync-text {
+                color: var(--pp-muted) !important;
+                font-weight: 500;
+            }
+
+            .partner-progress-card .partner-progress-sync-icon {
+                color: var(--pp-icon) !important;
+            }
+
+            .partner-progress-card .partner-progress-chart-empty,
+            .partner-progress-card .partner-progress-chart-empty-text {
+                color: var(--pp-muted) !important;
+                font-weight: 500;
+            }
+
+            .partner-progress-card .partner-progress-chart-empty-icon {
+                color: var(--pp-icon) !important;
+            }
+
+            /* Always-light chart panel: canvas + legend read as dark-on-white on every admin theme */
+            .partner-progress-card .partner-progress-chart-surface {
+                background: #ffffff;
+                border: 1px solid rgba(15, 23, 42, 0.14);
+                border-radius: 0.5rem;
+                padding: 1rem 1.1rem;
+                margin-top: 0.35rem;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+            }
+
+            .partner-progress-card .partner-progress-chart-surface-label {
+                color: #1f2937 !important;
+                font-weight: 700 !important;
+            }
+
+            .partner-progress-card .partner-progress-chart-surface-hint,
+            .partner-progress-card .partner-progress-chart-surface-legend {
+                color: #374151 !important;
+                line-height: 1.65;
+            }
+
+            .partner-progress-card .partner-progress-chart-surface-legend strong {
+                color: #111827;
+            }
+
+            .partner-progress-card .partner-progress-chart-surface .partner-progress-chart-empty,
+            .partner-progress-card .partner-progress-chart-surface .partner-progress-chart-empty-text {
+                color: #4b5563 !important;
+            }
+
+            .partner-progress-card .partner-progress-chart-surface .partner-progress-chart-empty-icon {
+                color: #64748b !important;
+            }
+
+            .partner-progress-card .btn.partner-progress-refresh {
+                font-weight: 600;
+                border-width: 2px;
+            }
+
+            html[data-bs-theme="dark"] .partner-progress-card .btn.partner-progress-refresh,
+            body.dark-layout .partner-progress-card .btn.partner-progress-refresh,
+            body.skin.dark .partner-progress-card .btn.partner-progress-refresh,
+            .dark .partner-progress-card .btn.partner-progress-refresh {
+                color: #93c5fd !important;
+                border-color: #60a5fa !important;
+            }
+
+            html[data-bs-theme="dark"] .partner-progress-card .btn.partner-progress-refresh:hover,
+            body.dark-layout .partner-progress-card .btn.partner-progress-refresh:hover,
+            body.skin.dark .partner-progress-card .btn.partner-progress-refresh:hover,
+            .dark .partner-progress-card .btn.partner-progress-refresh:hover {
+                color: #dbeafe !important;
+                background-color: rgba(37, 99, 235, 0.2) !important;
+            }
+
+            .btn.partner-trend-range {
+                font-weight: 600;
+                border-width: 2px !important;
+                color: #111827 !important;
+                background-color: #ffffff !important;
+                border-color: #6b7280 !important;
+            }
+
+            html[data-bs-theme="dark"] .btn.partner-trend-range,
+            body.dark-layout .btn.partner-trend-range,
+            body.skin.dark .btn.partner-trend-range,
+            .dark .btn.partner-trend-range {
+                color: #f9fafb !important;
+                background-color: #1f2937 !important;
+                border-color: #9ca3af !important;
+            }
+
+            .btn.partner-trend-range.active {
+                color: #ffffff !important;
+                background-color: #2563eb !important;
+                border-color: #2563eb !important;
             }
         </style>
     @endpush
@@ -1553,6 +1759,30 @@
                     // Charts (Chart.js v2)
                     if (typeof Chart !== 'function') return;
 
+                    /**
+                     * Admin skin only — do NOT use prefers-color-scheme (OS dark mode) or light Backpack
+                     * UIs get light tick/legend colours and axes/legends disappear on white.
+                     */
+                    const getThemeColors = () => {
+                        const el = document.documentElement;
+                        const body = document.body;
+                        const darkMode =
+                            el.getAttribute('data-bs-theme') === 'dark' ||
+                            el.classList.contains('dark') ||
+                            (body && (
+                                body.classList.contains('dark-layout') ||
+                                body.classList.contains('skin-dark') ||
+                                body.classList.contains('theme-dark')
+                            ));
+                        return {
+                            text: darkMode ? '#f9fafb' : '#111827',
+                            muted: darkMode ? '#d1d5db' : '#4b5563',
+                            grid: darkMode ? 'rgba(148, 163, 184, 0.38)' : 'rgba(55, 65, 81, 0.22)',
+                            chipText: darkMode ? '#f9fafb' : '#111827'
+                        };
+                    };
+                    const themeColors = getThemeColors();
+
                     const attendanceCtx = document.getElementById('attendanceBarChart');
                     if (attendanceCtx) {
                         const totalDays = {{ (int) $totalCourseDays }};
@@ -1579,13 +1809,28 @@
                                 responsive: true,
                                 maintainAspectRatio: false,
                                 legend: {
-                                    display: false
+                                    display: false,
+                                    labels: {
+                                        fontColor: themeColors.text
+                                    }
                                 },
                                 scales: {
                                     yAxes: [{
                                         ticks: {
                                             beginAtZero: true,
-                                            stepSize: 1
+                                            stepSize: 1,
+                                            fontColor: themeColors.text
+                                        },
+                                        gridLines: {
+                                            color: themeColors.grid
+                                        }
+                                    }],
+                                    xAxes: [{
+                                        ticks: {
+                                            fontColor: themeColors.text
+                                        },
+                                        gridLines: {
+                                            color: themeColors.grid
                                         }
                                     }]
                                 }
@@ -1625,7 +1870,10 @@
                                 maintainAspectRatio: false,
                                 legend: {
                                     display: true,
-                                    position: 'top'
+                                    position: 'top',
+                                    labels: {
+                                        fontColor: themeColors.text
+                                    }
                                 },
                                 scales: {
                                     yAxes: [{
@@ -1633,9 +1881,21 @@
                                             beginAtZero: true,
                                             max: 100,
                                             stepSize: 10,
+                                            fontColor: themeColors.text,
                                             callback: function(value) {
                                                 return value + '%';
                                             }
+                                        },
+                                        gridLines: {
+                                            color: themeColors.grid
+                                        }
+                                    }],
+                                    xAxes: [{
+                                        ticks: {
+                                            fontColor: themeColors.text
+                                        },
+                                        gridLines: {
+                                            color: themeColors.grid
                                         }
                                     }]
                                 }
@@ -1655,6 +1915,30 @@
                         let partnerTrendChart = null;
                         let partnerHistogramChart = null;
 
+                        /** Dark ink on white chart surface — fixed regardless of Backpack / OS theme */
+                        const partnerChartInk = {
+                            text: '#111827',
+                            muted: '#64748b',
+                            grid: 'rgba(55, 65, 81, 0.28)',
+                            chipText: '#111827'
+                        };
+
+                        const partnerChartTooltip = {
+                            enabled: true,
+                            backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                            titleFontColor: '#f8fafc',
+                            bodyFontColor: '#e2e8f0',
+                            borderColor: 'rgba(148, 163, 184, 0.45)',
+                            borderWidth: 1,
+                            cornerRadius: 6,
+                            xPadding: 11,
+                            yPadding: 9,
+                            titleFontSize: 12,
+                            bodyFontSize: 12,
+                            titleFontStyle: 'bold',
+                            bodySpacing: 6
+                        };
+
                         const palette = [
                             'rgba(230, 25, 75, 1)',
                             'rgba(60, 180, 75, 1)',
@@ -1666,21 +1950,31 @@
                             'rgba(210, 245, 60, 1)',
                         ];
 
-                        const activityKeysFromSnapshot = Object.keys(snapshotSelected || {}).filter((key) => key.endsWith(
-                            '_percentage_complete'));
-                        const fallbackKeys = [
-                            'video_percentage_complete',
-                            'quiz_percentage_complete',
-                            'project_percentage_complete',
-                            'task_percentage_complete'
-                        ];
-                        const activityKeys = activityKeysFromSnapshot.length ? activityKeysFromSnapshot : fallbackKeys;
-                        const activityMeta = activityKeys.map((key, idx) => ({
-                            key,
-                            label: key.replace('_percentage_complete', '').replace(/_/g, ' ').replace(/\b\w/g,
-                                (ch) => ch.toUpperCase()),
-                            color: palette[idx % palette.length]
-                        }));
+                        const partnerActivitiesFromServer = @json($partnerProgressActivities ?? []);
+                        let activityMeta = [];
+                        if (Array.isArray(partnerActivitiesFromServer) && partnerActivitiesFromServer.length > 0) {
+                            activityMeta = partnerActivitiesFromServer.map((a) => ({
+                                key: a.key,
+                                label: a.label,
+                                color: a.color
+                            }));
+                        } else {
+                            const activityKeysFromSnapshot = Object.keys(snapshotSelected || {}).filter((key) => key.endsWith(
+                                '_percentage_complete'));
+                            const fallbackKeys = [
+                                'video_percentage_complete',
+                                'quiz_percentage_complete',
+                                'project_percentage_complete',
+                                'task_percentage_complete'
+                            ];
+                            const activityKeys = activityKeysFromSnapshot.length ? activityKeysFromSnapshot : fallbackKeys;
+                            activityMeta = activityKeys.map((key, idx) => ({
+                                key,
+                                label: key.replace('_percentage_complete', '').replace(/_/g, ' ').replace(/\b\w/g,
+                                    (ch) => ch.toUpperCase()),
+                                color: palette[idx % palette.length]
+                            }));
+                        }
 
                         const computeRowsByRange = (rangeValue) => {
                             if (!Array.isArray(allHistoryRows)) return [];
@@ -1717,9 +2011,6 @@
                             if (selectedMetrics && selectedMetrics[key] !== undefined && selectedMetrics[key] !== null) {
                                 return Number(selectedMetrics[key] || 0);
                             }
-                            if (row[key] !== undefined && row[key] !== null) {
-                                return Number(row[key] || 0);
-                            }
                             return 0;
                         };
 
@@ -1727,8 +2018,8 @@
                             if (!deltaBadge || !Array.isArray(values) || values.length < 2) return;
                             const delta = Number((values[values.length - 1] - values[0]).toFixed(1));
                             const positive = delta >= 0;
-                            deltaBadge.classList.remove('bg-success', 'bg-danger');
-                            deltaBadge.classList.add(positive ? 'bg-success' : 'bg-danger');
+                            deltaBadge.classList.remove('bg-success', 'bg-danger', 'bg-secondary');
+                            deltaBadge.classList.add(positive ? 'bg-success' : 'bg-danger', 'text-white');
                             deltaBadge.textContent = `${positive ? '+' : ''}${delta} pts`;
                         };
 
@@ -1746,21 +2037,21 @@
                                 return {
                                     key: 'increasing',
                                     label: `Increasing (+${delta})`,
-                                    badge: 'bg-success'
+                                    badge: 'bg-success text-white'
                                 };
                             }
                             if (delta < -0.5) {
                                 return {
                                     key: 'decreasing',
                                     label: `Decreasing (${delta})`,
-                                    badge: 'bg-danger'
+                                    badge: 'bg-danger text-white'
                                 };
                             }
                             if (endNum <= 0.5) {
                                 return {
                                     key: 'no_progress',
                                     label: 'No progress',
-                                    badge: 'bg-secondary'
+                                    badge: 'bg-secondary text-white'
                                 };
                             }
                             return {
@@ -1775,7 +2066,7 @@
                             barTrendContainer.innerHTML = '';
                             if (!Array.isArray(rows) || rows.length < 2) {
                                 barTrendContainer.innerHTML =
-                                    '<span class="badge bg-secondary">Need at least 2 sync points for indicators</span>';
+                                    '<span class="badge bg-secondary text-white">Need at least 2 sync points for indicators</span>';
                                 return;
                             }
 
@@ -1802,11 +2093,14 @@
 
                             activityMeta.forEach((item) => {
                                 const chip = document.createElement('span');
-                                chip.className = 'badge border text-dark';
-                                chip.style.backgroundColor = item.color.replace(', 1)', ', 0.14)');
-                                chip.style.borderColor = item.color.replace(', 1)', ', 0.45)');
+                                chip.className = 'border rounded px-2 py-1 d-inline-flex align-items-center';
+                                chip.style.backgroundColor = item.color.replace(', 1)', ', 0.16)');
+                                chip.style.borderColor = item.color.replace(', 1)', ', 0.55)');
+                                chip.style.color = partnerChartInk.chipText;
+                                chip.style.fontWeight = '600';
+                                chip.style.fontSize = '0.8rem';
                                 chip.innerHTML =
-                                    `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${item.color};margin-right:6px;"></span>${item.label}`;
+                                    `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${item.color};margin-right:6px;flex-shrink:0;"></span><span>${item.label}</span>`;
                                 legend.appendChild(chip);
                             });
                         };
@@ -1817,6 +2111,8 @@
                                 partnerHistogramChart.destroy();
                                 partnerHistogramChart = null;
                             }
+
+                            const chartTheme = partnerChartInk;
 
                             const datasets = activityMeta.map((item) => ({
                                 label: item.label,
@@ -1836,23 +2132,65 @@
                                 options: {
                                     responsive: true,
                                     maintainAspectRatio: false,
+                                    tooltips: partnerChartTooltip,
                                     legend: {
                                         display: true,
                                         position: 'bottom',
+                                        labels: {
+                                            fontColor: chartTheme.text,
+                                            fontSize: 13,
+                                            boxWidth: 14,
+                                            padding: 14,
+                                            usePointStyle: false,
+                                            fontStyle: 'bold'
+                                        }
                                     },
                                     scales: {
                                         yAxes: [{
+                                            scaleLabel: {
+                                                display: true,
+                                                labelString: 'Progress (%)',
+                                                fontColor: chartTheme.text,
+                                                fontSize: 12,
+                                                fontStyle: 'bold'
+                                            },
                                             ticks: {
                                                 beginAtZero: true,
                                                 max: 100,
+                                                fontColor: chartTheme.text,
+                                                fontSize: 12,
                                                 callback: function(value) {
                                                     return value + '%';
                                                 }
+                                            },
+                                            gridLines: {
+                                                color: chartTheme.grid,
+                                                zeroLineColor: chartTheme.muted,
+                                                lineWidth: 1,
+                                                zeroLineWidth: 1
                                             }
                                         }],
                                         xAxes: [{
+                                            scaleLabel: {
+                                                display: true,
+                                                labelString: 'Sync time',
+                                                fontColor: chartTheme.text,
+                                                fontSize: 12,
+                                                fontStyle: 'bold'
+                                            },
                                             ticks: {
-                                                maxTicksLimit: 7
+                                                maxTicksLimit: 10,
+                                                fontColor: chartTheme.text,
+                                                fontSize: 11,
+                                                maxRotation: 55,
+                                                minRotation: 25,
+                                                autoSkip: true
+                                            },
+                                            gridLines: {
+                                                color: chartTheme.grid,
+                                                zeroLineColor: chartTheme.muted,
+                                                lineWidth: 1,
+                                                zeroLineWidth: 1
                                             }
                                         }]
                                     }
@@ -1870,6 +2208,7 @@
                             }
 
                             if (rows.length > 1) {
+                                const chartTheme = partnerChartInk;
                                 updateDeltaBadge(historyOverall);
                                 renderBarTrendIndicators(rows);
                                 renderHistogram(rows, historyLabels);
@@ -1893,24 +2232,66 @@
                                 options: {
                                     responsive: true,
                                     maintainAspectRatio: false,
+                                    tooltips: partnerChartTooltip,
                                     legend: {
                                         display: true,
-                                        position: 'bottom'
+                                        position: 'bottom',
+                                        labels: {
+                                            fontColor: chartTheme.text,
+                                            fontSize: 13,
+                                            boxWidth: 14,
+                                            padding: 14,
+                                            usePointStyle: false,
+                                            fontStyle: 'bold'
+                                        }
                                     },
                                     scales: {
                                         yAxes: [{
+                                            scaleLabel: {
+                                                display: true,
+                                                labelString: 'Progress (%)',
+                                                fontColor: chartTheme.text,
+                                                fontSize: 12,
+                                                fontStyle: 'bold'
+                                            },
                                             ticks: {
                                                 beginAtZero: true,
                                                 max: 100,
                                                 stepSize: 10,
+                                                fontColor: chartTheme.text,
+                                                fontSize: 12,
                                                 callback: function(value) {
                                                     return value + '%';
                                                 }
+                                            },
+                                            gridLines: {
+                                                color: chartTheme.grid,
+                                                zeroLineColor: chartTheme.muted,
+                                                lineWidth: 1,
+                                                zeroLineWidth: 1
                                             }
                                         }],
                                         xAxes: [{
+                                            scaleLabel: {
+                                                display: true,
+                                                labelString: 'Sync time',
+                                                fontColor: chartTheme.text,
+                                                fontSize: 12,
+                                                fontStyle: 'bold'
+                                            },
                                             ticks: {
-                                                maxTicksLimit: 6
+                                                maxTicksLimit: 10,
+                                                fontColor: chartTheme.text,
+                                                fontSize: 11,
+                                                maxRotation: 55,
+                                                minRotation: 25,
+                                                autoSkip: true
+                                            },
+                                            gridLines: {
+                                                color: chartTheme.grid,
+                                                zeroLineColor: chartTheme.muted,
+                                                lineWidth: 1,
+                                                zeroLineWidth: 1
                                             }
                                         }]
                                     }
@@ -1918,20 +2299,20 @@
                             });
                         } else {
                             if (deltaBadge) {
-                                deltaBadge.classList.remove('bg-success');
-                                deltaBadge.classList.add('bg-secondary');
+                                deltaBadge.classList.remove('bg-success', 'bg-danger');
+                                deltaBadge.classList.add('bg-secondary', 'text-white');
                                 deltaBadge.textContent = 'N/A';
                             }
                             if (barTrendContainer) {
                                 barTrendContainer.innerHTML =
-                                    '<span class="badge bg-secondary">Need at least 2 sync points for indicators</span>';
+                                    '<span class="badge bg-secondary text-white">Need at least 2 sync points for indicators</span>';
                             }
                             if (partnerHistogramCtx) {
                                 partnerHistogramCtx.parentElement.innerHTML =
-                                    '<div class="text-center text-muted py-4"><i class="la la-chart-bar fa-2x mb-2"></i><div>Need at least 2 sync points to show histogram by activity.</div></div>';
+                                    '<div class="text-center py-4 partner-progress-chart-empty"><i class="la la-chart-bar fa-2x mb-2 partner-progress-chart-empty-icon"></i><div class="partner-progress-chart-empty-text">Need at least 2 sync points to show histogram by activity.</div></div>';
                             }
                             partnerTrendCtx.parentElement.innerHTML =
-                                '<div class="text-center text-muted py-4"><i class="la la-chart-line fa-2x mb-2"></i><div>Need at least 2 sync points to show a progress trend.</div></div>';
+                                '<div class="text-center py-4 partner-progress-chart-empty"><i class="la la-chart-line fa-2x mb-2 partner-progress-chart-empty-icon"></i><div class="partner-progress-chart-empty-text">Need at least 2 sync points to show a progress trend.</div></div>';
                         }
                         };
 

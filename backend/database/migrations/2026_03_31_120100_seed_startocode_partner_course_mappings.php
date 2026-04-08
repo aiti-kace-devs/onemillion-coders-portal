@@ -13,7 +13,8 @@ return new class extends Migration
         }
 
         $now = now();
-        $partnerCode = (string) config('services.partner_startocode.code', 'startocode');
+        // Must match App Config PARTNER_PROGRESS_STARTOCODE_PARTNER_CODE / StartocodePartnerCode::current().
+        $partnerCode = 'startocode';
         $rows = [
             ['course_name_pattern' => 'Introduction to Programming'],
             ['course_name_pattern' => 'AWS Cloud Practitioner'],
@@ -46,7 +47,7 @@ return new class extends Migration
             return;
         }
 
-        $partnerCode = (string) config('services.partner_startocode.code', 'startocode');
+        $partnerCode = 'startocode';
 
         DB::table('partner_course_mappings')
             ->where('partner_code', $partnerCode)

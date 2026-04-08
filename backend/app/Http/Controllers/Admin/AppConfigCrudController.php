@@ -46,6 +46,23 @@ class AppConfigCrudController extends CrudController
     {
         CrudListHelper::editInDropdown();
 
+        CRUD::orderBy('key', 'asc');
+
+        $this->crud->addFilter(
+            [
+                'name' => 'key',
+                'type' => 'text',
+                'label' => 'Config key',
+            ],
+            false,
+            function ($value) {
+                if ($value === '' || $value === null) {
+                    return;
+                }
+                CRUD::addClause('where', 'key', 'like', '%'.addcslashes((string) $value, '%_\\').'%');
+            }
+        );
+
         CRUD::column('key')->type('textarea')->label('Name');
         CRUD::column('type')->type('text')->label('Type');
         CRUD::addColumn([
@@ -91,9 +108,10 @@ class AppConfigCrudController extends CrudController
         CRUD::addField([
             'name' => 'value',
             'label' => 'Value',
-            'type'      => 'number',
-            // 'attributes' => ['readonly' => 'readonly'],
+            'type' => 'text',
+            'attributes' => ['spellcheck' => 'false'],
             'wrapper' => ['class' => 'form-group col-6'],
+            'hint' => 'For type Integer, enter digits only. For String (e.g. partner slugs), any normalized slug.',
         ]);
         $this->addIsActiveField([ true  => 'True', false => 'False'], 'Is Cached', 'is_cached');
     }

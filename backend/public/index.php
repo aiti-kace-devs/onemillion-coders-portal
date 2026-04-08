@@ -35,6 +35,20 @@ require __DIR__ . '/../vendor/autoload.php';
 
 /*
 |--------------------------------------------------------------------------
+| Optional machine-local SSL / CA overrides (gitignored)
+|--------------------------------------------------------------------------
+|
+| Copy bootstrap/local-dev-ssl.php.example to bootstrap/local-dev-ssl.php
+| and set curl.cainfo / openssl.cafile for Windows PHP without editing php.ini.
+|
+*/
+
+if (is_file(__DIR__ . '/../bootstrap/local-dev-ssl.php')) {
+    require __DIR__ . '/../bootstrap/local-dev-ssl.php';
+}
+
+/*
+|--------------------------------------------------------------------------
 | Run The Application
 |--------------------------------------------------------------------------
 |
