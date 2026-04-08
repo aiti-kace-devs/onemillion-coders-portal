@@ -1,16 +1,6 @@
 <script setup>
-import { usePage, Link } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { Link } from "@inertiajs/vue3";
 
-const user = usePage().props.auth?.user || {};
-
-const levelDeterminationTestUrl = computed(() => {
-    const baseUrl = usePage().props.quiz_frontend_url;
-    const token = usePage().props.quiz_jwt_token;
-    const userId = user?.userId ?? "";
-    if (!token) return `${baseUrl}/quiz`;
-    return `${baseUrl}/quiz/${userId}?token=${token}`;
-});
 </script>
 
 <template>

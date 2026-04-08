@@ -20,22 +20,42 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
-        $user = User::select('users.*', 'users.updated_at as user_updated', 'users.created_at as user_created', 'users.name as student_name', 'courses.*', 'course_sessions.session as selected_session', 'course_sessions.*', 'user_admission.*')
-            ->where('userId', Auth::user()->userId)
-            ->join('user_admission', 'user_admission.user_id', '=', 'users.userId')
-            ->join('course_sessions', 'user_admission.session', '=', 'course_sessions.id')
-            ->join('courses', 'user_admission.course_id', '=', 'courses.id')
-            ->first();
+        $user = $request->user()->load(['admission.course', 'admission.courseSession']);
 
-        if (!$user) {
-            $user = Auth::user();
-        }
+        $userData = array_merge($user->toArray(), [
+            'isAdmitted' => $user->isAdmitted(),
+            'student_name' => $user->student_name,
+            'course_name' => $user->course_name,
+            'selected_session' => $user->selected_session,
+            'verification_date' => $user->verification_date,
+        ]);
 
-        $user['isAdmitted'] = $user?->isAdmitted();
-
+        $userData = collect($userData)->only([
+            'id',
+            'userId',
+            'name',
+            'student_name',
+            'first_name',
+            'middle_name',
+            'last_name',
+            'email',
+            'mobile_no',
+            'gender',
+            'network_type',
+            'card_type',
+            'ghcard',
+            'age',
+            'pwd',
+            'details_updated_at',
+            'registered_course',
+            'course_name',
+            'selected_session',
+            'verification_date',
+            'isAdmitted'
+        ])->toArray();
 
         return Inertia::render('Student/Profile/Edit', [
-            'user' => $user
+            'user' => $userData
         ]);
     }
 
@@ -64,6 +84,11 @@ class ProfileController extends Controller
 
         $user->details_updated_at = now();
         $user->save();
+
+        // activity('student')
+        //     ->causedBy($user)
+        //     ->event('Profile Modified')
+        //     ->log("{$user->name} successfully modified their profile.");
 
         return Redirect::route('student.profile.edit');
     }

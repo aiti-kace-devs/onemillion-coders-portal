@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\StudentAdmitted;
+use App\Models\Oex_question_master;
 use App\Models\OexExamMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
@@ -31,6 +32,8 @@ use App\Http\Controllers\NotificationController;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\Models\Activity;
+
 use App\Models\UserAssessment;
 
 class StudentOperation extends Controller
@@ -38,30 +41,29 @@ class StudentOperation extends Controller
     //student dashboard
     public function dashboard()
     {
-        $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
-            ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
-            ->join('users', 'users.id', '=', 'user_exams.user_id')
-            ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-            ->orderBy('user_exams.exam_id', 'desc')
-            ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-            ->where('user_exams.user_id', Auth::user()->id)
-            ->where('user_exams.std_status', '1')
-            ->get()
-            ->toArray();
+        $user = Auth::user();
 
-        $questionnaires = Questionnaire::where('active', true)->latest()->get();
+        $questionnaires = Questionnaire::where('active', true)
+            ->latest()
+            ->get(['id', 'title', 'code'])
+            ->map(function ($q) use ($user) {
+                $q->is_submitted = $user->questionnaire_response()
+                    ->where('questionnaire_id', $q->id)
+                    ->where('is_submitted', true)
+                    ->exists();
+                return $q;
+            });
 
-        $questionnaires = $questionnaires->map(function ($questionnaire) {
-            $questionnaire['is_submitted'] = Auth::user()->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->where('is_submitted', true)->exists();
-
-            return $questionnaire;
-        });
         $registeredCourse = null;
-        if (Auth::user()->registered_course) {
-            $registeredCourse = Course::find(Auth::user()->registered_course);
+        if ($user->registered_course) {
+            $registeredCourse = Course::where('id', $user->registered_course)
+                ->first(['id', 'course_name']);
         }
 
-        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires', 'registeredCourse'));
+        return Inertia::render('Student/Dashboard', [
+            'questionnaires' => $questionnaires,
+            'registeredCourse' => $registeredCourse
+        ]);
     }
 
     public function profile()
@@ -89,13 +91,21 @@ class StudentOperation extends Controller
         $user_admission = UserAdmission::where('user_id', $user->userId)->first();
         $user_assessment = UserAssessment::where('user_id', $user->id)->first();
 
-        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_admission', 'user_assessment'));
+        $userFields = ['id', 'name', 'registered_course', 'shortlist'];
+        if (config(SHOW_STUDENT_LEVEL, false)) {
+            $userFields[] = 'student_level';
+        }
+
+        return Inertia::render('Student/ApplicationStatus', [
+            'user' => $user->only($userFields),
+            'user_admission' => $user_admission,
+            'user_assessment' => $user_assessment ? $user_assessment->only(['id', 'completed']) : null,
+        ]);
     }
 
     public function level_assessment()
     {
-        $user = Auth::guard('web')->user();
-        return Inertia::render('Student/LevelAssessment', compact('user'));
+        return Inertia::render('Student/LevelAssessment');
     }
 
     //Exam page
@@ -122,14 +132,12 @@ class StudentOperation extends Controller
 
         $user = Auth::guard('web')->user();
         $eligibilityStatus = $user->examEligibilityStatus($id);
-        // dd($question->pluck("id"));
         if (!$eligibilityStatus['status']) {
             return redirect(route('student.exam.index'))->with([
                 'flash' => $eligibilityStatus['message'],
                 'key' => 'error',
             ]);
         }
-        // dd($question->pluck("id"));
         $exam = Oex_exam_master::where('id', $id)->get()->first();
         $questions = [];
         $usedTime = $eligibilityStatus['usedTime'] ?? 0;
@@ -266,8 +274,7 @@ class StudentOperation extends Controller
             $percentage = round(($yes_ans / $total) * 100);
 
             return redirect(route('student.exam.index'))->with([
-                // 'flash' => "Test already submitted on this exam. Submission Date: {$std_info->submitted} .Result: {$percentage}% ({$yes_ans}/{$total})",
-                'flash' => "Test already submitted on this exam. Submission Date: {$std_info->submitted}",
+                'flash' => "Test already submitted on this exam. Submission Date: {$std_info->submitted} .Result: {$percentage}% ({$yes_ans}/{$total})",
                 'key' => 'info',
             ]);
         }
@@ -314,10 +321,6 @@ class StudentOperation extends Controller
         $total = $yes_ans + $no_ans;
         $res->exam_set = $exam_set_id;
         $res->save();
-        // $storedResult = Oex_result::where('user_id', $user->id)
-        //     ->where('exam_id', $request->exam_id)
-        //     ->first();
-        // GoogleSheets::updateGoogleSheets($userId, ['result' => $storedResult->yes_ans]);
         NotificationController::notify(
             $user->id,
             'AFTER_EXAM_SUBMISSION_EMAIL',
@@ -325,6 +328,12 @@ class StudentOperation extends Controller
             'Hi, <br>We acknowledge your assessment test submission.<br>Please note that shortlisted applicants will be contacted as soon as possible.'
         );
         TestSubmittedJob::dispatch($user, $res);
+
+        activity('exam')
+            ->causedBy($user)
+            ->withProperties(['exam_id' => $request->exam_id])
+            ->event('Exam submitted')
+            ->log("$user->name submitted the exam at $std_info->submitted with score $res->yes_ans/$total");
 
         return redirect(route('student.exam.index'));
     }
@@ -454,7 +463,7 @@ class StudentOperation extends Controller
 
     public function confirm_session(Request $request)
     {
-        $user = $request->guard('web')->user();
+        $user = Auth::guard('web')->user();
 
         $data = $request->validate(
             [
@@ -476,22 +485,11 @@ class StudentOperation extends Controller
                     'flash' => 'Unable to change session at this time. Contact administrator',
                     'key' => 'error',
                 ]);
-
-                // return redirect(url('student/select-session/' . $user->userId))->with([
-                //     'flash' => 'Unable to change session at this time. Contact administrator',
-                //     'key' => 'error',
-                // ]);
             }
-
             $courseDetails = Course::find($admission->course_id);
             $session = CourseSession::where('course_id', $courseDetails->id)->where('id', $data['session_id'])->first();
 
             if (!$session) {
-                // return redirect(url('student/select-session/' . $user->userId))->with([
-                //     'flash' => 'Unable to confirm session. Try again later',
-                //     'key' => 'error',
-                // ]);
-
                 return redirect()->back()->with([
                     'flash' => 'Unable to confirm session. Try again later',
                     'key' => 'error',
@@ -501,11 +499,6 @@ class StudentOperation extends Controller
             $slotLeft = $session->slotLeft();
 
             if ($slotLeft < 1) {
-                // return redirect(url('student/select-session/' . $user->userId))->with([
-                //     'flash' => 'Unable to confirm session. No slots available',
-                //     'key' => 'error',
-                // ]);
-
                 return redirect()->back()->with([
                     'flash' => 'Unable to confirm session. No slots available',
                     'key' => 'error',
@@ -514,17 +507,31 @@ class StudentOperation extends Controller
 
             $admission->confirmed = now();
             $admission->session = $session->id;
-            // $admission->email_sent = now();
             $admission->location = $courseDetails->location;
             $admission->save();
 
             if (!$changingSession) {
                 AdmitStudentJob::dispatch($admission);
+                activity('user_admission')
+                    ->causedBy($user)
+                    ->performedOn($admission)
+                    ->withProperties([
+                        'session' => $session->name,
+                        'course' => $courseDetails->course_name,
+                    ])
+                    ->event('Session Confirmed')
+                    ->log("$user->name confirmed their session: {$session->name}");
+            } else {
+                activity('user_admission')
+                    ->causedBy($user)
+                    ->performedOn($admission)
+                    ->withProperties([
+                        'session' => $session->name,
+                        'course' => $courseDetails->course_name,
+                    ])
+                    ->event('Session Changed')
+                    ->log("$user->name changed their session to: {$session->name}");
             }
-            // return redirect(url('student/select-session/' . $user->userId))->with([
-            //     'flash' => $changingSession ? 'Session changed successfully' : 'Confirmation successful',
-            //     'key' => 'success',
-            // ]);
 
             return redirect()->back()->with([
                 'flash' => $changingSession ? 'Session changed successfully' : 'Confirmation successful',
@@ -532,22 +539,10 @@ class StudentOperation extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error($e);
-            // return redirect(url('student/select-session/' . $user->userId))->with([
-            //     'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
-            //     'key' => 'error',
-            // ]);
-
             return redirect()->back()->with([
                 'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
                 'key' => 'error',
             ]);
-
-            // return response()->json([
-            //     'status' => [
-            //         'key' => 'error',
-            //         'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later'
-            //     ]
-            // ]);
         }
     }
 
@@ -556,6 +551,15 @@ class StudentOperation extends Controller
     public function change_course()
     {
         $user = Auth::guard('web')->user();
+
+        if ($user->shortlist) {
+            return redirect()
+                ->route('student.application-status')
+                ->with([
+                    'flash' => 'Your course selection is now locked because you have been shortlisted. If you need assistance, please contact support.',
+                    'key' => 'info',
+                ]);
+        }
 
         if (!$user->userAssessment?->completed) {
             return redirect()
@@ -568,15 +572,18 @@ class StudentOperation extends Controller
 
         $currentCourseId = $user->registered_course;
 
-        $courses = Course::where('status', 1)->where('id', '!=', $currentCourseId)->get();
+        // $courses = Course::where('status', 1)->where('id', '!=', $currentCourseId)->get();
 
         $currentCourse = null;
         if (!empty($currentCourseId)) {
             $currentCourse = Course::find($currentCourseId);
         }
 
-        return Inertia::render('Student/ChangeCourse', compact('user', 'courses', 'currentCourse'));
-        return view('student.change-course', compact('user', 'courses', 'currentCourse'));
+
+
+        return Inertia::render('Student/ChangeCourse', [
+            'currentCourse' => $currentCourse
+        ]);
     }
 
     // Update course selection
@@ -603,11 +610,11 @@ class StudentOperation extends Controller
                 ]);
         }
 
-        if ($user->admission) {
+        if ($user->shortlist || $user->admission) {
             return redirect()
-                ->back()
+                ->route('student.application-status')
                 ->with([
-                    'flash' => 'Unable to change course.',
+                    'flash' => 'Unable to change course. Selection is locked.',
                     'key' => 'error',
                 ]);
         }
@@ -621,15 +628,30 @@ class StudentOperation extends Controller
         );
 
         // Get course information
-        // $course = Course::find($request->course_id);
+        $oldCourse = Course::find($user->registered_course);
+        $newCourse = Course::find($request->course_id);
 
-        // if (!$course) {
-        //     return redirect()->back()->with('error', 'Selected course not found.');
-        // }
+        if (!$newCourse) {
+            return redirect()
+                ->back()
+                ->with([
+                    'flash' => 'Selected course not found.',
+                    'key' => 'error',
+                ]);
+        }
+        activity()->withoutLogs(function () use ($user, $request) {
+            $user->registered_course = $request->course_id;
+            $user->save();
+        });
 
-        // Update user record with course and session information
-        $user->registered_course = $request->course_id; // Store course_id in exam field
-        $user->save();
+        activity('student')
+            ->causedBy($user)
+            ->event('Course Changed')
+            ->withProperties([
+                'old_course' => $oldCourse?->course_name,
+                'new_course' => $newCourse->course_name,
+            ])
+            ->log("{$user->name} changed their course from {$oldCourse?->course_name} to {$newCourse->course_name}");
 
         return redirect()->route('student.application-status');
     }
@@ -651,6 +673,10 @@ class StudentOperation extends Controller
                 CreateStudentAdmissionJob::dispatch($user, $course, null);
                 $count++;
             }
+            activity('user_admission')
+                ->causedBy($user)
+                ->event('Admission Created')
+                ->log("Admitted {$count} students successfully!");
 
             return response()->json([
                 'success' => true,
@@ -672,7 +698,10 @@ class StudentOperation extends Controller
         $delete_user_admission = UserAdmission::where('user_id', $user->userId)->first();
 
         if ($delete_user_admission) {
-            $delete_user_admission->delete();
+            activity()->withoutLogs(function () use ($delete_user_admission, $user) {
+                $delete_user_admission->delete();
+                $user->update(['shortlist' => 0]);
+            });
 
             AdmissionRejection::create([
                 'user_id' => $user->userId,
@@ -680,7 +709,10 @@ class StudentOperation extends Controller
                 'rejected_at' => now(),
             ]);
 
-            $user->update(['shortlist' => 0]);
+            activity('user_admission')
+                ->causedBy($user)
+                ->event('Admission Deleted')
+                ->log("$user->name deleted admission successfully!");
 
             return Redirect::route('student.application-status');
         } else {
@@ -787,7 +819,13 @@ class StudentOperation extends Controller
         }
 
         $user->details_updated_at = now();
-        $user->save();
+        activity()->withoutLogs(function () use ($user) {
+            $user->save();
+        });
+        activity('student')
+            ->causedBy($user)
+            ->event('Details Updated')
+            ->log("{$user->name}'s details updated successfully!");
 
         return redirect()
             ->back()
@@ -808,8 +846,6 @@ class StudentOperation extends Controller
         });
 
         return Inertia::render('Student/Assessment/Index', compact('questionnaires'));
-
-        return view('student.questionnaire', compact('questionnaires'));
     }
 
     public function take_questionnaire($code)
@@ -863,8 +899,6 @@ class StudentOperation extends Controller
         $instructorQuestions = collect($questionnaire->schema)->where('type', 'instructors')->first()['questions'] ?? [];
 
         return Inertia::render('Student/Assessment/TakeQuestionnaire', compact('questionnaire', 'hasSubmitted', 'instructors', 'instructorQuestions', 'responses'));
-
-        return view('student.take_questionnaire', compact('questionnaire', 'hasSubmitted', 'instructors', 'instructorQuestions', 'responses'));
     }
 
     public function store_questionnaire(Request $request)
@@ -1105,27 +1139,10 @@ class StudentOperation extends Controller
             ]);
         }
 
-        if (is_null($assessment->level_started_at)) {
-            $assessment->level_started_at = now();
-            $assessment->save();
-        }
-
-        $timeoutSeconds = config('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 900);
-        $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
-        $timeRemainingSeconds = $timeoutSeconds - $timeElapsedSeconds;
+        $timeRemainingSeconds = $this->getAssessmentTimeRemaining($assessment);
 
         if ($timeRemainingSeconds <= 0) {
-            $assessment->completed = true;
-            $assessment->save();
-
-            if ($assessment->current_level === 'Beginner') {
-                $user->student_level = 'Beginner';
-            } elseif ($assessment->current_level === 'Intermediate') {
-                $user->student_level = 'Beginner';
-            } elseif ($assessment->current_level === 'Advanced') {
-                $user->student_level = 'Intermediate';
-            }
-            $user->save();
+            $this->completeAssessment($user, $assessment, false);
 
             return response()->json([
                 'status' => 'error',
@@ -1187,27 +1204,10 @@ class StudentOperation extends Controller
             ], 404);
         }
 
-        if (is_null($assessment->level_started_at)) {
-            $assessment->level_started_at = now();
-            $assessment->save();
-        }
-
-        $timeoutSeconds = config('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 900);
-        $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
-        $timeRemainingSeconds = $timeoutSeconds - $timeElapsedSeconds;
+        $timeRemainingSeconds = $this->getAssessmentTimeRemaining($assessment);
 
         if ($timeRemainingSeconds <= 0) {
-            $assessment->completed = true;
-            $assessment->save();
-
-            if ($assessment->current_level === 'Beginner') {
-                $user->student_level = 'Beginner';
-            } elseif ($assessment->current_level === 'Intermediate') {
-                $user->student_level = 'Beginner';
-            } elseif ($assessment->current_level === 'Advanced') {
-                $user->student_level = 'Intermediate';
-            }
-            $user->save();
+            $this->completeAssessment($user, $assessment, false);
 
             return response()->json([
                 'status' => 'error',
@@ -1282,20 +1282,10 @@ class StudentOperation extends Controller
                     $assessment->correct_answers = 0;
                     $assessment->wrong_answers = 0;
                 } elseif ($assessment->current_level === 'Advanced') {
-                    $user->student_level = 'Advanced';
-                    $user->save();
-                    $assessment->completed = true;
+                    $this->completeAssessment($user, $assessment, true);
                 }
             } else {
-                if ($assessment->current_level === 'Beginner') {
-                    $user->student_level = 'Beginner';
-                } elseif ($assessment->current_level === 'Intermediate') {
-                    $user->student_level = 'Beginner';
-                } elseif ($assessment->current_level === 'Advanced') {
-                    $user->student_level = 'Intermediate';
-                }
-                $user->save();
-                $assessment->completed = true;
+                $this->completeAssessment($user, $assessment, false);
             }
         }
 
@@ -1334,17 +1324,7 @@ class StudentOperation extends Controller
         $maxViolations = config('ASSESSMENT_MAX_VIOLATIONS', 3);
 
         if ($assessment->violation_count >= $maxViolations) {
-            $assessment->completed = true;
-            $assessment->save();
-
-            if ($assessment->current_level === 'Beginner') {
-                $user->student_level = 'Beginner';
-            } elseif ($assessment->current_level === 'Intermediate') {
-                $user->student_level = 'Beginner';
-            } elseif ($assessment->current_level === 'Advanced') {
-                $user->student_level = 'Intermediate';
-            }
-            $user->save();
+            $this->completeAssessment($user, $assessment, false);
 
             return response()->json([
                 'status' => 'error',
@@ -1363,5 +1343,49 @@ class StudentOperation extends Controller
             'violation_count' => $assessment->violation_count,
             'assessment_completed' => false,
         ]);
+    }
+
+    private function getAssessmentTimeRemaining($assessment)
+    {
+        if (is_null($assessment->level_started_at)) {
+            $assessment->level_started_at = now();
+            $assessment->save();
+        }
+
+        $timeoutSeconds = config('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 900);
+        $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
+        return $timeoutSeconds - $timeElapsedSeconds;
+    }
+
+    private function completeAssessment($user, $assessment, $passed = false)
+    {
+        $assessment->completed = true;
+
+        if ($passed) {
+            $user->student_level = 'Advanced';
+        } else {
+            if ($assessment->current_level === 'Beginner') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Intermediate') {
+                $user->student_level = 'Beginner';
+            } elseif ($assessment->current_level === 'Advanced') {
+                $user->student_level = 'Intermediate';
+            }
+        }
+
+        $user->save();
+        $assessment->save();
+
+        activity('assessment')
+            ->causedBy($user)
+            ->performedOn($assessment)
+            ->withProperties([
+                'level' => $user->student_level,
+                'correct_answers' => $assessment->correct_answers,
+                'wrong_answers' => $assessment->wrong_answers,
+                'violation_count' => $assessment->violation_count,
+            ])
+            ->event('Assessment Completed')
+            ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
     }
 }

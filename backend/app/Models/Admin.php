@@ -12,8 +12,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Activitylog\LogOptions;
 use Spatie\Permission\Traits\HasRoles;
-
+use Spatie\Activitylog\Traits\LogsActivity;
 class Admin extends Authenticatable
 {
     /**
@@ -88,7 +89,7 @@ class Admin extends Authenticatable
     {
         return $this->assignedCourses()
             ->pluck('courses.id')
-            ->map(fn ($courseId) => (int) $courseId)
+            ->map(fn($courseId) => (int) $courseId)
             ->all();
     }
 
@@ -122,9 +123,18 @@ class Admin extends Authenticatable
         $this->notify(new ResetPasswordNotification($token));
     }
 
-
     public function getNameWithEmail()
     {
         return $this->name . ' (' . $this->email . ')';
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->useLogName('admin')
+            ->setDescriptionForEvent(fn(string $event) => "Admin {$event}")
+            ->dontLogIfAttributesChangedOnly(['last_login']);
     }
 }

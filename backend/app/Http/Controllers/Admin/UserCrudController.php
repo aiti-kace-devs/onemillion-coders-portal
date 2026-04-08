@@ -106,24 +106,18 @@ class UserCrudController extends CrudController
         $this->addConfirmedAdmissionColumn();
         View::share('mailable', \App\Helpers\MailerHelper::getMailableClasses());
         $this->setupStudentColumns();
-        // CRUD::disablePersistentTable();
         // CRUD::addButtonFromView('top', 'student_views_dropdown', 'student_views_dropdown', 'beginning');
         // CRUD::addButtonFromView('top', 'bulk_actions_dropdown', 'bulk_actions_dropdown', 'beginning');
         // CRUD::addButton('top', 'assign_batch_bulk', 'view', 'admin.bulk.assign_batch', 'beginning');
+
         // Add userId column to the list view
         // CRUD::addColumn([
         //     'name' => 'userId',
         //     'label' => 'User ID',
         //     'type' => 'text',
         // ]);
-
-        // $this->setupStudentColumns();
-        // Disable responsive table
-        // CRUD::disableResponsiveTable();
-        // $this->setupFilter();
-        // Enable bulk operations
-        CRUD::enableBulkActions();
-        CRUD::enableExportButtons();
+        // CRUD::enableBulkActions();
+        // CRUD::enableExportButtons();
 
         CRUD::removeButton('update', 'line');
         CRUD::removeButton('delete', 'line');
@@ -135,7 +129,7 @@ class UserCrudController extends CrudController
     {
         // $this->setupShowStudentColumns();
         $this->crud->set('show.setFromDb', false);
-        
+
         $this->crud->setShowView('vendor.backpack.crud.manage_student_show');
 
         CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
@@ -271,7 +265,7 @@ class UserCrudController extends CrudController
      */
     public function viewResult($id)
     {
-        $student = \App\Models\User::find($id);
+        $student = \App\Models\User::findOrFail($id);
         if (!$student) {
             return back()->with(['flash' => 'Student not found.', 'key' => 'error']);
         }
@@ -363,4 +357,12 @@ class UserCrudController extends CrudController
             return response()->json(['message' => 'Failed to delete admission.'], 500);
         }
     }
+
+    public function getActivities($user_id)
+    {
+        $user = User::findOrFail($user_id);
+        $activities = $user->actions()->latest()->get();
+        return view('admin.users.activities', compact('user', 'activities'));
+    }
+
 }

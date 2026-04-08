@@ -5,17 +5,28 @@ namespace App\Models;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Course extends Model
 {
     use CrudTrait;
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->useLogName('course')
+            ->setDescriptionForEvent(fn(string $event) => "Course {$event}");
+    }
 
     protected $fillable = [
         'centre_id',
         'programme_id',
         'course_name',
-        'location',
+        // 'location',
         'duration',
         'start_date',
         'batch_id',
@@ -151,11 +162,11 @@ class Course extends Model
                 ? "{$programme->title} - ({$centre->title})"
                 : $course->course_name;
 
-            $course->location = $branch?->title;
+            // $course->location = $branch?->title;
         });
 
         static::saved(function ($course) {
-            if ($course->wasChanged(['course_name', 'location'])) {
+            if ($course->wasChanged(['course_name'])) {
                 $course->sessions()->get()->each(function ($session) {
                     $session->setSessionName();
                     $session->save();

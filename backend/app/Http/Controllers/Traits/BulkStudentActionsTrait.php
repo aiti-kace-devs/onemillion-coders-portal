@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Jobs\SendBulkEmailJob;
 use App\Jobs\SendBulkSMSJob;
+use Spatie\Activitylog\Models\Activity;
 
 trait BulkStudentActionsTrait
 {
@@ -120,7 +121,7 @@ trait BulkStudentActionsTrait
     public function saveShortlistedStudents(SaveShortlistedStudentsRequest $request)
     {
         if ($request->has('select_all_in_query')) {
-            $query = $this->getFilteredQuery();
+            $query = $this->getFilteredQuery($request);
             $usersToUpdate = $query
                 ->where(function ($query) {
                     $query->whereNull('shortlist')->orWhere('shortlist', '!=', 1);
@@ -136,7 +137,28 @@ trait BulkStudentActionsTrait
                 );
             }
 
-            $updatedCount = User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
+            $updatedCount = $usersToUpdate->count();
+            activity()->withoutLogs(function () use ($usersToUpdate) {
+                User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
+
+                foreach ($usersToUpdate as $user) {
+                    \App\Models\UserAdmission::updateOrCreate(
+                        ['user_id' => $user->userId],
+                        [
+                            'course_id' => $user->registered_course,
+                            'session' => null,
+                            'confirmed' => null,
+                            'location' => null,
+                            'email_sent' => null
+                        ]
+                    );
+                }
+            });
+
+
+            activity('user_admission')
+                ->event('Bulk Shortlist')
+                ->log("Shortlisted $updatedCount user(s) successfully using bulk action.");
 
             return response()->json([
                 'message' => "$updatedCount user(s) successfully shortlisted.",
@@ -171,7 +193,28 @@ trait BulkStudentActionsTrait
             );
         }
 
-        $updatedCount = User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
+        $updatedCount = $usersToUpdate->count();
+        activity()->withoutLogs(function () use ($usersToUpdate) {
+            User::whereIn('id', $usersToUpdate->pluck('id'))->update(['shortlist' => 1]);
+
+            foreach ($usersToUpdate as $user) {
+                \App\Models\UserAdmission::updateOrCreate(
+                    ['user_id' => $user->userId],
+                    [
+                        'course_id' => $user->registered_course,
+                        'session' => null,
+                        'confirmed' => null,
+                        'location' => null,
+                        'email_sent' => null
+                    ]
+                );
+            }
+        });
+
+
+        activity('user_admission')
+            ->event('Targeted Shortlist')
+            ->log("Shortlisted $updatedCount user(s) successfully using targeted action.");
 
         return response()->json([
             'message' => "$updatedCount user(s) successfully shortlisted.",
@@ -181,7 +224,7 @@ trait BulkStudentActionsTrait
     public function admitStudent(Request $request)
     {
         if ($request->has('select_all_in_query')) {
-            $query = $this->getFilteredQuery();
+            $query = $this->getFilteredQuery($request);
             $request->merge(['user_ids' => $query->pluck('userId')->toArray()]);
         }
         $validated = $request->validate([
@@ -252,6 +295,10 @@ trait BulkStudentActionsTrait
         }
 
         // Return JSON for AJAX requests, redirect for regular requests
+        activity('user_admission')
+            ->event('Student Admit')
+            ->log("Admitted $admittedCount student(s) into course ID {$course->id}.");
+
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,

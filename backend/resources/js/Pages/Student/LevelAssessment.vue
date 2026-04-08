@@ -2,25 +2,22 @@
 import { computed, ref, onMounted, onUnmounted } from "vue";
 import { Head, usePage, router } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
-import axios from "axios";
 
-const props = defineProps({
-    user: Object,
-});
+const { auth, quiz_frontend_url, quiz_jwt_token } = usePage().props;
+const user = auth.user;
 
 const assessmentUrl = computed(() => {
-    const baseUrl = usePage().props.quiz_frontend_url || '';
+    const baseUrl = quiz_frontend_url || '';
     const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    const token = usePage().props.quiz_jwt_token;
-    const path = `${base}/quiz/${props.user.userId}`;
-    return token ? `${path}?token=${token}` : path;
+    const path = `${base}/quiz/${user.userId}`;
+    return quiz_jwt_token ? `${path}?token=${quiz_jwt_token}&embed=true` : `${path}?embed=true`;
 });
 
 const iframeRef = ref(null);
 const hasStarted = ref(false);
 const isComplete = ref(false);
 
-let violationCooldown = false;
+
 
 onMounted(() => {
     window.addEventListener("message", handleMessage);
@@ -78,7 +75,7 @@ function handleMessage(event) {
         isComplete.value = true;
     } else if (event.data?.type === "LARAVEL_IFRAME_DETECTED") {
         isComplete.value = true;
-        router.visit('/student/change-course');
+        router.visit('/student/choose-course');
     }
 }
 
@@ -88,7 +85,7 @@ function handleIframeLoad() {
         const href = iframeRef.value.contentWindow.location.href;
         const pathname = iframeRef.value.contentWindow.location.pathname;
 
-        if (pathname && (pathname.includes('/student/change-course') || pathname.includes('/student/choose-course'))) {
+        if (pathname && (pathname.includes('/student/choose-course') || pathname.includes('/student/choose-course'))) {
             isComplete.value = true; // Stop tracking violations
             router.visit(pathname);
         }
@@ -106,7 +103,7 @@ function handleIframeLoad() {
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Level Assessment</h2>
         </template>
 
-        <div class="h-[calc(100vh-64px)] overflow-hidden relative">
+        <div class="h-[calc(100vh-70px)] overflow-hidden relative">
             <iframe ref="iframeRef" :src="assessmentUrl" class="w-full h-full border-0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowfullscreen @load="handleIframeLoad"></iframe>

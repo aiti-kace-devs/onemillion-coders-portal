@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Services\CourseMatchReferenceService;
+use App\Helpers\CrudListHelper;
 
 /**
  * Class CourseMatchCrudController
@@ -50,6 +51,7 @@ class CourseMatchCrudController extends CrudController
     protected function setupListOperation()
     {
         WidgetHelper::courseMatchStatisticsWidget();
+        CrudListHelper::editInDropdown();
 
         CRUD::column('tag');
         CRUD::column('question');

@@ -83,7 +83,7 @@ const Footer = ({ data }) => {
     : `© ${new Date().getFullYear()} One Million Coders Ghana. All rights reserved.`;
 
   const footerLinks = hasData && footerData.copyrights?.footer_links?.length
-    ? footerData.copyrights.footer_links
+    ? footerData.copyrights.footer_links.filter((l) => !/powered|gi-kace/i.test(l.name))
     : [
         { name: "Terms of Service & Privacy Policy", url: "/terms-and-privacy" },
       ];

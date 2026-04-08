@@ -20,7 +20,7 @@
     <x-backpack::menu-dropdown title="Student Management" icon="la la-users">
         @can('student.read.all')
             <x-backpack::menu-dropdown-item title="Manage Students" icon="la la-user-graduate" :link="backpack_url('manage-student')" />
-            <x-backpack::menu-dropdown-item title="Students" icon="la la-user-alt" :link="backpack_url('user')" />
+            {{-- <x-backpack::menu-dropdown-item title="Students" icon="la la-user-alt" :link="backpack_url('user')" /> --}}
         @endcan
         @can('student-verification.read.all')
             <x-backpack::menu-dropdown-item title="Student Verifications" icon="la la-check-circle" :link="backpack_url('student-verification')" />
@@ -42,9 +42,9 @@
 
 
 @can('centre.read.all')
-<x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
-<x-backpack::menu-item title="Manage Districts" icon="la la-question" :link="backpack_url('district')" />
-<x-backpack::menu-item title="Constituencies" icon="la la-question" :link="backpack_url('constituency')" />
+    <x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
+    {{-- <x-backpack::menu-item title="Manage Districts" icon="la la-question" :link="backpack_url('district')" /> --}}
+    {{-- <x-backpack::menu-item title="Constituencies" icon="la la-question" :link="backpack_url('constituency')" /> --}}
 @endcan
 
 @can('programme.read.all')
@@ -146,6 +146,9 @@
         @endcan
         @can('app-config.update')
             <x-backpack::menu-dropdown-item title="App Maintenance" icon="la la-tools" :link="backpack_url('utilities')" />
+        @endcan
+        @can('admin.read.all')
+            <x-backpack::menu-dropdown-item title="Activity Logs" icon="la la-history" :link="backpack_url('activity')" />
         @endcan
     </x-backpack::menu-dropdown>
 @endif

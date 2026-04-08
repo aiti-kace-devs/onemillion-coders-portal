@@ -35,7 +35,7 @@ trait BatchFieldHelpers
                 SELECT COUNT(ua.id)
                 FROM courses c
                 LEFT JOIN user_admission ua ON ua.course_id = c.id AND ua.confirmed IS NOT NULL
-                WHERE ua.batch_id = admission_batches.id
+                WHERE c.batch_id = admission_batches.id
             ) AS admitted_students_count')
             ->selectRaw('(
                 SELECT COUNT(DISTINCT c2.programme_id)
@@ -226,7 +226,7 @@ trait BatchFieldHelpers
             ->where('status', 1)
             ->orderBy('title')
             ->get();
-        
+
         // Use the blade view for the modal
         return view('admin.batch.add_course_modal', [
             'batch' => $batch,
@@ -385,7 +385,7 @@ trait BatchFieldHelpers
                     'toggle_error_message' => 'Error updating course status.',
                 ],
             ])->render();
-            
+
             $dataCentreId = $course->centre_id ?? '';
             $dataProgrammeId = $course->programme_id ?? '';
             $dataCentreTitle = $course->centre?->title ?? '';
@@ -465,7 +465,7 @@ trait BatchFieldHelpers
         if (!$isEmpty) {
             $html .= '<p id="batchCoursesNoResultsMsg" class="text-muted text-center py-4" style="display:none;">No matching courses found.</p>';
         }
-        
+
         $html .= '<p id="batchCoursesEmptyMsg" class="text-muted text-center py-4" style="display:' . ($isEmpty ? 'block' : 'none') . ';">No courses assigned to this batch yet.</p>';
 
         if (!$isEmpty) {
@@ -529,7 +529,7 @@ trait BatchFieldHelpers
                     ->where('programme_id', $programmeId)
                     ->where('batch_id', $batch->id)
                     ->first();
-                
+
                 if (!$existingCourse) {
                     $course = Course::create([
                         'centre_id' => $centreId,

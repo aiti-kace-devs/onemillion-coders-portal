@@ -61,6 +61,13 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->isProduction()) {
             URL::forceRootUrl(config('app.url'));
             URL::forceScheme('https');
+            // This fixes the crash during 'php artisan basset:cache'
+            $maxTime = ini_get('max_execution_time');
+
+            // If it's a numeric string (common in GCP/Docker), cast it to int
+            if (is_numeric($maxTime)) {
+                @set_time_limit((int)$maxTime);
+            }
             // Horizon::routeSlackNotificationsTo(env('LOG_SLACK_WEBHOOK_URL', ''),  env('SLACK_CHANNEL', '#general'));
         }
 

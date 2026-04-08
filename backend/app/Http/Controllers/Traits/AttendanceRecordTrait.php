@@ -67,8 +67,18 @@ trait AttendanceRecordTrait
         $attendance->user_id = $user_id;
         $attendance->course_id = $course_id;
         $attendance->date = $date;
-        $attendance->save();
-        // UpdateAttendanceOnSheetJob::dispatch($attendance);
+        activity()->withoutLogs(function () use ($attendance) {
+            $attendance->save();
+        });
+
+        $user = \App\Models\User::where('userId', $user_id)->first();
+        if ($user) {
+            activity('attendance')
+                ->by($user)
+                ->on($attendance)
+                ->event('Attendance Recorded')
+                ->log("{$user->name} recorded attendance for {$date}");
+        }
         return true;
     }
 }
