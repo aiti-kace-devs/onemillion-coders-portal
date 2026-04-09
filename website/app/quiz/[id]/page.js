@@ -77,7 +77,7 @@ function requestFullscreen() {
     el.requestFullscreen ||
     el.webkitRequestFullscreen ||
     el.msRequestFullscreen;
-   if (rfs) {
+  if (rfs) {
     rfs.call(el).catch(() => {
       // Fallback: ask parent to do it
       window.parent.postMessage({ type: 'REQUEST_FULLSCREEN' }, '*');
@@ -411,7 +411,7 @@ export default function QuizPage({ params }) {
             setOverallLevel(result?.user_overall_level || null);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
 
       if (count >= MAX_VIOLATIONS) {
         // Auto-submit: mark assessment as complete on client
@@ -776,7 +776,7 @@ export default function QuizPage({ params }) {
           </motion.button>
 
           <button
-            onClick={() => router.push(`${process.env.NEXT_PUBLIC_PORTAL_URL}`)}
+            onClick={() => window.location.href = process.env.NEXT_PUBLIC_PORTAL_URL || '/'}
             className="mt-5 text-sm text-white/40 hover:text-white/80 transition-colors"
           >
             <FiHome className="inline mr-1 -mt-0.5" size={14} /> Back to Home
@@ -1060,12 +1060,12 @@ export default function QuizPage({ params }) {
 
                     <div className="space-y-2.5">
                       <button
-                        onClick={() =>
-                          router.push(
-                            process.env.NEXT_PUBLIC_PORTAL_URL +
-                              `/student/change-course`,
-                          )
-                        }
+                        onClick={() => {
+                          if (window.parent !== window) {
+                            window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
+                          }
+                          window.location.href = `${process.env.NEXT_PUBLIC_PORTAL_URL}/student/choose-course`;
+                        }}
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
                         Proceed to Course Selection <FiArrowRight size={16} />
@@ -1131,12 +1131,12 @@ export default function QuizPage({ params }) {
                     </div>
                     <div className="space-y-2.5">
                       <button
-                        onClick={() =>
-                          router.push(
-                            process.env.NEXT_PUBLIC_PORTAL_URL +
-                              `/student/change-course`,
-                          )
-                        }
+                        onClick={() => {
+                          if (window.parent !== window) {
+                            window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
+                          }
+                          window.location.href = `${process.env.NEXT_PUBLIC_PORTAL_URL}/student/choose-course`;
+                        }}
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
                         Proceed to Course Selection <FiArrowRight size={16} />
@@ -1169,13 +1169,12 @@ export default function QuizPage({ params }) {
                       {lvl.label} &middot; {progress}/{totalQs}
                     </p>
                     <div
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                        timeLeft <= 60
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${timeLeft <= 60
                           ? "bg-red-100 text-red-600"
                           : timeLeft <= 300
                             ? "bg-yellow-100 text-yellow-700"
                             : "bg-gray-200 text-gray-600"
-                      }`}
+                        }`}
                     >
                       <FiClock size={11} />
                       <span className="font-mono">{formatTime(timeLeft)}</span>
