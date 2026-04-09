@@ -703,12 +703,12 @@ export default function CourseMatchPage() {
                             {course.mode_of_delivery === "Online" ? (
                               <FiMonitor className="w-2.5 h-2.5 text-blue-600" />
                             ) : course.mode_of_delivery === "In Person" ? (
-                              <FiUsers className="w-2.5 h-2.5 text-green-600" />
+                              <FiMapPin className="w-2.5 h-2.5 text-green-600" />
                             ) : (
                               <FiGlobe className="w-2.5 h-2.5 text-purple-600" />
                             )}
                             <span className={`text-[10px] sm:text-[11px] font-medium ${course.mode_of_delivery === "Online" ? "text-blue-700" :
-                                course.mode_of_delivery === "In Person" ? "text-green-700" : "text-purple-700"
+                              course.mode_of_delivery === "In Person" ? "text-green-700" : "text-purple-700"
                               }`}>
                               {course.mode_of_delivery}
                             </span>
