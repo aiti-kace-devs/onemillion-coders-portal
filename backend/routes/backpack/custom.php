@@ -109,6 +109,7 @@ Route::group([
     Route::get('course-session/ajax-list', 'CourseSessionCrudController@ajaxList');
     Route::post('user/bulk-admit', 'UserCrudController@bulkAdmit');
     Route::crud('course-category', 'CourseCategoryCrudController');
+    Route::post('course-category/{id}/toggle', 'CourseCategoryCrudController@toggleStatus');
     Route::crud('course-module', 'CourseModuleCrudController');
     Route::get('qr-scanner', 'AttendanceCrudController@setupScanQrCodePage')->name('qr-scanner');
 
