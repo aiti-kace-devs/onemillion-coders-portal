@@ -14,9 +14,10 @@ import {
 } from "react-icons/fi";
 import Link from "next/link";
 import {
-  getAllRegions,
   getDistrictsByBranch,
   getCentresByDistrict,
+  getTotalCentresCount,
+  getAllRegionsWithCentreCounts,
 } from "../../services/pages";
 
 function SearchableSelect({
@@ -64,8 +65,7 @@ function SearchableSelect({
             ? "border border-yellow-400 ring-2 ring-yellow-400/20 bg-white"
             : "bg-gray-50 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 text-gray-600"
         }`}
-      >
-        {selectedOption ? selectedOption.title : placeholder}
+      >        {selectedOption ? `${selectedOption.title} (${selectedOption.total_centres || 0} ${selectedOption.total_centres === 1 ? 'center' : 'centers'})` : placeholder}
       </button>
       <Icon className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${selectedOption && !disabled ? "text-yellow-600" : "text-gray-400"}`} />
       <FiChevronDown
@@ -106,7 +106,7 @@ function SearchableSelect({
                         : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
-                    {option.title}
+                    {`${option.title} (${option.total_centres || 0} ${option.total_centres === 1 ? 'center' : 'centers'})`}
                   </button>
                 </li>
               ))
@@ -137,6 +137,8 @@ function CentersPageContent() {
   const [centers, setCenters] = useState([]);
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [selectedDistrict, setSelectedDistrict] = useState(null);
+  const [totalCentres, setTotalCentres] = useState(0);
+  const [districtCentresCount, setDistrictCentresCount] = useState(0);
   const [loadingRegions, setLoadingRegions] = useState(true);
   const [loadingDistricts, setLoadingDistricts] = useState(false);
   const [loadingCenters, setLoadingCenters] = useState(false);
@@ -148,8 +150,12 @@ function CentersPageContent() {
     const fetchRegions = async () => {
       try {
         setLoadingRegions(true);
-        const data = await getAllRegions();
-        setRegions(data || []);
+        const [regionsData, totalCount] = await Promise.all([
+          getAllRegionsWithCentreCounts(),
+          getTotalCentresCount(),
+        ]);
+        setRegions(regionsData || []);
+        setTotalCentres(totalCount || 0);
       } catch (err) {
         console.error("Error fetching regions:", err);
         setError("Failed to load regions. Please try again.");
@@ -205,7 +211,9 @@ function CentersPageContent() {
       setLoadingCenters(true);
       setError(null);
       const data = await getCentresByDistrict(district.id);
-      setCenters(data?.centres || []);
+      const centresData = data?.centres || [];
+      setCenters(centresData);
+      setDistrictCentresCount(centresData.length);
     } catch (err) {
       console.error("Error fetching centers:", err);
       setError("Failed to load centers. Please try again.");
@@ -261,7 +269,7 @@ function CentersPageContent() {
               </span>
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.1] mb-5">
-              Training Centers
+              <span className="text-yellow-400">{totalCentres}</span> Training {totalCentres === 1 ? 'Center' : 'Centers'}
               <br />
               <span className="text-yellow-400">Across Ghana</span>
             </h1>
@@ -370,6 +378,18 @@ function CentersPageContent() {
                   </button>
                 </span>
               )}
+            </div>
+          )}
+
+          {/* Statistics Pills - District count */}
+          {selectedDistrict && (
+            <div className="flex items-center gap-3 mt-3 flex-wrap">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200/60 rounded-full text-xs font-medium">
+                <span className="w-5 h-5 flex items-center justify-center bg-blue-400 text-white rounded-full text-xs font-bold">
+                  {districtCentresCount}
+                </span>
+                {districtCentresCount === 1 ? 'Center' : 'Centers'} in {selectedDistrict.title}
+              </span>
             </div>
           )}
         </div>
