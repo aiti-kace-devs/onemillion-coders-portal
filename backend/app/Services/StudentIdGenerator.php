@@ -11,8 +11,8 @@ class StudentIdGenerator
     /**
      * Generate a student ID for a user being admitted.
      *
-     * Format: OMCP-{batch_number}{YY}{NNNNNN}
-     * Example: OMCP-126100980
+     * Format: OMCP-{batch_number}{YY}{id}
+     * Example: OMCP-125143901
      *
      * @param  User  $user
      * @return string|null  Returns null if batch info is unavailable.
@@ -40,30 +40,9 @@ class StudentIdGenerator
         }
 
         $prefix = "OMCP-{$batchNumber}{$yearSuffix}";
+        $studentId = $prefix . str($user->id)->padLeft(6, '0');
 
-        // Generate a unique 6-digit number (100000–999999)
-        $maxAttempts = 20;
-
-        for ($i = 0; $i < $maxAttempts; $i++) {
-            $number = random_int(100000, 999999);
-            $studentId = $prefix . $number;
-
-            if (!User::where('student_id', $studentId)->exists()) {
-                return $studentId;
-            }
-        }
-
-        // Fallback: find the next available number sequentially
-        $lastId = User::where('student_id', 'like', "{$prefix}%")
-            ->orderByDesc('student_id')
-            ->value('student_id');
-
-        $nextNumber = $lastId
-            ? ((int) substr($lastId, -6)) + 1
-            : 100000;
-
-        $finalId = $prefix . str_pad((string) $nextNumber, 6, '0', STR_PAD_LEFT);
-        return $finalId;
+        return $studentId;
     }
 
     /**
