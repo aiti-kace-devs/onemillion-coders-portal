@@ -33,44 +33,50 @@ class StatamicEntryApiController extends Controller
         $fields = $request->input('fields') ? explode(',', $request->input('fields')) : null;
         $includeRelated = $request->input('include_related') ? explode(',', $request->input('include_related')) : null;
 
-        // Build the query
-        $query = Entry::query()->where('collection', $collection);
+        $cacheKey = 'entries_' . $collection . '_' . $limit . '_' . $page . '_' . ($fields ? implode(',', $fields) : 'all') . '_' . ($includeRelated ? implode(',', $includeRelated) : 'none');
 
-        // Apply pagination
-        $entries = $query->paginate($limit, ['*'], 'page', $page);
+        $responseData = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($collection, $limit, $page, $fields, $includeRelated) {
+            // Build the query
+            $query = Entry::query()->where('collection', $collection);
 
-        // Transform entries with related data
-        $data = $entries->getCollection()->map(function ($entry) use ($fields, $includeRelated) {
-            $entryData = $this->transformEntry($entry, $fields);
+            // Apply pagination
+            $entries = $query->paginate($limit, ['*'], 'page', $page);
 
-            // Include related entries if requested
-            if ($includeRelated) {
-                $related = $this->getRelatedEntries($entry, $includeRelated);
-                if ($related instanceof \Illuminate\Support\Collection) {
-                    $related = $related->toArray();
+            // Transform entries with related data
+            $data = $entries->getCollection()->map(function ($entry) use ($fields, $includeRelated) {
+                $entryData = $this->transformEntry($entry, $fields);
+
+                // Include related entries if requested
+                if ($includeRelated) {
+                    $related = $this->getRelatedEntries($entry, $includeRelated);
+                    if ($related instanceof \Illuminate\Support\Collection) {
+                        $related = $related->toArray();
+                    }
+                    $entryData = array_merge($entryData, $related);
                 }
-                $entryData = array_merge($entryData, $related);
-            }
 
-            return $entryData;
+                return $entryData;
+            });
+
+            return [
+                'data' => $data,
+                'pagination' => [
+                    'current_page' => $entries->currentPage(),
+                    'last_page' => $entries->lastPage(),
+                    'per_page' => $entries->perPage(),
+                    'total' => $entries->total(),
+                    'from' => $entries->firstItem(),
+                    'to' => $entries->lastItem(),
+                ],
+                'meta' => [
+                    'collection' => $collection,
+                    'fields' => $fields,
+                    'include_related' => $includeRelated,
+                ]
+            ];
         });
 
-        return response()->json([
-            'data' => $data,
-            'pagination' => [
-                'current_page' => $entries->currentPage(),
-                'last_page' => $entries->lastPage(),
-                'per_page' => $entries->perPage(),
-                'total' => $entries->total(),
-                'from' => $entries->firstItem(),
-                'to' => $entries->lastItem(),
-            ],
-            'meta' => [
-                'collection' => $collection,
-                'fields' => $fields,
-                'include_related' => $includeRelated,
-            ]
-        ]);
+        return response()->json($responseData);
     }
 
     /**
@@ -83,23 +89,33 @@ class StatamicEntryApiController extends Controller
             'include_related' => 'nullable|string',
         ]);
 
-        $entry = Entry::find($id);
-
-        if (!$entry) {
-            return response()->json(['error' => 'Entry not found'], 404);
-        }
-
         $fields = $request->input('fields') ? explode(',', $request->input('fields')) : null;
         $includeRelated = $request->input('include_related') ? explode(',', $request->input('include_related')) : null;
 
-        $entryData = $this->transformEntry($entry, $fields);
+        $cacheKey = 'entry_' . $id . '_' . ($fields ? implode(',', $fields) : 'all') . '_' . ($includeRelated ? implode(',', $includeRelated) : 'none');
 
-        if ($includeRelated) {
-            $related = $this->getRelatedEntries($entry, $includeRelated);
-            if ($related instanceof \Illuminate\Support\Collection) {
-                $related = $related->toArray();
+        $entryData = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($id, $fields, $includeRelated) {
+            $entry = Entry::find($id);
+
+            if (!$entry) {
+                return null; // Indicate not found
             }
-            $entryData = array_merge($entryData, $related);
+
+            $entryData = $this->transformEntry($entry, $fields);
+
+            if ($includeRelated) {
+                $related = $this->getRelatedEntries($entry, $includeRelated);
+                if ($related instanceof \Illuminate\Support\Collection) {
+                    $related = $related->toArray();
+                }
+                $entryData = array_merge($entryData, $related);
+            }
+
+            return $entryData;
+        });
+
+        if ($entryData === null) {
+            return response()->json(['error' => 'Entry not found'], 404);
         }
 
         return response()->json(['data' => $entryData]);
@@ -461,12 +477,15 @@ class StatamicEntryApiController extends Controller
      */
     public function collections(): JsonResponse
     {
-        $collections = Collection::all()->map(function ($collection) {
-            return [
-                'handle' => $collection->handle(),
-                'title' => $collection->title(),
-                'entries_count' => $collection->queryEntries()->count(),
-            ];
+
+        $collections = Cache::flexible('collections', \cache_flexible_ttl(), function () {
+            return Collection::all()->map(function ($collection) {
+                return [
+                    'handle' => $collection->handle(),
+                    'title' => $collection->title(),
+                    'entries_count' => $collection->queryEntries()->count(),
+                ];
+            });
         });
 
         return response()->json(['data' => $collections]);
@@ -487,35 +506,41 @@ class StatamicEntryApiController extends Controller
         $collection = $request->input('collection');
         $limit = $request->input('limit', 25);
 
-        $entriesQuery = Entry::query();
+        $cacheKey = 'search_' . md5($query) . '_' . ($collection ?: 'all') . '_' . $limit;
 
-        if ($collection) {
-            $entriesQuery->where('collection', $collection);
-        }
+        $responseData = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($query, $collection, $limit) {
+            $entriesQuery = Entry::query();
 
-        // Search in title and content fields
-        $entries = $entriesQuery->where(function ($q) use ($query) {
-            $q->where('title', 'like', "%{$query}%")
-                ->orWhere('content', 'like', "%{$query}%");
-        })->limit($limit)->get();
+            if ($collection) {
+                $entriesQuery->where('collection', $collection);
+            }
 
-        $data = $entries->map(function ($entry) {
+            // Search in title and content fields
+            $entries = $entriesQuery->where(function ($q) use ($query) {
+                $q->where('title', 'like', "%{$query}%")
+                    ->orWhere('content', 'like', "%{$query}%");
+            })->limit($limit)->get();
+
+            $data = $entries->map(function ($entry) {
+                return [
+                    'id' => $entry->id(),
+                    'title' => $entry->get('title'),
+                    'slug' => $entry->slug(),
+                    'url' => $entry->url(),
+                    'collection' => $entry->collection()->handle(),
+                ];
+            });
+
             return [
-                'id' => $entry->id(),
-                'title' => $entry->get('title'),
-                'slug' => $entry->slug(),
-                'url' => $entry->url(),
-                'collection' => $entry->collection()->handle(),
+                'data' => $data,
+                'meta' => [
+                    'query' => $query,
+                    'total' => $entries->count(),
+                ]
             ];
         });
 
-        return response()->json([
-            'data' => $data,
-            'meta' => [
-                'query' => $query,
-                'total' => $entries->count(),
-            ]
-        ]);
+        return response()->json($responseData);
     }
 
     /**

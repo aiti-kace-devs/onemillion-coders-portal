@@ -9,6 +9,7 @@ use App\Helpers\GeneralFieldsAndColumns;
 use App\Helpers\ProgrammeFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
+use App\Helpers\MediaHelper;
 use App\Models\CourseModule;
 use App\Models\CourseCertification;
 use App\Helpers\CrudListHelper;
@@ -111,6 +112,7 @@ class ProgrammeCrudController extends CrudController
             'type' => 'view',
             'view' => 'admin.status_toggle.status_column',
         ]);
+        MediaHelper::previewMediaImagesFile('image', 'Image');
         FilterHelper::addDateRangeFilter('start_date', 'Start Date');
         $this->addOngoingCoursesFilter('Ongoing Programmes');
         FilterHelper::addBooleanFilter('status', 'Status');
@@ -166,6 +168,7 @@ class ProgrammeCrudController extends CrudController
     public function store()
     {
         $this->crud->setRequest($this->handleOverviewData());
+        $this->normalizeImagePath();
         $response = $this->traitStore();
         $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
         $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
@@ -185,6 +188,7 @@ class ProgrammeCrudController extends CrudController
 
         $programme = $this->crud->getCurrentEntry();
         $this->handleProgrammeTags($programme, $data['tags']);
+        $this->normalizeImagePath();
         $response = $this->traitUpdate();
         $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
         $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
@@ -236,7 +240,31 @@ class ProgrammeCrudController extends CrudController
         $programme->tags()->sync($tags);
     }
 
+    protected function normalizeImagePath()
+    {
+        $request = $this->crud->getRequest();
+        $imagePath = $request->input('image');
 
+        if (empty($imagePath)) {
+            return;
+        }
+
+        // If it already has https://, don't process further
+        if (strpos($imagePath, 'https://') === 0 || strpos($imagePath, 'http://') === 0) {
+            return;
+        }
+
+        // Strip "Google Cloud Storage/" or similar disk aliases
+        if (strpos($imagePath, CLOUD_STORAGE_ALIAS . '/') === 0) {
+            $imagePath = substr($imagePath, strlen(CLOUD_STORAGE_ALIAS . '/'));
+        }
+
+        // Build the full CDN URL
+        $cdnUrl = rtrim(config('filesystems.cdn_url'), '/');
+        $fullUrl = $cdnUrl . '/' . ltrim($imagePath, '/');
+
+        $request->merge(['image' => $fullUrl]);
+    }
 
     protected function handleOverviewData()
     {

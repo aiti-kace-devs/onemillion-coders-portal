@@ -135,7 +135,7 @@ const tieredTestTaken = computed(() => {
                             </Link>
 
                             <Link
-                                v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS && config.SHOW_RESULTS_TO_STUDENTS"
+                                v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
                                 :href="route('student.results')"
                                 class="block h-full"
                             >

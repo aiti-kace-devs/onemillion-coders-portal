@@ -107,14 +107,7 @@ export default function CoursesPage({ params }) {
       district: selectedDistrict?.id || null,
       centre: selectedCentre?.id || null,
     });
-  }, [
-    step,
-    selectedRegion,
-    selectedDistrict,
-    selectedCentre,
-    userStatus,
-    updateQueryParams,
-  ]);
+  }, [step, selectedRegion, selectedDistrict, selectedCentre, userStatus, updateQueryParams]);
 
   // Restore progress from query params
   const restoreFromParams = async () => {
@@ -138,26 +131,16 @@ export default function CoursesPage({ params }) {
         setAvailableDistricts(districts);
 
         if (districtId && savedStep >= 3) {
-          const district = districts?.districts?.find(
-            (d) => String(d.id) === districtId,
-          );
-          if (!district) {
-            setStep(2);
-            return;
-          }
+          const district = districts?.districts?.find((d) => String(d.id) === districtId);
+          if (!district) { setStep(2); return; }
           setSelectedDistrict(district);
 
           const centres = await getCentresByDistrict(district.id, token);
           setAvailableCenters(centres);
 
           if (centreId && savedStep >= 4) {
-            const centre = centres?.centres?.find(
-              (c) => String(c.id) === centreId,
-            );
-            if (!centre) {
-              setStep(3);
-              return;
-            }
+            const centre = centres?.centres?.find((c) => String(c.id) === centreId);
+            if (!centre) { setStep(3); return; }
             setSelectedCentre(centre);
 
             const data = await getCourseMatchQuestions("Choice", token);
@@ -179,9 +162,7 @@ export default function CoursesPage({ params }) {
         setVerificationError(null);
         const data = await checkUserStatus(id, token);
         if (data?.success === false) {
-          setVerificationError(
-            data.message || "User not found. Please register first.",
-          );
+          setVerificationError(data.message || "User not found. Please register first.");
           setCheckingRecommendations(false);
           return;
         }
@@ -218,7 +199,7 @@ export default function CoursesPage({ params }) {
         setVerificationError(
           err.response?.status === 404
             ? "User not found. Please register first."
-            : "Unable to verify your account. Please try again.",
+            : "Unable to verify your account. Please try again."
         );
         setCheckingRecommendations(false);
       } finally {
@@ -242,39 +223,33 @@ export default function CoursesPage({ params }) {
     }
   };
 
-  const fetchDistricts = useCallback(
-    async (branchId) => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getDistrictsByBranch(branchId, token);
-        setAvailableDistricts(data);
-      } catch (err) {
-        setError("Failed to load districts. Please try again.");
-        console.error("Error fetching districts:", err);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [token],
-  );
+  const fetchDistricts = useCallback(async (branchId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getDistrictsByBranch(branchId, token);
+      setAvailableDistricts(data);
+    } catch (err) {
+      setError("Failed to load districts. Please try again.");
+      console.error("Error fetching districts:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
-  const fetchCenters = useCallback(
-    async (districtId) => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getCentresByDistrict(districtId, token);
-        setAvailableCenters(data);
-      } catch (err) {
-        setError("Failed to load centers. Please try again.");
-        console.error("Error fetching centers:", err);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [token],
-  );
+  const fetchCenters = useCallback(async (districtId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getCentresByDistrict(districtId, token);
+      setAvailableCenters(data);
+    } catch (err) {
+      setError("Failed to load centers. Please try again.");
+      console.error("Error fetching centers:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   const fetchQuestions = useCallback(async () => {
     try {
@@ -424,22 +399,14 @@ export default function CoursesPage({ params }) {
       try {
         setEnrollSubmitting(true);
         setError(null);
-        await confirmCourse(
-          {
-            userId: id,
-            course_id: courseId,
-            support: false,
-            ...(centreId && { centre_id: centreId }),
-          },
-          token,
-        );
+        await confirmCourse({
+          userId: id,
+          course_id: courseId,
+          support: false,
+          ...(centreId && { centre_id: centreId }),
+        }, token);
         setEnrollSuccess(true);
-        updateQueryParams({
-          step: null,
-          region: null,
-          district: null,
-          centre: null,
-        });
+        updateQueryParams({ step: null, region: null, district: null, centre: null });
       } catch (err) {
         const apiErrors = err.response?.data?.errors;
         const apiMessage = err.response?.data?.message;
@@ -459,22 +426,14 @@ export default function CoursesPage({ params }) {
       setEnrollSubmitting(true);
       setError(null);
       const centreId = enrollingCentreId || selectedCentre?.id;
-      await confirmCourse(
-        {
-          userId: id,
-          course_id: enrollingCourseId,
-          support: needsSupport === true,
-          ...(centreId && { centre_id: centreId }),
-        },
-        token,
-      );
+      await confirmCourse({
+        userId: id,
+        course_id: enrollingCourseId,
+        support: needsSupport === true,
+        ...(centreId && { centre_id: centreId }),
+      }, token);
       setEnrollSuccess(true);
-      updateQueryParams({
-        step: null,
-        region: null,
-        district: null,
-        centre: null,
-      });
+      updateQueryParams({ step: null, region: null, district: null, centre: null });
       setEnrollingCourseId(null);
       setEnrollingCentreId(null);
     } catch (err) {
@@ -492,8 +451,7 @@ export default function CoursesPage({ params }) {
 
   const goToStep = (targetStep) => {
     // Allow going forward to step 4 if quiz progress exists
-    const canGoForward =
-      targetStep === 4 && selectedCentre && questions.length > 0;
+    const canGoForward = targetStep === 4 && selectedCentre && questions.length > 0;
     if (targetStep < step || canGoForward) {
       setStep(targetStep);
       setSearchQuery("");
@@ -518,6 +476,7 @@ export default function CoursesPage({ params }) {
   const stepLabels = ["Region", "District", "Center", "Course"];
   const activeQuestion = questions[currentQuestion];
 
+
   // Show verification state before allowing access
   if (verifying || checkingRecommendations) {
     return (
@@ -525,9 +484,7 @@ export default function CoursesPage({ params }) {
         <div className="text-center px-4">
           <div className="w-10 h-10 border-3 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-600 text-sm">
-            {verifying
-              ? "Verifying your account..."
-              : "Checking your courses..."}
+            {verifying ? "Verifying your account..." : "Checking your courses..."}
           </p>
         </div>
       </div>
@@ -545,6 +502,7 @@ export default function CoursesPage({ params }) {
             className="w-full max-w-md"
           >
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+
               <div className="px-6 py-8 sm:px-8 sm:py-10 text-center">
                 {/* Icon */}
                 <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-5">
@@ -572,6 +530,7 @@ export default function CoursesPage({ params }) {
                 </div>
               </div>
             </div>
+
           </motion.div>
         </div>
       </div>
@@ -618,11 +577,7 @@ export default function CoursesPage({ params }) {
               transition={{ duration: 0.2 }}
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
               onClick={(e) => {
-                if (
-                  e.target === e.currentTarget &&
-                  !enrollSubmitting &&
-                  !enrollSuccess
-                ) {
+                if (e.target === e.currentTarget && !enrollSubmitting && !enrollSuccess) {
                   setEnrollingCourseId(null);
                   setEnrollingCentreId(null);
                   setNeedsSupport(null);
@@ -646,10 +601,7 @@ export default function CoursesPage({ params }) {
                     </h2>
                     <p className="text-gray-500 text-sm sm:text-base mb-6">
                       You have been successfully enrolled in{" "}
-                      <span className="font-semibold text-gray-700">
-                        {enrolledCourseName}
-                      </span>
-                      .
+                      <span className="font-semibold text-gray-700">{enrolledCourseName}</span>.
                     </p>
                     <button
                       onClick={() => {
@@ -680,16 +632,12 @@ export default function CoursesPage({ params }) {
                         One more thing
                       </h2>
                       <p className="text-gray-500 text-xs sm:text-sm">
-                        Enrolling in{" "}
-                        <span className="font-medium text-gray-700">
-                          {enrolledCourseName}
-                        </span>
+                        Enrolling in <span className="font-medium text-gray-700">{enrolledCourseName}</span>
                       </p>
                     </div>
 
                     <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-4">
-                      Do you require any special support or accessibility
-                      assistance?
+                      Do you require any special support or accessibility assistance?
                     </h3>
 
                     {error && (
@@ -701,21 +649,19 @@ export default function CoursesPage({ params }) {
                     <div className="grid grid-cols-2 gap-3 mb-6">
                       <button
                         onClick={() => setNeedsSupport(true)}
-                        className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                          needsSupport === true
-                            ? "bg-gray-900 text-white border-gray-900"
-                            : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                        }`}
+                        className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${needsSupport === true
+                          ? "bg-gray-900 text-white border-gray-900"
+                          : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                          }`}
                       >
                         Yes, I do
                       </button>
                       <button
                         onClick={() => setNeedsSupport(false)}
-                        className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                          needsSupport === false
-                            ? "bg-gray-900 text-white border-gray-900"
-                            : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                        }`}
+                        className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${needsSupport === false
+                          ? "bg-gray-900 text-white border-gray-900"
+                          : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                          }`}
                       >
                         No, thanks
                       </button>
@@ -735,11 +681,10 @@ export default function CoursesPage({ params }) {
                       <button
                         onClick={handleEnrollSubmit}
                         disabled={needsSupport === null || enrollSubmitting}
-                        className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${
-                          needsSupport !== null && !enrollSubmitting
-                            ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
-                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        }`}
+                        className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${needsSupport !== null && !enrollSubmitting
+                          ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          }`}
                       >
                         {enrollSubmitting ? (
                           <>
@@ -792,8 +737,7 @@ export default function CoursesPage({ params }) {
               {previousRecommendations.title}
             </h2>
             <p className="text-gray-500 text-xs sm:text-base max-w-lg mx-auto">
-              {previousRecommendations.description ||
-                "Based on your previous preferences, here are recommended courses that best align with your goals"}
+              {previousRecommendations.description || "Based on your previous preferences, here are recommended courses that best align with your goals"}
             </p>
           </div>
 
@@ -805,10 +749,7 @@ export default function CoursesPage({ params }) {
                 className="rounded-lg bg-white border border-gray-200 overflow-hidden"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{
-                  duration: 0.2,
-                  delay: Math.min(index * 0.04, 0.2),
-                }}
+                transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
               >
                 <div className="relative h-28 sm:h-32 bg-gray-100">
                   {course.image && !imageErrors[course.id] ? (
@@ -817,12 +758,7 @@ export default function CoursesPage({ params }) {
                       alt={course.title}
                       fill
                       className="object-cover"
-                      onError={() =>
-                        setImageErrors((prev) => ({
-                          ...prev,
-                          [course.id]: true,
-                        }))
-                      }
+                      onError={() => setImageErrors((prev) => ({ ...prev, [course.id]: true }))}
                     />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -841,11 +777,10 @@ export default function CoursesPage({ params }) {
                   <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
                     {course.match_percentage && (
                       <span
-                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${
-                          parseInt(course.match_percentage.split("%")[0]) >= 70
-                            ? "bg-green-50/90 text-green-700"
-                            : "bg-yellow-50/90 text-yellow-700"
-                        }`}
+                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${parseInt(course.match_percentage.split("%")[0]) >= 70
+                          ? "bg-green-50/90 text-green-700"
+                          : "bg-yellow-50/90 text-yellow-700"
+                          }`}
                       >
                         <FiStar className="w-2.5 h-2.5" />
                         {course.match_percentage}
@@ -865,19 +800,10 @@ export default function CoursesPage({ params }) {
                   </h3>
                   {course.sub_title && (
                     <div className="flex items-center justify-between gap-1 mb-2 transition-colors">
-                      <div className="text-sm text-gray-600 line-clamp-1">
-                        {course.sub_title}
-                      </div>
+                      <div className="text-sm text-gray-600 line-clamp-1">{course.sub_title}</div>
                       {userStatus && (
-                        <a
-                          href={`/programmes/${course.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 mb-2 transition-colors"
-                        >
-                          <span className="text-[10px] sm:text-[11px] font-medium text-green-700">
-                            View Details
-                          </span>
+                        <a href={`/programmes/${course.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 mb-2 transition-colors">
+                          <span className="text-[10px] sm:text-[11px] font-medium text-green-700">View Details</span>
                           <FiInfo className="w-2.5 h-2.5 text-green-700" />
                         </a>
                       )}
@@ -886,9 +812,7 @@ export default function CoursesPage({ params }) {
                   {course.mode_of_delivery && (
                     <div className="flex items-center gap-1 mb-2">
                       <FiGlobe className="w-2.5 h-2.5 text-blue-600" />
-                      <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">
-                        {course.mode_of_delivery}
-                      </span>
+                      <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">{course.mode_of_delivery}</span>
                     </div>
                   )}
                   <button
@@ -962,48 +886,34 @@ export default function CoursesPage({ params }) {
                 <React.Fragment key={num}>
                   <button
                     onClick={() => goToStep(num)}
-                    disabled={
-                      num >= step &&
-                      !(num === 4 && selectedCentre && questions.length > 0)
-                    }
+                    disabled={num >= step && !(num === 4 && selectedCentre && questions.length > 0)}
                     className="flex items-center gap-1 sm:gap-2 group flex-shrink-0"
                   >
                     <div
-                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${
-                        step > num ||
-                        (num === 4 &&
-                          step === 3 &&
-                          selectedCentre &&
-                          questions.length > 0)
-                          ? "bg-green-500 text-white cursor-pointer group-hover:bg-green-600"
-                          : step === num
-                            ? "bg-yellow-400 text-gray-900 ring-2 sm:ring-4 ring-yellow-100"
-                            : "bg-gray-200 text-gray-400"
-                      }`}
+                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${step > num || (num === 4 && step === 3 && selectedCentre && questions.length > 0)
+                        ? "bg-green-500 text-white cursor-pointer group-hover:bg-green-600"
+                        : step === num
+                          ? "bg-yellow-400 text-gray-900 ring-2 sm:ring-4 ring-yellow-100"
+                          : "bg-gray-200 text-gray-400"
+                        }`}
                     >
-                      {step > num ||
-                      (num === 4 &&
-                        step === 3 &&
-                        selectedCentre &&
-                        questions.length > 0) ? (
+                      {step > num || (num === 4 && step === 3 && selectedCentre && questions.length > 0) ? (
                         <FiCheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                       ) : (
                         num
                       )}
                     </div>
                     <span
-                      className={`text-[10px] sm:text-xs font-medium transition-colors ${
-                        step >= num ? "text-gray-700" : "text-gray-400"
-                      }`}
+                      className={`text-[10px] sm:text-xs font-medium transition-colors ${step >= num ? "text-gray-700" : "text-gray-400"
+                        }`}
                     >
                       {stepLabels[num - 1]}
                     </span>
                   </button>
                   {num < 4 && (
                     <div
-                      className={`flex-1 h-0.5 rounded-full mx-1.5 sm:mx-3 transition-all duration-500 ${
-                        step > num ? "bg-green-400" : "bg-gray-200"
-                      }`}
+                      className={`flex-1 h-0.5 rounded-full mx-1.5 sm:mx-3 transition-all duration-500 ${step > num ? "bg-green-400" : "bg-gray-200"
+                        }`}
                     />
                   )}
                 </React.Fragment>
@@ -1024,9 +934,7 @@ export default function CoursesPage({ params }) {
                   className="flex items-center gap-1 sm:gap-1.5 hover:text-yellow-600 transition-colors py-0.5 min-w-0"
                 >
                   <FiMapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
-                  <span className="truncate max-w-[80px] sm:max-w-none">
-                    {selectedRegion.title}
-                  </span>
+                  <span className="truncate max-w-[80px] sm:max-w-none">{selectedRegion.title}</span>
                 </button>
               )}
               {selectedDistrict && (
@@ -1036,9 +944,7 @@ export default function CoursesPage({ params }) {
                     onClick={() => goToStep(2)}
                     className="flex items-center gap-1 sm:gap-1.5 hover:text-yellow-600 transition-colors py-0.5 min-w-0"
                   >
-                    <span className="truncate max-w-[80px] sm:max-w-none">
-                      {selectedDistrict.title}
-                    </span>
+                    <span className="truncate max-w-[80px] sm:max-w-none">{selectedDistrict.title}</span>
                   </button>
                 </>
               )}
@@ -1049,9 +955,7 @@ export default function CoursesPage({ params }) {
                     onClick={() => goToStep(3)}
                     className="flex items-center gap-1 sm:gap-1.5 hover:text-yellow-600 transition-colors py-0.5 min-w-0"
                   >
-                    <span className="truncate max-w-[80px] sm:max-w-none">
-                      {selectedCentre.title}
-                    </span>
+                    <span className="truncate max-w-[80px] sm:max-w-none">{selectedCentre.title}</span>
                   </button>
                 </>
               )}
@@ -1138,9 +1042,7 @@ export default function CoursesPage({ params }) {
                   <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
                     {allRegions
                       .filter((region) =>
-                        region.title
-                          .toLowerCase()
-                          .includes(searchQuery.toLowerCase()),
+                        region.title.toLowerCase().includes(searchQuery.toLowerCase())
                       )
                       .map((region, index) => (
                         <motion.button
@@ -1149,10 +1051,7 @@ export default function CoursesPage({ params }) {
                           className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          transition={{
-                            duration: 0.15,
-                            delay: Math.min(index * 0.02, 0.15),
-                          }}
+                          transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
                         >
                           <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
                             {region.title}
@@ -1160,16 +1059,14 @@ export default function CoursesPage({ params }) {
                         </motion.button>
                       ))}
                     {allRegions.filter((region) =>
-                      region.title
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase()),
+                      region.title.toLowerCase().includes(searchQuery.toLowerCase())
                     ).length === 0 && (
-                      <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
-                        <p className="text-gray-500 text-xs sm:text-sm">
-                          No regions match &ldquo;{searchQuery}&rdquo;
-                        </p>
-                      </div>
-                    )}
+                        <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
+                          <p className="text-gray-500 text-xs sm:text-sm">
+                            No regions match &ldquo;{searchQuery}&rdquo;
+                          </p>
+                        </div>
+                      )}
                   </div>
                 </>
               ) : (
@@ -1250,9 +1147,7 @@ export default function CoursesPage({ params }) {
                   <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
                     {availableDistricts.districts
                       .filter((district) =>
-                        district.title
-                          .toLowerCase()
-                          .includes(searchQuery.toLowerCase()),
+                        district.title.toLowerCase().includes(searchQuery.toLowerCase())
                       )
                       .map((district, index) => (
                         <motion.button
@@ -1261,10 +1156,7 @@ export default function CoursesPage({ params }) {
                           className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          transition={{
-                            duration: 0.15,
-                            delay: Math.min(index * 0.02, 0.15),
-                          }}
+                          transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
                         >
                           <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
                             {district.title}
@@ -1272,16 +1164,14 @@ export default function CoursesPage({ params }) {
                         </motion.button>
                       ))}
                     {availableDistricts.districts.filter((district) =>
-                      district.title
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase()),
+                      district.title.toLowerCase().includes(searchQuery.toLowerCase())
                     ).length === 0 && (
-                      <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
-                        <p className="text-gray-500 text-xs sm:text-sm">
-                          No districts match &ldquo;{searchQuery}&rdquo;
-                        </p>
-                      </div>
-                    )}
+                        <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
+                          <p className="text-gray-500 text-xs sm:text-sm">
+                            No districts match &ldquo;{searchQuery}&rdquo;
+                          </p>
+                        </div>
+                      )}
                   </div>
                 </>
               ) : (
@@ -1306,6 +1196,7 @@ export default function CoursesPage({ params }) {
                   </div>
                 )
               )}
+
             </motion.div>
           )}
 
@@ -1365,11 +1256,10 @@ export default function CoursesPage({ params }) {
                     <div className="mb-3 sm:mb-4">
                       <button
                         onClick={() => setFilterPwdFriendly(!filterPwdFriendly)}
-                        className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-sm font-medium border transition-all duration-200 ${
-                          filterPwdFriendly
-                            ? "bg-purple-50 border-purple-300 text-purple-700"
-                            : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
-                        }`}
+                        className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-sm font-medium border transition-all duration-200 ${filterPwdFriendly
+                          ? "bg-purple-50 border-purple-300 text-purple-700"
+                          : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                          }`}
                       >
                         <span>♿</span>
                         Accessibility friendly
@@ -1384,14 +1274,11 @@ export default function CoursesPage({ params }) {
                     {availableCenters.centres
                       .filter((c) => !filterPwdFriendly || c.is_pwd_friendly)
                       .filter((c) =>
-                        c.title
-                          .toLowerCase()
-                          .includes(searchQuery.toLowerCase()),
+                        c.title.toLowerCase().includes(searchQuery.toLowerCase())
                       )
                       .map((centre, index) => {
                         const accessibilityFeatures = [
-                          centre.wheelchair_accessible &&
-                            "Wheelchair accessible",
+                          centre.wheelchair_accessible && "Wheelchair accessible",
                           centre.has_access_ramp && "Access ramp",
                           centre.has_accessible_toilet && "Accessible toilet",
                           centre.has_elevator && "Elevator",
@@ -1399,9 +1286,7 @@ export default function CoursesPage({ params }) {
                           centre.supports_visually_impaired && "Visual support",
                         ].filter(Boolean);
 
-                        const hasExtras =
-                          centre.is_pwd_friendly ||
-                          accessibilityFeatures.length > 0;
+                        const hasExtras = centre.is_pwd_friendly || accessibilityFeatures.length > 0;
 
                         return (
                           <motion.button
@@ -1410,17 +1295,10 @@ export default function CoursesPage({ params }) {
                             className="w-full p-3 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.99] group"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{
-                              duration: 0.15,
-                              delay: Math.min(index * 0.02, 0.15),
-                            }}
+                            transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
                           >
-                            <div
-                              className={`flex justify-between gap-2 ${hasExtras ? "items-start" : "items-center"}`}
-                            >
-                              <div
-                                className={`flex gap-2.5 sm:gap-3 min-w-0 flex-1 ${hasExtras ? "items-start" : "items-center"}`}
-                              >
+                            <div className={`flex justify-between gap-2 ${hasExtras ? "items-start" : "items-center"}`}>
+                              <div className={`flex gap-2.5 sm:gap-3 min-w-0 flex-1 ${hasExtras ? "items-start" : "items-center"}`}>
                                 {hasExtras ? (
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2">
@@ -1435,16 +1313,14 @@ export default function CoursesPage({ params }) {
                                     </div>
                                     {accessibilityFeatures.length > 0 && (
                                       <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-1.5">
-                                        {accessibilityFeatures.map(
-                                          (feature) => (
-                                            <span
-                                              key={feature}
-                                              className="text-[9px] sm:text-[11px] px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full"
-                                            >
-                                              {feature}
-                                            </span>
-                                          ),
-                                        )}
+                                        {accessibilityFeatures.map((feature) => (
+                                          <span
+                                            key={feature}
+                                            className="text-[9px] sm:text-[11px] px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full"
+                                          >
+                                            {feature}
+                                          </span>
+                                        ))}
                                       </div>
                                     )}
                                   </div>
@@ -1478,9 +1354,7 @@ export default function CoursesPage({ params }) {
                       availableCenters.centres
                         .filter((c) => !filterPwdFriendly || c.is_pwd_friendly)
                         .filter((c) =>
-                          c.title
-                            .toLowerCase()
-                            .includes(searchQuery.toLowerCase()),
+                          c.title.toLowerCase().includes(searchQuery.toLowerCase())
                         ).length === 0 && (
                         <div className="text-center py-8 bg-white rounded-xl border border-gray-200">
                           <p className="text-gray-500 text-xs sm:text-sm">
@@ -1512,6 +1386,7 @@ export default function CoursesPage({ params }) {
                   </div>
                 )
               )}
+
             </motion.div>
           )}
 
@@ -1529,8 +1404,7 @@ export default function CoursesPage({ params }) {
                   Let&apos;s match you to a course
                 </h2>
                 <p className="text-gray-500 text-xs sm:text-base mt-0.5 sm:mt-1">
-                  Answer a few questions so we can recommend the right courses
-                  for you
+                  Answer a few questions so we can recommend the right courses for you
                 </p>
               </div>
 
@@ -1569,7 +1443,7 @@ export default function CoursesPage({ params }) {
                       </span>
                       <span className="text-[10px] sm:text-xs text-gray-400">
                         {Math.round(
-                          ((currentQuestion + 1) / questions.length) * 100,
+                          ((currentQuestion + 1) / questions.length) * 100
                         )}
                         %
                       </span>
@@ -1578,9 +1452,8 @@ export default function CoursesPage({ params }) {
                       <div
                         className="bg-yellow-400 h-1.5 rounded-full transition-all duration-500 ease-out"
                         style={{
-                          width: `${
-                            ((currentQuestion + 1) / questions.length) * 100
-                          }%`,
+                          width: `${((currentQuestion + 1) / questions.length) * 100
+                            }%`,
                         }}
                       />
                     </div>
@@ -1602,7 +1475,7 @@ export default function CoursesPage({ params }) {
                             {
                               className:
                                 "w-5 h-5 sm:w-6 sm:h-6 text-yellow-600",
-                            },
+                            }
                           )}
                         </div>
                         <h2 className="text-base sm:text-2xl font-bold text-gray-900 mb-1.5 sm:mb-3 leading-tight">
@@ -1625,38 +1498,31 @@ export default function CoursesPage({ params }) {
                         {activeQuestion.course_match_options?.map(
                           (option, index) => {
                             const isSelected = activeQuestion.is_multiple_select
-                              ? (answers[activeQuestion.id] || []).includes(
-                                  option.id,
-                                )
+                              ? (answers[activeQuestion.id] || []).includes(option.id)
                               : answers[activeQuestion.id] === option.id;
                             return (
                               <motion.button
                                 key={option.id}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                transition={{
-                                  duration: 0.15,
-                                  delay: Math.min(index * 0.03, 0.12),
-                                }}
+                                transition={{ duration: 0.15, delay: Math.min(index * 0.03, 0.12) }}
                                 onClick={() =>
                                   handleAnswer(activeQuestion.id, option.id)
                                 }
-                                className={`relative p-4 sm:p-6 rounded-xl text-left transition-all duration-200 border-2 ${
-                                  isSelected
-                                    ? "bg-gray-900 text-white border-gray-900"
-                                    : "bg-white border-gray-200 hover:border-yellow-400 active:scale-[0.98]"
-                                }`}
+                                className={`relative p-4 sm:p-6 rounded-xl text-left transition-all duration-200 border-2 ${isSelected
+                                  ? "bg-gray-900 text-white border-gray-900"
+                                  : "bg-white border-gray-200 hover:border-yellow-400 active:scale-[0.98]"
+                                  }`}
                               >
                                 <div className="flex items-start gap-3">
                                   {/* Checkbox / Radio indicator */}
                                   <div className="flex-shrink-0 mt-0.5">
                                     {activeQuestion.is_multiple_select ? (
                                       <div
-                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
-                                          isSelected
-                                            ? "bg-white border-white"
-                                            : "border-gray-300"
-                                        }`}
+                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${isSelected
+                                          ? "bg-white border-white"
+                                          : "border-gray-300"
+                                          }`}
                                       >
                                         {isSelected && (
                                           <FiCheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-900" />
@@ -1664,11 +1530,10 @@ export default function CoursesPage({ params }) {
                                       </div>
                                     ) : (
                                       <div
-                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                          isSelected
-                                            ? "border-white"
-                                            : "border-gray-300"
-                                        }`}
+                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
+                                          ? "border-white"
+                                          : "border-gray-300"
+                                          }`}
                                       >
                                         {isSelected && (
                                           <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white" />
@@ -1682,11 +1547,10 @@ export default function CoursesPage({ params }) {
                                     </h3>
                                     {option.description && (
                                       <p
-                                        className={`text-xs sm:text-sm leading-relaxed ${
-                                          isSelected
-                                            ? "text-gray-300"
-                                            : "text-gray-500"
-                                        }`}
+                                        className={`text-xs sm:text-sm leading-relaxed ${isSelected
+                                          ? "text-gray-300"
+                                          : "text-gray-500"
+                                          }`}
                                       >
                                         {option.description}
                                       </p>
@@ -1695,7 +1559,7 @@ export default function CoursesPage({ params }) {
                                 </div>
                               </motion.button>
                             );
-                          },
+                          }
                         )}
                       </div>
                     </motion.div>
@@ -1722,18 +1586,13 @@ export default function CoursesPage({ params }) {
                     ) : activeQuestion.is_multiple_select ? (
                       <button
                         onClick={handleNextQuestion}
-                        disabled={
-                          (answers[activeQuestion.id] || []).length === 0
-                        }
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                          (answers[activeQuestion.id] || []).length > 0
-                            ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
-                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        }`}
+                        disabled={(answers[activeQuestion.id] || []).length === 0}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${(answers[activeQuestion.id] || []).length > 0
+                          ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          }`}
                       >
-                        {currentQuestion < questions.length - 1
-                          ? "Next"
-                          : "Get Results"}
+                        {currentQuestion < questions.length - 1 ? "Next" : "Get Results"}
                         <FiChevronRight className="w-4 h-4" />
                       </button>
                     ) : null}
@@ -1783,11 +1642,7 @@ export default function CoursesPage({ params }) {
                     transition={{ duration: 0.2 }}
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
                     onClick={(e) => {
-                      if (
-                        e.target === e.currentTarget &&
-                        !enrollSubmitting &&
-                        !enrollSuccess
-                      ) {
+                      if (e.target === e.currentTarget && !enrollSubmitting && !enrollSuccess) {
                         setEnrollingCourseId(null);
                         setNeedsSupport(null);
                       }
@@ -1810,10 +1665,7 @@ export default function CoursesPage({ params }) {
                           </h2>
                           <p className="text-gray-500 text-sm sm:text-base mb-6">
                             You have been successfully enrolled in{" "}
-                            <span className="font-semibold text-gray-700">
-                              {enrolledCourseName}
-                            </span>
-                            .
+                            <span className="font-semibold text-gray-700">{enrolledCourseName}</span>.
                           </p>
                           <button
                             onClick={() => {
@@ -1842,35 +1694,29 @@ export default function CoursesPage({ params }) {
                               One more thing
                             </h2>
                             <p className="text-gray-500 text-xs sm:text-sm">
-                              Enrolling in{" "}
-                              <span className="font-medium text-gray-700">
-                                {enrolledCourseName}
-                              </span>
+                              Enrolling in <span className="font-medium text-gray-700">{enrolledCourseName}</span>
                             </p>
                           </div>
 
                           <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-4">
-                            Do you require any special support or accessibility
-                            assistance?
+                            Do you require any special support or accessibility assistance?
                           </h3>
                           <div className="grid grid-cols-2 gap-3 mb-6">
                             <button
                               onClick={() => setNeedsSupport(true)}
-                              className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                                needsSupport === true
-                                  ? "bg-gray-900 text-white border-gray-900"
-                                  : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                              }`}
+                              className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${needsSupport === true
+                                ? "bg-gray-900 text-white border-gray-900"
+                                : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                                }`}
                             >
                               Yes, I do
                             </button>
                             <button
                               onClick={() => setNeedsSupport(false)}
-                              className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                                needsSupport === false
-                                  ? "bg-gray-900 text-white border-gray-900"
-                                  : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                              }`}
+                              className={`p-3 sm:p-4 rounded-xl border-2 text-sm font-medium transition-all ${needsSupport === false
+                                ? "bg-gray-900 text-white border-gray-900"
+                                : "bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                                }`}
                             >
                               No, thanks
                             </button>
@@ -1888,14 +1734,11 @@ export default function CoursesPage({ params }) {
                             </button>
                             <button
                               onClick={handleEnrollSubmit}
-                              disabled={
-                                needsSupport === null || enrollSubmitting
-                              }
-                              className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${
-                                needsSupport !== null && !enrollSubmitting
-                                  ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
-                                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                              }`}
+                              disabled={needsSupport === null || enrollSubmitting}
+                              className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${needsSupport !== null && !enrollSubmitting
+                                ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                }`}
                             >
                               {enrollSubmitting ? (
                                 <>
@@ -1936,10 +1779,7 @@ export default function CoursesPage({ params }) {
                       className="rounded-lg bg-white border border-gray-200 overflow-hidden"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{
-                        duration: 0.2,
-                        delay: Math.min(index * 0.04, 0.2),
-                      }}
+                      transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
                     >
                       <div className="relative h-28 sm:h-32 bg-gray-100">
                         {course.image && !imageErrors[course.id] ? (
@@ -1948,12 +1788,7 @@ export default function CoursesPage({ params }) {
                             alt={course.title}
                             fill
                             className="object-cover"
-                            onError={() =>
-                              setImageErrors((prev) => ({
-                                ...prev,
-                                [course.id]: true,
-                              }))
-                            }
+                            onError={() => setImageErrors((prev) => ({ ...prev, [course.id]: true }))}
                           />
                         ) : (
                           <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -1972,11 +1807,10 @@ export default function CoursesPage({ params }) {
                         <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
                           {course.match_percentage != null && (
                             <span
-                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${
-                                course.match_percentage.split("%")[0] >= 70
-                                  ? "bg-green-50/90 text-green-700"
-                                  : "bg-yellow-50/90 text-yellow-700"
-                              }`}
+                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${course.match_percentage.split("%")[0] >= 70
+                                ? "bg-green-50/90 text-green-700"
+                                : "bg-yellow-50/90 text-yellow-700"
+                                }`}
                             >
                               <FiStar className="w-2.5 h-2.5" />
                               {course.match_percentage}
@@ -2003,9 +1837,7 @@ export default function CoursesPage({ params }) {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1 mb-2">
                               <FiGlobe className="w-2.5 h-2.5 text-blue-600" />
-                              <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">
-                                {course.mode_of_delivery}
-                              </span>
+                              <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">{course.mode_of_delivery}</span>
                             </div>
                             {userStatus && (
                               <a
@@ -2014,9 +1846,7 @@ export default function CoursesPage({ params }) {
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1 mb-2 transition-colors"
                               >
-                                <span className="text-[10px] sm:text-[11px] font-medium text-green-700">
-                                  View Details
-                                </span>
+                                <span className="text-[10px] sm:text-[11px] font-medium text-green-700">View Details</span>
                                 <FiInfo className="w-2.5 h-2.5 text-green-700" />
                               </a>
                             )}
@@ -2058,11 +1888,7 @@ export default function CoursesPage({ params }) {
               {/* Actions */}
               <div className="mt-8 sm:mt-10 flex justify-center">
                 <Button
-                  onClick={() =>
-                    router.push(
-                      `/programmes?user_id=${id}${selectedCentre ? `&centre_id=${selectedCentre.id}` : ""}`,
-                    )
-                  }
+                  onClick={() => router.push(`/programmes?user_id=${id}${selectedCentre ? `&centre_id=${selectedCentre.id}` : ''}`)}
                   className="min-h-[44px]"
                 >
                   View All Courses

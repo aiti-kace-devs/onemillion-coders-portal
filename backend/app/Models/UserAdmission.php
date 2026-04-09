@@ -43,7 +43,22 @@ class UserAdmission extends Model
 
     public function courseSession()
     {
+        return $this->sessionRecord();
+    }
+
+    public function sessionRecord()
+    {
         return $this->belongsTo(CourseSession::class, 'session');
+    }
+
+    public function courseSessionOnly()
+    {
+        return $this->sessionRecord()->where('session_type', CourseSession::TYPE_COURSE);
+    }
+
+    public function centreSession()
+    {
+        return $this->sessionRecord()->where('session_type', CourseSession::TYPE_CENTRE);
     }
 
     public function user()

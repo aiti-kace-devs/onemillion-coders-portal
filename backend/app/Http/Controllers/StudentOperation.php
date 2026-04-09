@@ -43,30 +43,29 @@ class StudentOperation extends Controller
     //student dashboard
     public function dashboard()
     {
-        $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
-            ->selectRaw('(SELECT count(id) from oex_question_masters where exam_id = oex_exam_masters.id) as question_count', [])
-            ->join('users', 'users.id', '=', 'user_exams.user_id')
-            ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
-            ->orderBy('user_exams.exam_id', 'desc')
-            ->join('oex_categories', 'oex_exam_masters.category', '=', 'oex_categories.id')
-            ->where('user_exams.user_id', Auth::user()->id)
-            ->where('user_exams.std_status', '1')
-            ->get()
-            ->toArray();
+        $user = Auth::user();
 
-        $questionnaires = Questionnaire::where('active', true)->latest()->get();
+        $questionnaires = Questionnaire::where('active', true)
+            ->latest()
+            ->get(['id', 'title', 'code'])
+            ->map(function ($q) use ($user) {
+                $q->is_submitted = $user->questionnaire_response()
+                    ->where('questionnaire_id', $q->id)
+                    ->where('is_submitted', true)
+                    ->exists();
+                return $q;
+            });
 
-        $questionnaires = $questionnaires->map(function ($questionnaire) {
-            $questionnaire['is_submitted'] = Auth::user()->questionnaire_response()->where('questionnaire_id', $questionnaire->id)->where('is_submitted', true)->exists();
-
-            return $questionnaire;
-        });
         $registeredCourse = null;
-        if (Auth::user()->registered_course) {
-            $registeredCourse = Course::find(Auth::user()->registered_course);
+        if ($user->registered_course) {
+            $registeredCourse = Course::where('id', $user->registered_course)
+                ->first(['id', 'course_name']);
         }
 
-        return Inertia::render('Student/Dashboard', compact('exams', 'questionnaires', 'registeredCourse'));
+        return Inertia::render('Student/Dashboard', [
+            'questionnaires' => $questionnaires,
+            'registeredCourse' => $registeredCourse
+        ]);
     }
 
     public function profile()
@@ -94,13 +93,21 @@ class StudentOperation extends Controller
         $user_admission = UserAdmission::where('user_id', $user->userId)->first();
         $user_assessment = UserAssessment::where('user_id', $user->id)->first();
 
-        return Inertia::render('Student/ApplicationStatus', compact('user', 'user_admission', 'user_assessment'));
+        $userFields = ['id', 'name', 'registered_course', 'shortlist'];
+        if (config(SHOW_STUDENT_LEVEL, false)) {
+            $userFields[] = 'student_level';
+        }
+
+        return Inertia::render('Student/ApplicationStatus', [
+            'user' => $user->only($userFields),
+            'user_admission' => $user_admission,
+            'user_assessment' => $user_assessment ? $user_assessment->only(['id', 'completed']) : null,
+        ]);
     }
 
     public function level_assessment()
     {
-        $user = Auth::guard('web')->user();
-        return Inertia::render('Student/LevelAssessment', compact('user'));
+        return Inertia::render('Student/LevelAssessment');
     }
 
     //Exam page
@@ -546,6 +553,19 @@ class StudentOperation extends Controller
     public function change_course()
     {
         $user = Auth::guard('web')->user();
+        $branches = Branch::query()
+            ->where('status', 1)
+            ->orderBy('title')
+            ->get(['id', 'title']);
+
+        if ($user->shortlist) {
+            return redirect()
+                ->route('student.application-status')
+                ->with([
+                    'flash' => 'Your course selection is now locked because you have been shortlisted. If you need assistance, please contact support.',
+                    'key' => 'info',
+                ]);
+        }
 
         if (!$user->userAssessment?->completed) {
             return redirect()
@@ -625,11 +645,11 @@ class StudentOperation extends Controller
                 ]);
         }
 
-        if ($user->admission) {
+        if ($user->shortlist || $user->admission) {
             return redirect()
-                ->back()
+                ->route('student.application-status')
                 ->with([
-                    'flash' => 'Unable to change course.',
+                    'flash' => 'Unable to change course. Selection is locked.',
                     'key' => 'error',
                 ]);
         }

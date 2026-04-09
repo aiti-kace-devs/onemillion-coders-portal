@@ -58,7 +58,6 @@ class FormSubmitedListener implements ShouldQueue
         $student['pwd'] = $this->extractPwdFlag($event->submissionData);
         $student['password'] = $this->getField($event->submissionData, 'password');
         $student['exam_name'] = 'random';
-        $student['form_response_id'] = $event->formResponseId;
 
         $extraData = $this->buildExtraData($event->submissionData);
 
@@ -156,6 +155,7 @@ class FormSubmitedListener implements ShouldQueue
             'has_disability' => 'pwd',
             'pwd' => 'pwd',
             'password' => 'password',
+            'do_you_require_any_special_support_for_your_training' => 'do_you_require_any_special_support_for_your_training',
         ];
 
         foreach ($payload as $key => $value) {

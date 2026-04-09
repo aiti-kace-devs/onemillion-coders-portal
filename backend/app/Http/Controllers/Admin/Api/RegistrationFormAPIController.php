@@ -158,6 +158,7 @@ class RegistrationFormAPIController extends Controller
         $validator = Validator::make($request->all(), [
             'userId' => 'required|exists:users,userId',
             'course_id' => 'required|integer|exists:courses,id',
+            'centre_id' => 'required|integer|exists:centres,id',
             'support' => 'required|boolean',
         ]);
 
@@ -184,12 +185,22 @@ class RegistrationFormAPIController extends Controller
         if (!$course) {
             return response()->json([
                 'success' => false,
-                'message' => 'Course not found'
+                'message' => 'Course not found for the selected centre.'
             ], 404);
         }
 
+        $supportRequested = filter_var($data['support'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        $centreIsReady = (bool) ($course->centre?->is_ready);
+
+        if ($supportRequested && ! $centreIsReady) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Resource (internet & laptop) support is not available for the selected centre at this time. You can try again later',
+            ], 422);
+        }
+
         $user->registered_course = $course->id;
-        $user->support = filter_var($data['support'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        $user->support = $supportRequested;
         $user->save();
 
         return response()->json([

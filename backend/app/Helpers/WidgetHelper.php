@@ -390,8 +390,8 @@ class WidgetHelper
     {
         $totalCenters = Centre::count();
         $activeCenters = Centre::where('status', 1)->count();
-        $inactiveCenters = Centre::where('status', 0)->count();
-        $recentCenters = Centre::whereDate('created_at', '>=', now()->subDays(30))->count();
+        $isReadyCenters = Centre::where('is_ready', 1)->count();
+        $isNotReadyCenters = Centre::where('is_ready', null)->count();
 
         $getPercent = function ($count) use ($totalCenters) {
             return $totalCenters > 0 ? round(($count / $totalCenters) * 100) : 0;
@@ -422,22 +422,19 @@ class WidgetHelper
                 ],
                 [
                     'type' => 'progress_white',
-                    'progress' => $getPercent($inactiveCenters),
-                    'description' => 'Inactive Centers',
-                    'value' => number_format($inactiveCenters),
-                    'progressClass' => 'progress-bar bg-danger',
-                    'hint' => 'Centers currently inactive.',
+                    'progress' => $getPercent($isReadyCenters),
+                    'description' => 'Ready Centers',
+                    'value' => number_format($isReadyCenters),
+                    'progressClass' => 'progress-bar bg-success',
+                    'hint' => 'Centers that are ready.',
                 ],
                 [
                     'type' => 'progress_white',
-                    'progress' => $getPercent($recentCenters),
-                    'description' => 'New Centers (30 Days)',
-                    'value' => number_format($recentCenters),
-                    'progressClass' => 'progress-bar bg-primary',
-                    'wrapper' => [
-                        'style' => 'background-color:rgb(40, 127, 167);',
-                    ],
-                    'hint' => 'Centers added in the last 30 days.',
+                    'progress' => $getPercent($isNotReadyCenters),
+                    'description' => 'Centers Not Ready',
+                    'value' => number_format($isNotReadyCenters),
+                    'progressClass' => 'progress-bar bg-danger',
+                    'hint' => 'Centers that are not ready.',
                 ],
             ],
         ]);
@@ -530,11 +527,11 @@ class WidgetHelper
 
     public static function courseSessionStatisticsWidget()
     {
-        $totalSessions = CourseSession::count();
-        $activeSessions = CourseSession::where('status', 1)->count();
-        $inactiveSessions = CourseSession::where('status', 0)->count();
+        $totalSessions = CourseSession::courseType()->count();
+        $activeSessions = CourseSession::courseType()->where('status', 1)->count();
+        $inactiveSessions = CourseSession::courseType()->where('status', 0)->count();
 
-        $upcomingSessions = CourseSession::where('course_time', '>', now())->count();
+        $upcomingSessions = CourseSession::courseType()->where('course_time', '>', now())->count();
 
         $getPercent = function ($count) use ($totalSessions) {
             return $totalSessions > 0 ? round(($count / $totalSessions) * 100) : 0;

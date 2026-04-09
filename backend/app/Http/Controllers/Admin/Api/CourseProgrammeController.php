@@ -99,7 +99,15 @@ class CourseProgrammeController extends Controller
             $batchIds = $batchQuery->pluck('id');
 
             $courses = Course::whereIn('batch_id', $batchIds)
-                ->with(['programme.category', 'programme.coverImage', 'programme.courseCertification', 'programme.courseModules'])
+                ->whereHas('programme', function ($query) {
+                    $query->where('status', 1);
+                })
+                ->with([
+                    'programme.category',
+                    'programme.coverImage',
+                    'programme.courseCertification',
+                    'programme.courseModules'
+                ])
                 ->get();
 
             $items = $courses->unique('programme_id')->map(function ($course) {
@@ -356,7 +364,8 @@ class CourseProgrammeController extends Controller
     public function getCourseCategory()
     {
         $courseCategory = Cache::remember('course_categories', 600, function () {
-            return CourseCategory::orderBy('title')
+            return CourseCategory::where('status', 1)
+                ->orderBy('title')
                 ->get(['id', 'title', 'description', 'status', 'icon']);
         });
 
@@ -539,6 +548,7 @@ class CourseProgrammeController extends Controller
     public function centresByBranch(Branch $branch)
     {
         $centres = $branch->centre()
+            ->where('status', 1)
             ->get()
             ->map(function ($centre) {
                 $centreData = $centre->toArray();
@@ -567,6 +577,7 @@ class CourseProgrammeController extends Controller
         $districts = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($branch, $addCentreCount) {
             $districtQuery = District::query()
                 ->where('branch_id', $branch->id)
+                ->where('status', 1)
                 ->whereHas('centres')
                 ->orderBy('title');
 
@@ -652,7 +663,8 @@ class CourseProgrammeController extends Controller
 
         $district = District::query()
             ->with(['centres' => function ($query) {
-                $query->orderBy('title');
+                $query->where('status', 1)
+                        ->orderBy('title');
             }])
             ->findOrFail($data['district_id']);
 

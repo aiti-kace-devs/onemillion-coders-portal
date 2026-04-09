@@ -189,7 +189,7 @@ class RegistrationFormRequest extends FormRequest
             foreach ($rules as $rule) {
                 if ($this->isRegexRule($rule)) {
                     $pattern = $this->extractRegexPattern($rule);
-                    if (! $this->isValidRegexPattern($pattern)) {
+                    if (!$this->isValidRegexPattern($pattern)) {
                         $validator->errors()->add(
                             "schema.{$index}.rules",
                             "Invalid regex rule. Ensure it has valid delimiters (e.g. regex:/^...$/)."

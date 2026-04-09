@@ -184,8 +184,8 @@ export const getPageData = async (slug) => {
 export const getCourseRecommendations = async (answers) => {
   try {
     const response = await apiRequest("/course-match", {
-      method: "POST",
-      data: answers,
+      method: 'POST',
+      data: answers
     });
     return response.data;
   } catch (error) {
@@ -203,9 +203,9 @@ export const getAllRegions = async (token) => {
     const response = await apiRequest("/branches", {
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
-    const filteredRegions = response?.data?.filter((item) => {
-      return item.status === true;
-    });
+    const filteredRegions  =  response?.data?.filter((item) => {
+      return item.status === true
+    })
     return filteredRegions;
   } catch (error) {
     console.error("Error fetching regions:", error);
@@ -238,10 +238,7 @@ export const getProgrammeLocations = async (programmeId) => {
     const response = await apiRequest(`/programmes/${programmeId}/locations`);
     return response;
   } catch (error) {
-    console.error(
-      `Error fetching programme locations for ID ${programmeId}:`,
-      error,
-    );
+    console.error(`Error fetching programme locations for ID ${programmeId}:`, error);
     throw error;
   }
 };
@@ -269,10 +266,10 @@ export const submitRegistration = async (formData) => {
   try {
     const isFormData = formData instanceof FormData;
     const response = await apiRequest("/add-student", {
-      method: "POST",
+      method: 'POST',
       data: formData,
       ...(isFormData && {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { 'Content-Type': 'multipart/form-data' },
       }),
     });
     return response;
@@ -304,12 +301,9 @@ export const getCentreProgrammes = async (centreId) => {
  */
 export const getDistrictsByBranch = async (branchId, token) => {
   try {
-    const response = await apiRequest(
-      `/districts-by-branch?branch_id=${branchId}`,
-      {
-        ...(token && { headers: { Authorization: `Bearer ${token}` } }),
-      },
-    );
+    const response = await apiRequest(`/districts-by-branch?branch_id=${branchId}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
     return response;
   } catch (error) {
     console.error(`Error fetching districts for branch ${branchId}:`, error);
@@ -324,12 +318,9 @@ export const getDistrictsByBranch = async (branchId, token) => {
  */
 export const getCentresByDistrict = async (districtId, token) => {
   try {
-    const response = await apiRequest(
-      `/centres-by-district?district_id=${districtId}`,
-      {
-        ...(token && { headers: { Authorization: `Bearer ${token}` } }),
-      },
-    );
+    const response = await apiRequest(`/centres-by-district?district_id=${districtId}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
     return response;
   } catch (error) {
     console.error(`Error fetching centres for district ${districtId}:`, error);
@@ -385,9 +376,7 @@ export const confirmCourse = async (data, token) => {
  */
 export const checkEmailAvailability = async (email) => {
   try {
-    const response = await apiRequest(
-      `/otp/check-email?email=${encodeURIComponent(email)}`,
-    );
+    const response = await apiRequest(`/otp/check-email?email=${encodeURIComponent(email)}`);
     return response;
   } catch (error) {
     console.error("Error checking email availability:", error);
@@ -434,3 +423,4 @@ export const verifyOtp = async (data) => {
     throw error;
   }
 };
+

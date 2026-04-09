@@ -99,21 +99,22 @@ trait ProgrammeFieldHelpers
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
+        $imageValue = $programme->image ?? '';
+        if (!empty($imageValue) && (strpos($imageValue, 'http://') === 0 || strpos($imageValue, 'https://') === 0)) {
+            // Strip the CDN URL to get the relative path for the browse field
+            $cdnUrl = rtrim(config('filesystems.cdn_url'), '/');
+            if (strpos($imageValue, $cdnUrl) === 0) {
+                $imageValue = substr($imageValue, strlen($cdnUrl));
+                $imageValue = ltrim($imageValue, '/');
+            }
+        }
+
         MediaHelper::getMediaSelector(
             name: 'image',
-            disk_options: MediaHelper::getArticleImagesDiskOptions(),
+            disk_options: MediaHelper::getProgrammeImagesDiskOptions(),
             label: 'Cover Image',
-            value: $entry->coverImage->file ?? '',
-        );
-
-
-        // CRUD::addField([
-        //     'name' => 'image',
-        //     'label' => 'Cover Image URL',
-        //     'type' => 'text',
-        //     'wrapper' => ['class' => 'form-group col-6'],
-        //     'hint' => 'Copy and paste image URL eg. https://cdn.msme.gikace.org/media/image/partners/undp-logo.png'
-        // ]);
+            value: $imageValue,
+        )->mime_types('image/*');
 
         CRUD::addField([
             'name' => 'start_date',
@@ -321,7 +322,7 @@ trait ProgrammeFieldHelpers
                 'label' => $courseMatch->question,
                 'type' => 'select2_multiple',
 
-                'fake' => true, 
+                'fake' => true,
                 'value' => $selectedValues,
 
                 'model' => CourseMatchOption::class,

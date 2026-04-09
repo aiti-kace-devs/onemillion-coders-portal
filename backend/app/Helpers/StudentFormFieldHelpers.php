@@ -63,7 +63,7 @@ trait StudentFormFieldHelpers
 
         MediaHelper::getMediaSelector(
             name: 'image',
-            disk_options: MediaHelper::getArticleImagesDiskOptions(),
+            disk_options: MediaHelper::getCertificateFilesDiskOptions(),
             label: 'Cover Image',
             value: $entry->coverImage->file ?? '',
         );

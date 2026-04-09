@@ -15,10 +15,7 @@ return new class extends Migration
             if (Schema::hasColumn('user_admission', 'batch_id')) {
                 $table->dropForeign(['batch_id']);
             }
-            if (Schema::hasColumn('user_admission', 'course_batch_id')) {
-                $table->dropForeign(['course_batch_id']);
-            }
-            $table->dropColumn(['submitted', 'location', 'status', 'batch_id', 'course_batch_id']);
+            $table->dropColumn(['submitted', 'location', 'status', 'batch_id']);
         });
 
         Schema::table('admission_batches', function (Blueprint $table) {
@@ -43,6 +40,7 @@ return new class extends Migration
         Schema::table('courses', function (Blueprint $table) {
             $table->tinyInteger('status')->nullable()->change();
             $table->dropColumn('location');
+            $table->dropColumn('course');
         });
 
         Schema::table('oex_categories', function (Blueprint $table) {
@@ -94,7 +92,10 @@ return new class extends Migration
         Schema::dropIfExists('periods');
 
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['email_verified_at', 'contact']);
+            if (Schema::hasColumn('users', 'form_response_id')) {
+                $table->dropForeign(['form_response_id']);
+            }
+            $table->dropColumn(['email_verified_at', 'contact', 'form_response_id']);
             $table->tinyInteger('shortlist')->nullable()->change();
             $table->tinyInteger('status')->nullable()->change();
             $table->renameColumn('has_disability', 'pwd');
@@ -104,6 +105,8 @@ return new class extends Migration
             $table->unsignedBigInteger('verified_by')->nullable()->change();
             $table->foreign('verified_by')->references('id')->on('admins')->nullOnDelete()->cascadeOnUpdate();
         });
+
+        Schema::dropIfExists('form_responses');
     }
 
     /**
@@ -114,6 +117,7 @@ return new class extends Migration
         Schema::table('courses', function (Blueprint $table) {
             $table->string('status')->nullable()->change();
             $table->string('location')->nullable();
+            $table->string('course')->nullable();
         });
 
         Schema::table('course_sessions', function (Blueprint $table) {
@@ -178,7 +182,6 @@ return new class extends Migration
             $table->string('location')->nullable();
             $table->string('status')->nullable();
             $table->foreignId('batch_id')->nullable()->constrained('admission_batches')->nullOnDelete();
-            $table->foreignId('course_batch_id')->nullable()->constrained('course_batches')->nullOnDelete();
         });
 
         Schema::table('users', function (Blueprint $table) {
@@ -189,6 +192,16 @@ return new class extends Migration
             $table->renameColumn('pwd', 'has_disability');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('contact')->nullable();
+            $table->foreignId('form_response_id')->nullable()->constrained('form_responses')->nullOnDelete();
+        });
+
+        Schema::create('form_responses', function (Blueprint $table) {
+            $table->id();
+            $table->string('uuid')->unique();
+            $table->foreignId('form_id')->constrained()->onDelete('cascade');
+            $table->JSON('response_data');
+            $table->timestamps();
+            $table->timestamp('deleted_at')->nullable();
         });
 
         Schema::create('periods', function (Blueprint $table) {

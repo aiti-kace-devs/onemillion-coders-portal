@@ -27,6 +27,7 @@ class Centre extends Model
         'branch_id',
         'constituency_id',
         'status',
+        'is_ready',
         'gps_address',
         'is_pwd_friendly',
         'wheelchair_accessible',
@@ -39,6 +40,7 @@ class Centre extends Model
         'accessibility_rating',
         'pwd_notes',
         'images',
+        'video',
         'gps_location'
     ];
 
@@ -46,6 +48,7 @@ class Centre extends Model
     protected $casts = [
         'constituency_id' => 'integer',
         'status' => 'boolean',
+        'is_ready' => 'boolean',
         'is_pwd_friendly' => 'boolean',
         'wheelchair_accessible' => 'boolean',
         'has_access_ramp' => 'boolean',
@@ -58,6 +61,7 @@ class Centre extends Model
         'accessibility_rating' => 'integer',
         'pwd_notes' => 'string',
         'images' => 'array',
+        'video' => 'string',
         'gps_location' => 'array',
     ];
 
@@ -80,6 +84,17 @@ class Centre extends Model
     public function courses()
     {
         return $this->hasMany(Course::class);
+    }
+
+    public function admins()
+    {
+        return $this->belongsToMany(Admin::class, 'admin_centre', 'centre_id', 'admin_id')
+            ->withTimestamps();
+    }
+
+    public function centreSessions()
+    {
+        return $this->hasMany(CentreSession::class, 'centre_id');
     }
 
     public function districts()

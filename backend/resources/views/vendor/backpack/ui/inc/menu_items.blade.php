@@ -41,11 +41,11 @@
 @endcan
 
 
-@can('centre.read.all')
+@canany(['centre.read.all', 'centre.read.self'])
     <x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
     {{-- <x-backpack::menu-item title="Manage Districts" icon="la la-question" :link="backpack_url('district')" /> --}}
     {{-- <x-backpack::menu-item title="Constituencies" icon="la la-question" :link="backpack_url('constituency')" /> --}}
-@endcan
+@endcanany
 
 @can('programme.read.all')
     <x-backpack::menu-item title="Programmes" icon="la la-graduation-cap" :link="backpack_url('programme')" />

@@ -102,29 +102,29 @@ Route::prefix('admins')
             ->middleware('permission:form.read')
             ->name('form.')
             ->group(function () {
-                Route::get('/', [FormController::class, 'index'])->name('index');
-                Route::get('/fetch', [FormController::class, 'fetch'])->name('fetch');
-                Route::get('/create', [FormController::class, 'create'])
-                    ->name('create')
-                    ->middleware('permission:form.create');
-                Route::post('/', [FormController::class, 'store'])
-                    ->name('store')
-                    ->middleware('permission:form.create');
-                Route::get('/{form}/edit', [FormController::class, 'edit'])
-                    ->name('edit')
-                    ->middleware('permission:form.update');
-                Route::put('/{form}/update', [FormController::class, 'update'])
-                    ->name('update')
-                    ->middleware('permission:form.update');
-                Route::get('/{form}/preview', [FormController::class, 'preview'])->name('preview');
-                Route::get('/{form}/responses', [FormController::class, 'show'])->name('show');
-                Route::get('/{form}/export', [FormController::class, 'export'])
-                    ->name('export')
-                    ->middleware('permission:form.create');
-                Route::post('/{form}/destroy', [FormController::class, 'destroy'])
-                    ->name('destroy')
-                    ->middleware('permission:form.delete');
-            });
+            Route::get('/', [FormController::class, 'index'])->name('index');
+            Route::get('/fetch', [FormController::class, 'fetch'])->name('fetch');
+            Route::get('/create', [FormController::class, 'create'])
+                ->name('create')
+                ->middleware('permission:form.create');
+            Route::post('/', [FormController::class, 'store'])
+                ->name('store')
+                ->middleware('permission:form.create');
+            Route::get('/{form}/edit', [FormController::class, 'edit'])
+                ->name('edit')
+                ->middleware('permission:form.update');
+            Route::put('/{form}/update', [FormController::class, 'update'])
+                ->name('update')
+                ->middleware('permission:form.update');
+            Route::get('/{form}/preview', [FormController::class, 'preview'])->name('preview');
+            Route::get('/{form}/responses', [FormController::class, 'show'])->name('show');
+            Route::get('/{form}/export', [FormController::class, 'export'])
+                ->name('export')
+                ->middleware('permission:form.create');
+            Route::post('/{form}/destroy', [FormController::class, 'destroy'])
+                ->name('destroy')
+                ->middleware('permission:form.delete');
+        });
 
         Route::prefix('form-responses')
             ->middleware('permission:form-response.read')
@@ -153,29 +153,29 @@ Route::prefix('admins')
             ->middleware('permission:form.read')
             ->name('questionnaire.')
             ->group(function () {
-                Route::get('/', [QuestionnaireController::class, 'index'])->name('index');
-                Route::get('/fetch', [QuestionnaireController::class, 'fetch'])->name('fetch');
-                Route::get('/create', [QuestionnaireController::class, 'create'])
-                    ->name('create')
-                    ->middleware('permission:form.create');
-                Route::post('/', [QuestionnaireController::class, 'store'])
-                    ->name('store')
-                    ->middleware('permission:form.create');
-                Route::get('/{questionnaire}/edit', [QuestionnaireController::class, 'edit'])
-                    ->name('edit')
-                    ->middleware('permission:form.update');
-                Route::put('/{questionnaire}/update', [QuestionnaireController::class, 'update'])
-                    ->name('update')
-                    ->middleware('permission:form.update');
-                Route::get('/{questionnaire}/preview', [QuestionnaireController::class, 'preview'])->name('preview');
-                Route::get('/{questionnaire}/responses', [QuestionnaireController::class, 'show'])->name('show');
-                Route::get('/{questionnaire}/export', [QuestionnaireController::class, 'export'])
-                    ->name('export')
-                    ->middleware('permission:form.create');
-                Route::post('/{questionnaire}/destroy', [QuestionnaireController::class, 'destroy'])
-                    ->name('destroy')
-                    ->middleware('permission:form.delete');
-            });
+            Route::get('/', [QuestionnaireController::class, 'index'])->name('index');
+            Route::get('/fetch', [QuestionnaireController::class, 'fetch'])->name('fetch');
+            Route::get('/create', [QuestionnaireController::class, 'create'])
+                ->name('create')
+                ->middleware('permission:form.create');
+            Route::post('/', [QuestionnaireController::class, 'store'])
+                ->name('store')
+                ->middleware('permission:form.create');
+            Route::get('/{questionnaire}/edit', [QuestionnaireController::class, 'edit'])
+                ->name('edit')
+                ->middleware('permission:form.update');
+            Route::put('/{questionnaire}/update', [QuestionnaireController::class, 'update'])
+                ->name('update')
+                ->middleware('permission:form.update');
+            Route::get('/{questionnaire}/preview', [QuestionnaireController::class, 'preview'])->name('preview');
+            Route::get('/{questionnaire}/responses', [QuestionnaireController::class, 'show'])->name('show');
+            Route::get('/{questionnaire}/export', [QuestionnaireController::class, 'export'])
+                ->name('export')
+                ->middleware('permission:form.create');
+            Route::post('/{questionnaire}/destroy', [QuestionnaireController::class, 'destroy'])
+                ->name('destroy')
+                ->middleware('permission:form.delete');
+        });
     });
 
 Route::prefix('admins')
@@ -185,7 +185,7 @@ Route::prefix('admins')
         Route::middleware(['auth:admin'])->group(function () {
             // Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
             // Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
-
+    
             Route::middleware('permission:category.read')
                 ->name('category.')
                 ->group(function () {
@@ -370,176 +370,176 @@ Route::prefix('admins')
                 ->middleware('permission:branch.read')
                 ->name('branch.')
                 ->group(function () {
-                    Route::get('/', [BranchController::class, 'index'])->name('index');
-                    Route::post('/', [BranchController::class, 'store'])
-                        ->name('store')
-                        ->middleware('permission:branch.create');
-                    Route::get('/{id}/edit', [BranchController::class, 'edit'])
-                        ->name('edit')
-                        ->middleware('permission:branch.update');
-                    Route::put('/{branch}/update', [BranchController::class, 'update'])
-                        ->name('update')
-                        ->middleware('permission:branch.update');
-                    Route::get('/{branch}/delete', [BranchController::class, 'destroy'])
-                        ->name('destroy')
-                        ->middleware('permission:branch.delete');
-                    Route::get('/branch_status/{id}', [AdminController::class, 'branch_status'])
-                        ->name('status')
-                        ->middleware('permission:branch.status');
-                });
+                Route::get('/', [BranchController::class, 'index'])->name('index');
+                Route::post('/', [BranchController::class, 'store'])
+                    ->name('store')
+                    ->middleware('permission:branch.create');
+                Route::get('/{id}/edit', [BranchController::class, 'edit'])
+                    ->name('edit')
+                    ->middleware('permission:branch.update');
+                Route::put('/{branch}/update', [BranchController::class, 'update'])
+                    ->name('update')
+                    ->middleware('permission:branch.update');
+                Route::get('/{branch}/delete', [BranchController::class, 'destroy'])
+                    ->name('destroy')
+                    ->middleware('permission:branch.delete');
+                Route::get('/branch_status/{id}', [AdminController::class, 'branch_status'])
+                    ->name('status')
+                    ->middleware('permission:branch.status');
+            });
             // end of manage branch routes
-
+    
             // manage centre routes
             Route::prefix('manage-centre')
                 ->middleware('permission:centre.read')
                 ->name('centre.')
                 ->group(function () {
-                    Route::get('/', [CentreController::class, 'index'])->name('index');
-                    Route::get('/centre_status/{id}', [AdminController::class, 'centre_status'])->middleware('permission:centre.status');
-                    Route::post('/', [CentreController::class, 'store'])
-                        ->name('store')
-                        ->middleware('permission:centre.create');
-                    Route::get('/{id}/edit', [CentreController::class, 'edit'])
-                        ->name('edit')
-                        ->middleware('permission:centre.update');
-                    Route::put('/{centre}/update', [CentreController::class, 'update'])
-                        ->name('update')
-                        ->middleware('permission:centre.update');
-                    Route::get('/{centre}/delete', [CentreController::class, 'destroy'])
-                        ->name('destroy')
-                        ->middleware('permission:centre.delete');
-                });
+                Route::get('/', [CentreController::class, 'index'])->name('index');
+                Route::get('/centre_status/{id}', [AdminController::class, 'centre_status'])->middleware('permission:centre.status');
+                Route::post('/', [CentreController::class, 'store'])
+                    ->name('store')
+                    ->middleware('permission:centre.create');
+                Route::get('/{id}/edit', [CentreController::class, 'edit'])
+                    ->name('edit')
+                    ->middleware('permission:centre.update');
+                Route::put('/{centre}/update', [CentreController::class, 'update'])
+                    ->name('update')
+                    ->middleware('permission:centre.update');
+                Route::get('/{centre}/delete', [CentreController::class, 'destroy'])
+                    ->name('destroy')
+                    ->middleware('permission:centre.delete');
+            });
             // end of manage centre routes
-
+    
             // manage programme routes
             Route::prefix('manage-programme')
                 ->middleware('permission:programme.read')
                 ->name('programme.')
                 ->group(function () {
-                    Route::get('/', [ProgrammeController::class, 'index'])->name('index');
-                    Route::get('/programme_status/{id}', [AdminController::class, 'programme_status'])
-                        ->name('status')
-                        ->middleware('permission:programme.status');
-                    Route::post('/', [ProgrammeController::class, 'store'])
-                        ->name('store')
-                        ->middleware('permission:programme.create');
-                    Route::get('/{id}/edit', [ProgrammeController::class, 'edit'])
-                        ->name('edit')
-                        ->middleware('permission:programme.update');
-                    Route::put('/{programme}/update', [ProgrammeController::class, 'update'])
-                        ->name('update')
-                        ->middleware('permission:programme.update');
-                    Route::get('/{programme}/delete', [ProgrammeController::class, 'destroy'])
-                        ->name('destroy')
-                        ->middleware('permission:programme.delete');
-                });
+                Route::get('/', [ProgrammeController::class, 'index'])->name('index');
+                Route::get('/programme_status/{id}', [AdminController::class, 'programme_status'])
+                    ->name('status')
+                    ->middleware('permission:programme.status');
+                Route::post('/', [ProgrammeController::class, 'store'])
+                    ->name('store')
+                    ->middleware('permission:programme.create');
+                Route::get('/{id}/edit', [ProgrammeController::class, 'edit'])
+                    ->name('edit')
+                    ->middleware('permission:programme.update');
+                Route::put('/{programme}/update', [ProgrammeController::class, 'update'])
+                    ->name('update')
+                    ->middleware('permission:programme.update');
+                Route::get('/{programme}/delete', [ProgrammeController::class, 'destroy'])
+                    ->name('destroy')
+                    ->middleware('permission:programme.delete');
+            });
             // end of manage programme routes
-
+    
             // manage course routes
             Route::prefix('manage-course')
                 ->middleware('permission:course.read')
                 ->name('course.')
                 ->group(function () {
-                    Route::get('/', [CourseController::class, 'index'])->name('index');
-                    Route::get('/course_status/{id}', [AdminController::class, 'course_status'])->middleware('permission:course.status');
-                    Route::post('/', [CourseController::class, 'store'])
-                        ->name('store')
-                        ->middleware('permission:course.create');
-                    Route::get('/{id}/edit', [CourseController::class, 'edit'])
-                        ->name('edit')
-                        ->middleware('permission:course.update');
-                    Route::put('/{course}/update', [CourseController::class, 'update'])->name('update');
-                    Route::get('/{course}/delete', [CourseController::class, 'destroy'])
-                        ->name('destroy')
-                        ->middleware('permission:course.delete');
-                    Route::get('/fetch-programme', [CourseController::class, 'fetchProgrammeDetails'])->name('fetch.programme');
-                    Route::get('/fetch/centre', [CourseController::class, 'fetchCentre'])->name('fetch.centre');
-                });
+                Route::get('/', [CourseController::class, 'index'])->name('index');
+                Route::get('/course_status/{id}', [AdminController::class, 'course_status'])->middleware('permission:course.status');
+                Route::post('/', [CourseController::class, 'store'])
+                    ->name('store')
+                    ->middleware('permission:course.create');
+                Route::get('/{id}/edit', [CourseController::class, 'edit'])
+                    ->name('edit')
+                    ->middleware('permission:course.update');
+                Route::put('/{course}/update', [CourseController::class, 'update'])->name('update');
+                Route::get('/{course}/delete', [CourseController::class, 'destroy'])
+                    ->name('destroy')
+                    ->middleware('permission:course.delete');
+                Route::get('/fetch-programme', [CourseController::class, 'fetchProgrammeDetails'])->name('fetch.programme');
+                Route::get('/fetch/centre', [CourseController::class, 'fetchCentre'])->name('fetch.centre');
+            });
             // end of manage course routes
-
+    
             // manage session routes
             Route::prefix('sessions')
                 ->middleware('permission:session.read')
                 ->name('session.')
                 ->group(function () {
-                    Route::get('/', [SessionController::class, 'index'])->name('index');
-                    Route::get('/fetch', [SessionController::class, 'fetch'])->name('fetch');
-                    Route::get('/create', [SessionController::class, 'create'])
-                        ->name('create')
-                        ->middleware('permission:session.create');
-                    Route::post('/', [SessionController::class, 'store'])
-                        ->name('store')
-                        ->middleware('permission:session.create');
-                    Route::get('/{id}/edit', [SessionController::class, 'edit'])
-                        ->name('edit')
-                        ->middleware('permission:session.update');
-                    Route::put('/{session}/update', [SessionController::class, 'update'])
-                        ->name('update')
-                        ->middleware('permission:session.update');
-                    Route::get('/{session}/delete', [SessionController::class, 'destroy'])
-                        ->name('destroy')
-                        ->middleware('permission:session.delete');
-                });
+                Route::get('/', [SessionController::class, 'index'])->name('index');
+                Route::get('/fetch', [SessionController::class, 'fetch'])->name('fetch');
+                Route::get('/create', [SessionController::class, 'create'])
+                    ->name('create')
+                    ->middleware('permission:session.create');
+                Route::post('/', [SessionController::class, 'store'])
+                    ->name('store')
+                    ->middleware('permission:session.create');
+                Route::get('/{id}/edit', [SessionController::class, 'edit'])
+                    ->name('edit')
+                    ->middleware('permission:session.update');
+                Route::put('/{session}/update', [SessionController::class, 'update'])
+                    ->name('update')
+                    ->middleware('permission:session.update');
+                Route::get('/{session}/delete', [SessionController::class, 'destroy'])
+                    ->name('destroy')
+                    ->middleware('permission:session.delete');
+            });
             // end of manage period routes
-
+    
             // manage class schedule routes
             Route::prefix('manage-class-schedule')
                 ->name('class.schedule.')
                 ->group(function () {
-                    Route::get('/', [ClassScheduleController::class, 'index'])->name('index');
-                    Route::post('/', [ClassScheduleController::class, 'store'])->name('store');
-                    Route::post('/{id}/edit', [ClassScheduleController::class, 'edit'])->name('edit');
-                    Route::put('/{course}/update', [ClassScheduleController::class, 'update'])->name('update');
-                    Route::get('/{course}/delete', [ClassScheduleController::class, 'destroy'])->name('destroy');
-                });
+                Route::get('/', [ClassScheduleController::class, 'index'])->name('index');
+                Route::post('/', [ClassScheduleController::class, 'store'])->name('store');
+                Route::post('/{id}/edit', [ClassScheduleController::class, 'edit'])->name('edit');
+                Route::put('/{course}/update', [ClassScheduleController::class, 'update'])->name('update');
+                Route::get('/{course}/delete', [ClassScheduleController::class, 'destroy'])->name('destroy');
+            });
             // end of manage class schedule routes
-
+    
             // manage sms_template routes
             Route::prefix('manage-sms-template')
                 ->middleware('permission:sms-template.read')
                 ->group(function () {
-                    Route::get('/', [SmsTemplateController::class, 'index'])->name('sms.template.index');
-                    Route::post('/', [SmsTemplateController::class, 'store'])
-                        ->name('sms.template.store')
-                        ->middleware('permission:sms-template.create');
-                    Route::get('/{id}/edit', [SmsTemplateController::class, 'edit'])
-                        ->name('sms.template.edit')
-                        ->middleware('permission:sms-template.update');
-                    Route::put('/{template}/update', [SmsTemplateController::class, 'update'])
-                        ->name('sms.template.update')
-                        ->middleware('permission:sms-template.update');
-                    Route::get('/{template}/delete', [SmsTemplateController::class, 'destroy'])
-                        ->name('sms.template.destroy')
-                        ->middleware('permission:sms-template.delete');
-                    Route::get('/fetch_sms_template', [AdminController::class, 'fetch_sms_template'])->name('fetch.sms.template');
-                    Route::post('/send-bulk-email', [AdminController::class, 'sendBulkEmail'])
-                        ->name('send_bulk_email')
-                        ->middleware('permission:student.bulk-email');
-                    Route::post('/send_bulk_sms', [AdminController::class, 'sendBulkSMS'])
-                        ->name('send_bulk_sms')
-                        ->middleware('permission:student.bulk-sms');
-                });
+                Route::get('/', [SmsTemplateController::class, 'index'])->name('sms.template.index');
+                Route::post('/', [SmsTemplateController::class, 'store'])
+                    ->name('sms.template.store')
+                    ->middleware('permission:sms-template.create');
+                Route::get('/{id}/edit', [SmsTemplateController::class, 'edit'])
+                    ->name('sms.template.edit')
+                    ->middleware('permission:sms-template.update');
+                Route::put('/{template}/update', [SmsTemplateController::class, 'update'])
+                    ->name('sms.template.update')
+                    ->middleware('permission:sms-template.update');
+                Route::get('/{template}/delete', [SmsTemplateController::class, 'destroy'])
+                    ->name('sms.template.destroy')
+                    ->middleware('permission:sms-template.delete');
+                Route::get('/fetch_sms_template', [AdminController::class, 'fetch_sms_template'])->name('fetch.sms.template');
+                Route::post('/send-bulk-email', [AdminController::class, 'sendBulkEmail'])
+                    ->name('send_bulk_email')
+                    ->middleware('permission:student.bulk-email');
+                Route::post('/send_bulk_sms', [AdminController::class, 'sendBulkSMS'])
+                    ->name('send_bulk_sms')
+                    ->middleware('permission:student.bulk-sms');
+            });
             // end of manage sms_template routes
-
+    
             // manage email_template routes
             Route::prefix('manage-email-template')
                 ->middleware('permission:email-template.read')
                 ->group(function () {
-                    Route::get('/', [EmailTemplateController::class, 'index'])->name('email.template.index');
-                    Route::post('/', [EmailTemplateController::class, 'store'])
-                        ->name('email.template.store')
-                        ->middleware('permission:email-template.create');
-                    Route::get('/{id}/edit', [EmailTemplateController::class, 'edit'])
-                        ->name('email.template.edit')
-                        ->middleware('permission:email-template.update');
-                    Route::put('/{template}/update', [EmailTemplateController::class, 'update'])
-                        ->name('email.template.update')
-                        ->middleware('permission:email-template.update');
-                    Route::get('/{template}/delete', [EmailTemplateController::class, 'destroy'])
-                        ->name('email.template.destroy')
-                        ->middleware('permission:email-template.delete');
-                    // Route::get('/fetch_email_template', [AdminController::class, 'fetch_email_template'])->name('fetch.email.template');
-                });
+                Route::get('/', [EmailTemplateController::class, 'index'])->name('email.template.index');
+                Route::post('/', [EmailTemplateController::class, 'store'])
+                    ->name('email.template.store')
+                    ->middleware('permission:email-template.create');
+                Route::get('/{id}/edit', [EmailTemplateController::class, 'edit'])
+                    ->name('email.template.edit')
+                    ->middleware('permission:email-template.update');
+                Route::put('/{template}/update', [EmailTemplateController::class, 'update'])
+                    ->name('email.template.update')
+                    ->middleware('permission:email-template.update');
+                Route::get('/{template}/delete', [EmailTemplateController::class, 'destroy'])
+                    ->name('email.template.destroy')
+                    ->middleware('permission:email-template.delete');
+                // Route::get('/fetch_email_template', [AdminController::class, 'fetch_email_template'])->name('fetch.email.template');
+            });
             // end of manage emai_template routes
             Route::middleware('permission:manage.monitor')->group(function () {
                 // Route::get('app-logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index'])->middleware('permission:manage.config');
@@ -591,6 +591,7 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::get('/course', [StudentOperation::class, 'change_course'])->name('course.index');
         Route::get('/course/select-center/{branch_id}', [StudentOperation::class, 'select_center'])->name('course.select-center');
         Route::get('/course/select-course', [StudentOperation::class, 'select_course'])->name('course.select-course');
+        Route::get('/choose-course', [StudentOperation::class, 'change_course'])->name('change-course');
         Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course');
 
         // Notifications

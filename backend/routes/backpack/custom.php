@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\CourseBatchCrudController;
 use App\Http\Controllers\Admin\DistrictCrudController;
 use App\Http\Controllers\Admin\ConstituencyCrudController;
 use App\Http\Controllers\Admin\ManageStudentCrudController;
+use App\Http\Controllers\Admin\CentreCrudController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UtilitiesController;
 // --------------------------
@@ -47,6 +48,9 @@ Route::group([
     Route::crud('centre', 'CentreCrudController');
     Route::post('centre/{id}/toggle', 'CentreCrudController@toggleStatus');
     Route::post('centre/{id}/toggle-is-pwd-friendly', 'CentreCrudController@toggleIsPwdFriendly');
+    Route::post('centre/{id}/toggle-is-ready', 'CentreCrudController@toggleIsReady');
+    Route::get('centre/{centreId}/sessions', [CentreCrudController::class, 'getCentreSessions']);
+    Route::post('centre/{centreId}/sessions', [CentreCrudController::class, 'saveCentreSessions']);
     Route::crud('course', 'CourseCrudController');
     Route::crud('batch', 'BatchCrudController');
     Route::post('batch/add-courses/{batchId}', [BatchCrudController::class, 'addCourses']);
@@ -105,6 +109,7 @@ Route::group([
     Route::get('course-session/ajax-list', 'CourseSessionCrudController@ajaxList');
     Route::post('user/bulk-admit', 'UserCrudController@bulkAdmit');
     Route::crud('course-category', 'CourseCategoryCrudController');
+    Route::post('course-category/{id}/toggle', 'CourseCategoryCrudController@toggleStatus');
     Route::crud('course-module', 'CourseModuleCrudController');
     Route::get('qr-scanner', 'AttendanceCrudController@setupScanQrCodePage')->name('qr-scanner');
 
