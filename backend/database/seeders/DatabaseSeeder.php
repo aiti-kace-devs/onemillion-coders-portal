@@ -19,7 +19,8 @@ class DatabaseSeeder extends Seeder
         $this->call(UserSeeder::class);
         $this->call(PermissionSeeder::class);
         $this->call(AppConfigSeeder::class);
-        $this->call(GhanaConstituencyAndDistrictsSeeder::class);
+        $this->call(GhanaConstituencySeeder::class);
+        $this->call(GhanaDistrictSeeder::class);
         $this->call(PermissionSeeder::class);
         $this->call(ProgrammeTagSeeder::class);
         $this->call(UpdateCourseNamesSeeder::class);

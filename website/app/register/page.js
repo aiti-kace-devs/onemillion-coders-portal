@@ -277,6 +277,12 @@ function RegisterForm() {
           const ghanaCardRegex = /^GHA-\d{9}-\d{1}$/;
           if (!ghanaCardRegex.test(value)) {
             errors[field.field_name] = "Please enter a valid Ghana Card Number (GHA-XXXXXXXXX-X)";
+        // Password validation
+        if (field.type === "password" && value) {
+          if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,64}$/.test(value)) {
+            errors[field.field_name] = "Password must be at least 6 characters with an uppercase letter, a lowercase letter, and a number.";
+          } else if (value !== confirmPassword) {
+            errors[field.field_name] = "Passwords do not match.";
           }
         }
         // Password validation
@@ -296,7 +302,8 @@ function RegisterForm() {
             errors[field.field_name] = `Only ${allowedExtensions.map((e) => e.toUpperCase()).join(", ")} files are allowed`;
           }
         }
-      });
+      }}}
+    )};
 
     return errors;
   };
@@ -648,12 +655,13 @@ function RegisterForm() {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className={`w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 ${confirmPassword && confirmPassword !== value && !value.startsWith(confirmPassword)
+              className={`w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 ${
+                confirmPassword && confirmPassword !== value && !value.startsWith(confirmPassword)
                   ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
                   : confirmPassword && confirmPassword === value
-                    ? "border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-200"
-                    : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
-                } focus:outline-none hover:border-gray-300`}
+                  ? "border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                  : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
+              } focus:outline-none hover:border-gray-300`}
               placeholder="Re-enter your password"
               autoComplete="new-password"
             />
@@ -669,10 +677,11 @@ function RegisterForm() {
               {checks.map((check, i) => (
                 <li key={i} className="flex items-center gap-2 text-xs sm:text-sm">
                   <span
-                    className={`inline-flex items-center justify-center w-4 h-4 shrink-0 rounded border transition-colors duration-200 ${check.met
+                    className={`inline-flex items-center justify-center w-4 h-4 shrink-0 rounded border transition-colors duration-200 ${
+                      check.met
                         ? "bg-green-500 border-green-500 text-white"
                         : "border-gray-300 bg-white"
-                      }`}
+                    }`}
                   >
                     {check.met && (
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -1156,4 +1165,4 @@ function RegisterForm() {
       </div>
     </div>
   );
-}
+

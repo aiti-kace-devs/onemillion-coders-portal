@@ -69,13 +69,25 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
     "Online": {
       color: "bg-purple-50 text-purple-700 border-purple-100",
       icon: FiMonitor
-    }
+    }}
+  // Level color mapping for programme level badges
+  const getLevelColor = (level) => {
+    const normalizedLevel = level?.trim().toLowerCase();
+    const levelColors = {
+      'beginner': 'bg-green-50 text-green-700',
+      'intermediate': 'bg-yellow-50 text-yellow-700',
+      'advanced': 'bg-blue-50 text-blue-700',
+    };
+    return levelColors[normalizedLevel] || 'bg-green-50 text-green-700';
   };
 
-  const currentMode = modeStyles[programme.mode_of_delivery] || {
-    color: "bg-gray-50 text-gray-700 border-gray-100",
-    icon: FiGlobe
-  };
+    // Custom SVG bars for programme level badges
+    const getLevelBars = (level) => {
+      const allBars = [
+        { x: 8, y: 52, height: 20 },   // bar 1 (short)
+        { x: 39, y: 32, height: 40 },  // bar 2 (medium)
+        { x: 70, y: 8, height: 64 }    // bar 3 (tall)
+      ];
 
   const ModeIcon = currentMode.icon;
   // Level color mapping for programme level badges
@@ -197,16 +209,25 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
           </div>
           <div className="flex items-center space-x-2">
             {programme.mode_of_delivery && (
-              <span className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${currentMode.color}`}>
-                <ModeIcon className="w-3 h-3" />
+              <span className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                programme.mode_of_delivery === "Online"
+                  ? "bg-blue-50 text-blue-700"
+                  : "bg-orange-50 text-orange-700"
+              }`}>
+                {programme.mode_of_delivery === "Online" ? (
+                  <FiGlobe className="w-3 h-3" />
+                ) : (
+                  <FiMapPin className="w-3 h-3" />
+                )}
                 {programme.mode_of_delivery}
               </span>
             )}
+            
             {/* Level Badge highlight color and bars */}
             <span className={`flex items-center gap-2 px-2 py-1 rounded text-xs font-medium ${getLevelColor(programme.level)}`}>
-              {getLevelBars(programme.level)}
-              {programme.level}
-            </span>
+             {getLevelBars(programme.level)}
+             {programme.level}
+          </span>
           </div>
         </div>
 
@@ -392,6 +413,6 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
       </AnimatePresence>
     </div>
   );
-};
+}};
 
 export default ProgrammeCard; 
