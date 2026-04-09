@@ -164,15 +164,13 @@ export default function Header() {
             <div ref={programsRef} className="relative">
               <button
                 onClick={handleProgramsClick}
-                className={`nav-pill flex items-center space-x-1 ${
-                  isActiveLink("/programmes") ? "active" : ""
-                }`}
+                className={`nav-pill flex items-center space-x-1 ${isActiveLink("/programmes") ? "active" : ""
+                  }`}
               >
                 <span>Courses </span>
                 <FiChevronDown
-                  className={`w-3 h-3 transition-transform duration-200 ${
-                    isProgramsMenuOpen ? "rotate-180" : ""
-                  }`}
+                  className={`w-3 h-3 transition-transform duration-200 ${isProgramsMenuOpen ? "rotate-180" : ""
+                    }`}
                 />
               </button>
               <ProgramsMenu
@@ -209,9 +207,8 @@ export default function Header() {
             </Link>
             <Link
               href="/centers"
-              className={`nav-pill ${
-                isActiveLink("/centers") ? "active" : ""
-              }`}
+              className={`nav-pill ${isActiveLink("/centers") ? "active" : ""
+                }`}
             >
               Centers
             </Link>
@@ -294,22 +291,20 @@ export default function Header() {
                 {/* Mobile Navigation Links */}
                 <Link
                   href="/"
-                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
-                    isActiveLink("/")
-                      ? "text-yellow-600 bg-yellow-50 font-semibold"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
+                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${isActiveLink("/")
+                    ? "text-yellow-600 bg-yellow-50 font-semibold"
+                    : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Home
                 </Link>
                 <Link
                   href="/about"
-                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
-                    isActiveLink("/about")
-                      ? "text-yellow-600 bg-yellow-50 font-semibold"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
+                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${isActiveLink("/about")
+                    ? "text-yellow-600 bg-yellow-50 font-semibold"
+                    : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   About
@@ -318,17 +313,15 @@ export default function Header() {
                 <div>
                   <button
                     onClick={() => setIsMobileCoursesOpen(!isMobileCoursesOpen)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors font-medium ${
-                      isActiveLink("/programmes")
-                        ? "text-yellow-600 bg-yellow-50 font-semibold"
-                        : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                    }`}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors font-medium ${isActiveLink("/programmes")
+                      ? "text-yellow-600 bg-yellow-50 font-semibold"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
                   >
                     <span>Courses</span>
                     <FiChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${
-                        isMobileCoursesOpen ? "rotate-180" : ""
-                      }`}
+                      className={`w-4 h-4 transition-transform duration-200 ${isMobileCoursesOpen ? "rotate-180" : ""
+                        }`}
                     />
                   </button>
                   <AnimatePresence>
@@ -360,7 +353,7 @@ export default function Header() {
                               className="flex-1 text-center px-3 py-2 text-xs text-yellow-700 font-semibold bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors"
                               onClick={() => setIsMobileMenuOpen(false)}
                             >
-                              Course Match Help
+                              Course Recommendation
                             </Link>
                             <Link
                               href="/programmes"
@@ -377,33 +370,30 @@ export default function Header() {
                 </div>
                 <Link
                   href="/pathway"
-                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
-                    isActiveLink("/pathway")
-                      ? "text-yellow-600 bg-yellow-50 font-semibold"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
+                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${isActiveLink("/pathway")
+                    ? "text-yellow-600 bg-yellow-50 font-semibold"
+                    : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Pathways
                 </Link>
                 <Link
                   href="/centers"
-                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
-                    isActiveLink("/centers")
-                      ? "text-yellow-600 bg-yellow-50 font-semibold"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
+                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${isActiveLink("/centers")
+                    ? "text-yellow-600 bg-yellow-50 font-semibold"
+                    : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Centers
                 </Link>
                 <Link
                   href="/gallery"
-                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
-                    isActiveLink("/gallery")
-                      ? "text-yellow-600 bg-yellow-50 font-semibold"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
+                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${isActiveLink("/gallery")
+                    ? "text-yellow-600 bg-yellow-50 font-semibold"
+                    : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Gallery
@@ -421,11 +411,10 @@ export default function Header() {
                 </Link> */}
                 <Link
                   href="/faqs"
-                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${
-                    isActiveLink("/faqs")
-                      ? "text-yellow-600 bg-yellow-50 font-semibold"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
+                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${isActiveLink("/faqs")
+                    ? "text-yellow-600 bg-yellow-50 font-semibold"
+                    : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   FAQs

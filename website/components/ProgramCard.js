@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiClock, FiAward, FiBookOpen, FiChevronRight, FiMapPin, FiGlobe } from 'react-icons/fi';
+import { FiClock, FiAward, FiBookOpen, FiChevronRight, FiMapPin, FiGlobe, FiMonitor } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Button from './Button';
@@ -32,9 +32,8 @@ const ProgramCard = ({ program }) => {
   return (
     <motion.div
       whileHover={{ y: program.isAvailable ? -5 : 0 }}
-      className={`bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden transition-all duration-300 group relative ${
-        program.isAvailable ? 'hover:shadow-lg' : 'opacity-75'
-      }`}
+      className={`bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden transition-all duration-300 group relative ${program.isAvailable ? 'hover:shadow-lg' : 'opacity-75'
+        }`}
     >
       {/* Coming Soon Overlay */}
       {!program.isAvailable && (
@@ -61,7 +60,7 @@ const ProgramCard = ({ program }) => {
             />
           </div>
         )}
-        
+
         {/* Category Badge */}
         <div className="absolute top-4 left-4">
           <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getCategoryColor(program.category?.title || program.category)}`}>
@@ -89,13 +88,15 @@ const ProgramCard = ({ program }) => {
           {program.mode_of_delivery && (
             <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center space-x-1">
               {program.mode_of_delivery === "Online" ? (
-                <FiGlobe className="w-3 h-3 text-blue-600" />
-              ) : (
+                <FiMonitor className="w-3 h-3 text-blue-600" />
+              ) : program.mode_of_delivery === "In Person" ? (
                 <FiMapPin className="w-3 h-3 text-orange-600" />
+              ) : (
+                <FiGlobe className="w-3 h-3 text-purple-600" />
               )}
-              <span className={`text-xs font-medium ${
-                program.mode_of_delivery === "Online" ? "text-blue-700" : "text-orange-700"
-              }`}>{program.mode_of_delivery}</span>
+              <span className={`text-xs font-medium ${program.mode_of_delivery === "Online" ? "text-blue-700" :
+                program.mode_of_delivery === "In Person" ? "text-green-700" : "text-purple-700"
+                }`}>{program.mode_of_delivery}</span>
             </div>
           )}
         </div>

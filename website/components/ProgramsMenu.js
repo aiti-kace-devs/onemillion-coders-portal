@@ -35,20 +35,20 @@ const ProgramsMenu = ({ isOpen, onClose, categories = [], isLoading = false }) =
 
   const programs = categories.length > 0
     ? categories
-        .filter((cat) => cat.status)
-        .map((category) => {
-          const style = categoryStyleMap[category.title] || defaultStyle;
-          return {
-            id: category.id,
-            title: category.title,
-            description: category.description || "",
-            icon: style.icon,
-            color: style.color,
-            bg: style.bg,
-            hoverBg: style.hoverBg,
-            border: style.border,
-          };
-        })
+      .filter((cat) => cat.status)
+      .map((category) => {
+        const style = categoryStyleMap[category.title] || defaultStyle;
+        return {
+          id: category.id,
+          title: category.title,
+          description: category.description || "",
+          icon: style.icon,
+          color: style.color,
+          bg: style.bg,
+          hoverBg: style.hoverBg,
+          border: style.border,
+        };
+      })
     : [];
 
   return (
@@ -138,7 +138,7 @@ const ProgramsMenu = ({ isOpen, onClose, categories = [], isLoading = false }) =
                   }}
                   className="text-xs text-yellow-600 hover:text-yellow-700 font-medium flex items-center space-x-1 transition-colors"
                 >
-                  <span>Course Match Help</span>
+                  <span>Course Recommendation</span>
                   <FiArrowRight className="w-3 h-3" />
                 </button>
                 <button

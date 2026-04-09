@@ -22,6 +22,8 @@ import {
   FiX,
   FiGlobe,
   FiInfo,
+  FiMonitor,
+  FiUsers,
 } from "react-icons/fi";
 import {
   getAllRegions,
@@ -1608,7 +1610,7 @@ export default function CoursesPage({ params }) {
                       Questions unavailable
                     </h3>
                     <p className="text-gray-500 mb-4 text-xs sm:text-sm">
-                      Could not load the course match questions.
+                      Could not load the course recommendation questions.
                     </p>
                     <Button
                       onClick={() => fetchQuestions()}
@@ -1836,8 +1838,16 @@ export default function CoursesPage({ params }) {
                         {course.mode_of_delivery && (
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1 mb-2">
-                              <FiGlobe className="w-2.5 h-2.5 text-blue-600" />
-                              <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">{course.mode_of_delivery}</span>
+                              {course.mode_of_delivery === "Online" ? (
+                                <FiMonitor className="w-2.5 h-2.5 text-blue-600" />
+                              ) : course.mode_of_delivery === "In Person" ? (
+                                <FiUsers className="w-2.5 h-2.5 text-green-600" />
+                              ) : (
+                                <FiGlobe className="w-2.5 h-2.5 text-purple-600" />
+                              )}
+                              <span className={`text-[10px] sm:text-[11px] font-medium ${course.mode_of_delivery === "Online" ? "text-blue-700" :
+                                  course.mode_of_delivery === "In Person" ? "text-green-700" : "text-purple-700"
+                                }`}>{course.mode_of_delivery}</span>
                             </div>
                             {userStatus && (
                               <a

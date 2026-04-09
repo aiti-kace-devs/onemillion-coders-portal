@@ -33,7 +33,7 @@ data:
       enabled: true
     -
       id: md570o3l
-      name: 'Course Match'
+      name: 'Course Recommendations'
       link: /course-match
       type: quick_link
       enabled: true

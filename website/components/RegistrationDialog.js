@@ -298,6 +298,14 @@ const RegistrationDialog = ({ isOpen, onClose, programme, userId, courseId, cent
             errors[field.field_name] = "Please enter a valid phone number";
           }
         }
+
+        // Ghana Card validation
+        if (field.title?.toLowerCase().includes("ghana card") && value) {
+          const ghanaCardRegex = /^GHA-\d{9}-\d{1}$/;
+          if (!ghanaCardRegex.test(value)) {
+            errors[field.field_name] = "Please enter a valid Ghana Card Number (GHA-XXXXXXXXX-X)";
+          }
+        }
       });
 
     if (!consentAccepted) {
@@ -439,6 +447,32 @@ const RegistrationDialog = ({ isOpen, onClose, programme, userId, courseId, cent
     }
 
     // Standard input field
+    if (field.title?.toLowerCase().includes("ghana card")) {
+      return (
+        <div className="relative">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900 font-medium select-none pointer-events-none">
+            GHA-
+          </span>
+          <input
+            type="text"
+            value={value.replace("GHA-", "")}
+            onChange={(e) => {
+              const numbers = e.target.value.replace(/[^0-9]/g, "");
+              let formattedNumbers = numbers.slice(0, 9);
+              if (numbers.length > 9) {
+                formattedNumbers += "-" + numbers.slice(9, 10);
+              }
+              // Keep GHA- in the actual value for the backend
+              handleFieldChange(field.field_name, numbers ? `GHA-${formattedNumbers}` : "");
+            }}
+            className={`${baseClasses} pl-14`}
+            placeholder="123456789-0"
+            autoComplete="off"
+          />
+        </div>
+      );
+    }
+
     return (
       <input
         type={inputType}
