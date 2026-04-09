@@ -581,6 +581,7 @@ export default function QuizPage({ params }) {
             setAssessmentComplete(true);
             setShowLevelEnd(true);
             setSelected(null);
+            setLastResult(null);
             setSubmittingAnswer(false);
           } else if (result?.level_complete) {
             // Current level is done, show transition
@@ -592,6 +593,7 @@ export default function QuizPage({ params }) {
             }));
             setShowLevelEnd(true);
             setSelected(null);
+            setLastResult(null);
             setSubmittingAnswer(false);
 
             // Store next question for after the transition
@@ -624,10 +626,12 @@ export default function QuizPage({ params }) {
               setCurrentLevel(nextQ.level);
             }
             setSelected(null);
+            setLastResult(null);
             setSubmittingAnswer(false);
           } else {
             // Fallback: just reset selection
             setSelected(null);
+            setLastResult(null);
             setSubmittingAnswer(false);
           }
         }, 1100);
@@ -636,6 +640,7 @@ export default function QuizPage({ params }) {
         // On error, just advance
         setTimeout(() => {
           setSelected(null);
+          setLastResult(null);
           setSubmittingAnswer(false);
         }, 1100);
       }
@@ -771,7 +776,7 @@ export default function QuizPage({ params }) {
           </motion.button>
 
           <button
-            onClick={() => window.location.href = process.env.NEXT_PUBLIC_PORTAL_URL || '/'}
+            onClick={() => router.push(`${process.env.NEXT_PUBLIC_PORTAL_URL}`)}
             className="mt-5 text-sm text-white/40 hover:text-white/80 transition-colors"
           >
             <FiHome className="inline mr-1 -mt-0.5" size={14} /> Back to Home
@@ -1055,12 +1060,12 @@ export default function QuizPage({ params }) {
 
                     <div className="space-y-2.5">
                       <button
-                        onClick={() => {
-                          if (window.parent !== window) {
-                            window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
-                          }
-                          window.location.href = `${process.env.NEXT_PUBLIC_PORTAL_URL}/student/choose-course`;
-                        }}
+                        onClick={() =>
+                          router.push(
+                            process.env.NEXT_PUBLIC_PORTAL_URL +
+                              `/student/change-course`,
+                          )
+                        }
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
                         Proceed to Course Selection <FiArrowRight size={16} />
@@ -1126,12 +1131,12 @@ export default function QuizPage({ params }) {
                     </div>
                     <div className="space-y-2.5">
                       <button
-                        onClick={() => {
-                          if (window.parent !== window) {
-                            window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
-                          }
-                          window.location.href = `${process.env.NEXT_PUBLIC_PORTAL_URL}/student/choose-course`;
-                        }}
+                        onClick={() =>
+                          router.push(
+                            process.env.NEXT_PUBLIC_PORTAL_URL +
+                              `/student/change-course`,
+                          )
+                        }
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
                         Proceed to Course Selection <FiArrowRight size={16} />

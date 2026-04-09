@@ -4,9 +4,11 @@ namespace App\Providers;
 
 use App\Events\FormSubmittedEvent;
 use App\Events\UserRegistered;
+use App\Events\CourseChanged;
 use App\Listeners\EmailSentListener;
 use App\Listeners\FormSubmitedListener;
 use App\Listeners\SendExamLoginCredentials;
+use App\Listeners\CourseChangedListener;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -28,6 +30,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         FormSubmittedEvent::class => [
             FormSubmitedListener::class,
+        ],
+        CourseChanged::class => [
+            CourseChangedListener::class,
         ],
         \Illuminate\Queue\Events\JobProcessed::class => [
             EmailSentListener::class

@@ -70,7 +70,6 @@ Route::get(config('statamic.cp.route', 'cp') . '/auth/login', function () {
 });
 
 Route::get('/api/course-match', [CourseMatchAPIController::class, 'index']);
-Route::get('/api/check-user-recommended-courses/{userId}', [CourseMatchAPIController::class, 'checkUserRecommendedCourses']);
 Route::post('/api/course-match/recommend', action: [CourseMatchAPIController::class, 'recommend']);
 Route::get('/api/programmes', [CourseProgrammeController::class, 'programmeWithBatch']);
 Route::get('/api/programmes-with-batches', [CourseProgrammeController::class, 'programmeWithBatch']);
@@ -589,6 +588,9 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::get('/results', [StudentOperation::class, 'results'])->name('results');
 
         // Change course route
+        Route::get('/course', [StudentOperation::class, 'change_course'])->name('course.index');
+        Route::get('/course/select-center/{branch_id}', [StudentOperation::class, 'select_center'])->name('course.select-center');
+        Route::get('/course/select-course', [StudentOperation::class, 'select_course'])->name('course.select-course');
         Route::get('/choose-course', [StudentOperation::class, 'change_course'])->name('change-course');
         Route::post('/update-course', [StudentOperation::class, 'update_course'])->name('update-course');
 

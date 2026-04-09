@@ -86,7 +86,8 @@ class AttendanceCrudController extends CrudController
 
         $this->courseFilter('course_id');
 
-        $sessions = \App\Models\CourseSession::select('session')
+        $sessions = \App\Models\CourseSession::courseType()
+            ->select('session')
             ->distinct()
             ->pluck('session', 'session')
             ->toArray();

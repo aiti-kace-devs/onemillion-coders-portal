@@ -62,7 +62,7 @@ class BranchCrudController extends CrudController
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
 
-        // CRUD::denyAccess('show');
+        CRUD::denyAccess('show');
 
     }
 

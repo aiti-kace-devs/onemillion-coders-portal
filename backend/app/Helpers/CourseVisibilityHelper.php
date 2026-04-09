@@ -18,12 +18,12 @@ final class CourseVisibilityHelper
             return null;
         }
 
-        if (method_exists($admin, 'visibleCourseIds')) {
-            return $admin->visibleCourseIds();
-        }
-
         if (method_exists($admin, 'isSuper') && $admin->isSuper()) {
             return null;
+        }
+
+        if (method_exists($admin, 'visibleCourseIds')) {
+            return $admin->visibleCourseIds();
         }
 
         return $admin->assignedCourses()

@@ -158,7 +158,6 @@ class RegistrationFormAPIController extends Controller
         $validator = Validator::make($request->all(), [
             'userId' => 'required|exists:users,userId',
             'course_id' => 'required|integer|exists:courses,id',
-            'centre_id' => 'required|integer|exists:centres,id',
             'support' => 'required|boolean',
         ]);
 
@@ -180,15 +179,12 @@ class RegistrationFormAPIController extends Controller
                 'message' => 'User not found'
             ]);
         }
-
-        $course = Course::with('programme')
-            ->where('id', $data['course_id'])
-            ->where('centre_id', $data['centre_id'])
-            ->first();
+        
+        $course = Course::with('programme')->find($data['course_id']);
         if (!$course) {
             return response()->json([
                 'success' => false,
-                'message' => 'Course not found for the selected centre.'
+                'message' => 'Course not found'
             ], 404);
         }
 

@@ -41,11 +41,11 @@
 @endcan
 
 
-@can('centre.read.all')
+@canany(['centre.read.all', 'centre.read.self'])
     <x-backpack::menu-item title="Manage Centres" icon="la la-building" :link="backpack_url('centre')" />
     {{-- <x-backpack::menu-item title="Manage Districts" icon="la la-question" :link="backpack_url('district')" /> --}}
     {{-- <x-backpack::menu-item title="Constituencies" icon="la la-question" :link="backpack_url('constituency')" /> --}}
-@endcan
+@endcanany
 
 @can('programme.read.all')
     <x-backpack::menu-item title="Programmes" icon="la la-graduation-cap" :link="backpack_url('programme')" />
@@ -139,7 +139,9 @@
     </x-backpack::menu-dropdown>
 @endif
 
-@if (auth()->user()->can('app-config.read.all') || auth()->user()->can('app-config.update'))
+@if (auth()->user()->can('app-config.read.all') ||
+        auth()->user()->can('app-config.update') ||
+        auth()->user()->can('admin.read.all'))
     <x-backpack::menu-dropdown title="System Settings" icon="la la-cogs">
         @can('app-config.read.all')
             <x-backpack::menu-dropdown-item title="App Configs" icon="la la-cog" :link="backpack_url('app-config')" />
