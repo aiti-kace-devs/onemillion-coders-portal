@@ -837,7 +837,7 @@ export default function CoursesPage({ params }) {
               className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white font-semibold text-sm rounded-xl transition-colors"
             >
               <FiTarget className="w-4 h-4" />
-              Retake Quiz
+              Get New Recommendations
             </button>
           </div>
         </motion.div>
@@ -1846,7 +1846,7 @@ export default function CoursesPage({ params }) {
                                 <FiGlobe className="w-2.5 h-2.5 text-purple-600" />
                               )}
                               <span className={`text-[10px] sm:text-[11px] font-medium ${course.mode_of_delivery === "Online" ? "text-blue-700" :
-                                  course.mode_of_delivery === "In Person" ? "text-green-700" : "text-purple-700"
+                                course.mode_of_delivery === "In Person" ? "text-green-700" : "text-purple-700"
                                 }`}>{course.mode_of_delivery}</span>
                             </div>
                             {userStatus && (
@@ -1890,7 +1890,7 @@ export default function CoursesPage({ params }) {
                     variant="outline"
                     className="min-h-[44px]"
                   >
-                    Retake Quiz
+                    Get New Recommendations
                   </Button>
                 </div>
               )}
