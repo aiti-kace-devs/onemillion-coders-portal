@@ -198,7 +198,7 @@ class RegistrationFormAPIController extends Controller
         if ($supportRequested && ! $centreIsReady) {
             return response()->json([
                 'success' => false,
-                'message' => 'Accessibility support is not available for the selected centre because the centre is not ready.',
+                'message' => 'Resource (internet & laptop) support is not available for the selected centre at this time. You can try again later',
             ], 422);
         }
 
