@@ -572,9 +572,12 @@ public function change_course()
             ]);
     }
 
-    $branches = Branch::where('status', 1)->get();
+    $currentCourse = Course::find($user->registered_course);
 
-    return Inertia::render('Student/Course/Index', compact('user', 'branches'));
+    return Inertia::render('Student/ChangeCourse', [
+        'user' => $user,
+        'currentCourse' => $currentCourse
+    ]);
 }
     // Select training center
     public function select_center($branch_id)
