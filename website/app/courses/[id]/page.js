@@ -1610,7 +1610,7 @@ export default function CoursesPage({ params }) {
                       Questions unavailable
                     </h3>
                     <p className="text-gray-500 mb-4 text-xs sm:text-sm">
-                      Could not load the course match questions.
+                      Could not load the course recommendation questions.
                     </p>
                     <Button
                       onClick={() => fetchQuestions()}
@@ -1845,10 +1845,9 @@ export default function CoursesPage({ params }) {
                               ) : (
                                 <FiGlobe className="w-2.5 h-2.5 text-purple-600" />
                               )}
-                              <span className={`text-[10px] sm:text-[11px] font-medium ${
-                                course.mode_of_delivery === "Online" ? "text-blue-700" :
-                                course.mode_of_delivery === "In Person" ? "text-green-700" : "text-purple-700"
-                              }`}>{course.mode_of_delivery}</span>
+                              <span className={`text-[10px] sm:text-[11px] font-medium ${course.mode_of_delivery === "Online" ? "text-blue-700" :
+                                  course.mode_of_delivery === "In Person" ? "text-green-700" : "text-purple-700"
+                                }`}>{course.mode_of_delivery}</span>
                             </div>
                             {userStatus && (
                               <a

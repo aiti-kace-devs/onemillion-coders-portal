@@ -75,7 +75,7 @@ const Footer = ({ data }) => {
     { name: "Pathway", link: "/pathway" },
     { name: "Community", link: "/community" },
     { name: "About", link: "/about" },
-    { name: "Course Match", link: "/course-match" },
+    { name: "Course Recommendation", link: "/course-match" },
   ];
 
   const copyrightText = hasData && footerData.copyrights?.copyright
@@ -85,8 +85,8 @@ const Footer = ({ data }) => {
   const footerLinks = hasData && footerData.copyrights?.footer_links?.length
     ? footerData.copyrights.footer_links.filter((l) => !/powered|gi-kace/i.test(l.name))
     : [
-        { name: "Terms of Service & Privacy Policy", url: "/terms-and-privacy" },
-      ];
+      { name: "Terms of Service & Privacy Policy", url: "/terms-and-privacy" },
+    ];
 
   const collaboratorsBlock = hasData ? footerData.collaborators : null;
   const description = collaboratorsBlock?.description ?? "Empowering Ghana's digital future through world-class technology education and training programs.";
@@ -95,11 +95,11 @@ const Footer = ({ data }) => {
   const socialItems = hasData && footerData.socialMedia.length > 0
     ? footerData.socialMedia
     : [
-        { name: "Facebook", url: "#", icon: { value: "facebook" } },
-        { name: "X(twitter)", url: "#", icon: { value: "twitter" } },
-        { name: "LinkedIn", url: "#", icon: { value: "linkedin" } },
-        { name: "Instagram", url: "#", icon: { value: "instagram" } },
-      ];
+      { name: "Facebook", url: "#", icon: { value: "facebook" } },
+      { name: "X(twitter)", url: "#", icon: { value: "twitter" } },
+      { name: "LinkedIn", url: "#", icon: { value: "linkedin" } },
+      { name: "Instagram", url: "#", icon: { value: "instagram" } },
+    ];
 
   const poweredByLink = hasData && footerData.copyrights?.footer_links
     ? footerData.copyrights.footer_links.find((l) => /powered|gi-kace/i.test(l.name))

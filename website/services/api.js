@@ -1,5 +1,5 @@
 import axios from 'axios';
- 
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://app.omcp.gikace.org/api";
 
 // Create axios instance with base configuration
@@ -56,7 +56,7 @@ export const apiRequest = async (endpoint, options = {}) => {
   }
 };
 
-export default apiRequest; 
+export default apiRequest;
 
 /**
  * Fetch page data by slug
@@ -116,7 +116,7 @@ export const getCourseMatchQuestions = async (type, token) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Failed to fetch course match questions:', error);
+    console.error('Failed to fetch course recommendation questions:', error);
     throw error;
   }
 };
