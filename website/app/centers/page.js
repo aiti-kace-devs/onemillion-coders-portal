@@ -380,18 +380,6 @@ function CentersPageContent() {
               )}
             </div>
           )}
-
-          {/* Statistics Pills - District count */}
-          {selectedDistrict && (
-            <div className="flex items-center gap-3 mt-3 flex-wrap">
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200/60 rounded-full text-xs font-medium">
-                <span className="w-5 h-5 flex items-center justify-center bg-blue-400 text-white rounded-full text-xs font-bold">
-                  {districtCentresCount}
-                </span>
-                {districtCentresCount === 1 ? 'Center' : 'Centers'} in {selectedDistrict.title}
-              </span>
-            </div>
-          )}
         </div>
       </section>
 
