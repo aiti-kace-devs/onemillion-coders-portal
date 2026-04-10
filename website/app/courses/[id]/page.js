@@ -1888,7 +1888,7 @@ export default function CoursesPage({ params }) {
               {/* Actions */}
               <div className="mt-8 sm:mt-10 flex justify-center">
                 <Button
-                  onClick={() => router.push(`/programmes?user_id=${id}${selectedCentre ? `&centre_id=${selectedCentre.id}` : ''}`)}
+                  onClick={() => router.push(`/programmes?user_id=${id}${selectedCentre ? `&centre_id=${selectedCentre.id}` : ''}${token ? `&token=${token}` : ''}`)}
                   className="min-h-[44px]"
                 >
                   View All Courses

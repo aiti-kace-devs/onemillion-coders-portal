@@ -13,6 +13,7 @@ export default function ProgrammesClient({ initialCategory }) {
   const searchParams = useSearchParams();
   const userId = searchParams.get("user_id");
   const centreId = searchParams.get("centre_id");
+  const token = searchParams.get("token");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedDuration, setSelectedDuration] = useState("All");
@@ -498,7 +499,7 @@ export default function ProgrammesClient({ initialCategory }) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  <ProgrammeCard programme={programme} userId={userId} centreId={centreId} />
+                  <ProgrammeCard programme={programme} userId={userId} centreId={centreId} token={token} />
                 </motion.div>
               ))
             )}
