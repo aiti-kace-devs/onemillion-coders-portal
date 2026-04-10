@@ -375,12 +375,12 @@ export default function CourseMatchClient() {
                         .toLowerCase()
                         .includes(searchQuery.toLowerCase()),
                     ).length === 0 && (
-                      <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
-                        <p className="text-gray-500 text-xs sm:text-sm">
-                          No regions match &ldquo;{searchQuery}&rdquo;
-                        </p>
-                      </div>
-                    )}
+                        <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
+                          <p className="text-gray-500 text-xs sm:text-sm">
+                            No regions match &ldquo;{searchQuery}&rdquo;
+                          </p>
+                        </div>
+                      )}
                   </div>
                 </>
               ) : (
@@ -436,9 +436,8 @@ export default function CourseMatchClient() {
                       <div
                         className="bg-yellow-400 h-1.5 rounded-full transition-all duration-500 ease-out"
                         style={{
-                          width: `${
-                            ((currentQuestion + 1) / totalQuestions) * 100
-                          }%`,
+                          width: `${((currentQuestion + 1) / totalQuestions) * 100
+                            }%`,
                         }}
                       />
                     </div>
@@ -484,8 +483,8 @@ export default function CourseMatchClient() {
                           (option, index) => {
                             const isSelected = activeQuestion.is_multiple_select
                               ? (answers[activeQuestion.id] || []).includes(
-                                  option.id,
-                                )
+                                option.id,
+                              )
                               : answers[activeQuestion.id] === option.id;
                             return (
                               <motion.button
@@ -499,22 +498,20 @@ export default function CourseMatchClient() {
                                 onClick={() =>
                                   handleAnswer(activeQuestion.id, option.id)
                                 }
-                                className={`relative p-4 sm:p-6 rounded-xl text-left transition-all duration-200 border-2 ${
-                                  isSelected
+                                className={`relative p-4 sm:p-6 rounded-xl text-left transition-all duration-200 border-2 ${isSelected
                                     ? "bg-gray-900 text-white border-gray-900"
                                     : "bg-white border-gray-200 hover:border-yellow-400 active:scale-[0.98]"
-                                }`}
+                                  }`}
                               >
                                 <div className="flex items-start gap-3">
                                   {/* Checkbox / Radio indicator */}
                                   <div className="flex-shrink-0 mt-0.5">
                                     {activeQuestion.is_multiple_select ? (
                                       <div
-                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
-                                          isSelected
+                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${isSelected
                                             ? "bg-white border-white"
                                             : "border-gray-300"
-                                        }`}
+                                          }`}
                                       >
                                         {isSelected && (
                                           <FiCheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-900" />
@@ -522,11 +519,10 @@ export default function CourseMatchClient() {
                                       </div>
                                     ) : (
                                       <div
-                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                          isSelected
+                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
                                             ? "border-white"
                                             : "border-gray-300"
-                                        }`}
+                                          }`}
                                       >
                                         {isSelected && (
                                           <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white" />
@@ -540,11 +536,10 @@ export default function CourseMatchClient() {
                                     </h3>
                                     {option.description && (
                                       <p
-                                        className={`text-xs sm:text-sm leading-relaxed ${
-                                          isSelected
+                                        className={`text-xs sm:text-sm leading-relaxed ${isSelected
                                             ? "text-gray-300"
                                             : "text-gray-500"
-                                        }`}
+                                          }`}
                                       >
                                         {option.description}
                                       </p>
@@ -583,11 +578,10 @@ export default function CourseMatchClient() {
                         disabled={
                           (answers[activeQuestion.id] || []).length === 0
                         }
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                          (answers[activeQuestion.id] || []).length > 0
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${(answers[activeQuestion.id] || []).length > 0
                             ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
                             : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        }`}
+                          }`}
                       >
                         {currentQuestion < questions.length - 1
                           ? "Next"
@@ -607,7 +601,7 @@ export default function CourseMatchClient() {
                       Questions unavailable
                     </h3>
                     <p className="text-gray-500 mb-4 text-xs sm:text-sm">
-                      Could not load the course match questions.
+                      Could not load the course recommendation questions.
                     </p>
                     <Button
                       onClick={() => window.location.reload()}
@@ -637,7 +631,7 @@ export default function CourseMatchClient() {
                   <FiCheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
                 </div>
                 <h2 className="text-base sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
-                  Your Course Matches
+                  Your Course Recommendations
                 </h2>
                 <p className="text-gray-500 text-xs sm:text-base max-w-lg mx-auto">
                   Based on your preferences, here are the courses that best fit
@@ -690,11 +684,10 @@ export default function CourseMatchClient() {
                         <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
                           {course.match_percentage != null && (
                             <span
-                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${
-                                course.match_percentage.split("%")[0] >= 70
+                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${course.match_percentage.split("%")[0] >= 70
                                   ? "bg-green-50/90 text-green-700"
                                   : "bg-yellow-50/90 text-yellow-700"
-                              }`}
+                                }`}
                             >
                               <FiStar className="w-2.5 h-2.5" />
                               {course.match_percentage}

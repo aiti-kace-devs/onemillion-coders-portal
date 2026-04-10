@@ -151,7 +151,7 @@ const TechGhanaSection = () => {
         setLoading(true);
         const response = await fetchBranchesSummary();
         if (response?.success && response?.data) {
-setBranchesData(response.data);
+          setBranchesData(response.data);
         }
       } catch (error) {
         console.error("Failed to load branches data:", error);
@@ -356,56 +356,55 @@ setBranchesData(response.data);
                 {/* Region Tooltip - always rendered, visibility toggled */}
                 <div
                   ref={tooltipRef}
-                  className={`absolute z-[1001] pointer-events-none transition-all duration-500 ease-in-out ${
-                    hoveredRegion && mapInView ? "opacity-100 scale-100" : "opacity-0 scale-95"
-                  }`}
+                  className={`absolute z-[1001] pointer-events-none transition-all duration-500 ease-in-out ${hoveredRegion && mapInView ? "opacity-100 scale-100" : "opacity-0 scale-95"
+                    }`}
                   style={{
                     ...(hoveredRegion ? getTooltipPosition(hoveredRegion) : {}),
                     transform: "translate(-50%, -110%)",
                   }}
                 >
-                    <div className="bg-white rounded-xl px-3 py-2.5 shadow-2xl border border-gray-100 w-52">
-                      <h4 className="font-semibold text-gray-900 text-sm mb-2">
-                        {REGION_MAP[hoveredRegion]} Region
-                      </h4>
+                  <div className="bg-white rounded-xl px-3 py-2.5 shadow-2xl border border-gray-100 w-52">
+                    <h4 className="font-semibold text-gray-900 text-sm mb-2">
+                      {REGION_MAP[hoveredRegion]} Region
+                    </h4>
 
-                      {hoveredBranchData ? (
-                        <>
-                          {/* Stats row */}
-                          <div className="mb-2">
-                            <div className="bg-gray-50 rounded-md px-2 py-1.5 text-center">
-                              <span className="text-sm font-bold text-gray-900">
-                                {hoveredBranchData.total_centres}
-                              </span>
-                              <span className="text-[11px] text-gray-500 ml-1">
-                                center{hoveredBranchData.total_centres !== 1 ? "s" : ""}
-                              </span>
-                            </div>
+                    {hoveredBranchData ? (
+                      <>
+                        {/* Stats row */}
+                        <div className="mb-2">
+                          <div className="bg-gray-50 rounded-md px-2 py-1.5 text-center">
+                            <span className="text-sm font-bold text-gray-900">
+                              {hoveredBranchData.total_centres}
+                            </span>
+                            <span className="text-[11px] text-gray-500 ml-1">
+                              center{hoveredBranchData.total_centres !== 1 ? "s" : ""}
+                            </span>
                           </div>
+                        </div>
 
-                          {/* Course tags */}
-                          {hoveredBranchData.courses?.length > 0 && (
-                            <div className="grid grid-cols-2 gap-1">
-                              {hoveredBranchData.courses.slice(0, 4).map((course, i) => (
-                                <span
-                                  key={i}
-                                  className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium text-center truncate"
-                                >
-                                  {course.title}
-                                </span>
-                              ))}
-                              {hoveredBranchData.courses.length > 4 && (
-                                <span className="text-[11px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-center">
-                                  +{hoveredBranchData.courses.length - 4} more
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <p className="text-xs text-gray-400">No active programs</p>
-                      )}
-                    </div>
+                        {/* Course tags */}
+                        {hoveredBranchData.courses?.length > 0 && (
+                          <div className="grid grid-cols-2 gap-1">
+                            {hoveredBranchData.courses.slice(0, 4).map((course, i) => (
+                              <span
+                                key={i}
+                                className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium text-center truncate"
+                              >
+                                {course.title}
+                              </span>
+                            ))}
+                            {hoveredBranchData.courses.length > 4 && (
+                              <span className="text-[11px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-center">
+                                +{hoveredBranchData.courses.length - 4} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-400">No active programs</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -430,7 +429,7 @@ setBranchesData(response.data);
             <p className="text-white/90 mb-6 max-w-2xl mx-auto">
               Be part of the movement that&apos;s positioning Ghana as a leading
               tech hub in Africa. Start your journey with world-class training
-              and certification programs.
+              and certification programmes.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
@@ -439,7 +438,7 @@ setBranchesData(response.data);
                 icon={FiGlobe}
                 className="!bg-white !text-gray-900 hover:!bg-gray-100 !border-white"
               >
-                Explore Programs
+                Explore Programmes
               </Button>
               <Button
                 onClick={() => router.push("/course-match")}
@@ -447,7 +446,7 @@ setBranchesData(response.data);
                 icon={FiSearch}
                 className="!bg-transparent !border-white !text-white hover:!bg-white hover:!text-gray-900"
               >
-                Course Match
+                Course Recommendation
               </Button>
             </div>
           </div>

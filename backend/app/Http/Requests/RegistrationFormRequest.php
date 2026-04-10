@@ -33,6 +33,8 @@ class RegistrationFormRequest extends FormRequest
             'schema.*.title' => 'required|string|max:255',
             'schema.*.type' => 'required|string|in:text,email,select,phonenumber,password,select_course,textarea,number,date,file,checkbox,radio',
             'schema.*.description' => 'nullable|string|max:500',
+            'schema.*.placeholder' => 'nullable|string|max:255',
+            'schema.*.group_name' => 'nullable|string|max:255',
             'schema.*.rules' => 'nullable|string|max:1000',
             'schema.*.options' => 'nullable|string|max:1000',
             'schema.*.validators' => 'nullable|array',
@@ -72,6 +74,8 @@ class RegistrationFormRequest extends FormRequest
             'schema.*.type.required' => 'Each form field must have a type.',
             'schema.*.type.in' => 'Field type must be one of: text, email, select, phonenumber, password, select_course, textarea, number, date, file, checkbox, radio.',
             'schema.*.description.max' => 'Field description cannot exceed 500 characters.',
+            'schema.*.placeholder.max' => 'Field placeholder cannot exceed 255 characters.',
+            'schema.*.group_name.max' => 'Field group name cannot exceed 255 characters.',
             'schema.*.rules.max' => 'Field rules cannot exceed 1000 characters.',
             'schema.*.options.max' => 'Field options cannot exceed 1000 characters.',
             'schema.*.validators.required' => 'Each form field must have validators.',
@@ -104,7 +108,7 @@ class RegistrationFormRequest extends FormRequest
      */
     private function validateSchemaStructure($validator)
     {
-        if (!$this->has('schema') || !is_array($this->input('schema'))) {
+        if (! $this->has('schema') || ! is_array($this->input('schema'))) {
             return;
         }
 
@@ -113,13 +117,13 @@ class RegistrationFormRequest extends FormRequest
         foreach ($schema as $index => $field) {
             // Validate select fields have options
             if (isset($field['type']) && in_array($field['type'], ['select']) && empty($field['options'])) {
-                $validator->errors()->add("schema.{$index}.options", "Select fields must have options defined.");
+                $validator->errors()->add("schema.{$index}.options", 'Select fields must have options defined.');
             }
 
             // Validate field name format
             if (isset($field['field_name'])) {
                 if (preg_match('/^[a-z0-9\-_]+$/', $field['field_name']) === 0) {
-                    $validator->errors()->add("schema.{$index}.field_name", "Field name contains invalid characters.");
+                    $validator->errors()->add("schema.{$index}.field_name", 'Field name contains invalid characters.');
                 }
             }
         }
@@ -130,7 +134,7 @@ class RegistrationFormRequest extends FormRequest
      */
     private function validateFieldNamesUniqueness($validator)
     {
-        if (!$this->has('schema') || !is_array($this->input('schema'))) {
+        if (! $this->has('schema') || ! is_array($this->input('schema'))) {
             return;
         }
 
@@ -152,7 +156,7 @@ class RegistrationFormRequest extends FormRequest
      */
     private function validateSelectOptions($validator)
     {
-        if (!$this->has('schema') || !is_array($this->input('schema'))) {
+        if (! $this->has('schema') || ! is_array($this->input('schema'))) {
             return;
         }
 
@@ -162,7 +166,7 @@ class RegistrationFormRequest extends FormRequest
             if (isset($field['type']) && $field['type'] === 'select' && isset($field['options'])) {
                 $options = explode(',', $field['options']);
                 if (count($options) < 2) {
-                    $validator->errors()->add("schema.{$index}.options", "Select field must have at least 2 options.");
+                    $validator->errors()->add("schema.{$index}.options", 'Select field must have at least 2 options.');
                 }
             }
         }
@@ -173,14 +177,14 @@ class RegistrationFormRequest extends FormRequest
      */
     private function validateRulesFormat($validator)
     {
-        if (!$this->has('schema') || !is_array($this->input('schema'))) {
+        if (! $this->has('schema') || ! is_array($this->input('schema'))) {
             return;
         }
 
         $schema = $this->input('schema');
 
         foreach ($schema as $index => $field) {
-            if (!isset($field['rules']) || trim((string) $field['rules']) === '') {
+            if (! isset($field['rules']) || trim((string) $field['rules']) === '') {
                 continue;
             }
 
@@ -189,10 +193,10 @@ class RegistrationFormRequest extends FormRequest
             foreach ($rules as $rule) {
                 if ($this->isRegexRule($rule)) {
                     $pattern = $this->extractRegexPattern($rule);
-                    if (!$this->isValidRegexPattern($pattern)) {
+                    if (! $this->isValidRegexPattern($pattern)) {
                         $validator->errors()->add(
                             "schema.{$index}.rules",
-                            "Invalid regex rule. Ensure it has valid delimiters (e.g. regex:/^...$/)."
+                            'Invalid regex rule. Ensure it has valid delimiters (e.g. regex:/^...$/).'
                         );
                         break;
                     }
@@ -225,6 +229,7 @@ class RegistrationFormRequest extends FormRequest
         $isValid = true;
         set_error_handler(function () use (&$isValid) {
             $isValid = false;
+
             return true;
         }, E_WARNING);
 
@@ -272,6 +277,7 @@ class RegistrationFormRequest extends FormRequest
                 if ($index < $length && $rules[$index] === '|') {
                     $index++;
                 }
+
                 continue;
             }
 
@@ -311,7 +317,7 @@ class RegistrationFormRequest extends FormRequest
 
         $delimiter = $rules[$current];
         $current++;
-        $token = $prefix . $delimiter;
+        $token = $prefix.$delimiter;
         $escaped = false;
 
         while ($current < $length) {

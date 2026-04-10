@@ -8,12 +8,14 @@ use App\Models\Course;
 use App\Models\CourseSession;
 use App\Models\User;
 use App\Models\UserAdmission;
+use App\Services\StudentIdGenerator;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 
 class CreateStudentAdmissionJob implements ShouldQueue
 {
@@ -33,6 +35,12 @@ class CreateStudentAdmissionJob implements ShouldQueue
     public function handle(): void
     {
         if (!$this->student) return;
+
+        $lockKey = 'admission-lock-' . $this->student->id;
+        if (!Cache::lock($lockKey, 30)->get()) {
+            \Log::info('[ADMISSION] Duplicate dispatch skipped', ['user_id' => $this->student->id]);
+            return;
+        }
 
         $course = $this->course ?? Course::find($this->student->registered_course);
         if (!$course) return;
@@ -72,6 +80,13 @@ class CreateStudentAdmissionJob implements ShouldQueue
             $admission = $existingAdmission;
         } else {
             $admission = UserAdmission::create($admissionData);
+        }
+
+        // Generate a new student ID on every admission
+        $studentId = StudentIdGenerator::generate($this->student, $course);
+        if ($studentId) {
+            $this->student->student_id = $studentId;
+            $this->student->saveQuietly();
         }
 
         if ($this->session) {

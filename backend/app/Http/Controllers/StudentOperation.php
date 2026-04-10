@@ -550,36 +550,35 @@ class StudentOperation extends Controller
 
     //Display change course form
 
-    public function change_course()
-    {
-        $user = Auth::guard('web')->user();
-        $branches = Branch::query()
-            ->where('status', 1)
-            ->orderBy('title')
-            ->get(['id', 'title']);
+public function change_course()
+{
+    $user = Auth::guard('web')->user();
 
-        if ($user->shortlist) {
-            return redirect()
-                ->route('student.application-status')
-                ->with([
-                    'flash' => 'Your course selection is now locked because you have been shortlisted. If you need assistance, please contact support.',
-                    'key' => 'info',
-                ]);
-        }
-
-        if (!$user->userAssessment?->completed) {
-            return redirect()
-                ->route('student.application-status')
-                ->with([
-                    'flash' => 'Please complete the Level Determination Assessment first.',
-                    'key' => 'info',
-                ]);
-        }
-
-        return Inertia::render('Student/Course/Index', compact('user', 'branches'));
-        // return view('student.change-course', compact('user', 'courses', 'currentCourse'));
+    if ($user->shortlist) {
+        return redirect()
+            ->route('student.application-status')
+            ->with([
+                'flash' => 'Your course selection is now locked because you have been shortlisted. If you need assistance, please contact support.',
+                'key' => 'info',
+            ]);
     }
 
+    if (!$user->userAssessment?->completed) {
+        return redirect()
+            ->route('student.application-status')
+            ->with([
+                'flash' => 'Please complete the Level Determination Assessment first.',
+                'key' => 'info',
+            ]);
+    }
+
+    $currentCourse = Course::find($user->registered_course);
+
+    return Inertia::render('Student/ChangeCourse', [
+        'user' => $user,
+        'currentCourse' => $currentCourse
+    ]);
+}
     // Select training center
     public function select_center($branch_id)
     {

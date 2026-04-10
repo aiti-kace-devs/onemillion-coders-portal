@@ -26,7 +26,7 @@ class Batch extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    protected $fillable = ['title', 'description', 'start_date', 'end_date', 'total_admitted_students', 'year', 'total_completed_students', 'completed', 'status', 'branch_id', 'centre_ids', 'programme_ids'];
+    protected $fillable = ['title', 'description', 'start_date', 'end_date', 'total_admitted_students', 'year', 'batch_number', 'total_completed_students', 'completed', 'status', 'branch_id', 'centre_ids', 'programme_ids'];
     // protected $hidden = [];
 
     protected $casts = [
@@ -50,6 +50,12 @@ class Batch extends Model
     {
         static::creating(function ($batch) {
             $batch->year = now()->year;
+
+            // Auto-assign batch_number as next sequential number for this year
+            if (empty($batch->batch_number)) {
+                $maxNumber = static::where('year', $batch->year)->max('batch_number') ?? 0;
+                $batch->batch_number = $maxNumber + 1;
+            }
         });
 
         static::saving(function ($batch) {

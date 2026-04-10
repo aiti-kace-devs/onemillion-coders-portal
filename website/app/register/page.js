@@ -134,8 +134,8 @@ function RegisterForm() {
         // Use grouped_schema if available, otherwise fall back to single group
         const groups = form.grouped_schema && form.grouped_schema.length > 0
           ? form.grouped_schema.filter(
-              (g) => g.fields.some((f) => f.field_name !== "course")
-            )
+            (g) => g.fields.some((f) => f.field_name !== "course")
+          )
           : [{ title: "Registration", fields: form.schema.filter((f) => f.field_name !== "course") }];
 
         setGroupedSchema(groups);
@@ -285,6 +285,21 @@ function RegisterForm() {
             }
           } catch (error) {
             errors[field.field_name] = "Please enter a valid Ghana phone number";
+          }
+        }
+
+        if (field.title?.toLowerCase().includes("ghana card") && value) {
+          const ghanaCardRegex = /^GHA-\d{9}-\d{1}$/;
+          if (!ghanaCardRegex.test(value)) {
+            errors[field.field_name] = "Please enter a valid Ghana Card Number (GHA-XXXXXXXXX-X)";
+          }
+        }
+        // Password validation
+        if (field.type === "password" && value) {
+          if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,64}$/.test(value)) {
+            errors[field.field_name] = "Password must be at least 6 characters with an uppercase letter, a lowercase letter, and a number.";
+          } else if (value !== confirmPassword) {
+            errors[field.field_name] = "Passwords do not match.";
           }
         }
 
@@ -461,11 +476,10 @@ function RegisterForm() {
     const value = formData[field.field_name] || "";
     const hasError = formErrors[field.field_name];
 
-    const baseClasses = `w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 ${
-      hasError
-        ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
-        : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
-    } focus:outline-none hover:border-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed`;
+    const baseClasses = `w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 ${hasError
+      ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+      : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
+      } focus:outline-none hover:border-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed`;
 
     // Handle radio fields
     if (field.type === "radio") {
@@ -480,11 +494,10 @@ function RegisterForm() {
                 key={index}
                 type="button"
                 onClick={() => handleFieldChange(field.field_name, trimmed)}
-                className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 ${
-                  isSelected
-                    ? "border-yellow-400 bg-yellow-50 text-gray-900"
-                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                }`}
+                className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 ${isSelected
+                  ? "border-yellow-400 bg-yellow-50 text-gray-900"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                  }`}
               >
                 {trimmed}
               </button>
@@ -520,13 +533,12 @@ function RegisterForm() {
     if (field.type === "file" || field.type === "image") {
       return (
         <div
-          className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 cursor-pointer ${
-            hasError
-              ? "border-red-300 bg-red-50"
-              : value
+          className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 cursor-pointer ${hasError
+            ? "border-red-300 bg-red-50"
+            : value
               ? "border-green-300 bg-green-50"
               : "border-gray-200 hover:border-yellow-400 hover:bg-yellow-50"
-          }`}
+            }`}
           onDragOver={(e) => {
             e.preventDefault();
             e.currentTarget.classList.add("border-yellow-400", "bg-yellow-50");
@@ -553,8 +565,8 @@ function RegisterForm() {
               field.type === "image"
                 ? "image/*"
                 : field.options
-                ? field.options.split(",").map((ext) => `.${ext.trim().toLowerCase()}`).join(",")
-                : undefined
+                  ? field.options.split(",").map((ext) => `.${ext.trim().toLowerCase()}`).join(",")
+                  : undefined
             }
             onChange={(e) => {
               const file = e.target.files[0];
@@ -575,8 +587,8 @@ function RegisterForm() {
                 {field.type === "image"
                   ? "PNG, JPG, GIF up to 5MB"
                   : field.options
-                  ? `${field.options.split(",").map((e) => e.trim().toUpperCase()).join(", ")} up to 10MB`
-                  : "PDF, DOC up to 10MB"}
+                    ? `${field.options.split(",").map((e) => e.trim().toUpperCase()).join(", ")} up to 10MB`
+                    : "PDF, DOC up to 10MB"}
               </p>
             </>
           )}
@@ -642,35 +654,94 @@ function RegisterForm() {
       );
     }
 
-    // Password field with show/hide eye toggle
+    // Password field with show/hide eye toggle and validation checklist
     if (field.type?.toLowerCase() === "password") {
+      const checks = [
+        { label: "At least 6 characters", met: value.length >= 6 },
+        { label: "Contains at least one uppercase letter", met: /[A-Z]/.test(value) },
+        { label: "Contains at least one lowercase letter", met: /[a-z]/.test(value) },
+        { label: "Contains a number", met: /\d/.test(value) },
+      ];
+
       return (
-        <div className="relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            value={value}
-            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
-            className={`${baseClasses} pr-11`}
-            placeholder={placeholder}
-            autoComplete="new-password"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword((s) => !s)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-            aria-label={showPassword ? "Hide password" : "Show password"}
-          >
-            {showPassword ? (
-              <FiEyeOff className="w-5 h-5" />
-            ) : (
-              <FiEye className="w-5 h-5" />
-            )}
-          </button>
+        <div>
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={value}
+              onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+              className={`${baseClasses} pr-11`}
+              placeholder={placeholder}
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <FiEyeOff className="w-5 h-5" />
+              ) : (
+                <FiEye className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+          {value.length > 0 && (
+            <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+              {checks.map((check, i) => (
+                <li key={i} className="flex items-center gap-2 text-xs sm:text-sm">
+                  <span
+                    className={`inline-flex items-center justify-center w-4 h-4 shrink-0 rounded border transition-colors duration-200 ${
+                      check.met
+                        ? "bg-green-500 border-green-500 text-white"
+                        : "border-gray-300 bg-white"
+                    }`}
+                  >
+                    {check.met && (
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </span>
+                  <span className={check.met ? "text-green-600" : "text-gray-500"}>
+                    {check.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       );
     }
 
     // Standard input field
+    if (field.title?.toLowerCase().includes("ghana card")) {
+      return (
+        <div className="relative">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900 font-medium select-none pointer-events-none">
+            GHA-
+          </span>
+          <input
+            type="text"
+            value={value.replace("GHA-", "")}
+            onChange={(e) => {
+              const numbers = e.target.value.replace(/[^0-9]/g, "");
+              let formattedNumbers = numbers.slice(0, 9);
+              if (numbers.length > 9) {
+                formattedNumbers += "-" + numbers.slice(9, 10);
+              }
+              // Keep GHA- in the actual value for the backend
+              handleFieldChange(field.field_name, numbers ? `GHA-${formattedNumbers}` : "");
+            }}
+            className={`${baseClasses} pl-14`}
+            placeholder="123456789-0"
+            autoComplete="off"
+          />
+        </div>
+      );
+    }
+
     return (
       <input
         type={inputType}
@@ -724,13 +795,12 @@ function RegisterForm() {
                       className="flex items-center gap-1 sm:gap-2 group flex-shrink-0"
                     >
                       <div
-                        className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${
-                          index < currentGroupIndex
-                            ? "bg-green-500 text-white cursor-pointer group-hover:bg-green-600"
-                            : index === currentGroupIndex
+                        className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${index < currentGroupIndex
+                          ? "bg-green-500 text-white cursor-pointer group-hover:bg-green-600"
+                          : index === currentGroupIndex
                             ? "bg-yellow-400 text-gray-900 ring-2 sm:ring-4 ring-yellow-100"
                             : "bg-gray-200 text-gray-400"
-                        }`}
+                          }`}
                       >
                         {index < currentGroupIndex ? (
                           <FiCheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -739,18 +809,16 @@ function RegisterForm() {
                         )}
                       </div>
                       <span
-                        className={`hidden sm:inline text-xs font-medium transition-colors ${
-                          index <= currentGroupIndex ? "text-gray-700" : "text-gray-400"
-                        }`}
+                        className={`hidden sm:inline text-xs font-medium transition-colors ${index <= currentGroupIndex ? "text-gray-700" : "text-gray-400"
+                          }`}
                       >
                         {group.title}
                       </span>
                     </button>
                     {index < groupedSchema.length - 1 && (
                       <div
-                        className={`flex-1 h-0.5 rounded-full mx-1.5 sm:mx-3 transition-all duration-500 ${
-                          index < currentGroupIndex ? "bg-green-400" : "bg-gray-200"
-                        }`}
+                        className={`flex-1 h-0.5 rounded-full mx-1.5 sm:mx-3 transition-all duration-500 ${index < currentGroupIndex ? "bg-green-400" : "bg-gray-200"
+                          }`}
                       />
                     )}
                   </React.Fragment>
@@ -872,15 +940,14 @@ function RegisterForm() {
                               <motion.div
                                 initial={{ opacity: 0, y: -5 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className={`flex items-center gap-2 text-sm mt-1 ${
-                                  emailAvailability.status === "checking"
-                                    ? "text-gray-500"
-                                    : emailAvailability.status === "available"
+                                className={`flex items-center gap-2 text-sm mt-1 ${emailAvailability.status === "checking"
+                                  ? "text-gray-500"
+                                  : emailAvailability.status === "available"
                                     ? "text-green-600"
                                     : emailAvailability.status === "otp_active"
-                                    ? "text-amber-600"
-                                    : "text-red-600"
-                                }`}
+                                      ? "text-amber-600"
+                                      : "text-red-600"
+                                  }`}
                               >
                                 {emailAvailability.status === "checking" && (
                                   <FiLoader className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
@@ -894,8 +961,8 @@ function RegisterForm() {
                                 {(emailAvailability.status === "registered" ||
                                   emailAvailability.status === "used" ||
                                   emailAvailability.status === "error") && (
-                                  <FiAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                                )}
+                                    <FiAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                                  )}
                                 <span>{emailAvailability.message}</span>
                               </motion.div>
                             )}
@@ -904,19 +971,19 @@ function RegisterForm() {
                             {field.type?.toLowerCase() === "email" &&
                               emailAvailability.status !== "registered" &&
                               emailAvailability.status !== "used" && (
-                              <OtpVerification
-                                email={formData[field.field_name] || ""}
-                                phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
-                                formUuid={formSchema.uuid}
-                                onVerified={(verified) => {
-                                  setOtpVerified(verified);
-                                  if (verified && formErrors.otp) {
-                                    setFormErrors((prev) => ({ ...prev, otp: null }));
-                                  }
-                                }}
-                                emailStatus={emailAvailability.status}
-                              />
-                            )}
+                                <OtpVerification
+                                  email={formData[field.field_name] || ""}
+                                  phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
+                                  formUuid={formSchema.uuid}
+                                  onVerified={(verified) => {
+                                    setOtpVerified(verified);
+                                    if (verified && formErrors.otp) {
+                                      setFormErrors((prev) => ({ ...prev, otp: null }));
+                                    }
+                                  }}
+                                  emailStatus={emailAvailability.status}
+                                />
+                              )}
 
                             {/* Confirm Password (frontend-only, rendered right after the password field) */}
                             {passwordFieldName && field.field_name === passwordFieldName && (
@@ -935,11 +1002,10 @@ function RegisterForm() {
                                         setFormErrors((prev) => ({ ...prev, confirm_password: null }));
                                       }
                                     }}
-                                    className={`w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 pr-11 ${
-                                      formErrors.confirm_password
-                                        ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
-                                        : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
-                                    } focus:outline-none hover:border-gray-300`}
+                                    className={`w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 pr-11 ${formErrors.confirm_password
+                                      ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                                      : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
+                                      } focus:outline-none hover:border-gray-300`}
                                     placeholder="Re-enter your password"
                                     autoComplete="new-password"
                                   />
@@ -1008,14 +1074,14 @@ function RegisterForm() {
                                 type="checkbox"
                                 checked={consentAccepted}
                                 onChange={(e) => {
-                                setConsentAccepted(e.target.checked);
-                                if (formErrors.consent) {
-                                  setFormErrors((prev) => ({ ...prev, consent: null }));
-                                }
-                                if (error) {
-                                  setError(null);
-                                }
-                              }}
+                                  setConsentAccepted(e.target.checked);
+                                  if (formErrors.consent) {
+                                    setFormErrors((prev) => ({ ...prev, consent: null }));
+                                  }
+                                  if (error) {
+                                    setError(null);
+                                  }
+                                }}
                                 className="mt-0.5 w-[18px] h-[18px] rounded border-gray-300 text-yellow-500 focus:ring-yellow-500 group-hover:border-yellow-400 transition-colors"
                               />
                               <span className="text-sm text-gray-700">
