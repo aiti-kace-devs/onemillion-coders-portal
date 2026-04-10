@@ -15,6 +15,7 @@ class CourseSession extends Model
     use HasFactory, LogsActivity;
 
     public const TYPE_COURSE = 'course';
+
     public const TYPE_CENTRE = 'centre';
 
     public function getActivitylogOptions(): LogOptions
@@ -23,7 +24,7 @@ class CourseSession extends Model
             ->logFillable()
             ->logOnlyDirty()
             ->useLogName('course_session')
-            ->setDescriptionForEvent(fn(string $event) => "Course Session {$event}");
+            ->setDescriptionForEvent(fn (string $event) => "Course Session {$event}");
     }
 
     protected $table = 'course_sessions';
@@ -33,6 +34,7 @@ class CourseSession extends Model
         'course_id',
         'centre_id',
         'session_type',
+        'centre_sync_key',
         'limit',
         'course_time',
         'session',
@@ -100,13 +102,14 @@ class CourseSession extends Model
     {
         $sessionIds = $this->sharedSessionIds();
         $used = UserAdmission::whereIn('session', $sessionIds)->whereNotNull('confirmed')->count();
+
         return $this->limit - $used;
     }
 
     protected function sharedSessionIds(): array
     {
         $course = $this->course;
-        if (!$course || !$course->isOnlineProgramme()) {
+        if (! $course || ! $course->isOnlineProgramme()) {
             return [$this->id];
         }
 

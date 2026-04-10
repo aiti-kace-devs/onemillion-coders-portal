@@ -228,9 +228,9 @@
     }
 
     function validateSessionRows(rows) {
-        if (!Array.isArray(rows) || rows.length === 0) {
-            return 'Add at least one session row before saving.';
-        }
+        // if (!Array.isArray(rows) || rows.length === 0) {
+        //     return 'Add at least one session row before saving.';
+        // }
 
         for (let i = 0; i < rows.length; i += 1) {
             const row = rows[i];

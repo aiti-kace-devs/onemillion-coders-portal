@@ -19,7 +19,7 @@ class Centre extends Model
             ->logFillable()
             ->logOnlyDirty()
             ->useLogName('centre')
-            ->setDescriptionForEvent(fn(string $event) => "Centre {$event}");
+            ->setDescriptionForEvent(fn (string $event) => "Centre {$event}");
     }
 
     protected $fillable = [
@@ -41,9 +41,8 @@ class Centre extends Model
         'pwd_notes',
         'images',
         'video',
-        'gps_location'
+        'gps_location',
     ];
-
 
     protected $casts = [
         'constituency_id' => 'integer',
@@ -64,7 +63,6 @@ class Centre extends Model
         'video' => 'string',
         'gps_location' => 'array',
     ];
-
 
     public function branch()
     {
@@ -108,6 +106,7 @@ class Centre extends Model
         static::saved(function ($centre) {
             if ($centre->wasChanged('title')) {
                 $centre->courses()->get()->each->save();
+                $centre->centreSessions()->get()->each->save();
             }
         });
     }
