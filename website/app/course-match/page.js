@@ -22,6 +22,7 @@ import {
   FiMapPin,
   FiSearch,
   FiX,
+  FiMonitor,
 } from "react-icons/fi";
 import Button from "../../components/Button";
 import {
@@ -490,8 +491,8 @@ export default function CourseMatchPage() {
                                   handleAnswer(activeQuestion.id, option.id)
                                 }
                                 className={`relative p-4 sm:p-6 rounded-xl text-left transition-all duration-200 border-2 ${isSelected
-                                    ? "bg-gray-900 text-white border-gray-900"
-                                    : "bg-white border-gray-200 hover:border-yellow-400 active:scale-[0.98]"
+                                  ? "bg-gray-900 text-white border-gray-900"
+                                  : "bg-white border-gray-200 hover:border-yellow-400 active:scale-[0.98]"
                                   }`}
                               >
                                 <div className="flex items-start gap-3">
@@ -500,8 +501,8 @@ export default function CourseMatchPage() {
                                     {activeQuestion.is_multiple_select ? (
                                       <div
                                         className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${isSelected
-                                            ? "bg-white border-white"
-                                            : "border-gray-300"
+                                          ? "bg-white border-white"
+                                          : "border-gray-300"
                                           }`}
                                       >
                                         {isSelected && (
@@ -511,8 +512,8 @@ export default function CourseMatchPage() {
                                     ) : (
                                       <div
                                         className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
-                                            ? "border-white"
-                                            : "border-gray-300"
+                                          ? "border-white"
+                                          : "border-gray-300"
                                           }`}
                                       >
                                         {isSelected && (
@@ -528,8 +529,8 @@ export default function CourseMatchPage() {
                                     {option.description && (
                                       <p
                                         className={`text-xs sm:text-sm leading-relaxed ${isSelected
-                                            ? "text-gray-300"
-                                            : "text-gray-500"
+                                          ? "text-gray-300"
+                                          : "text-gray-500"
                                           }`}
                                       >
                                         {option.description}
@@ -568,8 +569,8 @@ export default function CourseMatchPage() {
                         onClick={handleNextQuestion}
                         disabled={(answers[activeQuestion.id] || []).length === 0}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${(answers[activeQuestion.id] || []).length > 0
-                            ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
-                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
                           }`}
                       >
                         {currentQuestion < questions.length - 1 ? "Next" : "Get Results"}
@@ -588,7 +589,7 @@ export default function CourseMatchPage() {
                       Questions unavailable
                     </h3>
                     <p className="text-gray-500 mb-4 text-xs sm:text-sm">
-                      Could not load the course match questions.
+                      Could not load the course recommendation questions.
                     </p>
                     <Button
                       onClick={() => window.location.reload()}
@@ -618,7 +619,7 @@ export default function CourseMatchPage() {
                   <FiCheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
                 </div>
                 <h2 className="text-base sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
-                  Your Course Matches
+                  Your Recommended Courses
                 </h2>
                 <p className="text-gray-500 text-xs sm:text-base max-w-lg mx-auto">
                   Based on your preferences, here are the courses that best fit
@@ -672,8 +673,8 @@ export default function CourseMatchPage() {
                           {course.match_percentage != null && (
                             <span
                               className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${course.match_percentage.split("%")[0] >= 70
-                                  ? "bg-green-50/90 text-green-700"
-                                  : "bg-yellow-50/90 text-yellow-700"
+                                ? "bg-green-50/90 text-green-700"
+                                : "bg-yellow-50/90 text-yellow-700"
                                 }`}
                             >
                               <FiStar className="w-2.5 h-2.5" />
@@ -699,8 +700,16 @@ export default function CourseMatchPage() {
                         )}
                         {course.mode_of_delivery && (
                           <div className="flex items-center gap-1 mb-2">
-                            <FiGlobe className="w-2.5 h-2.5 text-blue-600" />
-                            <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">
+                            {course.mode_of_delivery === "Online" ? (
+                              <FiMonitor className="w-2.5 h-2.5 text-blue-600" />
+                            ) : course.mode_of_delivery === "In Person" ? (
+                              <FiMapPin className="w-2.5 h-2.5 text-green-600" />
+                            ) : (
+                              <FiGlobe className="w-2.5 h-2.5 text-purple-600" />
+                            )}
+                            <span className={`text-[10px] sm:text-[11px] font-medium ${course.mode_of_delivery === "Online" ? "text-blue-700" :
+                              course.mode_of_delivery === "In Person" ? "text-green-700" : "text-purple-700"
+                              }`}>
                               {course.mode_of_delivery}
                             </span>
                           </div>

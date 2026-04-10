@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiSearch, FiFilter, FiClock, FiX, FiGlobe, FiArrowUp, FiChevronDown, FiSliders, FiArrowLeft } from "react-icons/fi";
+import { FiSearch, FiFilter, FiClock, FiX, FiGlobe, FiArrowUp, FiChevronDown, FiSliders, FiArrowLeft, FiMonitor, FiUsers, FiMapPin } from "react-icons/fi";
 import { getProgrammesData, getCategoriesData } from "../../services";
 import ProgrammeCard from "../../components/ProgrammeCard";
 import ProgrammeSkeleton from "../../components/ProgrammeSkeleton";
@@ -121,7 +121,7 @@ export default function ProgrammesClient({ initialCategory }) {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-2">{error}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="text-yellow-600 underline hover:text-yellow-700"
           >
@@ -222,35 +222,42 @@ export default function ProgrammesClient({ initialCategory }) {
               <div className="w-px h-6 bg-gray-200 mx-1"></div>
 
               {[
-                { value: selectedCategory, setter: setSelectedCategory, icon: FiFilter, active: selectedCategory !== "All",
-                  options: categories.map(c => ({ value: c, label: c })) },
-                { value: selectedMode, setter: setSelectedMode, icon: FiGlobe, active: selectedMode !== "All",
-                  options: deliveryModes.map(m => ({ value: m, label: m === "All" ? "All Modes" : m })) },
-                { value: selectedDuration, setter: setSelectedDuration, icon: FiClock, active: selectedDuration !== "All",
+                {
+                  value: selectedCategory, setter: setSelectedCategory, icon: FiFilter, active: selectedCategory !== "All",
+                  options: categories.map(c => ({ value: c, label: c }))
+                },
+                {
+                  value: selectedMode, setter: setSelectedMode, icon: selectedMode === "Online" ? FiMonitor : selectedMode === "In Person" ? FiMapPin : FiGlobe, active: selectedMode !== "All",
+                  options: deliveryModes.map(m => ({ value: m, label: m === "All" ? "All Modes" : m }))
+                },
+                {
+                  value: selectedDuration, setter: setSelectedDuration, icon: FiClock, active: selectedDuration !== "All",
                   options: [
                     { value: "All", label: "All Durations" },
                     { value: "Short", label: "Short ≤100 hrs" },
                     { value: "Medium", label: "Medium 101-200 hrs" },
                     { value: "Long", label: "Long 200+ hrs" },
-                  ] },
-                { value: sortBy, setter: setSortBy, icon: FiArrowUp, active: sortBy !== "default",
+                  ]
+                },
+                {
+                  value: sortBy, setter: setSortBy, icon: FiArrowUp, active: sortBy !== "default",
                   options: [
                     { value: "default", label: "Sort: Default" },
                     { value: "name_asc", label: "Name (A-Z)" },
                     { value: "name_desc", label: "Name (Z-A)" },
                     { value: "duration_asc", label: "Duration (Shortest)" },
                     { value: "duration_desc", label: "Duration (Longest)" },
-                  ] },
+                  ]
+                },
               ].map((filter, idx) => (
                 <div key={idx} className="relative group">
                   <select
                     value={filter.value}
                     onChange={(e) => filter.setter(e.target.value)}
-                    className={`pl-8 pr-8 py-2 rounded-full text-sm cursor-pointer transition-all appearance-none ${
-                      filter.active
+                    className={`pl-8 pr-8 py-2 rounded-full text-sm cursor-pointer transition-all appearance-none ${filter.active
                         ? "bg-yellow-400/20 text-yellow-800 font-medium border border-yellow-400/40 shadow-sm"
                         : "bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-100"
-                    }`}
+                      }`}
                     disabled={isLoading}
                   >
                     {filter.options.map((opt) => (
@@ -288,13 +295,12 @@ export default function ProgrammesClient({ initialCategory }) {
             {/* Mobile filter toggle */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`lg:hidden relative flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                showFilters
+              className={`lg:hidden relative flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${showFilters
                   ? "bg-gray-900 text-white shadow-lg"
                   : hasActiveFilters
                     ? "bg-yellow-400 text-gray-900 shadow-md"
                     : "bg-gray-50 text-gray-700 border border-gray-200 hover:border-gray-300"
-              }`}
+                }`}
             >
               <FiSliders className="w-4 h-4" />
               <span className="hidden sm:inline">{showFilters ? "Close" : "Filters"}</span>
@@ -395,25 +401,33 @@ export default function ProgrammesClient({ initialCategory }) {
               <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
                 <div className="space-y-5">
                   {[
-                    { label: "Category", icon: FiFilter, value: selectedCategory, setter: setSelectedCategory,
-                      options: categories.map(c => ({ value: c, label: c })) },
-                    { label: "Delivery Mode", icon: FiGlobe, value: selectedMode, setter: setSelectedMode,
-                      options: deliveryModes.map(m => ({ value: m, label: m === "All" ? "All Modes" : m })) },
-                    { label: "Duration", icon: FiClock, value: selectedDuration, setter: setSelectedDuration,
+                    {
+                      label: "Category", icon: FiFilter, value: selectedCategory, setter: setSelectedCategory,
+                      options: categories.map(c => ({ value: c, label: c }))
+                    },
+                    {
+                      label: "Delivery Mode", icon: selectedMode === "Online" ? FiMonitor : selectedMode === "In Person" ? FiUsers : FiGlobe, value: selectedMode, setter: setSelectedMode,
+                      options: deliveryModes.map(m => ({ value: m, label: m === "All" ? "All Modes" : m }))
+                    },
+                    {
+                      label: "Duration", icon: FiClock, value: selectedDuration, setter: setSelectedDuration,
                       options: [
                         { value: "All", label: "All Durations" },
                         { value: "Short", label: "Short (≤100 hrs)" },
                         { value: "Medium", label: "Medium (101-200 hrs)" },
                         { value: "Long", label: "Long (200+ hrs)" },
-                      ] },
-                    { label: "Sort By", icon: FiArrowUp, value: sortBy, setter: setSortBy,
+                      ]
+                    },
+                    {
+                      label: "Sort By", icon: FiArrowUp, value: sortBy, setter: setSortBy,
                       options: [
                         { value: "default", label: "Default" },
                         { value: "name_asc", label: "Name (A-Z)" },
                         { value: "name_desc", label: "Name (Z-A)" },
                         { value: "duration_asc", label: "Shortest first" },
                         { value: "duration_desc", label: "Longest first" },
-                      ] },
+                      ]
+                    },
                   ].map((group) => (
                     <div key={group.label}>
                       <div className="flex items-center gap-2 mb-2.5">
@@ -425,11 +439,10 @@ export default function ProgrammesClient({ initialCategory }) {
                           <button
                             key={opt.value}
                             onClick={() => group.setter(opt.value)}
-                            className={`px-3 py-1.5 rounded-full text-sm transition-all ${
-                              group.value === opt.value
+                            className={`px-3 py-1.5 rounded-full text-sm transition-all ${group.value === opt.value
                                 ? "bg-gray-900 text-white font-medium shadow-md"
                                 : "bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-100"
-                            }`}
+                              }`}
                           >
                             {opt.label}
                           </button>
