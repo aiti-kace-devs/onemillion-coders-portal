@@ -690,7 +690,8 @@ class CourseProgrammeController extends Controller
                         'staff_trained_for_pwd' => $centre->staff_trained_for_pwd,
                         'accessibility_rating' => $centre->accessibility_rating,
                         'pwd_notes' => $centre->pwd_notes,
-                        'images' => $centre->images ?? []
+                        'images' => $centre->images ?? [],
+                        'video' => $centre->video,
                     ];
                 })
                 ->values(),
