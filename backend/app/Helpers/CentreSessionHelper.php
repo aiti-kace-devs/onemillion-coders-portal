@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 final class CentreSessionHelper
@@ -94,12 +95,13 @@ final class CentreSessionHelper
         }
 
         $duplicateSignatures = $normalizedRows
+            ->filter(fn ($row) => $row['status'])
             ->map(fn ($row) => self::rowSignature($row['session'], $row['course_time']))
             ->duplicates();
 
         if ($duplicateSignatures->isNotEmpty()) {
             throw ValidationException::withMessages([
-                'centre_sessions_payload' => 'A centre session with the same session type and course time can only be added once.',
+                'centre_sessions_payload' => 'An active centre session with the same session type and course time can only be added once.',
             ]);
         }
 
@@ -109,61 +111,54 @@ final class CentreSessionHelper
     public static function persist(Centre $centre, Collection $rows): void
     {
         DB::transaction(function () use ($centre, $rows) {
-            if ($rows->isEmpty()) {
-                CentreSession::query()
-                    ->where('centre_id', $centre->id)
-                    ->delete();
+            $centres = Centre::query()
+                ->select(['id'])
+                ->orderBy('id')
+                ->get();
+
+            if ($centres->isEmpty()) {
                 return;
             }
 
-            $existingSessions = CentreSession::query()
-                ->where('centre_id', $centre->id)
-                ->get();
+            $existingSessionsByCentre = CentreSession::query()
+                ->whereIn('centre_id', $centres->pluck('id')->all())
+                ->get()
+                ->groupBy('centre_id');
 
-            $existingById = $existingSessions->keyBy('id');
-            $existingBySignature = $existingSessions->keyBy(function ($session) {
-                return self::rowSignature($session->session, $session->course_time);
-            });
-            $retainedSessionIds = [];
+            $sourceExistingSessions = $existingSessionsByCentre->get($centre->id, collect());
+            $sourceSessionsById = $sourceExistingSessions->keyBy('id');
+            $retainedSourceSessionIds = [];
 
             foreach ($rows as $row) {
-                $payload = [
-                    'course_id' => null,
-                    'centre_id' => $centre->id,
-                    'session_type' => CourseSession::TYPE_CENTRE,
-                    'session' => $row['session'],
-                    'limit' => $row['limit'],
-                    'course_time' => $row['course_time'],
-                    'link' => $row['link'] !== '' ? $row['link'] : null,
-                    'status' => $row['status'] ? '1' : '0',
-                ];
+                if (! empty($row['id'])) {
+                    $existingSession = $sourceSessionsById->get($row['id']);
 
-                if ($row['id'] && $existingById->has($row['id'])) {
-                    $session = $existingById->get($row['id']);
-                    $session->fill($payload);
-                    $session->save();
-                    $retainedSessionIds[] = (int) $session->id;
+                    if (! $existingSession) {
+                        throw new \RuntimeException('One or more submitted sessions could not be matched to the selected centre. Reload and try again.');
+                    }
+
+                    $existingSession->fill(
+                        self::buildSessionPayload(
+                            $centre,
+                            $row,
+                            self::normalizeSyncKey($existingSession->centre_sync_key)
+                        )
+                    );
+                    $existingSession->save();
+                    $retainedSourceSessionIds[] = (int) $existingSession->id;
+
                     continue;
                 }
 
-                $session = $existingBySignature->get(self::rowSignature($row['session'], $row['course_time']));
-                if ($session) {
-                    $session->fill($payload);
-                    $session->save();
-                    $retainedSessionIds[] = (int) $session->id;
-                    continue;
-                }
-
-                $createdSession = CentreSession::create($payload);
-                $retainedSessionIds[] = (int) $createdSession->id;
+                $retainedSourceSessionIds[] = self::createSessionAcrossCentres(
+                    $centre,
+                    $row,
+                    $centres,
+                    $existingSessionsByCentre
+                );
             }
 
-            CentreSession::query()
-                ->where('centre_id', $centre->id)
-                ->when(! empty($retainedSessionIds), function ($query) use ($retainedSessionIds) {
-                    $query->whereNotIn('id', $retainedSessionIds);
-                })
-                ->delete();
+            self::markMissingSessionsInactive($sourceExistingSessions, $retainedSourceSessionIds);
         });
     }
 
@@ -175,6 +170,8 @@ final class CentreSessionHelper
 
         try {
             self::persist($centre, $rows);
+        } catch (\RuntimeException $e) {
+            \Alert::warning($e->getMessage())->flash();
         } catch (\Throwable $e) {
             report($e);
             \Alert::warning('Centre saved, but the centre sessions could not be synced.')->flash();
@@ -218,6 +215,118 @@ final class CentreSessionHelper
         $normalizedSession = strtolower(trim($session));
         $normalizedCourseTime = strtolower(preg_replace('/\s+/', ' ', trim($courseTime)));
 
-        return $normalizedSession . '|' . $normalizedCourseTime;
+        return $normalizedSession.'|'.$normalizedCourseTime;
+    }
+
+    protected static function createSessionAcrossCentres(
+        Centre $sourceCentre,
+        array $row,
+        Collection $centres,
+        Collection $existingSessionsByCentre
+    ): int {
+        $syncKey = self::resolveNewRowSyncKey($row, $existingSessionsByCentre->flatten(1));
+        $sourceSessionId = null;
+
+        foreach ($centres as $targetCentre) {
+            $targetSessions = $existingSessionsByCentre->get($targetCentre->id, collect());
+            $existingSession = self::findSessionBySignature($targetSessions, $row);
+
+            if (! $existingSession) {
+                $createdSession = CentreSession::create(
+                    self::buildSessionPayload($targetCentre, $row, $syncKey)
+                );
+
+                if ((int) $targetCentre->id === (int) $sourceCentre->id) {
+                    $sourceSessionId = (int) $createdSession->id;
+                }
+
+                continue;
+            }
+
+            if ((int) $targetCentre->id === (int) $sourceCentre->id) {
+                $existingSession->fill(
+                    self::buildSessionPayload(
+                        $targetCentre,
+                        $row,
+                        self::normalizeSyncKey($existingSession->centre_sync_key, $syncKey)
+                    )
+                );
+                $existingSession->save();
+                $sourceSessionId = (int) $existingSession->id;
+
+                continue;
+            }
+
+            if (trim((string) ($existingSession->centre_sync_key ?? '')) === '') {
+                $existingSession->centre_sync_key = $syncKey;
+                $existingSession->save();
+            }
+        }
+
+        if ($sourceSessionId === null) {
+            throw new \RuntimeException('Unable to create the new session for the selected centre. Please try again.');
+        }
+
+        return $sourceSessionId;
+    }
+
+    protected static function buildSessionPayload(Centre $centre, array $row, ?string $syncKey = null): array
+    {
+        return [
+            'course_id' => null,
+            'centre_id' => $centre->id,
+            'session_type' => CourseSession::TYPE_CENTRE,
+            'centre_sync_key' => self::normalizeSyncKey($syncKey),
+            'session' => $row['session'],
+            'limit' => $row['limit'],
+            'course_time' => $row['course_time'],
+            'link' => $row['link'] !== '' ? $row['link'] : null,
+            'status' => $row['status'] ? '1' : '0',
+        ];
+    }
+
+    protected static function markMissingSessionsInactive(Collection $existingSessions, array $retainedSessionIds): void
+    {
+        $existingSessions
+            ->reject(fn ($session) => in_array((int) $session->id, $retainedSessionIds, true))
+            ->each(function (CentreSession $session) {
+                if ($session->status === false) {
+                    return;
+                }
+
+                $session->status = false;
+                $session->save();
+            });
+    }
+
+    protected static function findSessionBySignature(Collection $existingSessions, array $row): ?CentreSession
+    {
+        $targetSignature = self::rowSignature($row['session'], $row['course_time']);
+
+        return $existingSessions->first(function ($session) use ($targetSignature) {
+            return self::rowSignature($session->session, $session->course_time) === $targetSignature;
+        });
+    }
+
+    protected static function resolveNewRowSyncKey(array $row, Collection $existingSessions): string
+    {
+        $existingSession = self::findSessionBySignature($existingSessions, $row);
+
+        return self::normalizeSyncKey($existingSession?->centre_sync_key);
+    }
+
+    protected static function normalizeSyncKey(?string $syncKey, ?string $fallback = null): string
+    {
+        $value = trim((string) ($syncKey ?? ''));
+        if ($value !== '') {
+            return $value;
+        }
+
+        $fallbackValue = trim((string) ($fallback ?? ''));
+        if ($fallbackValue !== '') {
+            return $fallbackValue;
+        }
+
+        return (string) Str::uuid();
     }
 }

@@ -8,7 +8,7 @@
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
             <div>
                 <h5 class="mb-1">Centre Sessions</h5>
-                <div class="text-muted small">Add or update centre sessions while saving this centre.</div>
+                <div class="text-muted small">New sessions are added to all centres, but edits to existing sessions stay on this centre.</div>
             </div>
             <button
                 type="button"
