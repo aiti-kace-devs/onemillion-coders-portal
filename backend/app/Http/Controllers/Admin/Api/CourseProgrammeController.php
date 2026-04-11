@@ -684,4 +684,14 @@ class CourseProgrammeController extends Controller
                 ->values(),
         ]);
     }
+
+    public function getTotalCentresCount()
+    {
+        $totalCentres = Centre::where('status', 1)->count();
+
+        return response()->json([
+            'success' => true,
+            'total_centres' => $totalCentres,
+        ]);
+    }
 }
