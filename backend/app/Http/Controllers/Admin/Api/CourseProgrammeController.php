@@ -54,10 +54,16 @@ class CourseProgrammeController extends Controller
 
     public function programmeWithBatch(Request $request)
     {
+        $validated = $request->validate([
+            'centre_id' => 'nullable|integer|exists:centres,id',
+        ]);
+
         $filter = $request->query('filter');
         $sort = $request->query('sort');
         $order = strtolower((string) $request->query('order', 'asc'));
         $limit = $request->query('limit');
+        $centreId = isset($validated['centre_id']) ? (int) $validated['centre_id'] : null;
+        $resolvedFilter = $filter ?: ($centreId !== null ? 'ongoing' : null);
 
         if (is_string($sort) && str_starts_with($sort, '-')) {
             $sort = ltrim($sort, '-');
@@ -69,76 +75,19 @@ class CourseProgrammeController extends Controller
             $limit = null;
         }
 
-        $cacheKey = 'programme_with_batch:' . ($filter ? (string) $filter : 'all')
+        $cacheKey = 'programme_with_batch:' . ($resolvedFilter ? (string) $resolvedFilter : 'all')
             . ':sort:' . ($sort ? (string) $sort : 'none')
             . ':order:' . ($order === 'desc' ? 'desc' : 'asc')
-            . ':limit:' . ($limit !== null ? (string) $limit : 'none');
+            . ':limit:' . ($limit !== null ? (string) $limit : 'none')
+            . ':centre:' . ($centreId !== null ? (string) $centreId : 'all');
 
-        $programmes = Cache::remember($cacheKey, 600, function () use ($filter, $sort, $order, $limit) {
-            $today = Carbon::today();
+        $programmes = Cache::remember($cacheKey, 600, function () use ($resolvedFilter, $sort, $order, $limit, $centreId) {
+            $courses = $this->getProgrammeWithBatchCourses($resolvedFilter, $centreId);
 
-            $batchQuery = Batch::where('completed', false)
-                ->where('status', true);
-
-            if ($filter) {
-                if ($filter === 'ongoing') {
-                    $batchQuery->where('start_date', '<=', $today)
-                        ->where('end_date', '>=', $today);
-                }
-
-                if ($filter === 'upcoming') {
-                    $batchQuery->where('start_date', '>', $today);
-                }
-
-                if ($filter === 'passed') {
-                    $batchQuery->where('end_date', '<', $today)
-                        ->orWhere('completed', true);
-                }
-            }
-
-            $batchIds = $batchQuery->pluck('id');
-
-            $courses = Course::whereIn('batch_id', $batchIds)
-                ->with(['programme.category', 'programme.coverImage', 'programme.courseCertification', 'programme.courseModules'])
-                ->get();
-
-            $items = $courses->unique('programme_id')->map(function ($course) {
-                $programme = $course->programme;
-                if ($programme) {
-                    return [
-                        'id' => $programme->id,
-                        'title' => $programme->title,
-                        'duration' => $course->duration ?? $programme->duration,
-                        // 'status' => $course->status ?? $programme->status ?? true,
-                        'description' => $programme->description,
-                        'sub_title' => $programme->sub_title,
-                        'level' => $programme->level,
-                        'mode_of_delivery' => $programme->mode_of_delivery,
-                        // 'provider' => $programme->provider,
-                        'job_responsible' => $programme->job_responsible,
-                        'image' => $programme->image,
-                        'category' => $programme->category
-                            ? [
-                                'id' => $programme->category->id,
-                                'title' => $programme->category->title,
-                            ]
-                            : null,
-                        'course_certification' => $programme->courseCertification
-                            ? $programme->courseCertification
-                            ->map(fn($cert) => [
-                                'title' => $cert->title,
-                                'description' => $cert->description,
-                                'type' => $cert->type,
-                                'status' => $cert->status,
-                            ])
-                            ->values()
-                            : [],
-                        'course_id' => $course->id,
-                        'centre_id' => $course->centre_id,
-                    ];
-                }
-                return null;
-            })->filter()->values();
+            $items = $courses->unique('programme_id')
+                ->map(fn($course) => $this->formatProgrammeWithBatchItem($course))
+                ->filter()
+                ->values();
 
             if ($sort) {
                 $allowedSorts = [
@@ -169,6 +118,89 @@ class CourseProgrammeController extends Controller
             'success' => true,
             'data' => $programmes
         ]);
+    }
+
+    protected function getProgrammeWithBatchCourses(?string $filter = null, ?int $centreId = null)
+    {
+        $batchIds = $this->getProgrammeWithBatchBatchIds($filter);
+
+        $query = Course::whereIn('batch_id', $batchIds)
+            ->whereNotNull('programme_id')
+            ->where('status', true)
+            ->with(['programme.category', 'programme.coverImage', 'programme.courseCertification', 'programme.courseModules']);
+
+        if ($centreId !== null) {
+            $query->where('centre_id', $centreId);
+        }
+
+        return $query->get();
+    }
+
+    protected function getProgrammeWithBatchBatchIds(?string $filter = null)
+    {
+        $today = Carbon::today()->toDateString();
+        $query = Batch::query()->where('status', true);
+
+        if ($filter === 'passed') {
+            return $query->where(function ($batchQuery) use ($today) {
+                $batchQuery->where('end_date', '<', $today)
+                    ->orWhere('completed', true);
+            })->pluck('id');
+        }
+
+        $query->where('completed', false);
+
+        if ($filter === 'ongoing') {
+            $query->where('start_date', '<=', $today)
+                ->where('end_date', '>=', $today);
+        }
+
+        if ($filter === 'upcoming') {
+            $query->where('start_date', '>', $today);
+        }
+
+        return $query->pluck('id');
+    }
+
+    protected function formatProgrammeWithBatchItem(Course $course): ?array
+    {
+        $programme = $course->programme;
+
+        if (!$programme) {
+            return null;
+        }
+
+        return [
+            'id' => $programme->id,
+            'title' => $programme->title,
+            'duration' => $course->duration ?? $programme->duration,
+            // 'status' => $course->status ?? $programme->status ?? true,
+            'description' => $programme->description,
+            'sub_title' => $programme->sub_title,
+            'level' => $programme->level,
+            'mode_of_delivery' => $programme->mode_of_delivery,
+            // 'provider' => $programme->provider,
+            'job_responsible' => $programme->job_responsible,
+            'image' => $programme->image,
+            'category' => $programme->category
+                ? [
+                    'id' => $programme->category->id,
+                    'title' => $programme->category->title,
+                ]
+                : null,
+            'course_certification' => $programme->courseCertification
+                ? $programme->courseCertification
+                ->map(fn($cert) => [
+                    'title' => $cert->title,
+                    'description' => $cert->description,
+                    'type' => $cert->type,
+                    'status' => $cert->status,
+                ])
+                ->values()
+                : [],
+            'course_id' => $course->id,
+            'centre_id' => $course->centre_id,
+        ];
     }
 
 
@@ -493,28 +525,11 @@ class CourseProgrammeController extends Controller
 
     public function programmesByCentre(Centre $centre)
     {
-        $today = Carbon::today();
-
-        $ongoingBatchIds = Batch::where('completed', false)
-            ->where('status', true)
-            ->where('start_date', '<=', $today)
-            ->where('end_date', '>=', $today)
-            ->pluck('id');
-
-        $courses = Course::where('centre_id', $centre->id)
-            ->whereIn('batch_id', $ongoingBatchIds)
-            ->with(['programme.category', 'programme.coverImage'])
-            ->get();
-
-        $programmes = $courses->map(function ($course) {
-            $programme = $course->programme;
-            if ($programme) {
-                $programmeData = $programme->toArray();
-                $programmeData['course_id'] = $course->id;
-                return $programmeData;
-            }
-            return null;
-        })->filter()->values();
+        $programmes = $this->getProgrammeWithBatchCourses('ongoing', $centre->id)
+            ->unique('programme_id')
+            ->map(fn($course) => $this->formatProgrammeWithBatchItem($course))
+            ->filter()
+            ->values();
 
         return response()->json([
             'centre_id' => $centre->id,

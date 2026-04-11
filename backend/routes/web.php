@@ -56,7 +56,7 @@ Route::post('/api/add-student', [FormResponseController::class, 'store']);
 Route::get('/api/constituencies/{constituency}/metrics', [ConstituencyCrudController::class, 'metrics']);
 Route::get('/api/check-user/{userID}', [RegistrationFormAPIController::class, 'check_user_by_userID'])->middleware('user.token');
 Route::post('/api/confirm-course', [RegistrationFormAPIController::class, 'confirmCourse'])->middleware('user.token');
-
+Route::get('/api/check-user-recommended-courses/{userID}', [CourseMatchAPIController::class, 'checkUserRecommendedCourses'])->middleware('user.token');
 
 // OTP verification routes for registration
 Route::get('/api/otp/check-email', [OtpController::class, 'checkEmail'])->middleware('throttle:30,1');
