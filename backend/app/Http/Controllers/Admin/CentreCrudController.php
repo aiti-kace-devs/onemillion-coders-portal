@@ -2,43 +2,43 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\CentreSessionHelper;
+use App\Helpers\CentreVisibilityHelper;
+use App\Helpers\CourseFieldHelpers;
+use App\Helpers\CrudListHelper;
+use App\Helpers\FilterHelper;
+use App\Helpers\GeneralFieldsAndColumns;
+use App\Helpers\MediaHelper;
+use App\Helpers\WidgetHelper;
 use App\Http\Requests\CentreRequest;
-use Backpack\CRUD\app\Http\Controllers\CrudController;
-use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Models\Branch;
 use App\Models\Centre;
 use App\Models\Constituency;
-use App\Helpers\CentreSessionHelper;
-use App\Helpers\CourseFieldHelpers;
 use App\Models\District;
-use App\Helpers\GeneralFieldsAndColumns;
-use App\Helpers\CentreVisibilityHelper;
-use Illuminate\Http\Request;
-use App\Helpers\CrudListHelper;
-use App\Helpers\FilterHelper;
-use App\Helpers\MediaHelper;
-use App\Helpers\WidgetHelper;
-use Illuminate\Support\Facades\Http;
+use Backpack\CRUD\app\Http\Controllers\CrudController;
+use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Backpack\CRUD\app\Library\Widget;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 /**
  * Class CentreCrudController
- * @package App\Http\Controllers\Admin
+ *
  * @property-read \Backpack\CRUD\app\Library\CrudPanel\CrudPanel $crud
  */
 class CentreCrudController extends CrudController
 {
-    use GeneralFieldsAndColumns;
-    use CourseFieldHelpers;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation {
         store as traitStore;
     }
+    use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation {
         update as traitUpdate;
     }
-    use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+    use CourseFieldHelpers;
+    use GeneralFieldsAndColumns;
 
     /**
      * Configure the CrudPanel object. Apply settings to all operations.
@@ -48,7 +48,7 @@ class CentreCrudController extends CrudController
     public function setup()
     {
         CRUD::setModel(Centre::class);
-        CRUD::setRoute(config('backpack.base.route_prefix') . '/centre');
+        CRUD::setRoute(config('backpack.base.route_prefix').'/centre');
         CRUD::setEntityNameStrings('centre', 'centres');
 
         $this->applyCurrentAdminCentreScope();
@@ -62,6 +62,7 @@ class CentreCrudController extends CrudController
      * Define what happens when the List operation is loaded.
      *
      * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
+     *
      * @return void
      */
     protected function setupListOperation()
@@ -81,7 +82,7 @@ class CentreCrudController extends CrudController
 
         $this->crud->query->with('districts');
 
-        if (!backpack_user()->can('centre.read.all') && !backpack_user()->can('centre.read.self')) {
+        if (! backpack_user()->can('centre.read.all') && ! backpack_user()->can('centre.read.self')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -134,8 +135,9 @@ class CentreCrudController extends CrudController
 
                     return $districts
                         ->map(function ($district) {
-                            $url = backpack_url('district/' . $district->id . '/show');
-                            return '<a href="' . $url . '">' . e($district->title) . '</a>';
+                            $url = backpack_url('district/'.$district->id.'/show');
+
+                            return '<a href="'.$url.'">'.e($district->title).'</a>';
                         })
                         ->implode(', ');
                 },
@@ -147,6 +149,14 @@ class CentreCrudController extends CrudController
                 'type' => 'view',
                 'view' => 'admin.status_toggle.status_column',
                 'toggle_url' => 'centre/{id}/toggle-is-pwd-friendly',
+            ]);
+            CRUD::addColumn([
+                'name' => 'is_ready',
+                'label' => 'Is Ready',
+                'type' => 'view',
+                'view' => 'admin.status_toggle.status_column',
+                'toggleable' => true,
+                'toggle_url' => 'centre/{id}/toggle-is-ready',
             ]);
             CRUD::addColumn([
                 'name' => 'status',
@@ -170,15 +180,15 @@ class CentreCrudController extends CrudController
                 'select2'
             );
         }
+        FilterHelper::addBooleanFilter('is_ready');
         FilterHelper::addBooleanFilter('status');
         FilterHelper::addDateRangeFilter('created_at', 'Created At');
         CRUD::enableExportButtons();
     }
 
-
     protected function setupShowOperation()
     {
-        if (!backpack_user()->can('centre.read.all') && !backpack_user()->can('centre.read.self')) {
+        if (! backpack_user()->can('centre.read.all') && ! backpack_user()->can('centre.read.self')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -202,15 +212,18 @@ class CentreCrudController extends CrudController
 
         if (empty($visibleCentreIds)) {
             $this->crud->addClause('whereRaw', '1 = 0');
+
             return;
         }
 
         $this->crud->addClause('whereIn', 'id', $visibleCentreIds);
     }
+
     /**
      * Define what happens when the Create operation is loaded.
      *
      * @see https://backpackforlaravel.com/docs/crud-operation-create
+     *
      * @return void
      */
     protected function setupCreateOperation()
@@ -219,20 +232,20 @@ class CentreCrudController extends CrudController
         CRUD::addField([
             'name' => 'title',
             'label' => 'Title',
-            'type'      => 'text',
+            'type' => 'text',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
         CRUD::addField([
-            'name'        => 'branch_id',
-            'label'       => 'Select Region',
-            'type'        => 'select',
-            'entity'      => 'branch',
-            'model'       => Branch::class,
-            'attribute'   => 'title',
+            'name' => 'branch_id',
+            'label' => 'Select Region',
+            'type' => 'select',
+            'entity' => 'branch',
+            'model' => Branch::class,
+            'attribute' => 'title',
             'allows_null' => true,
-            'default'     => null,
-            'wrapper'     => ['class' => 'form-group col-6'],
+            'default' => null,
+            'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
         CRUD::addField([
@@ -305,7 +318,7 @@ class CentreCrudController extends CrudController
         CRUD::addField([
             'name' => 'gps_address',
             'label' => 'GPS Address',
-            'type'      => 'textarea',
+            'type' => 'textarea',
             'value' => $gpsAddressValue,
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
@@ -375,7 +388,7 @@ class CentreCrudController extends CrudController
         CRUD::addField([
             'name' => 'pwd_notes',
             'label' => 'PWD Notes',
-            'type'      => 'textarea',
+            'type' => 'textarea',
             'wrapper' => ['class' => 'form-group col-6'],
         ]);
 
@@ -396,24 +409,25 @@ class CentreCrudController extends CrudController
             value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->video ?? '' : '',
         );
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Is PWD Friendly', 'is_pwd_friendly');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Is PWD Friendly', 'is_pwd_friendly');
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Wheelchair Accessible', 'wheelchair_accessible');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Wheelchair Accessible', 'wheelchair_accessible');
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Has Access Ramp', 'has_access_ramp');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Has Access Ramp', 'has_access_ramp');
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Has Accessible Toilet', 'has_accessible_toilet');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Has Accessible Toilet', 'has_accessible_toilet');
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Has Elevator', 'has_elevator');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Has Elevator', 'has_elevator');
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Supports Hearing Impaired', 'supports_hearing_impaired');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Supports Hearing Impaired', 'supports_hearing_impaired');
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Supports Visually Impaired', 'supports_visually_impaired');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Supports Visually Impaired', 'supports_visually_impaired');
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Staff Trained for PWDs', 'staff_trained_for_pwd');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Staff Trained for PWDs', 'staff_trained_for_pwd');
 
-        $this->addIsActiveField([ true  => 'True', false => 'False'], 'Status', 'status');
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Is Ready', 'is_ready');
 
+        $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
 
         CRUD::addField([
             'name' => 'centre_sessions_manager',
@@ -427,9 +441,9 @@ class CentreCrudController extends CrudController
 
         $this->addFieldsToTab('General', true, [
             'title', 'branch_id', 'constituency_id', 'constituency_dependency_script',
-            'district_id', 'district_dependency_script', 'gps_address', 'pwd_notes', 'images', 'video'
+            'district_id', 'district_dependency_script', 'gps_address', 'pwd_notes', 'images', 'video',
         ]);
-        $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'status']);
+        $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'is_ready', 'status']);
         $this->addFieldsToTab('GPS Location', true, ['gps_location']);
         $this->addFieldsToTab('Sessions', true, ['centre_sessions_manager']);
 
@@ -439,6 +453,7 @@ class CentreCrudController extends CrudController
      * Define what happens when the Update operation is loaded.
      *
      * @see https://backpackforlaravel.com/docs/crud-operation-update
+     *
      * @return void
      */
     protected function setupUpdateOperation()
@@ -455,6 +470,7 @@ class CentreCrudController extends CrudController
         $response = $this->traitStore();
         $this->syncDistrictSelection();
         CentreSessionHelper::syncAfterCrud($this->crud->getCurrentEntry(), $centreSessionRows);
+
         return $response;
     }
 
@@ -467,6 +483,7 @@ class CentreCrudController extends CrudController
         $response = $this->traitUpdate();
         $this->syncDistrictSelection();
         CentreSessionHelper::syncAfterCrud($this->crud->getCurrentEntry(), $centreSessionRows);
+
         return $response;
     }
 
@@ -551,6 +568,7 @@ class CentreCrudController extends CrudController
     protected function normalizeGpsAddressForCompare(string $address): string
     {
         $normalized = strtoupper(trim($address));
+
         return $normalized;
     }
 
@@ -683,13 +701,14 @@ class CentreCrudController extends CrudController
     protected function syncDistrictSelection(): void
     {
         $centre = $this->crud->getCurrentEntry();
-        if (!$centre) {
+        if (! $centre) {
             return;
         }
 
         $districtId = $this->crud->getRequest()->input('district_id');
         if ($districtId === null || $districtId === '') {
             $centre->districts()->sync([]);
+
             return;
         }
 
@@ -734,6 +753,25 @@ class CentreCrudController extends CrudController
         ]);
     }
 
+    public function toggleIsReady(Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $centre = Centre::findOrFail($id);
+        $centre->is_ready = (bool) $data['value'];
+        $centre->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Centre ready status updated successfully.',
+            'value' => $centre->is_ready ? 1 : 0,
+        ]);
+    }
+
     /**
      * Return existing sessions for a centre in JSON.
      */
@@ -753,12 +791,19 @@ class CentreCrudController extends CrudController
      */
     public function saveCentreSessions($centreId)
     {
+        $this->crud->hasAccessOrFail('update');
+
         $centre = Centre::findOrFail($centreId);
         CentreSessionHelper::ensureAccess($centre);
 
         try {
             $rows = CentreSessionHelper::validateAndNormalizeRows(request()->input('sessions', []));
             CentreSessionHelper::persist($centre, $rows);
+        } catch (\RuntimeException $e) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', $e->getMessage());
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()
                 ->back()
@@ -774,11 +819,8 @@ class CentreCrudController extends CrudController
 
         return redirect()
             ->back()
-            ->with('success', 'Centre sessions saved successfully.');
+            ->with('success', 'Centre sessions saved successfully. New sessions were added to all centres, while existing session edits stayed on this centre.');
     }
-
-
-
 
     public function filterByBranch(Request $request)
     {
@@ -786,9 +828,9 @@ class CentreCrudController extends CrudController
         $branchId = $request->input('branch_id');
 
         return Centre::where('branch_id', $branchId)
-            ->when($term, fn($q) => $q->where('title', 'like', "%$term%"))
+            ->when($term, fn ($q) => $q->where('title', 'like', "%$term%"))
             ->get()
-            ->map(fn($centre) => ['id' => $centre->id, 'text' => $centre->title]);
+            ->map(fn ($centre) => ['id' => $centre->id, 'text' => $centre->title]);
     }
 
     protected function normalizeImagesPath()
@@ -810,7 +852,7 @@ class CentreCrudController extends CrudController
             }
         }
 
-        if (!is_array($imagePaths)) {
+        if (! is_array($imagePaths)) {
             return;
         }
 
@@ -857,17 +899,15 @@ class CentreCrudController extends CrudController
         }
 
         // Strip "Google Cloud Storage/" or similar disk aliases
-        if (strpos($imagePath, CLOUD_STORAGE_ALIAS . '/') === 0) {
-            $imagePath = substr($imagePath, strlen(CLOUD_STORAGE_ALIAS . '/'));
+        if (strpos($imagePath, CLOUD_STORAGE_ALIAS.'/') === 0) {
+            $imagePath = substr($imagePath, strlen(CLOUD_STORAGE_ALIAS.'/'));
         }
 
         // Build the full CDN URL
         $cdnUrl = rtrim(config('filesystems.cdn_url'), '/');
-        return $cdnUrl . '/' . ltrim($imagePath, '/');
+
+        return $cdnUrl.'/'.ltrim($imagePath, '/');
     }
-
-
-
 
     protected function normalizeVideoPath()
     {
@@ -888,7 +928,7 @@ class CentreCrudController extends CrudController
             }
         }
 
-        if (!is_array($videoPaths)) {
+        if (! is_array($videoPaths)) {
             return;
         }
 
@@ -938,13 +978,13 @@ class CentreCrudController extends CrudController
         }
 
         // Strip "Google Cloud Storage/" or similar disk aliases
-        if (strpos($videoPath, CLOUD_STORAGE_ALIAS . '/') === 0) {
-            $videoPath = substr($videoPath, strlen(CLOUD_STORAGE_ALIAS . '/'));
+        if (strpos($videoPath, CLOUD_STORAGE_ALIAS.'/') === 0) {
+            $videoPath = substr($videoPath, strlen(CLOUD_STORAGE_ALIAS.'/'));
         }
 
         // Build the full CDN URL
         $cdnUrl = rtrim(config('filesystems.cdn_url'), '/');
-        return $cdnUrl . '/' . ltrim($videoPath, '/');
-    }
 
+        return $cdnUrl.'/'.ltrim($videoPath, '/');
+    }
 }

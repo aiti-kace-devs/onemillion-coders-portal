@@ -48,6 +48,7 @@ Route::group([
     Route::crud('centre', 'CentreCrudController');
     Route::post('centre/{id}/toggle', 'CentreCrudController@toggleStatus');
     Route::post('centre/{id}/toggle-is-pwd-friendly', 'CentreCrudController@toggleIsPwdFriendly');
+    Route::post('centre/{id}/toggle-is-ready', 'CentreCrudController@toggleIsReady');
     Route::get('centre/{centreId}/sessions', [CentreCrudController::class, 'getCentreSessions']);
     Route::post('centre/{centreId}/sessions', [CentreCrudController::class, 'saveCentreSessions']);
     Route::crud('course', 'CourseCrudController');
@@ -108,6 +109,7 @@ Route::group([
     Route::get('course-session/ajax-list', 'CourseSessionCrudController@ajaxList');
     Route::post('user/bulk-admit', 'UserCrudController@bulkAdmit');
     Route::crud('course-category', 'CourseCategoryCrudController');
+    Route::post('course-category/{id}/toggle', 'CourseCategoryCrudController@toggleStatus');
     Route::crud('course-module', 'CourseModuleCrudController');
     Route::get('qr-scanner', 'AttendanceCrudController@setupScanQrCodePage')->name('qr-scanner');
 

@@ -3,7 +3,7 @@
     <div class="modal-dialog modal-xl" role="document" style="margin-top: 50px;">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addCentreSessionModalLabel">Add Session</h5>
+                <h5 class="modal-title" id="addCentreSessionModalLabel">Manage Centre Sessions</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -14,6 +14,9 @@
                 <div class="modal-body">
                     <input type="hidden" id="centre_session_modal_centre_id" value="">
                     <p id="centre_session_modal_centre_name" class="text-muted mb-3"></p>
+                    <div class="alert alert-info py-2 px-3 small">
+                        New session rows are added to every centre. Changes to existing rows stay on this centre, and removing an existing row saves it as inactive for this centre only.
+                    </div>
 
                     <div id="centreSessionRowsContainer"></div>
 
@@ -254,9 +257,20 @@
             statusInput.value = status ? '1' : '0';
         }
 
+        updateRemoveButton(rowEl);
+
         if (removeBtn) {
             removeBtn.addEventListener('click', () => {
                 const container = document.getElementById('centreSessionRowsContainer');
+                const hasSavedSession = Boolean((idInput?.value || '').trim());
+
+                if (hasSavedSession) {
+                    const confirmed = window.confirm('This session will be saved as inactive for this centre only. Continue?');
+                    if (!confirmed) {
+                        return;
+                    }
+                }
+
                 rowEl.remove();
                 renumberSessionRows();
                 if (container && container.querySelectorAll('.centre-session-row').length === 0) {
@@ -266,6 +280,22 @@
         }
 
         return rowEl;
+    }
+
+    function updateRemoveButton(rowEl) {
+        if (!rowEl) return;
+
+        const removeBtn = rowEl.querySelector('.centre-remove-session-row');
+        const id = (rowEl.querySelector('.centre-session-id')?.value || '').trim();
+
+        if (!removeBtn) return;
+
+        if (id) {
+            removeBtn.innerHTML = '<i class="la la-ban"></i> Mark Inactive';
+            return;
+        }
+
+        removeBtn.innerHTML = '<i class="la la-trash"></i> Remove';
     }
 
     function renumberSessionRows() {
@@ -361,11 +391,13 @@
                 '|' +
                 String(row.course_time || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
-            if (seenSignatures.has(signature)) {
-                return 'Session row ' + rowNo + ': the same session type and duration already exists above.';
-            }
+            if (row.status === '1' || row.status === 1 || row.status === true) {
+                if (seenSignatures.has(signature)) {
+                    return 'Session row ' + rowNo + ': the same active session type and duration already exists above.';
+                }
 
-            seenSignatures.add(signature);
+                seenSignatures.add(signature);
+            }
         }
 
         return '';
@@ -479,7 +511,7 @@
         }
 
         if (centreIdEl) centreIdEl.value = centreId;
-        if (titleEl) titleEl.textContent = mode === 'form' ? 'Manage Centre Sessions' : 'Add Session';
+        if (titleEl) titleEl.textContent = 'Manage Centre Sessions';
         if (centreNameEl) centreNameEl.textContent = 'Centre: ' + centreName;
 
         const container = document.getElementById('centreSessionRowsContainer');

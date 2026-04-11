@@ -21,12 +21,12 @@ class Form extends Model
         'message_after_registration',
         'message_when_inactive',
         'active',
-        'status'
+        'status',
     ];
 
     protected $casts = [
         'schema' => 'array',
-        'active' => 'boolean'
+        'active' => 'boolean',
     ];
 
     protected static function boot()
@@ -43,24 +43,34 @@ class Form extends Model
                 if (is_string($originalSchema)) {
                     $originalSchema = json_decode($originalSchema, true) ?: [];
                 }
-                if (!is_array($originalSchema)) {
+                if (! is_array($originalSchema)) {
                     $originalSchema = [];
                 }
 
                 $originalValidatorsByField = [];
+                $originalSchemaByField = [];
                 foreach ($originalSchema as $originalField) {
-                    $originalFieldName = $originalField['field_name']
-                        ?? (isset($originalField['title']) ? Str::slug(strtolower($originalField['title']), '_') : null);
-                    if ($originalFieldName && isset($originalField['validators']) && is_array($originalField['validators'])) {
+                    $originalFieldName = ! empty($originalField['field_name'])
+                        ? $originalField['field_name']
+                        : (isset($originalField['title']) ? Str::slug(strtolower($originalField['title']), '_') : null);
+                    if (! $originalFieldName) {
+                        continue;
+                    }
+
+                    $originalSchemaByField[$originalFieldName] = $originalField;
+
+                    if (isset($originalField['validators']) && is_array($originalField['validators'])) {
                         $originalValidatorsByField[$originalFieldName] = $originalField['validators'];
                     }
                 }
 
-                $model->schema = array_map(function ($schema) use ($originalValidatorsByField) {
-                    $fieldName = $schema['field_name'] ?? Str::slug(strtolower($schema['title']), '_');
+                $model->schema = array_map(function ($schema) use ($originalValidatorsByField, $originalSchemaByField) {
+                    $fieldName = ! empty($schema['field_name'])
+                        ? $schema['field_name']
+                        : Str::slug(strtolower($schema['title']), '_');
                     $schema['field_name'] = $fieldName;
 
-                    if (!isset($schema['validators']) || !is_array($schema['validators'])) {
+                    if (! isset($schema['validators']) || ! is_array($schema['validators'])) {
                         $inlineRequired = $schema['validators.required'] ?? null;
                         $inlineUnique = $schema['validators.unique'] ?? null;
 
@@ -78,7 +88,7 @@ class Form extends Model
 
                     if (isset($schema['validators']) && is_array($schema['validators'])) {
                         $schema['validators'] = array_map(
-                            fn($value) => filter_var($value, FILTER_VALIDATE_BOOLEAN),
+                            fn ($value) => filter_var($value, FILTER_VALIDATE_BOOLEAN),
                             $schema['validators']
                         );
                         $schema['validators'] += [
@@ -87,10 +97,28 @@ class Form extends Model
                         ];
                     }
 
+                    $schema['placeholder'] = self::normalizeOptionalSchemaValue(
+                        $schema['placeholder'] ?? ($originalSchemaByField[$fieldName]['placeholder'] ?? null)
+                    );
+                    $schema['group_name'] = self::normalizeOptionalSchemaValue(
+                        $schema['group_name'] ?? ($originalSchemaByField[$fieldName]['group_name'] ?? null)
+                    );
+
                     return $schema;
                 }, $model->schema);
             }
         });
+    }
+
+    private static function normalizeOptionalSchemaValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 
     public function responses()
@@ -98,10 +126,8 @@ class Form extends Model
         return $this->hasMany(FormResponse::class);
     }
 
-
     public function getPreviewButton()
     {
         return '<a href="'.route('forms.preview', $this->id).'" target="_blank" class="btn btn-sm btn-primary"><i class="la la-eye"></i>Custom Preview</a>';
     }
-
 }

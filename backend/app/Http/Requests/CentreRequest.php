@@ -28,6 +28,7 @@ class CentreRequest extends FormRequest
         return [
             'branch_id' => 'required|integer|exists:branches,id',
             'title' => 'required|string|max:255',
+            'is_ready' => 'nullable|boolean',
             'constituency_id' => [
                 'required',
                 'integer',
@@ -54,6 +55,7 @@ class CentreRequest extends FormRequest
     {
         return [
             'branch_id' => 'Branch name',
+            'is_ready' => 'Ready status',
             'title' => 'Title',
             'constituency_id' => 'Constituency',
             'district_id' => 'District',
@@ -70,6 +72,7 @@ class CentreRequest extends FormRequest
         return [
             'branch_id.required' => 'The branch field is required.',
             'branch_id.exists' => 'The selected branch is invalid.',
+            'is_ready.boolean' => 'The ready status field must be true or false.',
             'title.required' => 'The title field is required.',
             'constituency_id.required' => 'The constituency field is required.',
             'constituency_id.exists' => 'The selected constituency is invalid for the selected region.',
