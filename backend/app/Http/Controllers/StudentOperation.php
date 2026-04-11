@@ -1424,4 +1424,44 @@ public function change_course()
             ->event('Assessment Completed')
             ->log("{$user->name} completed the level determination assessment at level: {$user->student_level}");
     }
+
+    public function recommendCourses(Request $request)
+    {
+        // $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'userId' => 'required|exists:users,userId',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
+        $user = User::where('userId', $data['userId'])->first();
+
+        if ($user->isAdmitted() && $user->hasAttendance()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You are not allowed to access this resource.',
+            ], 403);
+        }
+
+        $recommendedCourses = Course::where('status', 1)
+            ->whereHas('tags', function ($query) use ($user) {
+                $query->whereIn('name', [$user->student_level, $user->network_type]);
+            })
+            ->with('tags')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'recommended_courses' => $recommendedCourses,
+        ]);
+    }
 }
