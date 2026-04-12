@@ -56,6 +56,10 @@ class Programme extends Model
         return $this->hasMany(Course::class);
     }
 
+    public function quotas()
+    {
+        return $this->hasMany(ProgrammeQuota::class, 'programme_id');
+    }
 
     public function courseModules()
     {

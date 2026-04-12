@@ -51,6 +51,14 @@ class Course extends Model
         return $this->course_name ?: ($this->centre?->title ?? 'Unknown Centre');
     }
 
+    /**
+     * Virtual location for legacy code paths (DB column removed in data cleaning).
+     */
+    public function getLocationAttribute(): ?string
+    {
+        return $this->centre?->title;
+    }
+
     public function programme()
     {
         return $this->belongsTo(Programme::class);

@@ -24,7 +24,7 @@ class UserAdmission extends Model
 
     protected $table = 'user_admission';
 
-    protected $fillable = ['user_id', 'course_batch_id', 'batch_id', 'course_id', 'email_sent', 'session', 'location', 'confirmed'];
+    protected $fillable = ['user_id', 'course_id', 'email_sent', 'session', 'confirmed'];
 
     protected $casts = [
         'confirmed' => 'datetime',
@@ -36,9 +36,12 @@ class UserAdmission extends Model
         return $this->belongsTo(Course::class, 'course_id');
     }
 
-    public function batch()
+    /**
+     * Venue label for admin UI (column `location` was removed from `user_admission`).
+     */
+    public function getLocationAttribute(): ?string
     {
-        return $this->belongsTo(Batch::class, 'batch_id');
+        return $this->course?->centre?->title;
     }
 
     public function courseSession()

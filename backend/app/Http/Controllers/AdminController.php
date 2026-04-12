@@ -45,7 +45,14 @@ class AdminController extends Controller
         $user_admission_count = UserAdmission::whereNotNull('session')->count();
         $programe_count = Programme::count();
 
-        $studentsPerRegion = DB::table('users')->join('courses', 'users.registered_course', '=', 'courses.id')->select('courses.location as region', DB::raw('count(*) as total'))->whereNotNull('users.registered_course')->groupBy('courses.location')->get();
+        $studentsPerRegion = DB::table('users')
+            ->join('courses', 'users.registered_course', '=', 'courses.id')
+            ->join('centres', 'courses.centre_id', '=', 'centres.id')
+            ->join('branches', 'centres.branch_id', '=', 'branches.id')
+            ->select('branches.title as region', DB::raw('count(*) as total'))
+            ->whereNotNull('users.registered_course')
+            ->groupBy('branches.title')
+            ->get();
 
         $studentsPerCourse = User::select('courses.course_name', DB::raw('count(*) as total'))->leftJoin('courses', 'users.registered_course', '=', 'courses.id')->whereNotNull('registered_course')->groupBy('courses.course_name')->get();
 
@@ -81,7 +88,15 @@ class AdminController extends Controller
         //                       ->groupBy('courses.location')
         //                      ->get();
 
-        $admittedstudentsPerRegion = DB::table('user_admission')->join('courses', 'user_admission.course_id', '=', 'courses.id')->select('courses.location as region', DB::raw('count(*) as total'))->whereNotNull('user_admission.course_id')->whereNotNull('user_admission.session')->groupBy('courses.location')->get();
+        $admittedstudentsPerRegion = DB::table('user_admission')
+            ->join('courses', 'user_admission.course_id', '=', 'courses.id')
+            ->join('centres', 'courses.centre_id', '=', 'centres.id')
+            ->join('branches', 'centres.branch_id', '=', 'branches.id')
+            ->select('branches.title as region', DB::raw('count(*) as total'))
+            ->whereNotNull('user_admission.course_id')
+            ->whereNotNull('user_admission.session')
+            ->groupBy('branches.title')
+            ->get();
 
         return view('admin.dashboard', [
             'student' => $user_count,
@@ -335,10 +350,11 @@ class AdminController extends Controller
                 ->join('users', 'users.id', '=', 'user_exams.user_id')
                 ->join('oex_exam_masters', 'user_exams.exam_id', '=', 'oex_exam_masters.id')
                 ->leftJoin('courses', 'users.registered_course', '=', 'courses.id')
+                ->leftJoin('centres', 'courses.centre_id', '=', 'centres.id')
                 ->leftJoin('user_admission', 'user_admission.user_id', '=', 'user_exams.user_id')
                 // ->where('users.shortlist', 1)
                 // ->leftJoin('courses', '')
-                ->select(['users.id as id', 'users.userId as userId', 'user_exams.id as exam_id', 'users.name', 'users.email', 'users.age', 'users.gender', 'users.created_at', 'courses.course_name as course_name', 'courses.location as course_location', 'oex_exam_masters.title as ex_name', 'oex_exam_masters.passmark', 'user_exams.user_id', 'user_exams.exam_id', 'user_exams.submitted', 'user_exams.exam_joined', \DB::raw('CASE WHEN user_admission.user_id IS NOT NULL THEN "Admitted" ELSE "Not Admitted" END as admission_status')]);
+                ->select(['users.id as id', 'users.userId as userId', 'user_exams.id as exam_id', 'users.name', 'users.email', 'users.age', 'users.gender', 'users.created_at', 'courses.course_name as course_name', 'centres.title as course_location', 'oex_exam_masters.title as ex_name', 'oex_exam_masters.passmark', 'user_exams.user_id', 'user_exams.exam_id', 'user_exams.submitted', 'user_exams.exam_joined', \DB::raw('CASE WHEN user_admission.user_id IS NOT NULL THEN "Admitted" ELSE "Not Admitted" END as admission_status')]);
 
             // if ($request->has('ex_name')) {
             //     $baseQuery->whereIn('oex_exam_masters.title', (array) $request->ex_name);

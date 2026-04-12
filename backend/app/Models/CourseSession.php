@@ -51,6 +51,11 @@ class CourseSession extends Model
         return $this->belongsTo(Course::class, 'course_id', 'id');
     }
 
+    public function centre()
+    {
+        return $this->belongsTo(Centre::class, 'centre_id');
+    }
+
     protected static function boot()
     {
         parent::boot();

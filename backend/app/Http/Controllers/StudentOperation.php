@@ -21,7 +21,7 @@ use App\Models\user_exam;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Jobs\AdmitStudentJob;
+use App\Services\Scheduling\ConfirmStudentSessionService;
 use App\Jobs\CreateStudentAdmissionJob;
 use App\Jobs\TestSubmittedJob;
 use App\Models\AdmissionRejection;
@@ -478,65 +478,34 @@ class StudentOperation extends Controller
         );
 
         try {
-            $admission = UserAdmission::where('user_id', $user->userId)->firstOrFail();
-            $changingSession = $admission->confirmed && $admission->session;
+            /** @var ConfirmStudentSessionService $confirm */
+            $confirm = app(ConfirmStudentSessionService::class);
+            $result = $confirm->attempt($user, (int) $data['session_id'], null);
 
-            if ($changingSession && !config(ALLOW_SESSION_CHANGE, false)) {
+            if (($result['ok'] ?? false) !== true) {
+                $code = $result['error']['code'] ?? 'unknown';
+                $messages = [
+                    'session_change_disabled' => 'Unable to change session at this time. Contact administrator',
+                    'session_full' => 'Unable to confirm session. No slots available',
+                    'programme_quota_full' => 'This programme has reached its enrolment limit for your selection.',
+                    'invalid_session' => 'Unable to confirm session. Try again later',
+                    'block_required' => 'You must complete a centre time-slot booking before confirming this session.',
+                    'no_admission' => 'No admission found for your account.',
+                    'no_course' => 'Unable to confirm session. Try again later',
+                    'no_programme' => 'Unable to confirm session. Try again later',
+                    'server_error' => 'Unable to confirm session. Refresh page and try again later',
+                ];
 
                 return redirect()->back()->with([
-                    'flash' => 'Unable to change session at this time. Contact administrator',
-                    'key' => 'error',
-                ]);
-            }
-            $courseDetails = Course::find($admission->course_id);
-            $session = CourseSession::where('course_id', $courseDetails->id)->where('id', $data['session_id'])->first();
-
-            if (!$session) {
-                return redirect()->back()->with([
-                    'flash' => 'Unable to confirm session. Try again later',
-                    'key' => 'error',
-                ]);
-            }
-
-            $slotLeft = $session->slotLeft();
-
-            if ($slotLeft < 1) {
-                return redirect()->back()->with([
-                    'flash' => 'Unable to confirm session. No slots available',
+                    'flash' => $messages[$code] ?? 'Unable to confirm session. Try again later',
                     'key' => 'error',
                 ]);
             }
 
-            $admission->confirmed = now();
-            $admission->session = $session->id;
-            $admission->location = $courseDetails->location;
-            $admission->save();
-
-            if (!$changingSession) {
-                AdmitStudentJob::dispatch($admission);
-                activity('user_admission')
-                    ->causedBy($user)
-                    ->performedOn($admission)
-                    ->withProperties([
-                        'session' => $session->name,
-                        'course' => $courseDetails->course_name,
-                    ])
-                    ->event('Session Confirmed')
-                    ->log("$user->name confirmed their session: {$session->name}");
-            } else {
-                activity('user_admission')
-                    ->causedBy($user)
-                    ->performedOn($admission)
-                    ->withProperties([
-                        'session' => $session->name,
-                        'course' => $courseDetails->course_name,
-                    ])
-                    ->event('Session Changed')
-                    ->log("$user->name changed their session to: {$session->name}");
-            }
+            $changed = (bool) ($result['data']['changed_session'] ?? false);
 
             return redirect()->back()->with([
-                'flash' => $changingSession ? 'Session changed successfully' : 'Confirmation successful',
+                'flash' => $changed ? 'Session changed successfully' : 'Confirmation successful',
                 'key' => 'success',
             ]);
         } catch (\Exception $e) {

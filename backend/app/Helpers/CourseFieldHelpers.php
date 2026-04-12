@@ -528,8 +528,11 @@ CRUD::addField([
                 CRUD::addClause('whereExists', function ($query) use ($values) {
                     $query->select(\DB::raw(1))
                         ->from('user_admission')
+                        ->join('courses', 'user_admission.course_id', '=', 'courses.id')
+                        ->join('centres', 'courses.centre_id', '=', 'centres.id')
+                        ->join('branches', 'centres.branch_id', '=', 'branches.id')
                         ->whereColumn('user_admission.user_id', 'users.userId')
-                        ->whereIn('user_admission.location', $values);
+                        ->whereIn('branches.title', $values);
                 });
             }
         );
