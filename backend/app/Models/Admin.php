@@ -180,6 +180,7 @@ class Admin extends Authenticatable
     {
         return LogOptions::defaults()
             ->logFillable()
+            ->logExcept(['password'])
             ->logOnlyDirty()
             ->useLogName('admin')
             ->setDescriptionForEvent(fn(string $event) => "Admin {$event}")
