@@ -1061,6 +1061,7 @@ export default function QuizPage({ params }) {
                     <div className="space-y-2.5">
                       <button
                         onClick={() => {
+                          // Fix for iframe also appending /student/choose-course to its url
                           if (window.parent !== window) {
                             window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
                           }
@@ -1132,6 +1133,7 @@ export default function QuizPage({ params }) {
                     <div className="space-y-2.5">
                       <button
                         onClick={() => {
+                          // Fix for iframe also appending /student/choose-course to its url
                           if (window.parent !== window) {
                             window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
                           }
