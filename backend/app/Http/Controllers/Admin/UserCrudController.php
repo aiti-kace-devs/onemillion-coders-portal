@@ -119,9 +119,9 @@ class UserCrudController extends CrudController
         // CRUD::enableBulkActions();
         // CRUD::enableExportButtons();
 
-        CRUD::removeButton('update', 'line');
-        CRUD::removeButton('delete', 'line');
-        CRUD::removeButton('show', 'line');
+        // Add row actions using the custom dropdown
+        \App\Helpers\CrudListHelper::editInDropdown(['crud::buttons.shortlist_row_actions_dropdown']);
+
         CRUD::addButtonFromView('line', 'user_preview_manage_student', 'user_preview_manage_student', 'beginning');
     }
 

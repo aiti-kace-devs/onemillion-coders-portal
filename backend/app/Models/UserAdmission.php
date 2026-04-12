@@ -24,7 +24,7 @@ class UserAdmission extends Model
 
     protected $table = 'user_admission';
 
-    protected $fillable = ['user_id', 'course_batch_id', 'batch_id', 'course_id', 'email_sent', 'session', 'location', 'confirmed'];
+    protected $fillable = ['user_id', 'course_batch_id', 'batch_id', 'course_id', 'email_sent', 'session', 'confirmed'];
 
     protected $casts = [
         'confirmed' => 'datetime',

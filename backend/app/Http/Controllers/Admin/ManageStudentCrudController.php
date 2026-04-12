@@ -370,8 +370,12 @@ class ManageStudentCrudController extends CrudController
             options: $regions,
             type: 'select2',
             callback: function ($branchId) {
-                CRUD::addClause('whereHas', 'admissions.course.centre', function ($query) use ($branchId) {
-                    $query->where('branch_id', $branchId);
+                CRUD::addClause('where', function ($query) use ($branchId) {
+                    $query->whereHas('course.centre', function ($q) use ($branchId) {
+                        $q->where('branch_id', $branchId);
+                    })->orWhereHas('admissions.course.centre', function ($q) use ($branchId) {
+                        $q->where('branch_id', $branchId);
+                    });
                 });
             }
         );
@@ -599,7 +603,7 @@ class ManageStudentCrudController extends CrudController
             'session_id' => $admission?->session,
             'confirmed' => $admission?->confirmed,
             'batch_id' => $admission?->batch_id,
-            'location' => $admission?->location,
+            'location' => $admission?->course?->centre?->title,
         ];
 
         // Exam results

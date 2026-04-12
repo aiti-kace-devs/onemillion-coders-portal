@@ -509,7 +509,6 @@ class StudentOperation extends Controller
 
             $admission->confirmed = now();
             $admission->session = $session->id;
-            $admission->location = $courseDetails->location;
             $admission->save();
 
             if (!$changingSession) {

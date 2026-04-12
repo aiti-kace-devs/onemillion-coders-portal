@@ -129,6 +129,9 @@ class StudentsYetToAcceptAdmissionCrudController extends UserCrudController
             },
         ]);
 
+        // Add row actions using the custom dropdown
+        \App\Helpers\CrudListHelper::editInDropdown(['crud::buttons.shortlist_row_actions_dropdown']);
+
         // Enable bulk operations
         CRUD::enableBulkActions();
 
