@@ -87,6 +87,7 @@ Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'c
 Route::get('/api/districts-by-branch', [CourseProgrammeController::class, 'districtsByBranch']);
 Route::get('/api/centres-by-district', [CourseProgrammeController::class, 'centresByDistrict']);
 Route::get('/api/constituencies-by-branch', [CourseProgrammeController::class, 'constituencyByRegion']);
+Route::get('/api/centres/count/total', [CourseProgrammeController::class, 'getTotalCentresCount']);
 
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');

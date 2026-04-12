@@ -301,7 +301,7 @@ export const getCentreProgrammes = async (centreId) => {
  */
 export const getDistrictsByBranch = async (branchId, token) => {
   try {
-    const response = await apiRequest(`/districts-by-branch?branch_id=${branchId}`, {
+    const response = await apiRequest(`/districts-by-branch?branch_id=${branchId}&add_centre_count=true`, {
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response;
@@ -339,6 +339,40 @@ export const getCentreById = async (centreId) => {
     return response.data;
   } catch (error) {
     console.error(`Error fetching centre ${centreId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch total number of training centres across Ghana
+ * @returns {Promise<number>} - Total centres count
+ */
+export const getTotalCentresCount = async () => {
+  try {
+    const response = await apiRequest("/centres/count/total");
+    return response.total_centres || 0;
+  } catch (error) {
+    console.error("Error fetching total centres count:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch all regions with their centre counts
+ * @param {string|number} token - Optional auth token
+ * @returns {Promise<Array>} - Regions data with centre counts
+ */
+export const getAllRegionsWithCentreCounts = async (token) => {
+  try {
+    const response = await apiRequest("/branches?add_centre_count=true", {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    const filteredRegions = response?.data?.filter((item) => {
+      return item.status === true;
+    });
+    return filteredRegions;
+  } catch (error) {
+    console.error("Error fetching regions with centre counts:", error);
     throw error;
   }
 };
