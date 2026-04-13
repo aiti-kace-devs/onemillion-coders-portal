@@ -1061,10 +1061,13 @@ export default function QuizPage({ params }) {
                     <div className="space-y-2.5">
                       <button
                         onClick={() => {
+                          // Fix for iframe also appending /student/choose-course to its url
                           if (window.parent !== window) {
                             window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
+                          } else {
+                            const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || '';
+                            window.location.href = `${portalUrl}/student/choose-course`;
                           }
-                          window.location.href = `${process.env.NEXT_PUBLIC_PORTAL_URL}/student/choose-course`;
                         }}
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
@@ -1132,10 +1135,13 @@ export default function QuizPage({ params }) {
                     <div className="space-y-2.5">
                       <button
                         onClick={() => {
+                          // Fix for iframe also appending /student/choose-course to its url
                           if (window.parent !== window) {
                             window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
+                          } else {
+                            const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || '';
+                            window.location.href = `${portalUrl}/student/choose-course`;
                           }
-                          window.location.href = `${process.env.NEXT_PUBLIC_PORTAL_URL}/student/choose-course`;
                         }}
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
