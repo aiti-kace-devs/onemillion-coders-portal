@@ -62,6 +62,7 @@ Route::group([
     Route::crud('tag', 'TagCrudController');
     Route::crud('tag-type', 'TagTypeCrudController');
     Route::crud('course-session', 'CourseSessionCrudController');
+    Route::crud('master-session', 'MasterSessionCrudController');
     Route::crud('email-template', 'EmailTemplateCrudController');
     Route::crud('form', 'FormCrudController');
     Route::post('form/{id}/toggle', 'FormCrudController@toggleStatus');

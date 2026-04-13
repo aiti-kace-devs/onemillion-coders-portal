@@ -31,6 +31,7 @@ class CourseSession extends Model
 
     protected $fillable = [
         'name',
+        'master_session_id',
         'course_id',
         'centre_id',
         'session_type',
@@ -49,6 +50,11 @@ class CourseSession extends Model
     public function course()
     {
         return $this->belongsTo(Course::class, 'course_id', 'id');
+    }
+
+    public function masterSession()
+    {
+        return $this->belongsTo(MasterSession::class, 'master_session_id');
     }
 
     protected static function boot()
