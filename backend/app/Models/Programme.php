@@ -26,6 +26,9 @@ class Programme extends Model
         'title',
         'sub_title',
         'duration',
+        'duration_hours',
+        'duration_in_days',
+        'time_allocation',
         'start_date',
         'end_date',
         'description',
@@ -115,6 +118,26 @@ class Programme extends Model
                 'what_you_will_learn' => $whatYouWillLearn,
                 'why_choose_this_course' => $whyChoose
             ];
+
+            // Auto-compute duration_in_days and time_allocation from duration_hours
+            if ($programme->duration_hours) {
+                $hours = (int) $programme->duration_hours;
+                $programme->time_allocation = $hours < 40 ? 2 : 4;
+
+                if ($hours < 40) {
+                    $programme->duration_in_days = (int) ceil($hours / 2);
+                } elseif ($hours <= 80) {
+                    $programme->duration_in_days = 20;
+                } elseif ($hours <= 120) {
+                    $programme->duration_in_days = 30;
+                } elseif ($hours <= 160) {
+                    $programme->duration_in_days = 40;
+                } elseif ($hours <= 200) {
+                    $programme->duration_in_days = 50;
+                } else {
+                    $programme->duration_in_days = 60;
+                }
+            }
         });
 
         static::saved(function ($programme) {

@@ -8,7 +8,9 @@ use App\Models\Course;
 use App\Models\CourseSession;
 use App\Models\User;
 use App\Models\UserAdmission;
+use App\Models\ProgrammeBatch;
 use App\Services\StudentIdGenerator;
+use App\Services\BookingService;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -16,6 +18,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class CreateStudentAdmissionJob implements ShouldQueue
 {
@@ -24,10 +27,12 @@ class CreateStudentAdmissionJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public ?User $student, public ?Course $course = null, public ?CourseSession $session = null)
-    {
-        //
-    }
+    public function __construct(
+        public ?User $student,
+        public ?Course $course = null,
+        public ?CourseSession $session = null,
+        public ?int $programmeBatchId = null
+    ) {}
 
     /**
      * Execute the job.
@@ -38,7 +43,7 @@ class CreateStudentAdmissionJob implements ShouldQueue
 
         $lockKey = 'admission-lock-' . $this->student->id;
         if (!Cache::lock($lockKey, 30)->get()) {
-            \Log::info('[ADMISSION] Duplicate dispatch skipped', ['user_id' => $this->student->id]);
+            Log::info('[ADMISSION] Duplicate dispatch skipped', ['user_id' => $this->student->id]);
             return;
         }
 
@@ -47,14 +52,36 @@ class CreateStudentAdmissionJob implements ShouldQueue
 
         $changingAdmission = false;
 
-
         $existingAdmission = UserAdmission::where('user_id', $this->student->userId)->first();
-        if ($existingAdmission && !$this->session) {
+        if ($existingAdmission && !$this->session && !$this->programmeBatchId) {
             if (!$existingAdmission->email_sent) {
                 $this->sendAdmissionEmail();
                 $existingAdmission->update(['email_sent' => now()]);
             }
             return;
+        }
+
+        // If a programme_batch_id is provided, use BookingService to book
+        if ($this->programmeBatchId) {
+            $programmeBatch = ProgrammeBatch::find($this->programmeBatchId);
+            if (!$programmeBatch) {
+                Log::error('[ADMISSION] Programme batch not found', ['batch_id' => $this->programmeBatchId]);
+                return;
+            }
+
+            try {
+                $bookingService = app(BookingService::class);
+                $admission = $bookingService->book($this->student, $course, $programmeBatch);
+                $this->sendAdmissionEmail();
+                return;
+            } catch (\Exception $e) {
+                Log::error('[ADMISSION] Booking failed', [
+                    'user_id' => $this->student->id,
+                    'batch_id' => $this->programmeBatchId,
+                    'error' => $e->getMessage(),
+                ]);
+                return;
+            }
         }
 
         $admissionData = [

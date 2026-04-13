@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\CrudListHelper;
+use App\Services\ProgrammeBatchGenerator;
 
 /**
  * Class BatchCrudController
@@ -195,6 +196,23 @@ class BatchCrudController extends CrudController
             ]);
             return;
         }
+
+        // Regenerate programme batches button
+        CRUD::addField([
+            'name' => 'regenerate_batches',
+            'type' => 'custom_html',
+            'value' => '<div class="mb-3">
+                <a href="' . url('admin/batch/' . $batch->id . '/regenerate-batches') . '"
+                   class="btn btn-warning"
+                   onclick="event.preventDefault(); if(confirm(\'Regenerate programme batches for this admission? This may overwrite existing batches.\')) { document.getElementById(\'regenerate-batches-form\').submit(); }">
+                    <i class="la la-refresh"></i> Regenerate Programme Batches
+                </a>
+                <form id="regenerate-batches-form" action="' . url('admin/batch/' . $batch->id . '/regenerate-batches') . '" method="POST" style="display: none;">
+                    ' . csrf_field() . '
+                </form>
+            </div>',
+            'tab' => 'Assign Courses',
+        ]);
 
         CRUD::addField([
             'name' => 'add_course_modal',
@@ -460,7 +478,17 @@ class BatchCrudController extends CrudController
         ]);
     }
 
+    /**
+     * Regenerate programme batches for this admission batch.
+     */
+    public function regenerate(Request $request, int $id)
+    {
+        $batch = Batch::findOrFail($id);
 
+        $generator = app(ProgrammeBatchGenerator::class);
+        $generated = $generator->generate($batch);
 
-
+        return redirect()->back()
+            ->with('success', "Regenerated {$generated->count()} programme batches for '{$batch->title}'.");
+    }
 }

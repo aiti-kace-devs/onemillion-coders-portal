@@ -5,10 +5,13 @@ namespace App\Providers;
 use App\Events\FormSubmittedEvent;
 use App\Events\UserRegistered;
 use App\Events\CourseChanged;
+use App\Events\AdmissionSlotFreed;
+use App\Events\ProgrammeBatchCreated;
 use App\Listeners\EmailSentListener;
 use App\Listeners\FormSubmitedListener;
 use App\Listeners\SendExamLoginCredentials;
 use App\Listeners\CourseChangedListener;
+use App\Listeners\NotifyWaitlistedUsers;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -36,7 +39,13 @@ class EventServiceProvider extends ServiceProvider
         ],
         \Illuminate\Queue\Events\JobProcessed::class => [
             EmailSentListener::class
-        ]
+        ],
+        AdmissionSlotFreed::class => [
+            NotifyWaitlistedUsers::class . '@onSlotFreed',
+        ],
+        ProgrammeBatchCreated::class => [
+            NotifyWaitlistedUsers::class . '@onBatchCreated',
+        ],
     ];
 
     /**
@@ -49,5 +58,7 @@ class EventServiceProvider extends ServiceProvider
         \App\Models\Programme::observe(\App\Observers\ProgrammeObserver::class);
         \App\Models\Branch::observe(\App\Observers\BranchObserver::class);
         \App\Models\CourseCategory::observe(\App\Observers\CourseCategoryObserver::class);
+        \App\Models\Batch::observe(\App\Observers\BatchObserver::class);
+        \App\Models\Centre::observe(\App\Observers\CentreObserver::class);
     }
 }

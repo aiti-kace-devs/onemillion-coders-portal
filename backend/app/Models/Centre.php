@@ -42,6 +42,9 @@ class Centre extends Model
         'images',
         'video',
         'gps_location',
+        'seat_count',
+        'short_slots_per_day',
+        'long_slots_per_day',
     ];
 
     protected $casts = [
@@ -107,6 +110,23 @@ class Centre extends Model
             if ($centre->wasChanged('title')) {
                 $centre->courses()->get()->each->save();
                 $centre->centreSessions()->get()->each->save();
+            }
+        });
+
+        static::saving(function ($centre) {
+            // Auto-derive slot counts from seat_count using AppConfig percentages if not explicitly set
+            if ($centre->seat_count && (!$centre->short_slots_per_day || !$centre->long_slots_per_day)) {
+                $shortPercent = (int) (\App\Models\AppConfig::getValue('SHORT_SLOTS_PERCENTAGE', 60));
+                $longPercent = (int) (\App\Models\AppConfig::getValue('LONG_SLOTS_PERCENTAGE', 40));
+
+                $centre->short_slots_per_day = (int) round($centre->seat_count * $shortPercent / 100);
+                $centre->long_slots_per_day = (int) round($centre->seat_count * $longPercent / 100);
+
+                // Adjust rounding so short + long = seat_count
+                $diff = $centre->seat_count - ($centre->short_slots_per_day + $centre->long_slots_per_day);
+                if ($diff !== 0) {
+                    $centre->short_slots_per_day += $diff;
+                }
             }
         });
     }
