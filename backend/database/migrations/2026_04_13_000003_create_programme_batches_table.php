@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('programme_batches')) {
+            return;
+        }
+
         Schema::create('programme_batches', function (Blueprint $table) {
             $table->id();
             $table->foreignId('admission_batch_id')->constrained('admission_batches')->cascadeOnDelete();
@@ -24,12 +28,18 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['admission_batch_id', 'programme_id', 'centre_id', 'start_date']);
+            $table->unique(
+                ['admission_batch_id', 'programme_id', 'centre_id', 'start_date'],
+                'pb_batch_programme_centre_start_unique'
+            );
 
             // Composite index for availability queries
-            $table->index(['admission_batch_id', 'programme_id', 'centre_id', 'status']);
+            $table->index(
+                ['admission_batch_id', 'programme_id', 'centre_id', 'status'],
+                'pb_batch_programme_centre_status_idx'
+            );
             // Index for date range queries
-            $table->index(['start_date', 'end_date']);
+            $table->index(['start_date', 'end_date'], 'pb_start_end_date_idx');
         });
     }
 

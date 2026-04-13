@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('user_admission', function (Blueprint $table) {
             $table->foreignId('programme_batch_id')
                 ->nullable()
-                ->after('batch_id')
+                ->after('course_id')
                 ->constrained('programme_batches')
                 ->nullOnDelete();
 
