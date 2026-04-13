@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Batch;
+use App\Models\Booking;
 use App\Models\Centre;
 use App\Models\Course;
+use App\Models\CourseSession;
+use App\Models\MasterSession;
 use App\Models\Programme;
 use App\Models\ProgrammeBatch;
 use App\Models\User;
-use App\Models\UserAdmission;
 use App\Services\JwtService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,7 +19,7 @@ class BookingApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeFixture(int $slots = 10): array
+    private function makeFixture(int $slots = 10, int $shortSlots = 10, int $longSlots = 0): array
     {
         $batch = Batch::create([
             'title' => 'Admission Batch',
@@ -37,6 +39,8 @@ class BookingApiTest extends TestCase
             'title' => 'Centre',
             'branch_id' => 1,
             'seat_count' => $slots,
+            'short_slots_per_day' => $shortSlots,
+            'long_slots_per_day' => $longSlots,
         ]);
 
         $programmeBatch = ProgrammeBatch::create([
@@ -57,6 +61,23 @@ class BookingApiTest extends TestCase
             'course_name' => 'Course',
         ]);
 
+        $masterSession = MasterSession::create([
+            'master_name' => 'Morning',
+            'session_type' => 'course',
+            'time' => '09:00-11:00',
+            'course_type' => 'short',
+            'status' => true,
+        ]);
+
+        $session = CourseSession::create([
+            'name' => 'Morning Session',
+            'master_session_id' => $masterSession->id,
+            'course_id' => $course->id,
+            'centre_id' => $centre->id,
+            'session_type' => 'course',
+            'status' => true,
+        ]);
+
         $user = User::create([
             'userId' => 'API-' . uniqid(),
             'name' => 'Test User',
@@ -65,7 +86,16 @@ class BookingApiTest extends TestCase
 
         $token = app(JwtService::class)->generate($user->id);
 
-        return compact('batch', 'programme', 'centre', 'programmeBatch', 'course', 'user', 'token');
+        return compact('batch', 'programme', 'centre', 'programmeBatch', 'course', 'session', 'user', 'token');
+    }
+
+    private function bookingPayload(array $f): array
+    {
+        return [
+            'programme_batch_id' => $f['programmeBatch']->id,
+            'course_id' => $f['course']->id,
+            'course_session_id' => $f['session']->id,
+        ];
     }
 
     /** @test */
@@ -74,16 +104,19 @@ class BookingApiTest extends TestCase
         $f = $this->makeFixture(5);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $f['token'])
-            ->postJson('/api/bookings', [
-                'programme_batch_id' => $f['programmeBatch']->id,
-                'course_id' => $f['course']->id,
-            ]);
+            ->postJson('/api/bookings', $this->bookingPayload($f));
 
         $response->assertStatus(201)
             ->assertJsonPath('status', 'success');
 
         $f['programmeBatch']->refresh();
         $this->assertEquals(4, $f['programmeBatch']->available_slots);
+        $this->assertDatabaseHas('bookings', [
+            'user_id' => $f['user']->userId,
+            'programme_batch_id' => $f['programmeBatch']->id,
+            'course_session_id' => $f['session']->id,
+            'status' => 'confirmed',
+        ]);
         $this->assertDatabaseHas('user_admission', [
             'user_id' => $f['user']->userId,
             'programme_batch_id' => $f['programmeBatch']->id,
@@ -107,11 +140,11 @@ class BookingApiTest extends TestCase
             'course_name' => 'Wrong',
         ]);
 
+        $payload = $this->bookingPayload($f);
+        $payload['course_id'] = $wrongCourse->id;
+
         $response = $this->withHeader('Authorization', 'Bearer ' . $f['token'])
-            ->postJson('/api/bookings', [
-                'programme_batch_id' => $f['programmeBatch']->id,
-                'course_id' => $wrongCourse->id,
-            ]);
+            ->postJson('/api/bookings', $payload);
 
         $response->assertStatus(422);
         $f['programmeBatch']->refresh();
@@ -119,19 +152,45 @@ class BookingApiTest extends TestCase
     }
 
     /** @test */
-    public function post_bookings_returns_409_with_recommendations_when_full()
+    public function post_bookings_returns_409_when_batch_full()
     {
         $f = $this->makeFixture(1);
         $f['programmeBatch']->update(['available_slots' => 0]);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $f['token'])
-            ->postJson('/api/bookings', [
-                'programme_batch_id' => $f['programmeBatch']->id,
-                'course_id' => $f['course']->id,
-            ]);
+            ->postJson('/api/bookings', $this->bookingPayload($f));
 
         $response->assertStatus(409)
             ->assertJsonStructure(['status', 'message', 'recommendations']);
+    }
+
+    /** @test */
+    public function post_bookings_returns_409_when_session_capacity_exhausted()
+    {
+        // Batch has room, but session-level capacity (short_slots_per_day) is 1 and already used.
+        $f = $this->makeFixture(5, shortSlots: 1, longSlots: 0);
+
+        $otherUser = User::create([
+            'userId' => 'OCCUPANT',
+            'name' => 'Occupant',
+            'email' => 'occupant@example.com',
+        ]);
+
+        Booking::create([
+            'user_id' => $otherUser->userId,
+            'programme_batch_id' => $f['programmeBatch']->id,
+            'course_session_id' => $f['session']->id,
+            'centre_id' => $f['centre']->id,
+            'course_id' => $f['course']->id,
+            'course_type' => 'short',
+            'status' => 'confirmed',
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $f['token'])
+            ->postJson('/api/bookings', $this->bookingPayload($f));
+
+        $response->assertStatus(409)
+            ->assertJsonPath('message', 'Course session is full.');
     }
 
     /** @test */
@@ -140,25 +199,28 @@ class BookingApiTest extends TestCase
         $f = $this->makeFixture(5);
 
         $this->withHeader('Authorization', 'Bearer ' . $f['token'])
-            ->postJson('/api/bookings', [
-                'programme_batch_id' => $f['programmeBatch']->id,
-                'course_id' => $f['course']->id,
-            ])->assertStatus(201);
+            ->postJson('/api/bookings', $this->bookingPayload($f))
+            ->assertStatus(201);
 
-        $admission = UserAdmission::where('user_id', $f['user']->userId)->first();
+        $booking = Booking::where('user_id', $f['user']->userId)->first();
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $f['token'])
-            ->deleteJson('/api/bookings/' . $admission->id);
+            ->deleteJson('/api/bookings/' . $booking->id);
 
         $response->assertStatus(200)
             ->assertJsonPath('slot_restored', true);
 
         $f['programmeBatch']->refresh();
         $this->assertEquals(5, $f['programmeBatch']->available_slots);
+        $this->assertDatabaseMissing('bookings', ['id' => $booking->id]);
+        $this->assertDatabaseHas('user_admission', [
+            'user_id' => $f['user']->userId,
+            'programme_batch_id' => null,
+        ]);
     }
 
     /** @test */
-    public function delete_bookings_forbids_other_users_admissions()
+    public function delete_bookings_forbids_other_users_bookings()
     {
         $f = $this->makeFixture(5);
         $other = User::create([
@@ -166,28 +228,29 @@ class BookingApiTest extends TestCase
             'name' => 'Other',
             'email' => 'other' . uniqid() . '@example.com',
         ]);
-        $foreignAdmission = UserAdmission::create([
+        $foreignBooking = Booking::create([
             'user_id' => $other->userId,
-            'course_id' => $f['course']->id,
-            'batch_id' => $f['batch']->id,
             'programme_batch_id' => $f['programmeBatch']->id,
+            'course_session_id' => $f['session']->id,
+            'centre_id' => $f['centre']->id,
+            'course_id' => $f['course']->id,
+            'course_type' => 'short',
+            'status' => 'confirmed',
         ]);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $f['token'])
-            ->deleteJson('/api/bookings/' . $foreignAdmission->id);
+            ->deleteJson('/api/bookings/' . $foreignBooking->id);
 
         $response->assertStatus(403);
     }
 
     /** @test */
-    public function get_bookings_mine_lists_only_current_users_admissions()
+    public function get_bookings_mine_lists_only_current_users_bookings()
     {
         $f = $this->makeFixture(5);
         $this->withHeader('Authorization', 'Bearer ' . $f['token'])
-            ->postJson('/api/bookings', [
-                'programme_batch_id' => $f['programmeBatch']->id,
-                'course_id' => $f['course']->id,
-            ])->assertStatus(201);
+            ->postJson('/api/bookings', $this->bookingPayload($f))
+            ->assertStatus(201);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $f['token'])
             ->getJson('/api/bookings/mine');

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AdmissionRejection;
+use App\Models\Booking;
 use App\Models\User;
 use App\Models\UserAdmission;
 use Illuminate\Support\Facades\DB;
@@ -14,8 +15,8 @@ class AdmissionRevocationService
     }
 
     /**
-     * Revoke a user's admission: restore the programme_batch slot (if eligible),
-     * fire AdmissionSlotFreed, record the rejection, and clear the shortlist flag.
+     * Revoke a user's admission: cancel any linked booking (restoring the slot if eligible),
+     * record the rejection, and clear the shortlist flag. The UserAdmission row is deleted.
      *
      * @return array{slot_restored: bool, rejection: AdmissionRejection}
      */
@@ -25,7 +26,19 @@ class AdmissionRevocationService
             $userId = $admission->user_id;
             $courseId = $admission->course_id;
 
-            $slotRestored = $this->bookingService->cancel($admission);
+            $slotRestored = false;
+
+            $bookings = Booking::confirmed()
+                ->with('programmeBatch')
+                ->where('user_id', $userId)
+                ->get();
+            foreach ($bookings as $booking) {
+                if ($this->bookingService->cancel($booking)) {
+                    $slotRestored = true;
+                }
+            }
+
+            $admission->delete();
 
             $rejection = AdmissionRejection::create([
                 'user_id' => $userId,
@@ -41,4 +54,5 @@ class AdmissionRevocationService
             ];
         });
     }
+
 }

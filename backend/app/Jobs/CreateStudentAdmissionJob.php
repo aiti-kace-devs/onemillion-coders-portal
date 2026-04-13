@@ -61,8 +61,16 @@ class CreateStudentAdmissionJob implements ShouldQueue
             return;
         }
 
-        // If a programme_batch_id is provided, use BookingService to book
+        // If a programme_batch_id is provided, use BookingService to book (requires a course session).
         if ($this->programmeBatchId) {
+            if (!$this->session) {
+                Log::error('[ADMISSION] Booking requires a course session', [
+                    'user_id' => $this->student->id,
+                    'batch_id' => $this->programmeBatchId,
+                ]);
+                return;
+            }
+
             $programmeBatch = ProgrammeBatch::find($this->programmeBatchId);
             if (!$programmeBatch) {
                 Log::error('[ADMISSION] Programme batch not found', ['batch_id' => $this->programmeBatchId]);
@@ -71,7 +79,7 @@ class CreateStudentAdmissionJob implements ShouldQueue
 
             try {
                 $bookingService = app(BookingService::class);
-                $admission = $bookingService->book($this->student, $course, $programmeBatch);
+                $bookingService->book($this->student, $course, $programmeBatch, $this->session);
                 $this->sendAdmissionEmail();
                 return;
             } catch (\Exception $e) {

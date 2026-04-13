@@ -104,6 +104,15 @@ class Centre extends Model
             ->withTimestamps();
     }
 
+    public function slotCapacityFor(string $courseType): ?int
+    {
+        $value = $courseType === Programme::COURSE_TYPE_LONG
+            ? $this->long_slots_per_day
+            : $this->short_slots_per_day;
+
+        return $value !== null ? (int) $value : null;
+    }
+
     protected static function booted()
     {
         static::saved(function ($centre) {

@@ -13,6 +13,18 @@ class Programme extends Model
     use CrudTrait;
     use HasFactory, LogsActivity;
 
+    public const TIME_ALLOCATION_SHORT = 2;
+    public const TIME_ALLOCATION_LONG = 4;
+    public const COURSE_TYPE_SHORT = 'short';
+    public const COURSE_TYPE_LONG = 'long';
+
+    public function courseType(): string
+    {
+        return (int) $this->time_allocation === self::TIME_ALLOCATION_LONG
+            ? self::COURSE_TYPE_LONG
+            : self::COURSE_TYPE_SHORT;
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -121,7 +133,9 @@ class Programme extends Model
             // Auto-compute duration_in_days and time_allocation from duration
             if ($programme->duration) {
                 $hours = (int) $programme->duration;
-                $programme->time_allocation = $hours < 40 ? 2 : 4;
+                $programme->time_allocation = $hours < 40
+                    ? self::TIME_ALLOCATION_SHORT
+                    : self::TIME_ALLOCATION_LONG;
 
                 if ($hours < 40) {
                     $programme->duration_in_days = (int) ceil($hours / 2);

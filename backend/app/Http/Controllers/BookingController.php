@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Booking;
 use App\Models\Course;
+use App\Models\CourseSession;
 use App\Models\ProgrammeBatch;
-use App\Models\UserAdmission;
 use App\Services\AvailabilityService;
 use App\Services\BookingService;
 use Carbon\Carbon;
@@ -19,6 +20,7 @@ class BookingController extends Controller
         $validated = $request->validate([
             'programme_batch_id' => 'required|integer|exists:programme_batches,id',
             'course_id' => 'required|integer|exists:courses,id',
+            'course_session_id' => 'required|integer|exists:course_sessions,id',
         ]);
 
         $user = $request->user();
@@ -28,6 +30,7 @@ class BookingController extends Controller
 
         $batch = ProgrammeBatch::find($validated['programme_batch_id']);
         $course = Course::find($validated['course_id']);
+        $session = CourseSession::find($validated['course_session_id']);
 
         if ($course->programme_id !== $batch->programme_id) {
             return response()->json([
@@ -51,7 +54,7 @@ class BookingController extends Controller
         }
 
         try {
-            $admission = $bookingService->book($user, $course, $batch);
+            $booking = $bookingService->book($user, $course, $batch, $session);
         } catch (Exception $e) {
             $recommendations = $availabilityService->getAvailableSlots(
                 $batch->centre_id,
@@ -69,22 +72,22 @@ class BookingController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $admission->load('programmeBatch', 'course'),
+            'data' => $booking->load('programmeBatch', 'courseSession', 'course'),
         ], 201);
     }
 
-    public function destroy(Request $request, UserAdmission $userAdmission, \App\Services\AdmissionRevocationService $revocationService): JsonResponse
+    public function destroy(Request $request, Booking $booking, BookingService $bookingService): JsonResponse
     {
         $user = $request->user();
-        if (!$user || $userAdmission->user_id !== $user->userId) {
+        if (!$user || $booking->user_id !== $user->userId) {
             return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
         }
 
-        $result = $revocationService->revoke($userAdmission);
+        $slotRestored = $bookingService->cancel($booking);
 
         return response()->json([
             'status' => 'success',
-            'slot_restored' => $result['slot_restored'],
+            'slot_restored' => $slotRestored,
         ]);
     }
 
@@ -95,9 +98,9 @@ class BookingController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
         }
 
-        $bookings = UserAdmission::where('user_id', $user->userId)
-            ->whereNotNull('programme_batch_id')
-            ->with('programmeBatch.centre', 'programmeBatch.programme', 'course')
+        $bookings = Booking::confirmed()
+            ->where('user_id', $user->userId)
+            ->with('programmeBatch.centre', 'programmeBatch.programme', 'courseSession', 'course')
             ->get();
 
         return response()->json([

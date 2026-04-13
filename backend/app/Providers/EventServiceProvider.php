@@ -60,5 +60,6 @@ class EventServiceProvider extends ServiceProvider
         \App\Models\CourseCategory::observe(\App\Observers\CourseCategoryObserver::class);
         \App\Models\Batch::observe(\App\Observers\BatchObserver::class);
         \App\Models\Centre::observe(\App\Observers\CentreObserver::class);
+        \App\Models\Booking::observe(\App\Observers\BookingObserver::class);
     }
 }

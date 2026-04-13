@@ -31,7 +31,7 @@ Route::get('/availability', [\App\Http\Controllers\AvailabilityController::class
 Route::prefix('bookings')->name('api.bookings.')->middleware('user.token')->group(function () {
     Route::get('/mine', [\App\Http\Controllers\BookingController::class, 'mine'])->name('mine');
     Route::post('/', [\App\Http\Controllers\BookingController::class, 'store'])->name('store');
-    Route::delete('/{userAdmission}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('destroy');
+    Route::delete('/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('destroy');
 });
 // Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
 // Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);

@@ -2,17 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Events\AdmissionSlotFreed;
 use App\Models\Batch;
+use App\Models\Booking;
 use App\Models\Centre;
 use App\Models\Course;
+use App\Models\CourseSession;
+use App\Models\MasterSession;
 use App\Models\Programme;
 use App\Models\ProgrammeBatch;
 use App\Models\User;
-use App\Models\UserAdmission;
 use App\Services\BookingService;
-use App\Events\AdmissionSlotFreed;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
@@ -20,29 +21,28 @@ class BookingServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
-    public function it_books_a_slot_successfully()
+    private function fixture(int $slots = 10, int $shortSlots = 10, int $longSlots = 0, int $endDays = 30): array
     {
-        Event::fake();
-
         $batch = Batch::create([
-            'title' => 'Test Batch',
+            'title' => 'Admission Batch',
             'start_date' => now()->addDays(10),
-            'end_date' => now()->addDays(30),
+            'end_date' => now()->addDays(60),
             'status' => true,
         ]);
 
         $programme = Programme::create([
-            'title' => 'Test Programme',
+            'title' => 'Programme',
             'duration' => 20,
             'duration_in_days' => 10,
             'time_allocation' => 2,
         ]);
 
         $centre = Centre::create([
-            'title' => 'Test Centre',
+            'title' => 'Centre',
             'branch_id' => 1,
-            'seat_count' => 10,
+            'seat_count' => $slots,
+            'short_slots_per_day' => $shortSlots,
+            'long_slots_per_day' => $longSlots,
         ]);
 
         $programmeBatch = ProgrammeBatch::create([
@@ -50,9 +50,9 @@ class BookingServiceTest extends TestCase
             'programme_id' => $programme->id,
             'centre_id' => $centre->id,
             'start_date' => now()->addDays(10),
-            'end_date' => now()->addDays(20),
-            'max_enrolments' => 10,
-            'available_slots' => 10,
+            'end_date' => now()->addDays($endDays),
+            'max_enrolments' => $slots,
+            'available_slots' => $slots,
             'status' => true,
         ]);
 
@@ -60,209 +60,145 @@ class BookingServiceTest extends TestCase
             'programme_id' => $programme->id,
             'centre_id' => $centre->id,
             'batch_id' => $batch->id,
-            'course_name' => 'Test Course',
+            'course_name' => 'Course',
         ]);
 
-        $user = User::create([
-            'userId' => 'TEST-' . uniqid(),
-            'name' => 'Test User',
-            'email' => 'test' . uniqid() . '@example.com',
+        $masterSession = MasterSession::create([
+            'master_name' => 'Morning',
+            'session_type' => 'course',
+            'time' => '09:00-11:00',
+            'course_type' => 'short',
+            'status' => true,
         ]);
 
-        $bookingService = app(BookingService::class);
-        $admission = $bookingService->book($user, $course, $programmeBatch);
+        $session = CourseSession::create([
+            'name' => 'Morning Session',
+            'master_session_id' => $masterSession->id,
+            'course_id' => $course->id,
+            'centre_id' => $centre->id,
+            'session_type' => 'course',
+            'status' => true,
+        ]);
 
-        $this->assertInstanceOf(UserAdmission::class, $admission);
-        $this->assertEquals($user->userId, $admission->user_id);
-        $this->assertEquals($course->id, $admission->course_id);
-        $this->assertEquals($programmeBatch->id, $admission->programme_batch_id);
+        return compact('batch', 'programme', 'centre', 'programmeBatch', 'course', 'session');
+    }
 
-        // Verify slot was decremented
-        $programmeBatch->refresh();
-        $this->assertEquals(9, $programmeBatch->available_slots);
+    private function makeUser(string $prefix = 'T'): User
+    {
+        return User::create([
+            'userId' => $prefix . '-' . uniqid(),
+            'name' => 'User',
+            'email' => $prefix . uniqid() . '@example.com',
+        ]);
+    }
+
+    /** @test */
+    public function it_books_a_slot_and_decrements_available_slots()
+    {
+        Event::fake();
+        $f = $this->fixture();
+        $user = $this->makeUser();
+
+        $booking = app(BookingService::class)->book($user, $f['course'], $f['programmeBatch'], $f['session']);
+
+        $this->assertInstanceOf(Booking::class, $booking);
+        $this->assertEquals($user->userId, $booking->user_id);
+        $this->assertEquals($f['programmeBatch']->id, $booking->programme_batch_id);
+        $this->assertEquals($f['session']->id, $booking->course_session_id);
+        $this->assertEquals('short', $booking->course_type);
+
+        $f['programmeBatch']->refresh();
+        $this->assertEquals(9, $f['programmeBatch']->available_slots);
     }
 
     /** @test */
     public function it_rejects_booking_when_no_slots_available()
     {
-        $batch = Batch::create([
-            'title' => 'Test Batch',
-            'start_date' => now()->addDays(10),
-            'end_date' => now()->addDays(30),
-            'status' => true,
-        ]);
-
-        $programme = Programme::create([
-            'title' => 'Test Programme',
-            'duration' => 20,
-            'duration_in_days' => 10,
-            'time_allocation' => 2,
-        ]);
-
-        $centre = Centre::create([
-            'title' => 'Test Centre',
-            'branch_id' => 1,
-            'seat_count' => 1,
-        ]);
-
-        $programmeBatch = ProgrammeBatch::create([
-            'admission_batch_id' => $batch->id,
-            'programme_id' => $programme->id,
-            'centre_id' => $centre->id,
-            'start_date' => now()->addDays(10),
-            'end_date' => now()->addDays(20),
-            'max_enrolments' => 1,
-            'available_slots' => 0, // No available slots
-            'status' => true,
-        ]);
-
-        $course = Course::create([
-            'programme_id' => $programme->id,
-            'centre_id' => $centre->id,
-            'batch_id' => $batch->id,
-            'course_name' => 'Test Course',
-        ]);
-
-        $user = User::create([
-            'userId' => 'TEST-' . uniqid(),
-            'name' => 'Test User',
-            'email' => 'test' . uniqid() . '@example.com',
-        ]);
-
-        $bookingService = app(BookingService::class);
+        $f = $this->fixture();
+        $f['programmeBatch']->update(['available_slots' => 0]);
+        $user = $this->makeUser();
 
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('No available slots for this programme batch.');
 
-        $bookingService->book($user, $course, $programmeBatch);
+        app(BookingService::class)->book($user, $f['course'], $f['programmeBatch'], $f['session']);
     }
 
     /** @test */
-    public function it_cancels_admission_and_restores_slot_if_eligible()
+    public function it_rejects_booking_when_session_is_full()
+    {
+        $f = $this->fixture(slots: 5, shortSlots: 1);
+        Booking::create([
+            'user_id' => 'OCC',
+            'programme_batch_id' => $f['programmeBatch']->id,
+            'course_session_id' => $f['session']->id,
+            'centre_id' => $f['centre']->id,
+            'course_id' => $f['course']->id,
+            'course_type' => 'short',
+            'status' => 'confirmed',
+        ]);
+
+        $user = $this->makeUser();
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Course session is full.');
+
+        app(BookingService::class)->book($user, $f['course'], $f['programmeBatch'], $f['session']);
+    }
+
+    /** @test */
+    public function cancel_hard_deletes_booking_and_restores_slot()
     {
         Event::fake();
+        $f = $this->fixture();
+        $user = $this->makeUser();
 
-        $batch = Batch::create([
-            'title' => 'Test Batch',
-            'start_date' => now()->addDays(10),
-            'end_date' => now()->addDays(30),
-            'status' => true,
-        ]);
+        $service = app(BookingService::class);
+        $booking = $service->book($user, $f['course'], $f['programmeBatch'], $f['session']);
 
-        $programme = Programme::create([
-            'title' => 'Test Programme',
-            'duration' => 20,
-            'duration_in_days' => 10,
-            'time_allocation' => 2,
-        ]);
-
-        $centre = Centre::create([
-            'title' => 'Test Centre',
-            'branch_id' => 1,
-            'seat_count' => 10,
-        ]);
-
-        $programmeBatch = ProgrammeBatch::create([
-            'admission_batch_id' => $batch->id,
-            'programme_id' => $programme->id,
-            'centre_id' => $centre->id,
-            'start_date' => now()->addDays(10),
-            'end_date' => now()->addDays(30), // 30 days from now, > 7 days
-            'max_enrolments' => 10,
-            'available_slots' => 9,
-            'status' => true,
-        ]);
-
-        $course = Course::create([
-            'programme_id' => $programme->id,
-            'centre_id' => $centre->id,
-            'batch_id' => $batch->id,
-            'course_name' => 'Test Course',
-        ]);
-
-        $user = User::create([
-            'userId' => 'TEST-' . uniqid(),
-            'name' => 'Test User',
-            'email' => 'test' . uniqid() . '@example.com',
-        ]);
-
-        $bookingService = app(BookingService::class);
-        $admission = $bookingService->book($user, $course, $programmeBatch);
-
-        // Cancel the admission
-        $restored = $bookingService->cancel($admission);
+        $restored = $service->cancel($booking);
 
         $this->assertTrue($restored);
         Event::assertDispatched(AdmissionSlotFreed::class);
 
-        $programmeBatch->refresh();
-        $this->assertEquals(10, $programmeBatch->available_slots);
+        $f['programmeBatch']->refresh();
+        $this->assertEquals(10, $f['programmeBatch']->available_slots);
+        $this->assertDatabaseMissing('bookings', ['id' => $booking->id]);
+    }
 
-        // Verify admission was deleted
-        $this->assertDatabaseMissing('user_admission', ['id' => $admission->id]);
+    /** @test */
+    public function cancel_within_seven_days_does_not_restore_slot()
+    {
+        Event::fake();
+        $f = $this->fixture(endDays: 3);
+        $user = $this->makeUser();
+
+        $service = app(BookingService::class);
+        $booking = $service->book($user, $f['course'], $f['programmeBatch'], $f['session']);
+
+        $restored = $service->cancel($booking);
+
+        $this->assertFalse($restored);
+        Event::assertNotDispatched(AdmissionSlotFreed::class);
+
+        $f['programmeBatch']->refresh();
+        $this->assertEquals(9, $f['programmeBatch']->available_slots);
+        $this->assertDatabaseMissing('bookings', ['id' => $booking->id]);
     }
 
     /** @test */
     public function concurrent_book_calls_only_allow_one_success()
     {
-        $batch = Batch::create([
-            'title' => 'Test Batch',
-            'start_date' => now()->addDays(10),
-            'end_date' => now()->addDays(30),
-            'status' => true,
-        ]);
+        $f = $this->fixture(slots: 1, shortSlots: 1);
+        $user1 = $this->makeUser('U1');
+        $user2 = $this->makeUser('U2');
 
-        $programme = Programme::create([
-            'title' => 'Test Programme',
-            'duration' => 20,
-            'duration_in_days' => 10,
-            'time_allocation' => 2,
-        ]);
+        $service = app(BookingService::class);
 
-        $centre = Centre::create([
-            'title' => 'Test Centre',
-            'branch_id' => 1,
-            'seat_count' => 1,
-        ]);
+        $booking1 = $service->book($user1, $f['course'], $f['programmeBatch'], $f['session']);
+        $this->assertInstanceOf(Booking::class, $booking1);
 
-        $programmeBatch = ProgrammeBatch::create([
-            'admission_batch_id' => $batch->id,
-            'programme_id' => $programme->id,
-            'centre_id' => $centre->id,
-            'start_date' => now()->addDays(10),
-            'end_date' => now()->addDays(20),
-            'max_enrolments' => 1,
-            'available_slots' => 1,
-            'status' => true,
-        ]);
-
-        $course = Course::create([
-            'programme_id' => $programme->id,
-            'centre_id' => $centre->id,
-            'batch_id' => $batch->id,
-            'course_name' => 'Test Course',
-        ]);
-
-        $user1 = User::create([
-            'userId' => 'TEST-U1',
-            'name' => 'User One',
-            'email' => 'user1@example.com',
-        ]);
-
-        $user2 = User::create([
-            'userId' => 'TEST-U2',
-            'name' => 'User Two',
-            'email' => 'user2@example.com',
-        ]);
-
-        $bookingService = app(BookingService::class);
-
-        // Book first user
-        $admission1 = $bookingService->book($user1, $course, $programmeBatch);
-        $this->assertInstanceOf(UserAdmission::class, $admission1);
-
-        // Second booking should fail (no slots left)
         $this->expectException(\Exception::class);
-        $bookingService->book($user2, $course, $programmeBatch);
+        $service->book($user2, $f['course'], $f['programmeBatch'], $f['session']);
     }
 }
