@@ -49,7 +49,7 @@ class CourseRecommendationService
         }
 
         // Priority 3: No centre support option (online delivery)
-        if ($course->programme?->isOnline() || $this->hasOnlineAlternative($course)) {
+        if ($course->isOnlineProgramme() || $this->hasOnlineAlternative($course)) {
             return [
                 'priority' => self::PRIORITY_NO_SUPPORT,
                 'type'     => 'no_centre_support',

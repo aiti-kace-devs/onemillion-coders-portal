@@ -13,6 +13,9 @@ class Programme extends Model
     use CrudTrait;
     use HasFactory, LogsActivity;
 
+    /** Minimum duration_in_days that classifies a course as "long". */
+    public const SHORT_COURSE_THRESHOLD_DAYS = 20;
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

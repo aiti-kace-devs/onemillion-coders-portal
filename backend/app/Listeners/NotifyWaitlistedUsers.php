@@ -36,6 +36,7 @@ class NotifyWaitlistedUsers implements ShouldQueue
             ->whereNull('notified_at')
             ->orderBy('created_at')
             ->limit($limit)
+            ->with('user')
             ->get();
 
         foreach ($entries as $entry) {

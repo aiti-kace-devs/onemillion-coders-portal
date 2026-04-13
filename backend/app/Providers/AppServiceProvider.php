@@ -46,12 +46,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(JwtService::class, fn() => JwtService::fromConfig());
 
         $this->app->singleton(QuotaService::class);
-        $this->app->singleton(CourseBatchService::class, fn($app) => new CourseBatchService(
-            $app->make(QuotaService::class)
-        ));
-        $this->app->singleton(CourseRecommendationService::class, fn($app) => new CourseRecommendationService(
-            $app->make(QuotaService::class)
-        ));
+        $this->app->singleton(CourseBatchService::class);
+        $this->app->singleton(CourseRecommendationService::class);
         $this->app->singleton(AdmissionRevocationService::class);
     }
 

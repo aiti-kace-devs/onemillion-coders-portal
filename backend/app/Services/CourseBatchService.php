@@ -6,6 +6,7 @@ use App\Events\CourseBatchCreated;
 use App\Models\Batch;
 use App\Models\CourseBatch;
 use App\Models\Course;
+use App\Models\UserAdmission;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,8 @@ class CourseBatchService
      */
     public function generateForCourse(Course $course, Batch $batch): Collection
     {
+        // Ensure relationships are loaded before entering the transaction loop
+        $course->loadMissing(['programme', 'centre']);
         $programme = $course->programme;
 
         if (!$programme || !$programme->duration_in_days) {
@@ -34,14 +37,26 @@ class CourseBatchService
             );
         }
 
-        $batchStart  = Carbon::parse($batch->start_date);
-        $batchEnd    = Carbon::parse($batch->end_date);
+        $batchStart   = Carbon::parse($batch->start_date);
+        $batchEnd     = Carbon::parse($batch->end_date);
         $durationDays = (int) $programme->duration_in_days;
+        $centre       = $course->centre;
+
+        // Compute available slots once for the full batch window — underlying long-course
+        // data is stable throughout this generation run.
+        $availableSlots = $centre
+            ? $this->quotaService->getAvailableSlots(
+                $centre,
+                $course,
+                $batchStart->toDateString(),
+                $batchEnd->toDateString()
+            )
+            : 0;
 
         $createdBatches = collect();
 
         DB::transaction(function () use (
-            $course, $batch, $batchStart, $batchEnd, $durationDays, &$createdBatches
+            $course, $batch, $batchStart, $batchEnd, $durationDays, $availableSlots, &$createdBatches
         ) {
             $cursor = $batchStart->copy();
 
@@ -49,20 +64,9 @@ class CourseBatchService
                 $start = $cursor->copy();
                 $end   = $cursor->copy()->addDays($durationDays - 1);
 
-                // Clamp to admission batch end
                 if ($end->greaterThan($batchEnd)) {
                     $end = $batchEnd->copy();
                 }
-
-                $centre         = $course->centre;
-                $availableSlots = $centre
-                    ? $this->quotaService->getAvailableSlots(
-                        $centre,
-                        $course,
-                        $start->toDateString(),
-                        $end->toDateString()
-                    )
-                    : 0;
 
                 $programmeBatch = CourseBatch::create([
                     'course_id'       => $course->id,
@@ -73,39 +77,38 @@ class CourseBatchService
                     'available_slots' => $availableSlots,
                 ]);
 
-                event(new CourseBatchCreated($programmeBatch));
-
                 $createdBatches->push($programmeBatch);
 
                 $cursor->addDays($durationDays);
             }
         });
 
+        // Fire events after the transaction commits so listeners see persisted rows
+        foreach ($createdBatches as $programmeBatch) {
+            event(new CourseBatchCreated($programmeBatch));
+        }
+
         return $createdBatches;
     }
 
     /**
-     * Delete existing programme batches for a course+batch (guards against active admissions)
-     * then re-generate them.
+     * Delete existing programme batches (guards against active admissions) then re-generate.
+     * The entire delete + generate runs in a single transaction.
      */
     public function regenerateForCourse(Course $course, Batch $batch): Collection
     {
         $existing = CourseBatch::where('course_id', $course->id)
             ->where('batch_id', $batch->id)
-            ->get();
+            ->pluck('id');
 
-        foreach ($existing as $pb) {
-            if ($pb->admissions()->exists()) {
-                throw new \RuntimeException(
-                    "Cannot regenerate — programme batch [{$pb->id}] has active admissions."
-                );
-            }
+        if (UserAdmission::whereIn('programme_batch_id', $existing)->exists()) {
+            throw new \RuntimeException(
+                "Cannot regenerate — one or more programme batches for this course have active admissions."
+            );
         }
 
         DB::transaction(function () use ($existing) {
-            foreach ($existing as $pb) {
-                $pb->delete();
-            }
+            CourseBatch::whereIn('id', $existing)->delete();
         });
 
         return $this->generateForCourse($course, $batch);

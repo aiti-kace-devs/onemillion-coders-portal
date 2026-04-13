@@ -15,15 +15,16 @@ class AdmissionRevocationService
     /**
      * Revoke a student's admission.
      *
-     * - Copies record to revoked_admissions.
-     * - Deletes from user_admission.
-     * - Removes the student from external partners (Startocode, Coursera).
-     * - Frees the slot on the programme_batch if conditions are met.
+     * Copies the record to revoked_admissions, deletes from user_admission,
+     * frees the slot when conditions allow, and removes the student from external partners.
      */
     public function revoke(UserAdmission $admission): void
     {
-        DB::transaction(function () use ($admission) {
-            // 1. Keep the revoked record
+        $slotFreed      = false;
+        $courseId       = $admission->course_id;
+        $programmeBatch = null;
+
+        DB::transaction(function () use ($admission, &$slotFreed, &$programmeBatch) {
             RevokedAdmission::create([
                 'user_id'                 => $admission->user_id,
                 'course_id'               => $admission->course_id,
@@ -35,75 +36,54 @@ class AdmissionRevocationService
                 'revoked_at'              => now(),
             ]);
 
-            // 2. Handle slot freeing based on time left to course completion
-            $this->handleSlotOnRevocation($admission);
-
-            // 3. Remove from user_admission
+            $slotFreed      = $this->handleSlotOnRevocation($admission, $programmeBatch);
             $admission->delete();
         });
 
-        // 4. Remove from external partners (outside transaction — side effects)
-        $this->removeFromPartners($admission->user_id, $admission->course_id);
+        // Fire event and call partner APIs outside the transaction
+        if ($slotFreed && $programmeBatch) {
+            event(new AdmissionSlotFreed($courseId, $programmeBatch->id));
+        }
+
+        $this->removeFromPartner('Startocode', $admission->user_id, $courseId);
+        $this->removeFromPartner('Coursera', $admission->user_id, $courseId);
     }
 
-    // ─── Slot freeing logic ───────────────────────────────────────────────────
-
-    private function handleSlotOnRevocation(UserAdmission $admission): void
+    private function handleSlotOnRevocation(UserAdmission $admission, ?CourseBatch &$programmeBatch): bool
     {
-        $programmeBatch = $admission->programme_batch_id
-            ? CourseBatch::find($admission->programme_batch_id)
-            : null;
+        if (!$admission->programme_batch_id) {
+            return false;
+        }
 
+        $programmeBatch = CourseBatch::find($admission->programme_batch_id);
         if (!$programmeBatch) {
-            return;
+            return false;
         }
 
-        $endDate     = Carbon::parse($programmeBatch->end_date);
-        $today       = Carbon::today();
-        $daysLeft    = $today->diffInDays($endDate, false); // negative = past
-
-        if ($daysLeft <= 0) {
-            // Course already completed — slot goes to waste
-            return;
-        }
+        // Signed diff: negative = batch already ended
+        $daysLeft = Carbon::today()->diffInDays(Carbon::parse($programmeBatch->end_date), false);
 
         if ($daysLeft <= 7) {
-            // Less than 1 week left — slot goes to waste (no time to allocate)
-            return;
+            // Less than 1 week (or already ended) — slot goes to waste
+            return false;
         }
 
-        // 1 week or 2 weeks left — free the slot (increment available_slots)
-        // The slot will be surfaced to short-course seekers via QuotaService
         CourseBatch::where('id', $programmeBatch->id)->increment('available_slots');
 
-        event(new AdmissionSlotFreed($admission->course_id, $programmeBatch->id));
+        return true;
     }
 
-    // ─── External partner removal ─────────────────────────────────────────────
-
-    private function removeFromPartners(string $userId, ?int $courseId): void
-    {
-        $this->removeFromStartocode($userId, $courseId);
-        $this->removeFromCoursera($userId, $courseId);
-    }
-
-    private function removeFromStartocode(string $userId, ?int $courseId): void
+    private function removeFromPartner(string $partner, string $userId, ?int $courseId): void
     {
         try {
-            // TODO: Implement Startocode API call to deactivate the student's account/enrolment
-            Log::info("Startocode removal triggered for user [{$userId}], course [{$courseId}]");
+            // TODO: Implement {$partner} API call to deactivate the student's enrolment
+            Log::info("{$partner} removal triggered", ['user_id' => $userId, 'course_id' => $courseId]);
         } catch (\Throwable $e) {
-            Log::error("Failed to remove user [{$userId}] from Startocode: " . $e->getMessage());
-        }
-    }
-
-    private function removeFromCoursera(string $userId, ?int $courseId): void
-    {
-        try {
-            // TODO: Implement Coursera API call to unenroll the student
-            Log::info("Coursera removal triggered for user [{$userId}], course [{$courseId}]");
-        } catch (\Throwable $e) {
-            Log::error("Failed to remove user [{$userId}] from Coursera: " . $e->getMessage());
+            Log::error("Failed to remove user from {$partner}", [
+                'user_id'   => $userId,
+                'course_id' => $courseId,
+                'error'     => $e->getMessage(),
+            ]);
         }
     }
 }

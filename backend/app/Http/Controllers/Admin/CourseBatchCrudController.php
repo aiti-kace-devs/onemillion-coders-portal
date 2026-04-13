@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Requests\CourseBatchRequest;
 use App\Events\CourseBatchCreated;
+use App\Helpers\CrudListHelper;
+use App\Helpers\FilterHelper;
 use App\Models\Attendance;
 use App\Models\Batch;
 use App\Models\CourseBatch;
@@ -11,11 +13,11 @@ use App\Models\Course;
 use App\Models\Oex_result;
 use App\Models\User;
 use App\Models\UserAdmission;
-use App\Helpers\FilterHelper;
 use App\Services\CourseBatchService;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 /**
  * Class CourseBatchCrudController
@@ -41,19 +43,20 @@ class CourseBatchCrudController extends CrudController
 
     protected function setupListOperation()
     {
+        CrudListHelper::editInDropdown();
         $this->setupFilters();
 
         CRUD::addColumn([
-            'name'  => 'course',
-            'label' => 'Course',
-            'type'  => 'relationship',
+            'name'      => 'course',
+            'label'     => 'Course',
+            'type'      => 'relationship',
             'attribute' => 'course_name',
         ]);
 
         CRUD::addColumn([
-            'name'  => 'batch',
-            'label' => 'Admission Batch',
-            'type'  => 'relationship',
+            'name'      => 'batch',
+            'label'     => 'Admission Batch',
+            'type'      => 'relationship',
             'attribute' => 'title',
         ]);
 
@@ -100,38 +103,19 @@ class CourseBatchCrudController extends CrudController
                 });
             });
 
-        $batches = Batch::all()->pluck('title', 'id')->toArray();
-        CRUD::addFilter([
-            'name'        => 'batch_id',
-            'type'        => 'select2',
-            'label'       => 'Admission Batch',
-            'placeholder' => 'Select a batch',
-        ], function () use ($batches) {
-            return $batches;
-        }, function ($value) {
-            if ($value) {
-                $this->crud->addClause('where', 'batch_id', $value);
-            }
-        });
+        FilterHelper::addSelectFilter(
+            'batch_id',
+            'Admission Batch',
+            Batch::query()->pluck('title', 'id')->toArray(),
+            'select2'
+        );
 
-        $courses = Course::all()->pluck('course_name', 'id')->toArray();
-        CRUD::addFilter([
-            'name'        => 'course_id',
-            'type'        => 'select2_multiple',
-            'label'       => 'Course',
-            'placeholder' => 'Select courses',
-        ], function () use ($courses) {
-            return $courses;
-        }, function ($value) {
-            if ($value) {
-                $decoded = is_array($value) ? $value : json_decode($value, true);
-                if (is_array($decoded) && count($decoded) > 0) {
-                    $this->crud->addClause('whereIn', 'course_id', $decoded);
-                } elseif ($decoded) {
-                    $this->crud->addClause('where', 'course_id', $decoded);
-                }
-            }
-        });
+        FilterHelper::addSelectFilter(
+            'course_id',
+            'Course',
+            Course::query()->pluck('course_name', 'id')->toArray(),
+            'select2_multiple'
+        );
     }
 
     protected function setupCreateOperation()
@@ -191,7 +175,8 @@ class CourseBatchCrudController extends CrudController
     }
 
     /**
-     * Override store to fire CourseBatchCreated event after creation.
+     * Override store to fire CourseBatchCreated after single-record CRUD creation.
+     * (Bulk generation via generate() fires events from CourseBatchService.)
      */
     public function store()
     {
@@ -219,7 +204,7 @@ class CourseBatchCrudController extends CrudController
             'batch_id' => 'required|integer|exists:admission_batches,id',
         ]);
 
-        $course = Course::findOrFail($courseId);
+        $course = Course::with(['programme', 'centre'])->findOrFail($courseId);
         $batch  = Batch::findOrFail($data['batch_id']);
 
         try {
@@ -241,35 +226,11 @@ class CourseBatchCrudController extends CrudController
     }
 
     /**
-     * Toggle course status.
-     */
-    public function toggleStatus(Request $request, $id)
-    {
-        if (!backpack_user()->can('course.update.all') && !backpack_user()->can('batch.update.all')) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        $data = $request->validate([
-            'value' => 'required|boolean',
-        ]);
-
-        $course = Course::findOrFail($id);
-        $course->status = (bool) $data['value'];
-        $course->save();
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Course status updated successfully.',
-            'value'   => $course->status ? 1 : 0,
-        ]);
-    }
-
-    /**
      * DataTables-compatible admitted students for a programme batch.
      */
     public function admittedStudentsData($id, Request $request)
     {
-        $programmeBatch = CourseBatch::findOrFail($id);
+        CourseBatch::findOrFail($id);
 
         $draw   = (int) $request->input('draw', 0);
         $start  = max(0, (int) $request->input('start', 0));
@@ -305,34 +266,12 @@ class CourseBatchCrudController extends CrudController
             ->take($length)
             ->get();
 
-        $fallbackUserInternalIds = $admissions
-            ->filter(fn($a) => $a->user === null && $a->user_id !== null && ctype_digit((string) $a->user_id))
-            ->pluck('user_id')
-            ->map(fn($v) => (int) $v)
-            ->unique()->values()->all();
-
-        $fallbackUsersById = collect();
-        if (!empty($fallbackUserInternalIds)) {
-            $fallbackUsersById = User::query()
-                ->whereIn('id', $fallbackUserInternalIds)
-                ->get(['id', 'name', 'email', 'userId'])
-                ->keyBy('id');
-        }
-
-        $internalIdsForExamLookup = $admissions
-            ->map(function ($a) use ($fallbackUsersById) {
-                if ($a->user?->id) return (int) $a->user->id;
-                if ($a->user_id !== null && ctype_digit((string) $a->user_id)) {
-                    return (int) $a->user_id;
-                }
-                return null;
-            })
-            ->filter()->unique()->values()->all();
+        [$fallbackUsersById, $internalIds] = $this->resolveFallbackUsers($admissions);
 
         $latestExamByUserId = collect();
-        if (!empty($internalIdsForExamLookup)) {
+        if (!empty($internalIds)) {
             $latestExamByUserId = Oex_result::query()
-                ->whereIn('user_id', $internalIdsForExamLookup)
+                ->whereIn('user_id', $internalIds)
                 ->with('exam:id,title')
                 ->orderByDesc('created_at')
                 ->get(['id', 'user_id', 'exam_id', 'yes_ans', 'no_ans', 'created_at'])
@@ -342,20 +281,12 @@ class CourseBatchCrudController extends CrudController
 
         $data = [];
         foreach ($admissions as $idx => $admission) {
-            $user = $admission->user;
-            if (!$user && $admission->user_id !== null && ctype_digit((string) $admission->user_id)) {
-                $user = $fallbackUsersById[(int) $admission->user_id] ?? null;
-            }
+            [$user, $userInternalId] = $this->resolveUser($admission, $fallbackUsersById);
 
-            $userInternalId = $user?->id;
-            if (!$userInternalId && $admission->user_id !== null && ctype_digit((string) $admission->user_id)) {
-                $userInternalId = (int) $admission->user_id;
-            }
-
-            $latestExam = $userInternalId ? ($latestExamByUserId[$userInternalId] ?? null) : null;
-            $hasExam    = $latestExam !== null;
-            $userName   = $user?->name ?? ($admission->user_id ?? 'N/A');
-            $userEmail  = $user?->email ?? 'N/A';
+            $latestExam  = $userInternalId ? ($latestExamByUserId[$userInternalId] ?? null) : null;
+            $hasExam     = $latestExam !== null;
+            $userName    = $user?->name ?? ($admission->user_id ?? 'N/A');
+            $userEmail   = $user?->email ?? 'N/A';
 
             $studentHtml = $userInternalId && $user
                 ? '<a href="' . e(backpack_url('user/' . $userInternalId . '/show')) . '">' . e($userName) . '</a>'
@@ -364,21 +295,7 @@ class CourseBatchCrudController extends CrudController
             $sessionName = $admission->courseSession?->name
                 ?? ($admission->session ? ('Session #' . $admission->session) : 'Unassigned');
 
-            $examTitle  = '-';
-            $scoreHtml  = '-';
-            $resultHtml = '-';
-            $actionsHtml = '-';
-
-            if ($hasExam) {
-                $examTitle  = e($latestExam?->exam?->title ?? ('Exam #' . ($latestExam->exam_id ?? '')));
-                $totalAns   = (int) ($latestExam->yes_ans ?? 0) + (int) ($latestExam->no_ans ?? 0);
-                $scorePct   = $totalAns > 0 ? round(((int) $latestExam->yes_ans / $totalAns) * 100, 1) : 0;
-                $passed     = $scorePct >= 50;
-                $scoreHtml  = '<span class="badge bg-info text-dark">' . e((string) $scorePct) . '%</span>';
-                $resultHtml = '<span class="badge ' . ($passed ? 'bg-success' : 'bg-danger') . '">' . ($passed ? 'Pass' : 'Fail') . '</span>';
-            } else {
-                $examTitle = '<span class="badge bg-secondary text-dark">Not taken</span>';
-            }
+            [$examTitle, $scoreHtml, $resultHtml] = $this->buildExamColumns($latestExam);
 
             $actions = [];
             if ($userInternalId) {
@@ -390,7 +307,6 @@ class CourseBatchCrudController extends CrudController
                 $actions[] = '<a href="' . $resultUrl . '" data-url="' . $resultUrl . '" class="btn btn-sm btn-outline-primary js-view-result-modal">'
                     . '<i class="la la-eye"></i> View Results</a>';
             }
-            $actionsHtml = !empty($actions) ? implode(' ', $actions) : '-';
 
             $data[] = [
                 'index'     => $start + $idx + 1,
@@ -401,7 +317,7 @@ class CourseBatchCrudController extends CrudController
                 'exam'      => $examTitle,
                 'score'     => $scoreHtml,
                 'result'    => $resultHtml,
-                'actions'   => $actionsHtml,
+                'actions'   => !empty($actions) ? implode(' ', $actions) : '-',
             ];
         }
 
@@ -414,12 +330,12 @@ class CourseBatchCrudController extends CrudController
     }
 
     /**
-     * DataTables-compatible attendance history for a course.
+     * DataTables-compatible attendance history for a programme batch (scoped to batch dates).
      */
     public function attendanceHistoryData($id, Request $request)
     {
         $programmeBatch = CourseBatch::findOrFail($id);
-        $course = Course::findOrFail($programmeBatch->course_id);
+        $course         = Course::findOrFail($programmeBatch->course_id);
 
         $draw   = (int) $request->input('draw', 0);
         $start  = max(0, (int) $request->input('start', 0));
@@ -428,7 +344,12 @@ class CourseBatchCrudController extends CrudController
         $searchValue = trim((string) $request->input('search.value', ''));
         $searchLike  = '%' . $searchValue . '%';
 
-        $baseQuery = Attendance::query()->where('course_id', $course->id);
+        $baseQuery = Attendance::query()
+            ->where('course_id', $course->id)
+            ->whereBetween('date', [
+                $programmeBatch->start_date->toDateString(),
+                $programmeBatch->end_date->toDateString(),
+            ]);
 
         $recordsTotal = (clone $baseQuery)->count();
 
@@ -454,19 +375,7 @@ class CourseBatchCrudController extends CrudController
             ->take($length)
             ->get();
 
-        $fallbackUserInternalIds = $records
-            ->filter(fn($r) => $r->user === null && $r->user_id !== null && ctype_digit((string) $r->user_id))
-            ->pluck('user_id')
-            ->map(fn($v) => (int) $v)
-            ->unique()->values()->all();
-
-        $fallbackUsersById = collect();
-        if (!empty($fallbackUserInternalIds)) {
-            $fallbackUsersById = User::query()
-                ->whereIn('id', $fallbackUserInternalIds)
-                ->get(['id', 'name', 'userId'])
-                ->keyBy('id');
-        }
+        [$fallbackUsersById] = $this->resolveFallbackUsers($records);
 
         $data = [];
         foreach ($records as $record) {
@@ -474,8 +383,6 @@ class CourseBatchCrudController extends CrudController
             if (!$user && $record->user_id !== null && ctype_digit((string) $record->user_id)) {
                 $user = $fallbackUsersById[(int) $record->user_id] ?? null;
             }
-
-            $studentName = $user?->name ?? ($record->user_id ?? 'N/A');
 
             try {
                 $dateStr = $record->date ? \Carbon\Carbon::parse($record->date)->format('Y-m-d') : 'N/A';
@@ -485,7 +392,7 @@ class CourseBatchCrudController extends CrudController
 
             $data[] = [
                 'date'    => e($dateStr),
-                'student' => e($studentName),
+                'student' => e($user?->name ?? ($record->user_id ?? 'N/A')),
                 'course'  => e($course->course_name ?? 'N/A'),
             ];
         }
@@ -496,5 +403,86 @@ class CourseBatchCrudController extends CrudController
             'recordsFiltered' => $recordsFiltered,
             'data'            => $data,
         ]);
+    }
+
+    // ─── Private helpers ──────────────────────────────────────────────────────
+
+    /**
+     * For records where the Eloquent `user` relation is null but `user_id` looks like
+     * an internal integer PK, do a single batch lookup and return a keyed collection.
+     * Also returns the flat array of internal IDs for downstream exam lookups.
+     *
+     * @return array{Collection, array<int>}
+     */
+    private function resolveFallbackUsers(Collection $records): array
+    {
+        $integerIds = $records
+            ->filter(fn($r) => $r->user === null && $r->user_id !== null && ctype_digit((string) $r->user_id))
+            ->pluck('user_id')
+            ->map(fn($v) => (int) $v)
+            ->unique()
+            ->values()
+            ->all();
+
+        $fallbackById = collect();
+        if (!empty($integerIds)) {
+            $fallbackById = User::query()
+                ->whereIn('id', $integerIds)
+                ->get(['id', 'name', 'email', 'userId'])
+                ->keyBy('id');
+        }
+
+        // Collect all internal IDs (from loaded relation or fallback) for exam lookups
+        $allInternalIds = $records
+            ->map(function ($r) use ($fallbackById) {
+                if ($r->user?->id) {
+                    return (int) $r->user->id;
+                }
+                if ($r->user_id !== null && ctype_digit((string) $r->user_id)) {
+                    return (int) $r->user_id;
+                }
+                return null;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return [$fallbackById, $allInternalIds];
+    }
+
+    /** @return array{string, string, string} [examTitle, scoreHtml, resultHtml] */
+    private function buildExamColumns(?object $latestExam): array
+    {
+        if (!$latestExam) {
+            return ['<span class="badge bg-secondary text-dark">Not taken</span>', '-', '-'];
+        }
+
+        $examTitle = e($latestExam->exam?->title ?? ('Exam #' . ($latestExam->exam_id ?? '')));
+        $totalAns  = (int) ($latestExam->yes_ans ?? 0) + (int) ($latestExam->no_ans ?? 0);
+        $scorePct  = $totalAns > 0 ? round(((int) $latestExam->yes_ans / $totalAns) * 100, 1) : 0;
+        $passed    = $scorePct >= 50;
+
+        return [
+            $examTitle,
+            '<span class="badge bg-info text-dark">' . e((string) $scorePct) . '%</span>',
+            '<span class="badge ' . ($passed ? 'bg-success' : 'bg-danger') . '">' . ($passed ? 'Pass' : 'Fail') . '</span>',
+        ];
+    }
+
+    /** @return array{?User, ?int} */
+    private function resolveUser(object $record, Collection $fallbackById): array
+    {
+        $user = $record->user;
+        if (!$user && $record->user_id !== null && ctype_digit((string) $record->user_id)) {
+            $user = $fallbackById[(int) $record->user_id] ?? null;
+        }
+
+        $internalId = $user?->id;
+        if (!$internalId && $record->user_id !== null && ctype_digit((string) $record->user_id)) {
+            $internalId = (int) $record->user_id;
+        }
+
+        return [$user, $internalId];
     }
 }
