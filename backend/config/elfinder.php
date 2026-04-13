@@ -2,7 +2,7 @@
 
 $diskToAdd = [];
 
-if (config('filesystems.default') === 's3') {
+if (config('filesystems.default_cloud_storage') === 's3') {
     $diskToAdd[] = ['s3' => [
         'URL' => env('AWS_URL'),
         'alias' => CLOUD_STORAGE_ALIAS,
