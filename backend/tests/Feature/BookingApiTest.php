@@ -28,7 +28,7 @@ class BookingApiTest extends TestCase
 
         $programme = Programme::create([
             'title' => 'Programme',
-            'duration_hours' => 20,
+            'duration' => 20,
             'duration_in_days' => 10,
             'time_allocation' => 2,
         ]);
@@ -96,7 +96,7 @@ class BookingApiTest extends TestCase
         $f = $this->makeFixture(5);
         $otherProgramme = Programme::create([
             'title' => 'Other',
-            'duration_hours' => 20,
+            'duration' => 20,
             'duration_in_days' => 10,
             'time_allocation' => 2,
         ]);

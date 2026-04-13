@@ -134,19 +134,19 @@ trait ProgrammeFieldHelpers
 
         CRUD::addField([
             'name' => 'duration',
-            'label' => 'Duration',
-            'type' => 'text',
-            'wrapper' => ['class' => 'form-group col-6'],
-            'hint' => 'eg 3  Week or 120 hrs'
-        ]);
-
-        CRUD::addField([
-            'name' => 'duration_hours',
             'label' => 'Duration (Hours)',
             'type' => 'number',
             'wrapper' => ['class' => 'form-group col-6'],
-            'hint' => 'Total course hours. Auto-computes duration_in_days and time_allocation.'
+            'hint' => 'Total course hours. Auto-computes duration_in_days and time_allocation.s'
         ]);
+
+        // CRUD::addField([
+        //     'name' => 'duration_hours',
+        //     'label' => 'Duration (Hours)',
+        //     'type' => 'number',
+        //     'wrapper' => ['class' => 'form-group col-6'],
+        //     'hint' => 'Total course hours. Auto-computes duration_in_days and time_allocation.'
+        // ]);
 
         CRUD::addField([
             'name' => 'duration_in_days',
@@ -154,7 +154,7 @@ trait ProgrammeFieldHelpers
             'type' => 'number',
             'wrapper' => ['class' => 'form-group col-6'],
             'attributes' => ['readonly' => 'readonly'],
-            'hint' => 'Auto-computed from duration_hours'
+            'hint' => 'Auto-computed from duration (hours)'
         ]);
 
         CRUD::addField([
@@ -364,7 +364,7 @@ trait ProgrammeFieldHelpers
 
 
 
-        $this->addFieldsToTab('Info', true, ['title', 'sub_title', 'image', 'start_date', 'end_date', 'duration', 'duration_hours', 'duration_in_days', 'time_allocation', 'course_category_id', 'status', 'level', 'mode_of_delivery', 'provider', 'job_responsible']);
+        $this->addFieldsToTab('Info', true, ['title', 'sub_title', 'image', 'start_date', 'end_date', 'duration', 'duration_in_days', 'time_allocation', 'course_category_id', 'status', 'level', 'mode_of_delivery', 'provider', 'job_responsible']);
         $this->addFieldsToTab('Module', true, ['course_modules']);
         $this->addFieldsToTab('Certification', true, ['course_certification']);
         $this->addFieldsToTab('Prerequisites', true, ['prerequisites']);

@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('programmes', function (Blueprint $table) {
-            $table->smallInteger('duration_hours')->nullable()->after('duration');
-            $table->tinyInteger('duration_in_days')->nullable()->after('duration_hours');
+            // $table->smallInteger('duration_hours')->nullable()->after('duration');
+            $table->tinyInteger('duration_in_days')->nullable()->after('duration');
             $table->tinyInteger('time_allocation')->nullable()->after('duration_in_days');
         });
     }
@@ -24,7 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('programmes', function (Blueprint $table) {
-            $table->dropColumn(['duration_hours', 'duration_in_days', 'time_allocation']);
+            $table->dropColumn(['duration_in_days', 'time_allocation']);
         });
     }
 };

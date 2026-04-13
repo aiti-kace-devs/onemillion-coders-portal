@@ -29,7 +29,7 @@ class ProgrammeBatchGeneratorTest extends TestCase
         // Create a 1-week programme (5 school days)
         $programme = Programme::create([
             'title' => 'One Week Programme',
-            'duration_hours' => 10,
+            'duration' => 10,
             'duration_in_days' => 5,
             'time_allocation' => 2,
         ]);
@@ -92,7 +92,7 @@ class ProgrammeBatchGeneratorTest extends TestCase
 
         $programme = Programme::create([
             'title' => 'Two Week Programme',
-            'duration_hours' => 20,
+            'duration' => 20,
             'duration_in_days' => 10,
             'time_allocation' => 2,
         ]);
@@ -126,7 +126,7 @@ class ProgrammeBatchGeneratorTest extends TestCase
 
         $programme = Programme::create([
             'title' => 'Test Programme',
-            'duration_hours' => 10,
+            'duration' => 10,
             'duration_in_days' => 5,
             'time_allocation' => 2,
         ]);

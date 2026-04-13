@@ -26,7 +26,6 @@ class Programme extends Model
         'title',
         'sub_title',
         'duration',
-        'duration_hours',
         'duration_in_days',
         'time_allocation',
         'start_date',
@@ -119,9 +118,9 @@ class Programme extends Model
                 'why_choose_this_course' => $whyChoose
             ];
 
-            // Auto-compute duration_in_days and time_allocation from duration_hours
-            if ($programme->duration_hours) {
-                $hours = (int) $programme->duration_hours;
+            // Auto-compute duration_in_days and time_allocation from duration
+            if ($programme->duration) {
+                $hours = (int) $programme->duration;
                 $programme->time_allocation = $hours < 40 ? 2 : 4;
 
                 if ($hours < 40) {

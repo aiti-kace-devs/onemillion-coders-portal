@@ -34,7 +34,7 @@ class BookingServiceTest extends TestCase
 
         $programme = Programme::create([
             'title' => 'Test Programme',
-            'duration_hours' => 20,
+            'duration' => 20,
             'duration_in_days' => 10,
             'time_allocation' => 2,
         ]);
@@ -94,7 +94,7 @@ class BookingServiceTest extends TestCase
 
         $programme = Programme::create([
             'title' => 'Test Programme',
-            'duration_hours' => 20,
+            'duration' => 20,
             'duration_in_days' => 10,
             'time_allocation' => 2,
         ]);
@@ -151,7 +151,7 @@ class BookingServiceTest extends TestCase
 
         $programme = Programme::create([
             'title' => 'Test Programme',
-            'duration_hours' => 20,
+            'duration' => 20,
             'duration_in_days' => 10,
             'time_allocation' => 2,
         ]);
@@ -214,7 +214,7 @@ class BookingServiceTest extends TestCase
 
         $programme = Programme::create([
             'title' => 'Test Programme',
-            'duration_hours' => 20,
+            'duration' => 20,
             'duration_in_days' => 10,
             'time_allocation' => 2,
         ]);
