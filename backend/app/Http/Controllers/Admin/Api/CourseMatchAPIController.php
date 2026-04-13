@@ -7,9 +7,9 @@ use App\Models\Centre;
 use App\Models\CourseMatch;
 use App\Models\CourseCategory;
 use App\Models\Branch;
-use App\Models\UserAdmission;
 use App\Models\Programme;
 use App\Models\Course;
+use App\Models\CourseSession;
 use App\Models\Batch;
 use App\Models\CourseBatch;
 use App\Models\User;
@@ -49,12 +49,27 @@ class CourseMatchAPIController extends Controller
         ]);
     }
 
-    public function checkUserRecommendedCourses(string $userId)
+    public function checkUserRecommendedCourses(Request $request, string $userId)
     {
+        $user = User::where('userId', $userId)->first();
+        $registeredCourseId = $user ? (int) $user->registered_course : null;
+
         $recommendations = DB::table('user_course_recommendations')
             ->where('user_id', $userId)
             ->orderBy('rank')
             ->get();
+
+        if ($recommendations->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No recommended courses found.',
+            ]);
+        }
+
+        // Exclude user's registered course from recommendations
+        if ($registeredCourseId) {
+            $recommendations = $recommendations->filter(fn($rec) => (int) $rec->course_id !== $registeredCourseId)->values();
+        }
 
         if ($recommendations->isEmpty()) {
             return response()->json([
@@ -75,33 +90,18 @@ class CourseMatchAPIController extends Controller
             ->keyBy('id');
 
         $matches = $recommendations
-            ->map(function ($recommendation, $index) use ($courses) {
+            ->map(function ($recommendation, $index) use ($request, $courses) {
                 $courseId = $recommendation->course_id;
                 $course = $courseId ? $courses->get($courseId) : null;
-                $programme = $course?->programme;
-
-                if (!$programme) {
-                    return null;
-                }
-
                 $rankValue = $recommendation->rank ?? ($index + 1);
 
-                return [
-                    'rank' => '#' . $rankValue,
-                    'id' => $programme->id,
-                    'title' => $programme->title,
-                    'sub_title' => $programme->sub_title,
-                    'duration' => $programme->duration,
-                    'level' => $programme->level,
-                    'image' => $programme->image,
-                    'job_responsible' => $programme->job_responsible,
-                    'prerequisites' => $programme->prerequisites,
-                    'mode_of_delivery' => $programme->mode_of_delivery,
-                    'provider' => $programme->provider,
-                    'match_percentage' => ((int) $recommendation->match_percentage) . '% Match',
-                    'course_id' => $courseId,
-                    'centre_id' => $recommendation->centre_id ?? $course?->centre_id,
-                ];
+                return $this->buildStoredRecommendationPayload(
+                    $request,
+                    $course,
+                    $rankValue,
+                    $recommendation->match_percentage,
+                    $recommendation->centre_id ?? $course?->centre_id
+                );
             })
             ->filter()
             ->values();
@@ -111,6 +111,195 @@ class CourseMatchAPIController extends Controller
             'title' => 'These are Your Recommended Courses',
             'description' => 'Based on your preferences, here are the recommended courses that best align with your goals',
             'matches' => $matches,
+        ]);
+    }
+
+    public function getUserRecommendedCoursesWithAvailableCourses(Request $request, string $userId)
+    {
+        $user = User::with('course')->where('userId', $userId)->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found.',
+            ]);
+        }
+
+        $currentCourseId = $user->registered_course ? (int) $user->registered_course : null;
+        $currentCourse = $user->course;
+
+        if (!$currentCourseId || !$currentCourse?->centre_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User has no registered course.',
+            ]);
+        }
+
+        $recommendations = DB::table('user_course_recommendations')
+            ->where('user_id', $userId)
+            ->orderBy('rank')
+            ->get();
+
+        $recommendedCourseIds = $recommendations
+            ->pluck('course_id')
+            ->filter()
+            ->reject(fn($courseId) => (int) $courseId === $currentCourseId)
+            ->unique()
+            ->values();
+
+        $recommendedCourses = Course::with('programme')
+            ->whereIn('id', $recommendedCourseIds)
+            ->get()
+            ->keyBy('id');
+
+        $matches = $recommendations
+            ->map(function ($recommendation, $index) use ($request, $recommendedCourses, $currentCourseId) {
+                $courseId = $recommendation->course_id ? (int) $recommendation->course_id : null;
+
+                if (!$courseId || $courseId === $currentCourseId) {
+                    return null;
+                }
+
+                $rankValue = $recommendation->rank ?? ($index + 1);
+
+                return $this->buildStoredRecommendationPayload(
+                    $request,
+                    $recommendedCourses->get($courseId),
+                    $rankValue,
+                    $recommendation->match_percentage,
+                    $recommendation->centre_id
+                );
+            })
+            ->filter()
+            ->values();
+
+        $existingCourseIds = $matches
+            ->pluck('course_id')
+            ->filter()
+            ->map(fn($courseId) => (int) $courseId)
+            ->unique()
+            ->values()
+            ->all();
+
+        $availableCourseIds = $this->getCentreCourses((int) $currentCourse->centre_id)
+            ->pluck('id')
+            ->map(fn($courseId) => (int) $courseId)
+            ->reject(fn($courseId) => $courseId === $currentCourseId || in_array($courseId, $existingCourseIds, true))
+            ->unique()
+            ->values();
+
+        $availableCourses = Course::with('programme')
+            ->whereIn('id', $availableCourseIds)
+            ->get()
+            ->sortBy(fn($course) => strtolower(trim((string) $course->programme?->title)))
+            ->values();
+
+        $nextRank = $this->nextRecommendationRank($matches);
+
+        $availableMatches = $availableCourses
+            ->map(function ($course) use ($request, &$nextRank) {
+                $payload = $this->buildStoredRecommendationPayload(
+                    $request,
+                    $course,
+                    $nextRank,
+                    null,
+                    $course->centre_id
+                );
+
+                if (!$payload) {
+                    return null;
+                }
+
+                $slotLeft = $payload['slot_left'];
+                if (!is_int($slotLeft) || $slotLeft < 1) {
+                    return null;
+                }
+
+                $nextRank++;
+
+                return $payload;
+            })
+            ->filter()
+            ->values();
+
+        $availableCoursesList = $availableMatches
+            ->map(function ($match) {
+                return [
+                    'id' => $match['id'],
+                    'title' => $match['title'],
+                    'sub_title' => $match['sub_title'],
+                    'duration' => $match['duration'],
+                    'level' => $match['level'],
+                    'image' => $match['image'],
+                    'job_responsible' => $match['job_responsible'],
+                    'prerequisites' => $match['prerequisites'],
+                    'mode_of_delivery' => $match['mode_of_delivery'],
+                    'provider' => $match['provider'],
+                    'course_id' => $match['course_id'],
+                    'slot_left' => $match['slot_left'],
+                    'centre_id' => $match['centre_id'] ?? null,
+                ];
+            })
+            ->values();
+
+        if ($matches->isEmpty() && $availableCoursesList->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No recommended or available courses found.',
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'title' => 'These are Your Recommended Courses',
+            'description' => 'Based on your preferences, here are the recommended courses that best align with your goals',
+            'matches' => $matches,
+            'available_courses' => $availableCoursesList,
+        ]);
+    }
+
+    public function courseSlotLeft(Request $request, ?int $courseId = null)
+    {
+        $data = validator(
+            ['course_id' => $courseId ?? $request->query('course_id')],
+            ['course_id' => 'required|integer|exists:courses,id']
+        )->validate();
+
+        $courseId = (int) $data['course_id'];
+        $course = Course::findOrFail($courseId);
+
+        $courseSessions = CourseSession::query()
+            ->courseType()
+            ->where('course_id', $courseId)
+            ->orderBy('id')
+            ->get();
+
+        $session = $courseSessions->first();
+        $slotsLeft = null;
+
+        if ($session) {
+            $courseSessionIds = $courseSessions
+                ->pluck('id')
+                ->map(fn($id) => (int) $id)
+                ->values()
+                ->all();
+
+            $courseSessionConfirmed = DB::table('user_admission')
+                ->whereIn('session', $courseSessionIds)
+                ->whereNotNull('confirmed')
+                ->selectRaw('session, COUNT(*) as count')
+                ->groupBy('session')
+                ->pluck('count', 'session');
+
+            $confirmedCount = (int) ($courseSessionConfirmed[$session->id] ?? 0);
+            $limit = (int) ($session->limit ?? 0);
+            $slotsLeft = $limit > 0 ? max(0, $limit - $confirmedCount) : null;
+        }
+
+        return response()->json([
+            'success' => true,
+            'course_id' => $course->id,
+            'slot_left' => $slotsLeft,
         ]);
     }
 
@@ -231,10 +420,24 @@ class CourseMatchAPIController extends Controller
             ->take(4)
             ->values();
 
+        // Exclude user's registered course programme from recommendations
+        if ($user && $user->registered_course) {
+            $registeredCourse = $user->course;
+            $registeredProgrammeId = $registeredCourse?->programme_id;
+
+            if ($registeredProgrammeId) {
+                $top = $top->filter(fn($programme) => (int) $programme->id !== (int) $registeredProgrammeId)
+                    ->values();
+            }
+        }
+
         $centresByProgramme = $this->buildCentresByProgramme($centreCourses);
 
-        $result = $top->map(function ($programme, $index) use ($centreCourses, $centresByProgramme, $includeDebug) {
+        $result = $top->map(function ($programme, $index) use ($request, $centreCourses, $centresByProgramme, $includeDebug) {
             $programmeCourses = $centreCourses->where('programme_id', $programme->id);
+            $courseId = $programmeCourses->first()?->id;
+            $slotLeftResponse = $courseId ? $this->courseSlotLeft($request, (int) $courseId) : null;
+            $slotLeft = $slotLeftResponse ? $slotLeftResponse->getData(true)['slot_left'] : null;
 
             $payload = [
                 'rank' => '#' . ($index + 1),
@@ -249,8 +452,9 @@ class CourseMatchAPIController extends Controller
                 'mode_of_delivery' => $programme->mode_of_delivery,
                 'provider' => $programme->provider,
                 'match_percentage' => $programme->match_percentage . '% Match',
-                'course_id' => $programmeCourses->first()?->id,
-                'centres' => $centresByProgramme->get($programme->id, collect())->values()
+                'course_id' => $courseId,
+                'slot_left' => $slotLeft,
+                // 'centres' => $centresByProgramme->get($programme->id, collect())->values()
             ];
 
             if ($includeDebug) {
@@ -965,6 +1169,55 @@ class CourseMatchAPIController extends Controller
             'success' => true,
             'data' => $programmes
         ]);
+    }
+
+    protected function buildStoredRecommendationPayload(
+        Request $request,
+        ?Course $course,
+        int $rankValue,
+        $matchPercentage = null,
+        ?int $centreId = null
+    ): ?array {
+        $programme = $course?->programme;
+
+        if (!$programme) {
+            return null;
+        }
+
+        $courseId = $course->id ? (int) $course->id : null;
+        $slotLeftResponse = $courseId ? $this->courseSlotLeft($request, $courseId) : null;
+        $slotLeft = $slotLeftResponse ? $slotLeftResponse->getData(true)['slot_left'] : null;
+
+        return [
+            'rank' => '#' . $rankValue,
+            'id' => $programme->id,
+            'title' => $programme->title,
+            'sub_title' => $programme->sub_title,
+            'duration' => $programme->duration,
+            'level' => $programme->level,
+            'image' => $programme->image,
+            'job_responsible' => $programme->job_responsible,
+            'prerequisites' => $programme->prerequisites,
+            'mode_of_delivery' => $programme->mode_of_delivery,
+            'provider' => $programme->provider,
+            'match_percentage' => $matchPercentage !== null ? ((int) $matchPercentage) . '% Match' : null,
+            'course_id' => $courseId,
+            'slot_left' => $slotLeft,
+            'centre_id' => $centreId ?? $course?->centre_id,
+        ];
+    }
+
+    protected function nextRecommendationRank($matches): int
+    {
+        $maxRank = collect($matches)
+            ->map(function ($match) {
+                $rank = ltrim((string) ($match['rank'] ?? ''), '#');
+                return ctype_digit($rank) ? (int) $rank : null;
+            })
+            ->filter(fn($rank) => $rank !== null)
+            ->max();
+
+        return $maxRank ? ($maxRank + 1) : 1;
     }
 
 }

@@ -96,11 +96,20 @@ class CourseSession extends Model
         return $query->where('session_type', self::TYPE_CENTRE);
     }
 
-    public function slotLeft()
+    public function slotLeft(): ?int
     {
+        $limit = (int) ($this->limit ?? 0);
+
+        if ($limit < 1) {
+            return null;
+        }
+
         $sessionIds = $this->sharedSessionIds();
-        $used = UserAdmission::whereIn('session', $sessionIds)->whereNotNull('confirmed')->count();
-        return $this->limit - $used;
+        $used = UserAdmission::whereIn('session', $sessionIds)
+            ->whereNotNull('confirmed')
+            ->count();
+
+        return max(0, $limit - $used);
     }
 
     protected function sharedSessionIds(): array

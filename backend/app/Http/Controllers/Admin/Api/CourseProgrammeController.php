@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Programme;
 use App\Models\CourseCategory;
 use App\Models\Branch;
-use App\Models\UserAdmission;
 use App\Models\Centre;
 use App\Models\District;
 use App\Models\Course;
@@ -80,12 +79,19 @@ class CourseProgrammeController extends Controller
             . ':order:' . ($order === 'desc' ? 'desc' : 'asc')
             . ':limit:' . ($limit !== null ? (string) $limit : 'none')
             . ':centre:' . ($centreId !== null ? (string) $centreId : 'all');
+        $courseMatchApiController = app(CourseMatchAPIController::class);
 
-        $programmes = Cache::remember($cacheKey, 600, function () use ($resolvedFilter, $sort, $order, $limit, $centreId) {
+        $programmes = Cache::remember($cacheKey, 600, function () use ($request, $resolvedFilter, $sort, $order, $limit, $centreId, $courseMatchApiController) {
             $courses = $this->getProgrammeWithBatchCourses($resolvedFilter, $centreId);
 
             $items = $courses->unique('programme_id')
-                ->map(fn($course) => $this->formatProgrammeWithBatchItem($course))
+                ->map(function ($course) use ($request, $courseMatchApiController) {
+                    $courseId = $course->id ? (int) $course->id : null;
+                    $slotLeftResponse = $courseId ? $courseMatchApiController->courseSlotLeft($request, $courseId) : null;
+                    $slotLeft = $slotLeftResponse ? $slotLeftResponse->getData(true)['slot_left'] : null;
+
+                    return $this->formatProgrammeWithBatchItem($course, $slotLeft);
+                })
                 ->filter()
                 ->values();
 
@@ -162,7 +168,7 @@ class CourseProgrammeController extends Controller
         return $query->pluck('id');
     }
 
-    protected function formatProgrammeWithBatchItem(Course $course): ?array
+    protected function formatProgrammeWithBatchItem(Course $course, ?int $slotLeft = null): ?array
     {
         $programme = $course->programme;
 
@@ -199,6 +205,7 @@ class CourseProgrammeController extends Controller
                 ->values()
                 : [],
             'course_id' => $course->id,
+            'slot_left' => $slotLeft,
             'centre_id' => $course->centre_id,
         ];
     }

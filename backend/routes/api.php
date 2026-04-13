@@ -22,6 +22,8 @@ use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
 Route::post('batch/add-courses/{batch}', [BatchCrudController::class, 'addCourses'])
     ->name('batch.add-courses');
 Route::post('/recommend/courses', [CourseMatchAPIController::class, 'recommendCourses']);
+Route::get('/courses/slot-left', [CourseMatchAPIController::class, 'courseSlotLeft']);
+Route::get('/courses/{courseId}/slot-left', [CourseMatchAPIController::class, 'courseSlotLeft']);
 // Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
 // Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
 

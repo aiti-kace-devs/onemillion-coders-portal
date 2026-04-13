@@ -189,6 +189,7 @@ class RegistrationFormAPIController extends Controller
         }
 
         $user->registered_course = $course->id;
+        $user->shortlist = true;
         $user->support = filter_var($data['support'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
         $user->save();
 
