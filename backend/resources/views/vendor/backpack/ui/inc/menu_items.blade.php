@@ -67,6 +67,9 @@
     @can('course-session.read.all')
         <x-backpack::menu-dropdown-item title="Course Sessions" icon="la la-clock" :link="backpack_url('course-session')" />
     @endcan
+    @can('course-session.read.all')
+        <x-backpack::menu-dropdown-item title="Master Sessions" icon="la la-clock-o" :link="backpack_url('master-session')" />
+    @endcan
     @can('course-category.read.all')
         <x-backpack::menu-dropdown-item title="Course Categories" icon="la la-layer-group" :link="backpack_url('course-category')" />
     @endcan
