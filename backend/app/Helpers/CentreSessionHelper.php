@@ -5,6 +5,7 @@ namespace App\Helpers;
 use App\Models\Centre;
 use App\Models\CentreSession;
 use App\Models\CourseSession;
+use App\Models\MasterSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -30,22 +31,55 @@ final class CentreSessionHelper
 
     public static function getSessionsCollection(Centre $centre): Collection
     {
-        return CentreSession::query()
-            ->where('centre_id', $centre->id)
-            ->select(['id', 'session', 'limit', 'course_time', 'link', 'status'])
+        // Fetch all active master sessions
+        $masterSessions = MasterSession::active()
             ->orderBy('id')
             ->get()
-            ->map(function ($session) {
-                return [
-                    'id' => (int) $session->id,
-                    'session' => (string) $session->session,
-                    'limit' => (int) $session->limit,
-                    'course_time' => (string) $session->course_time,
-                    'link' => $session->link,
-                    'status' => $session->status === null ? true : (bool) $session->status,
-                ];
-            })
-            ->values();
+            ->keyBy('id');
+
+        // Fetch this centre's overrides
+        $centreOverrides = CentreSession::query()
+            ->where('centre_id', $centre->id)
+            ->get()
+            ->keyBy('master_session_id');
+
+        // Merge: master sessions as base, centre overrides take precedence
+        $merged = $masterSessions->map(function ($master) use ($centreOverrides, $centre) {
+            $override = $centreOverrides->get($master->id);
+
+            return [
+                'id' => $override?->id,
+                'master_session_id' => (int) $master->id,
+                'session' => (string) $master->session_type,
+                'limit' => $override !== null ? (int) $override->limit : 100,
+                'course_time' => (string) $master->time,
+                'link' => $override?->link,
+                'status' => $override !== null
+                    ? (bool) $override->status
+                    : (bool) $master->status,
+            ];
+        })->values();
+
+        // Append legacy centre-only sessions that have no master_session_id
+        $legacySessions = CentreSession::query()
+            ->where('centre_id', $centre->id)
+            ->whereNull('master_session_id')
+            ->orderBy('id')
+            ->get();
+
+        $legacyRows = $legacySessions->map(function ($session) {
+            return [
+                'id' => (int) $session->id,
+                'master_session_id' => null,
+                'session' => (string) $session->session,
+                'limit' => (int) $session->limit,
+                'course_time' => (string) $session->course_time,
+                'link' => $session->link,
+                'status' => $session->status === null ? true : (bool) $session->status,
+            ];
+        })->values();
+
+        return $merged->concat($legacyRows)->values();
     }
 
     public static function getFormPayload(?Centre $centre): string
@@ -111,46 +145,66 @@ final class CentreSessionHelper
     public static function persist(Centre $centre, Collection $rows): void
     {
         DB::transaction(function () use ($centre, $rows) {
-            $centres = Centre::query()
-                ->select(['id'])
-                ->orderBy('id')
+            $existingSessions = CentreSession::query()
+                ->where('centre_id', $centre->id)
                 ->get();
 
-            if ($centres->isEmpty()) {
-                return;
-            }
-
-            $existingSessionsByCentre = CentreSession::query()
-                ->whereIn('centre_id', $centres->pluck('id')->all())
-                ->get()
-                ->groupBy('centre_id');
-
-            $sourceExistingSessions = $existingSessionsByCentre->get($centre->id, collect());
-            $sourceSessionsById = $sourceExistingSessions->keyBy('id');
-            $retainedSourceSessionIds = [];
+            $existingSessionsById = $existingSessions->keyBy('id');
+            $retainedSessionIds = [];
 
             foreach ($rows as $row) {
+                $isMasterLinked = ! empty($row['master_session_id']);
+
+                // Update existing session
                 if (! empty($row['id'])) {
-                    $existingSession = $sourceSessionsById->get($row['id']);
+                    $existingSession = $existingSessionsById->get($row['id']);
 
                     if (! $existingSession) {
                         throw new \RuntimeException('One or more submitted sessions could not be matched to the selected centre. Reload and try again.');
                     }
 
-                    $existingSession->fill(
-                        self::buildSessionPayload(
-                            $centre,
-                            $row,
-                            self::normalizeSyncKey($existingSession->centre_sync_key)
-                        )
-                    );
+                    $existingSession->fill(self::buildSessionPayload($centre, $row));
                     $existingSession->save();
-                    $retainedSourceSessionIds[] = (int) $existingSession->id;
+                    $retainedSessionIds[] = (int) $existingSession->id;
 
                     continue;
                 }
 
-                $retainedSourceSessionIds[] = self::createSessionAcrossCentres(
+                // Master-linked session: only create/update for this centre, no cross-centre sync
+                if ($isMasterLinked) {
+                    $existingOverride = $existingSessions->firstWhere('master_session_id', $row['master_session_id']);
+
+                    if ($existingOverride) {
+                        $existingOverride->fill(self::buildSessionPayload($centre, $row));
+                        $existingOverride->save();
+                        $retainedSessionIds[] = (int) $existingOverride->id;
+                    } else {
+                        $createdSession = CentreSession::create(self::buildSessionPayload($centre, $row));
+                        $retainedSessionIds[] = (int) $createdSession->id;
+                    }
+
+                    continue;
+                }
+
+                // Legacy centre-specific session: cross-centre sync still applies
+                $centres = Centre::query()
+                    ->select(['id'])
+                    ->orderBy('id')
+                    ->get();
+
+                if ($centres->isEmpty()) {
+                    continue;
+                }
+
+                $existingSessionsByCentre = CentreSession::query()
+                    ->whereIn('centre_id', $centres->pluck('id')->all())
+                    ->get()
+                    ->groupBy('centre_id');
+
+                $sourceExistingSessions = $existingSessionsByCentre->get($centre->id, collect());
+                $sourceSessionsById = $sourceExistingSessions->keyBy('id');
+
+                $retainedSessionIds[] = self::createSessionAcrossCentres(
                     $centre,
                     $row,
                     $centres,
@@ -158,7 +212,7 @@ final class CentreSessionHelper
                 );
             }
 
-            self::markMissingSessionsInactive($sourceExistingSessions, $retainedSourceSessionIds);
+            self::markMissingSessionsInactive($existingSessions->groupBy('centre_id')->get($centre->id, collect()), $retainedSessionIds);
         });
     }
 
@@ -183,6 +237,7 @@ final class CentreSessionHelper
         return [
             'sessions' => 'required|array|min:1',
             'sessions.*.id' => 'nullable|integer',
+            'sessions.*.master_session_id' => 'nullable|integer|exists:master_sessions,id',
             'sessions.*.session' => 'required|string|in:Morning,Afternoon,Evening,Fullday,Online',
             'sessions.*.limit' => 'required|integer|min:1|max:100000',
             'sessions.*.course_time' => 'required|string|max:255',
@@ -197,6 +252,7 @@ final class CentreSessionHelper
             ->map(function ($row) {
                 return [
                     'id' => isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null,
+                    'master_session_id' => isset($row['master_session_id']) && $row['master_session_id'] !== '' ? (int) $row['master_session_id'] : null,
                     'session' => trim((string) ($row['session'] ?? '')),
                     'limit' => (int) ($row['limit'] ?? 0),
                     'course_time' => trim((string) ($row['course_time'] ?? '')),
@@ -277,6 +333,7 @@ final class CentreSessionHelper
             'centre_id' => $centre->id,
             'session_type' => CourseSession::TYPE_CENTRE,
             'centre_sync_key' => self::normalizeSyncKey($syncKey),
+            'master_session_id' => $row['master_session_id'] ?? null,
             'session' => $row['session'],
             'limit' => $row['limit'],
             'course_time' => $row['course_time'],

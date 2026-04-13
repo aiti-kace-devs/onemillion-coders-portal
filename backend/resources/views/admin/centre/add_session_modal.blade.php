@@ -44,6 +44,7 @@
             </div>
 
             <input type="hidden" class="centre-session-id" value="">
+            <input type="hidden" class="centre-session-master-id" value="">
 
             <div class="row">
                 <div class="form-group col-md-4">
@@ -240,6 +241,7 @@
         if (!rowEl) return null;
 
         const idInput = rowEl.querySelector('.centre-session-id');
+        const masterIdInput = rowEl.querySelector('.centre-session-master-id');
         const nameInput = rowEl.querySelector('.centre-session-name');
         const limitInput = rowEl.querySelector('.centre-session-limit');
         const timeInput = rowEl.querySelector('.centre-session-time');
@@ -248,6 +250,7 @@
         const removeBtn = rowEl.querySelector('.centre-remove-session-row');
 
         if (idInput) idInput.value = rowData.id ? String(rowData.id) : '';
+        if (masterIdInput) masterIdInput.value = rowData.master_session_id ? String(rowData.master_session_id) : '';
         if (nameInput) nameInput.value = rowData.session ? String(rowData.session) : '';
         if (limitInput) limitInput.value = rowData.limit ? String(rowData.limit) : '';
         if (timeInput) timeInput.value = rowData.course_time ? String(rowData.course_time) : '';
@@ -339,6 +342,7 @@
 
         Array.from(rows).forEach((row) => {
             const id = (row.querySelector('.centre-session-id')?.value || '').trim();
+            const masterId = (row.querySelector('.centre-session-master-id')?.value || '').trim();
             const session = (row.querySelector('.centre-session-name')?.value || '').trim();
             const limit = (row.querySelector('.centre-session-limit')?.value || '').trim();
             const courseTime = (row.querySelector('.centre-session-time')?.value || '').trim();
@@ -351,6 +355,7 @@
 
             data.push({
                 id,
+                master_session_id: masterId,
                 session,
                 limit,
                 course_time: courseTime,
@@ -466,6 +471,7 @@
 
         rows.forEach((row, index) => {
             if (row.id) appendHiddenInput(postForm, `sessions[${index}][id]`, row.id);
+            if (row.master_session_id) appendHiddenInput(postForm, `sessions[${index}][master_session_id]`, row.master_session_id);
             appendHiddenInput(postForm, `sessions[${index}][session]`, row.session);
             appendHiddenInput(postForm, `sessions[${index}][limit]`, row.limit);
             appendHiddenInput(postForm, `sessions[${index}][course_time]`, row.course_time);

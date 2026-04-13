@@ -152,6 +152,9 @@ Route::group([
     Route::crud('course-match-option', 'CourseMatchOptionCrudController');
     Route::post('course-match-option/{id}/toggle', 'CourseMatchOptionCrudController@toggleStatus');
 
+    Route::crud('master-session', 'MasterSessionCrudController');
+    Route::post('master-session/{id}/toggle-status', 'MasterSessionCrudController@toggleStatus');
+
 
     // Utilities dashboard (super-admin only)
     Route::get('utilities', [UtilitiesController::class, 'index'])->name('admin.utilities.index');

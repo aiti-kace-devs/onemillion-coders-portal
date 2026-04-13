@@ -35,6 +35,7 @@ class CourseSession extends Model
         'centre_id',
         'session_type',
         'centre_sync_key',
+        'master_session_id',
         'limit',
         'course_time',
         'session',
@@ -49,6 +50,11 @@ class CourseSession extends Model
     public function course()
     {
         return $this->belongsTo(Course::class, 'course_id', 'id');
+    }
+
+    public function masterSession()
+    {
+        return $this->belongsTo(MasterSession::class, 'master_session_id');
     }
 
     protected static function boot()
