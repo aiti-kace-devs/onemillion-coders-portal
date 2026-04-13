@@ -503,11 +503,10 @@ CRUD::addField([
 
     protected static function getAdmissionLocations(): array
     {
-        return Branch::all()
-            ->pluck('location')
+        return Centre::all()
+            ->pluck('title', 'title')
             ->unique()
             ->sort()
-            ->values()
             ->toArray();
     }
 
@@ -525,11 +524,12 @@ CRUD::addField([
                     return;
                 }
 
-                CRUD::addClause('whereExists', function ($query) use ($values) {
-                    $query->select(\DB::raw(1))
-                        ->from('user_admission')
-                        ->whereColumn('user_admission.user_id', 'users.userId')
-                        ->whereIn('user_admission.location', $values);
+                CRUD::addClause('where', function ($query) use ($values) {
+                    $query->whereHas('course.centre', function ($q) use ($values) {
+                        $q->whereIn('title', $values);
+                    })->orWhereHas('admissions.course.centre', function ($q) use ($values) {
+                        $q->whereIn('title', $values);
+                    });
                 });
             }
         );

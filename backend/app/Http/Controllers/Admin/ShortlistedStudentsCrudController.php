@@ -123,11 +123,8 @@ class ShortlistedStudentsCrudController extends UserCrudController
             },
         ]);
 
-        // Remove default edit, preview, delete buttons and add custom row actions dropdown
-        CRUD::removeButton('line', 'update');
-        CRUD::removeButton('line', 'show');
-        CRUD::removeButton('line', 'delete');
-        CRUD::addButton('line', 'shortlist_row_actions_dropdown', 'view', 'crud::buttons.shortlist_row_actions_dropdown');
+        // Add row actions using the custom dropdown
+        \App\Helpers\CrudListHelper::editInDropdown(['crud::buttons.shortlist_row_actions_dropdown']);
 
         // Enable bulk operations
         CRUD::enableBulkActions();

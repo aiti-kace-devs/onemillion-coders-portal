@@ -152,7 +152,8 @@ trait UserFieldHelpers
             'type' => 'closure',
             'function' => function ($entry) {
                 $admission = $entry->admission;
-                return $admission?->location ?? '-';
+                $course = $entry->course;
+                return $admission?->course?->centre?->title ?? $course?->centre?->title ?? '-';
             },
         ]);
         CRUD::column('mobile_no')->label('Mobile Number');
@@ -239,7 +240,7 @@ trait UserFieldHelpers
                 'class' => 'avatar'
             ])
             ->value(function ($entry) {
-                return  config('filesystems.cdn_url') . '/' . $entry->userProfile->avatar;
+                return config('filesystems.cdn_url') . '/' . $entry->userProfile->avatar;
             })
             ->tab($this->profileTab);
 
@@ -447,20 +448,20 @@ trait UserFieldHelpers
             })->tab($this->accountInfoTab);
     }
 
-public function addTitleColumn(): void
-{
-    CRUD::addColumn([
-        'name' => 'name_email',
-        'label' => 'Fullname (email)',
-        'type' => 'model_function',
-        'function_name' => 'getNameWithEmail',
-        'tab' => $this->accountInfoTab,
-        'searchLogic' => function ($query, $column, $searchTerm) {
-            $query->orWhere('name', 'like', '%' . $searchTerm . '%')
-                ->orWhere('email', 'like', '%' . $searchTerm . '%');
-        },
-    ]);
-}
+    public function addTitleColumn(): void
+    {
+        CRUD::addColumn([
+            'name' => 'name_email',
+            'label' => 'Fullname (email)',
+            'type' => 'model_function',
+            'function_name' => 'getNameWithEmail',
+            'tab' => $this->accountInfoTab,
+            'searchLogic' => function ($query, $column, $searchTerm) {
+                $query->orWhere('name', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('email', 'like', '%' . $searchTerm . '%');
+            },
+        ]);
+    }
 
 
 
