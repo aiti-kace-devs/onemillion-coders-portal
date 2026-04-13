@@ -99,24 +99,102 @@ export default function CoursesPage({ params }) {
 
   // ── Mock data (not connected to API) ──
   const MOCK_BATCHES = [
-    { id: 1, name: "Batch A — Cohort 2026", startDate: "2026-05-12", endDate: "2026-08-12", duration: 90, totalSlots: 40, availableSlots: 12 },
-    { id: 2, name: "Batch B — Cohort 2026", startDate: "2026-06-16", endDate: "2026-09-16", duration: 90, totalSlots: 40, availableSlots: 28 },
-    { id: 3, name: "Batch C — Cohort 2026", startDate: "2026-09-01", endDate: "2026-12-01", duration: 90, totalSlots: 40, availableSlots: 40 },
-    { id: 4, name: "Batch D — Cohort 2026", startDate: "2026-10-06", endDate: "2027-01-06", duration: 90, totalSlots: 40, availableSlots: 0 },
+    {
+      id: 1,
+      name: "Batch A — Cohort 2026",
+      startDate: "2026-05-12",
+      endDate: "2026-08-12",
+      duration: 90,
+      totalSlots: 40,
+      availableSlots: 12,
+    },
+    {
+      id: 2,
+      name: "Batch B — Cohort 2026",
+      startDate: "2026-06-16",
+      endDate: "2026-09-16",
+      duration: 90,
+      totalSlots: 40,
+      availableSlots: 28,
+    },
+    {
+      id: 3,
+      name: "Batch C — Cohort 2026",
+      startDate: "2026-09-01",
+      endDate: "2026-12-01",
+      duration: 90,
+      totalSlots: 40,
+      availableSlots: 40,
+    },
+    {
+      id: 4,
+      name: "Batch D — Cohort 2026",
+      startDate: "2026-10-06",
+      endDate: "2027-01-06",
+      duration: 90,
+      totalSlots: 40,
+      availableSlots: 0,
+    },
   ];
   const MOCK_SESSIONS = [
-    { id: "morning", label: "Morning", time: "8:00 AM — 12:00 PM", description: "Best for early risers", hoursPerDay: 4 },
-    { id: "afternoon", label: "Afternoon", time: "1:00 PM — 5:00 PM", description: "Perfect midday schedule", hoursPerDay: 4 },
-    { id: "evening", label: "Evening", time: "6:00 PM — 9:00 PM", description: "Ideal for working professionals", hoursPerDay: 3 },
+    {
+      id: "morning",
+      label: "Morning",
+      time: "8:00 AM — 10:00 AM",
+      description: "Best for early risers",
+      hoursPerDay: 4,
+    },
+    {
+      id: "afternoon",
+      label: "Afternoon",
+      time: "10:00 AM — 12:00 PM",
+      description: "Perfect midday schedule",
+      hoursPerDay: 4,
+    },
+    {
+      id: "afternoon2",
+      label: "Afternoon",
+      time: "1:00 PM — 3:00 PM",
+      description: "Perfect midday schedule",
+      hoursPerDay: 4,
+    },
+    {
+      id: "evening",
+      label: "Evening",
+      time: "3:00 PM — 5:00 PM",
+      description: "Ideal for working professionals",
+      hoursPerDay: 3,
+    },
   ];
   const MOCK_ALT_CENTRES = [
     { id: 101, name: "Accra Digital Centre — East Legon", availableSlots: 8 },
     { id: 102, name: "Tema Innovation Hub", availableSlots: 15 },
   ];
   const MOCK_ALT_COURSES = [
-    { id: 201, title: "Web Development Fundamentals", matchPercentage: "92%", availableSlots: 6, duration: "200 Hours", image: "/images/courses/web-dev.jpg" },
-    { id: 202, title: "Data Analytics with Python", matchPercentage: "85%", availableSlots: 14, duration: "80 Hours", image: "/images/courses/data-analytics.jpg" },
-    { id: 203, title: "Mobile App Development", matchPercentage: "78%", availableSlots: 9, duration: "160 Hours", image: "/images/courses/mobile-dev.jpg" },
+    {
+      id: 201,
+      title: "Cybersecurity Professional",
+      matchPercentage: "92%",
+      availableSlots: 6,
+      duration: "200 Hours",
+      image: "/images/courses/cybersecurity-professional.JPG",
+    },
+    {
+      id: 202,
+      title: "Data Analyst Associate",
+      matchPercentage: "85%",
+      availableSlots: 14,
+      duration: "80 Hours",
+      image: "/images/courses/data-analyst-associate.JPG",
+    },
+    {
+      id: 203,
+      title: "Network Security",
+      matchPercentage: "78%",
+      availableSlots: 9,
+      duration: "160 Hours",
+      image: "/images/courses/network.jpg",
+    },
   ];
 
   // Helper to update URL query params without navigation
@@ -141,7 +219,14 @@ export default function CoursesPage({ params }) {
       district: selectedDistrict?.id || null,
       centre: selectedCentre?.id || null,
     });
-  }, [step, selectedRegion, selectedDistrict, selectedCentre, userStatus, updateQueryParams]);
+  }, [
+    step,
+    selectedRegion,
+    selectedDistrict,
+    selectedCentre,
+    userStatus,
+    updateQueryParams,
+  ]);
 
   // Restore progress from query params
   const restoreFromParams = async () => {
@@ -165,16 +250,26 @@ export default function CoursesPage({ params }) {
         setAvailableDistricts(districts);
 
         if (districtId && savedStep >= 3) {
-          const district = districts?.districts?.find((d) => String(d.id) === districtId);
-          if (!district) { setStep(2); return; }
+          const district = districts?.districts?.find(
+            (d) => String(d.id) === districtId,
+          );
+          if (!district) {
+            setStep(2);
+            return;
+          }
           setSelectedDistrict(district);
 
           const centres = await getCentresByDistrict(district.id, token);
           setAvailableCenters(centres);
 
           if (centreId && savedStep >= 4) {
-            const centre = centres?.centres?.find((c) => String(c.id) === centreId);
-            if (!centre) { setStep(3); return; }
+            const centre = centres?.centres?.find(
+              (c) => String(c.id) === centreId,
+            );
+            if (!centre) {
+              setStep(3);
+              return;
+            }
             setSelectedCentre(centre);
 
             const data = await getCourseMatchQuestions("Choice", token);
@@ -192,7 +287,11 @@ export default function CoursesPage({ params }) {
   useEffect(() => {
     // DEMO MODE: Skip verification, use mock data for testing UI
     if (isDemo) {
-      setUserStatus({ success: true, name: "Demo User", email: "demo@test.com" });
+      setUserStatus({
+        success: true,
+        name: "Demo User",
+        email: "demo@test.com",
+      });
       setVerifying(false);
       setCheckingRecommendations(false);
       fetchAllRegions();
@@ -205,7 +304,9 @@ export default function CoursesPage({ params }) {
         setVerificationError(null);
         const data = await checkUserStatus(id, token);
         if (data?.success === false) {
-          setVerificationError(data.message || "User not found. Please register first.");
+          setVerificationError(
+            data.message || "User not found. Please register first.",
+          );
           setCheckingRecommendations(false);
           return;
         }
@@ -242,7 +343,7 @@ export default function CoursesPage({ params }) {
         setVerificationError(
           err.response?.status === 404
             ? "User not found. Please register first."
-            : "Unable to verify your account. Please try again."
+            : "Unable to verify your account. Please try again.",
         );
         setCheckingRecommendations(false);
       } finally {
@@ -266,48 +367,80 @@ export default function CoursesPage({ params }) {
     }
   };
 
-  const fetchDistricts = useCallback(async (branchId) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getDistrictsByBranch(branchId, token);
-      setAvailableDistricts(data);
-    } catch (err) {
-      setError("Failed to load districts. Please try again.");
-      console.error("Error fetching districts:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
+  const fetchDistricts = useCallback(
+    async (branchId) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getDistrictsByBranch(branchId, token);
+        setAvailableDistricts(data);
+      } catch (err) {
+        setError("Failed to load districts. Please try again.");
+        console.error("Error fetching districts:", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token],
+  );
 
-  const fetchCenters = useCallback(async (districtId) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getCentresByDistrict(districtId, token);
-      setAvailableCenters(data);
-    } catch (err) {
-      setError("Failed to load centers. Please try again.");
-      console.error("Error fetching centers:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
+  const fetchCenters = useCallback(
+    async (districtId) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getCentresByDistrict(districtId, token);
+        setAvailableCenters(data);
+      } catch (err) {
+        setError("Failed to load centers. Please try again.");
+        console.error("Error fetching centers:", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token],
+  );
 
   const fetchQuestions = useCallback(async () => {
     if (isDemo) {
       setLoading(true);
       await new Promise((r) => setTimeout(r, 300));
       setQuestions([
-        { id: 1, question: "What is your experience level with technology?", tag: "experience", is_multiple_select: false, course_match_options: [
-          { id: 1, answer: "Complete beginner" }, { id: 2, answer: "Some experience" }, { id: 3, answer: "Intermediate" }, { id: 4, answer: "Advanced" },
-        ]},
-        { id: 2, question: "How much time can you commit per week?", tag: "timeCommitment", is_multiple_select: false, course_match_options: [
-          { id: 5, answer: "Less than 10 hours" }, { id: 6, answer: "10-20 hours" }, { id: 7, answer: "20-40 hours" },
-        ]},
-        { id: 3, question: "What area interests you the most?", tag: "interest", is_multiple_select: false, course_match_options: [
-          { id: 8, answer: "Cybersecurity" }, { id: 9, answer: "Web Development" }, { id: 10, answer: "Data Science" }, { id: 11, answer: "Mobile Development" },
-        ]},
+        {
+          id: 1,
+          question: "What is your experience level with technology?",
+          tag: "experience",
+          is_multiple_select: false,
+          course_match_options: [
+            { id: 1, answer: "Complete beginner" },
+            { id: 2, answer: "Some experience" },
+            { id: 3, answer: "Intermediate" },
+            { id: 4, answer: "Advanced" },
+          ],
+        },
+        {
+          id: 2,
+          question: "How much time can you commit per week?",
+          tag: "timeCommitment",
+          is_multiple_select: false,
+          course_match_options: [
+            { id: 5, answer: "Less than 10 hours" },
+            { id: 6, answer: "10-20 hours" },
+            { id: 7, answer: "20-40 hours" },
+          ],
+        },
+        {
+          id: 3,
+          question: "What area interests you the most?",
+          tag: "interest",
+          is_multiple_select: false,
+          course_match_options: [
+            { id: 8, answer: "Cybersecurity" },
+            { id: 9, answer: "Web Development" },
+            { id: 10, answer: "Data Science" },
+            { id: 11, answer: "Mobile Development" },
+          ],
+        },
       ]);
       setLoading(false);
       return;
@@ -415,10 +548,42 @@ export default function CoursesPage({ params }) {
       setSubmitting(true);
       await new Promise((r) => setTimeout(r, 600));
       setRecommendations([
-        { id: 1, title: "Cybersecurity Fundamentals", sub_title: "Network security and ethical hacking", duration: "120 Hours", mode_of_delivery: "In Person", match_percentage: "95%", image: null },
-        { id: 2, title: "Web Application Development", sub_title: "Full-stack web development", duration: "200 Hours", mode_of_delivery: "Online", match_percentage: "88%", image: null },
-        { id: 3, title: "Data Analytics with Python", sub_title: "Data analysis and visualization", duration: "80 Hours", mode_of_delivery: "In Person", match_percentage: "82%", image: null },
-        { id: 4, title: "Mobile App Development", sub_title: "Build Android and iOS apps", duration: "160 Hours", mode_of_delivery: "In Person", match_percentage: "75%", image: null },
+        {
+          id: 1,
+          title: "Cybersecurity Fundamentals",
+          sub_title: "Network security and ethical hacking",
+          duration: "120 Hours",
+          mode_of_delivery: "In Person",
+          match_percentage: "95%",
+          image: "/images/courses/cybersecuirty-officer.jpg",
+        },
+        {
+          id: 2,
+          title: "Web Application Development",
+          sub_title: "Full-stack web development",
+          duration: "200 Hours",
+          mode_of_delivery: "Online",
+          match_percentage: "88%",
+          image: "/images/courses/data-protection-manager.jpg",
+        },
+        {
+          id: 3,
+          title: "Data Analytics with Python",
+          sub_title: "Data analysis and visualization",
+          duration: "80 Hours",
+          mode_of_delivery: "In Person",
+          match_percentage: "82%",
+          image: "/images/courses/data-analyst.jpg",
+        },
+        {
+          id: 4,
+          title: "Mobile App Development",
+          sub_title: "Build Android and iOS apps",
+          duration: "160 Hours",
+          mode_of_delivery: "In Person",
+          match_percentage: "75%",
+          image: "/images/courses/dpo.JPG",
+        },
       ]);
       setShowResults(true);
       setSubmitting(false);
@@ -482,14 +647,22 @@ export default function CoursesPage({ params }) {
         setEnrollSubmitting(true);
         setError(null);
         const centreId = enrollingCentreId || selectedCentre?.id;
-        await confirmCourse({
-          userId: id,
-          course_id: enrollingCourseId,
-          support: false,
-          ...(centreId && { centre_id: centreId }),
-        }, token);
+        await confirmCourse(
+          {
+            userId: id,
+            course_id: enrollingCourseId,
+            support: false,
+            ...(centreId && { centre_id: centreId }),
+          },
+          token,
+        );
         setEnrollSuccess(true);
-        updateQueryParams({ step: null, region: null, district: null, centre: null });
+        updateQueryParams({
+          step: null,
+          region: null,
+          district: null,
+          centre: null,
+        });
       } catch (err) {
         const apiErrors = err.response?.data?.errors;
         const apiMessage = err.response?.data?.message;
@@ -503,8 +676,13 @@ export default function CoursesPage({ params }) {
       }
     } else {
       // Needs support → go to batch selection (or course full if no batches)
-      const isFirstRecommendation = recommendations.length > 0 && (enrollingCourseId === (recommendations[0]?.course_id || recommendations[0]?.id));
-      const hasAvailableBatch = isFirstRecommendation ? false : MOCK_BATCHES.some((b) => b.availableSlots > 0);
+      const isFirstRecommendation =
+        recommendations.length > 0 &&
+        enrollingCourseId ===
+          (recommendations[0]?.course_id || recommendations[0]?.id);
+      const hasAvailableBatch = isFirstRecommendation
+        ? false
+        : MOCK_BATCHES.some((b) => b.availableSlots > 0);
       setEnrollmentStep(hasAvailableBatch ? "batch" : "courseFull");
     }
   };
@@ -531,14 +709,22 @@ export default function CoursesPage({ params }) {
       setEnrollSubmitting(true);
       setError(null);
       const centreId = enrollingCentreId || selectedCentre?.id;
-      await confirmCourse({
-        userId: id,
-        course_id: enrollingCourseId,
-        support: needsSupport === true,
-        ...(centreId && { centre_id: centreId }),
-      }, token);
+      await confirmCourse(
+        {
+          userId: id,
+          course_id: enrollingCourseId,
+          support: needsSupport === true,
+          ...(centreId && { centre_id: centreId }),
+        },
+        token,
+      );
       setEnrollSuccess(true);
-      updateQueryParams({ step: null, region: null, district: null, centre: null });
+      updateQueryParams({
+        step: null,
+        region: null,
+        district: null,
+        centre: null,
+      });
     } catch (err) {
       const apiErrors = err.response?.data?.errors;
       const apiMessage = err.response?.data?.message;
@@ -566,7 +752,8 @@ export default function CoursesPage({ params }) {
 
   const goToStep = (targetStep) => {
     // Allow going forward to step 4 if quiz progress exists
-    const canGoForward = targetStep === 4 && selectedCentre && questions.length > 0;
+    const canGoForward =
+      targetStep === 4 && selectedCentre && questions.length > 0;
     if (targetStep < step || canGoForward) {
       setStep(targetStep);
       setSearchQuery("");
@@ -591,7 +778,6 @@ export default function CoursesPage({ params }) {
   const stepLabels = ["Region", "District", "Center", "Course"];
   const activeQuestion = questions[currentQuestion];
 
-
   // Show verification state before allowing access
   if (verifying || checkingRecommendations) {
     return (
@@ -599,7 +785,9 @@ export default function CoursesPage({ params }) {
         <div className="text-center px-4">
           <div className="w-10 h-10 border-3 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-600 text-sm">
-            {verifying ? "Verifying your account..." : "Checking your courses..."}
+            {verifying
+              ? "Verifying your account..."
+              : "Checking your courses..."}
           </p>
         </div>
       </div>
@@ -617,7 +805,6 @@ export default function CoursesPage({ params }) {
             className="w-full max-w-md"
           >
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-
               <div className="px-6 py-8 sm:px-8 sm:py-10 text-center">
                 {/* Icon */}
                 <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-5">
@@ -645,7 +832,6 @@ export default function CoursesPage({ params }) {
                 </div>
               </div>
             </div>
-
           </motion.div>
         </div>
       </div>
@@ -716,7 +902,8 @@ export default function CoursesPage({ params }) {
               {previousRecommendations.title}
             </h2>
             <p className="text-gray-500 text-xs sm:text-base max-w-lg mx-auto">
-              {previousRecommendations.description || "Based on your previous preferences, here are recommended courses that best align with your goals"}
+              {previousRecommendations.description ||
+                "Based on your previous preferences, here are recommended courses that best align with your goals"}
             </p>
           </div>
 
@@ -728,7 +915,10 @@ export default function CoursesPage({ params }) {
                 className="rounded-lg bg-white border border-gray-200 overflow-hidden"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
+                transition={{
+                  duration: 0.2,
+                  delay: Math.min(index * 0.04, 0.2),
+                }}
               >
                 <div className="relative h-28 sm:h-32 bg-gray-100">
                   {course.image && !imageErrors[course.id] ? (
@@ -737,7 +927,12 @@ export default function CoursesPage({ params }) {
                       alt={course.title}
                       fill
                       className="object-cover"
-                      onError={() => setImageErrors((prev) => ({ ...prev, [course.id]: true }))}
+                      onError={() =>
+                        setImageErrors((prev) => ({
+                          ...prev,
+                          [course.id]: true,
+                        }))
+                      }
                     />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -756,10 +951,11 @@ export default function CoursesPage({ params }) {
                   <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
                     {course.match_percentage && (
                       <span
-                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${parseInt(course.match_percentage.split("%")[0]) >= 70
-                          ? "bg-green-50/90 text-green-700"
-                          : "bg-yellow-50/90 text-yellow-700"
-                          }`}
+                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${
+                          parseInt(course.match_percentage.split("%")[0]) >= 70
+                            ? "bg-green-50/90 text-green-700"
+                            : "bg-yellow-50/90 text-yellow-700"
+                        }`}
                       >
                         <FiStar className="w-2.5 h-2.5" />
                         {course.match_percentage}
@@ -779,10 +975,19 @@ export default function CoursesPage({ params }) {
                   </h3>
                   {course.sub_title && (
                     <div className="flex items-center justify-between gap-1 mb-2 transition-colors">
-                      <div className="text-sm text-gray-600 line-clamp-1">{course.sub_title}</div>
+                      <div className="text-sm text-gray-600 line-clamp-1">
+                        {course.sub_title}
+                      </div>
                       {userStatus && (
-                        <a href={`/programmes/${course.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 mb-2 transition-colors">
-                          <span className="text-[10px] sm:text-[11px] font-medium text-green-700">View Details</span>
+                        <a
+                          href={`/programmes/${course.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 mb-2 transition-colors"
+                        >
+                          <span className="text-[10px] sm:text-[11px] font-medium text-green-700">
+                            View Details
+                          </span>
                           <FiInfo className="w-2.5 h-2.5 text-green-700" />
                         </a>
                       )}
@@ -791,7 +996,9 @@ export default function CoursesPage({ params }) {
                   {course.mode_of_delivery && (
                     <div className="flex items-center gap-1 mb-2">
                       <FiGlobe className="w-2.5 h-2.5 text-blue-600" />
-                      <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">{course.mode_of_delivery}</span>
+                      <span className="text-[10px] sm:text-[11px] font-medium text-blue-700">
+                        {course.mode_of_delivery}
+                      </span>
                     </div>
                   )}
                   <button
@@ -865,34 +1072,48 @@ export default function CoursesPage({ params }) {
                 <React.Fragment key={num}>
                   <button
                     onClick={() => goToStep(num)}
-                    disabled={num >= step && !(num === 4 && selectedCentre && questions.length > 0)}
+                    disabled={
+                      num >= step &&
+                      !(num === 4 && selectedCentre && questions.length > 0)
+                    }
                     className="flex items-center gap-1 sm:gap-2 group flex-shrink-0"
                   >
                     <div
-                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${step > num || (num === 4 && step === 3 && selectedCentre && questions.length > 0)
-                        ? "bg-green-500 text-white cursor-pointer group-hover:bg-green-600"
-                        : step === num
-                          ? "bg-yellow-400 text-gray-900 ring-2 sm:ring-4 ring-yellow-100"
-                          : "bg-gray-200 text-gray-400"
-                        }`}
+                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${
+                        step > num ||
+                        (num === 4 &&
+                          step === 3 &&
+                          selectedCentre &&
+                          questions.length > 0)
+                          ? "bg-green-500 text-white cursor-pointer group-hover:bg-green-600"
+                          : step === num
+                            ? "bg-yellow-400 text-gray-900 ring-2 sm:ring-4 ring-yellow-100"
+                            : "bg-gray-200 text-gray-400"
+                      }`}
                     >
-                      {step > num || (num === 4 && step === 3 && selectedCentre && questions.length > 0) ? (
+                      {step > num ||
+                      (num === 4 &&
+                        step === 3 &&
+                        selectedCentre &&
+                        questions.length > 0) ? (
                         <FiCheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                       ) : (
                         num
                       )}
                     </div>
                     <span
-                      className={`text-[10px] sm:text-xs font-medium transition-colors ${step >= num ? "text-gray-700" : "text-gray-400"
-                        }`}
+                      className={`text-[10px] sm:text-xs font-medium transition-colors ${
+                        step >= num ? "text-gray-700" : "text-gray-400"
+                      }`}
                     >
                       {stepLabels[num - 1]}
                     </span>
                   </button>
                   {num < 4 && (
                     <div
-                      className={`flex-1 h-0.5 rounded-full mx-1.5 sm:mx-3 transition-all duration-500 ${step > num ? "bg-green-400" : "bg-gray-200"
-                        }`}
+                      className={`flex-1 h-0.5 rounded-full mx-1.5 sm:mx-3 transition-all duration-500 ${
+                        step > num ? "bg-green-400" : "bg-gray-200"
+                      }`}
                     />
                   )}
                 </React.Fragment>
@@ -913,7 +1134,9 @@ export default function CoursesPage({ params }) {
                   className="flex items-center gap-1 sm:gap-1.5 hover:text-yellow-600 transition-colors py-0.5 min-w-0"
                 >
                   <FiMapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
-                  <span className="truncate max-w-[80px] sm:max-w-none">{selectedRegion.title}</span>
+                  <span className="truncate max-w-[80px] sm:max-w-none">
+                    {selectedRegion.title}
+                  </span>
                 </button>
               )}
               {selectedDistrict && (
@@ -923,7 +1146,9 @@ export default function CoursesPage({ params }) {
                     onClick={() => goToStep(2)}
                     className="flex items-center gap-1 sm:gap-1.5 hover:text-yellow-600 transition-colors py-0.5 min-w-0"
                   >
-                    <span className="truncate max-w-[80px] sm:max-w-none">{selectedDistrict.title}</span>
+                    <span className="truncate max-w-[80px] sm:max-w-none">
+                      {selectedDistrict.title}
+                    </span>
                   </button>
                 </>
               )}
@@ -934,7 +1159,9 @@ export default function CoursesPage({ params }) {
                     onClick={() => goToStep(3)}
                     className="flex items-center gap-1 sm:gap-1.5 hover:text-yellow-600 transition-colors py-0.5 min-w-0"
                   >
-                    <span className="truncate max-w-[80px] sm:max-w-none">{selectedCentre.title}</span>
+                    <span className="truncate max-w-[80px] sm:max-w-none">
+                      {selectedCentre.title}
+                    </span>
                   </button>
                 </>
               )}
@@ -1021,7 +1248,9 @@ export default function CoursesPage({ params }) {
                   <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
                     {allRegions
                       .filter((region) =>
-                        region.title.toLowerCase().includes(searchQuery.toLowerCase())
+                        region.title
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase()),
                       )
                       .map((region, index) => (
                         <motion.button
@@ -1030,7 +1259,10 @@ export default function CoursesPage({ params }) {
                           className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
+                          transition={{
+                            duration: 0.15,
+                            delay: Math.min(index * 0.02, 0.15),
+                          }}
                         >
                           <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
                             {region.title}
@@ -1038,14 +1270,16 @@ export default function CoursesPage({ params }) {
                         </motion.button>
                       ))}
                     {allRegions.filter((region) =>
-                      region.title.toLowerCase().includes(searchQuery.toLowerCase())
+                      region.title
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()),
                     ).length === 0 && (
-                        <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
-                          <p className="text-gray-500 text-xs sm:text-sm">
-                            No regions match &ldquo;{searchQuery}&rdquo;
-                          </p>
-                        </div>
-                      )}
+                      <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
+                        <p className="text-gray-500 text-xs sm:text-sm">
+                          No regions match &ldquo;{searchQuery}&rdquo;
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
@@ -1126,7 +1360,9 @@ export default function CoursesPage({ params }) {
                   <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
                     {availableDistricts.districts
                       .filter((district) =>
-                        district.title.toLowerCase().includes(searchQuery.toLowerCase())
+                        district.title
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase()),
                       )
                       .map((district, index) => (
                         <motion.button
@@ -1135,7 +1371,10 @@ export default function CoursesPage({ params }) {
                           className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
+                          transition={{
+                            duration: 0.15,
+                            delay: Math.min(index * 0.02, 0.15),
+                          }}
                         >
                           <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
                             {district.title}
@@ -1143,14 +1382,16 @@ export default function CoursesPage({ params }) {
                         </motion.button>
                       ))}
                     {availableDistricts.districts.filter((district) =>
-                      district.title.toLowerCase().includes(searchQuery.toLowerCase())
+                      district.title
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()),
                     ).length === 0 && (
-                        <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
-                          <p className="text-gray-500 text-xs sm:text-sm">
-                            No districts match &ldquo;{searchQuery}&rdquo;
-                          </p>
-                        </div>
-                      )}
+                      <div className="col-span-1 sm:col-span-2 text-center py-8 bg-white rounded-xl border border-gray-200">
+                        <p className="text-gray-500 text-xs sm:text-sm">
+                          No districts match &ldquo;{searchQuery}&rdquo;
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
@@ -1175,7 +1416,6 @@ export default function CoursesPage({ params }) {
                   </div>
                 )
               )}
-
             </motion.div>
           )}
 
@@ -1235,10 +1475,11 @@ export default function CoursesPage({ params }) {
                     <div className="mb-3 sm:mb-4">
                       <button
                         onClick={() => setFilterPwdFriendly(!filterPwdFriendly)}
-                        className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-sm font-medium border transition-all duration-200 ${filterPwdFriendly
-                          ? "bg-purple-50 border-purple-300 text-purple-700"
-                          : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
-                          }`}
+                        className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-sm font-medium border transition-all duration-200 ${
+                          filterPwdFriendly
+                            ? "bg-purple-50 border-purple-300 text-purple-700"
+                            : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                        }`}
                       >
                         <span>♿</span>
                         Accessibility friendly
@@ -1253,11 +1494,14 @@ export default function CoursesPage({ params }) {
                     {availableCenters.centres
                       .filter((c) => !filterPwdFriendly || c.is_pwd_friendly)
                       .filter((c) =>
-                        c.title.toLowerCase().includes(searchQuery.toLowerCase())
+                        c.title
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase()),
                       )
                       .map((centre, index) => {
                         const accessibilityFeatures = [
-                          centre.wheelchair_accessible && "Wheelchair accessible",
+                          centre.wheelchair_accessible &&
+                            "Wheelchair accessible",
                           centre.has_access_ramp && "Access ramp",
                           centre.has_accessible_toilet && "Accessible toilet",
                           centre.has_elevator && "Elevator",
@@ -1265,7 +1509,9 @@ export default function CoursesPage({ params }) {
                           centre.supports_visually_impaired && "Visual support",
                         ].filter(Boolean);
 
-                        const hasExtras = centre.is_pwd_friendly || accessibilityFeatures.length > 0;
+                        const hasExtras =
+                          centre.is_pwd_friendly ||
+                          accessibilityFeatures.length > 0;
 
                         return (
                           <motion.button
@@ -1274,10 +1520,17 @@ export default function CoursesPage({ params }) {
                             className="w-full p-3 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.99] group"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.15) }}
+                            transition={{
+                              duration: 0.15,
+                              delay: Math.min(index * 0.02, 0.15),
+                            }}
                           >
-                            <div className={`flex justify-between gap-2 ${hasExtras ? "items-start" : "items-center"}`}>
-                              <div className={`flex gap-2.5 sm:gap-3 min-w-0 flex-1 ${hasExtras ? "items-start" : "items-center"}`}>
+                            <div
+                              className={`flex justify-between gap-2 ${hasExtras ? "items-start" : "items-center"}`}
+                            >
+                              <div
+                                className={`flex gap-2.5 sm:gap-3 min-w-0 flex-1 ${hasExtras ? "items-start" : "items-center"}`}
+                              >
                                 {hasExtras ? (
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2">
@@ -1292,14 +1545,16 @@ export default function CoursesPage({ params }) {
                                     </div>
                                     {accessibilityFeatures.length > 0 && (
                                       <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-1.5">
-                                        {accessibilityFeatures.map((feature) => (
-                                          <span
-                                            key={feature}
-                                            className="text-[9px] sm:text-[11px] px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full"
-                                          >
-                                            {feature}
-                                          </span>
-                                        ))}
+                                        {accessibilityFeatures.map(
+                                          (feature) => (
+                                            <span
+                                              key={feature}
+                                              className="text-[9px] sm:text-[11px] px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full"
+                                            >
+                                              {feature}
+                                            </span>
+                                          ),
+                                        )}
                                       </div>
                                     )}
                                   </div>
@@ -1333,7 +1588,9 @@ export default function CoursesPage({ params }) {
                       availableCenters.centres
                         .filter((c) => !filterPwdFriendly || c.is_pwd_friendly)
                         .filter((c) =>
-                          c.title.toLowerCase().includes(searchQuery.toLowerCase())
+                          c.title
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()),
                         ).length === 0 && (
                         <div className="text-center py-8 bg-white rounded-xl border border-gray-200">
                           <p className="text-gray-500 text-xs sm:text-sm">
@@ -1365,7 +1622,6 @@ export default function CoursesPage({ params }) {
                   </div>
                 )
               )}
-
             </motion.div>
           )}
 
@@ -1383,7 +1639,8 @@ export default function CoursesPage({ params }) {
                   Let&apos;s match you to a course
                 </h2>
                 <p className="text-gray-500 text-xs sm:text-base mt-0.5 sm:mt-1">
-                  Answer a few questions so we can recommend the right courses for you
+                  Answer a few questions so we can recommend the right courses
+                  for you
                 </p>
               </div>
 
@@ -1422,7 +1679,7 @@ export default function CoursesPage({ params }) {
                       </span>
                       <span className="text-[10px] sm:text-xs text-gray-400">
                         {Math.round(
-                          ((currentQuestion + 1) / questions.length) * 100
+                          ((currentQuestion + 1) / questions.length) * 100,
                         )}
                         %
                       </span>
@@ -1431,8 +1688,9 @@ export default function CoursesPage({ params }) {
                       <div
                         className="bg-yellow-400 h-1.5 rounded-full transition-all duration-500 ease-out"
                         style={{
-                          width: `${((currentQuestion + 1) / questions.length) * 100
-                            }%`,
+                          width: `${
+                            ((currentQuestion + 1) / questions.length) * 100
+                          }%`,
                         }}
                       />
                     </div>
@@ -1454,7 +1712,7 @@ export default function CoursesPage({ params }) {
                             {
                               className:
                                 "w-5 h-5 sm:w-6 sm:h-6 text-yellow-600",
-                            }
+                            },
                           )}
                         </div>
                         <h2 className="text-base sm:text-2xl font-bold text-gray-900 mb-1.5 sm:mb-3 leading-tight">
@@ -1477,31 +1735,38 @@ export default function CoursesPage({ params }) {
                         {activeQuestion.course_match_options?.map(
                           (option, index) => {
                             const isSelected = activeQuestion.is_multiple_select
-                              ? (answers[activeQuestion.id] || []).includes(option.id)
+                              ? (answers[activeQuestion.id] || []).includes(
+                                  option.id,
+                                )
                               : answers[activeQuestion.id] === option.id;
                             return (
                               <motion.button
                                 key={option.id}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                transition={{ duration: 0.15, delay: Math.min(index * 0.03, 0.12) }}
+                                transition={{
+                                  duration: 0.15,
+                                  delay: Math.min(index * 0.03, 0.12),
+                                }}
                                 onClick={() =>
                                   handleAnswer(activeQuestion.id, option.id)
                                 }
-                                className={`relative p-4 sm:p-6 rounded-xl text-left transition-all duration-200 border-2 ${isSelected
-                                  ? "bg-gray-900 text-white border-gray-900"
-                                  : "bg-white border-gray-200 hover:border-yellow-400 active:scale-[0.98]"
-                                  }`}
+                                className={`relative p-4 sm:p-6 rounded-xl text-left transition-all duration-200 border-2 ${
+                                  isSelected
+                                    ? "bg-gray-900 text-white border-gray-900"
+                                    : "bg-white border-gray-200 hover:border-yellow-400 active:scale-[0.98]"
+                                }`}
                               >
                                 <div className="flex items-start gap-3">
                                   {/* Checkbox / Radio indicator */}
                                   <div className="flex-shrink-0 mt-0.5">
                                     {activeQuestion.is_multiple_select ? (
                                       <div
-                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${isSelected
-                                          ? "bg-white border-white"
-                                          : "border-gray-300"
-                                          }`}
+                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
+                                          isSelected
+                                            ? "bg-white border-white"
+                                            : "border-gray-300"
+                                        }`}
                                       >
                                         {isSelected && (
                                           <FiCheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-900" />
@@ -1509,10 +1774,11 @@ export default function CoursesPage({ params }) {
                                       </div>
                                     ) : (
                                       <div
-                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isSelected
-                                          ? "border-white"
-                                          : "border-gray-300"
-                                          }`}
+                                        className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                                          isSelected
+                                            ? "border-white"
+                                            : "border-gray-300"
+                                        }`}
                                       >
                                         {isSelected && (
                                           <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white" />
@@ -1526,10 +1792,11 @@ export default function CoursesPage({ params }) {
                                     </h3>
                                     {option.description && (
                                       <p
-                                        className={`text-xs sm:text-sm leading-relaxed ${isSelected
-                                          ? "text-gray-300"
-                                          : "text-gray-500"
-                                          }`}
+                                        className={`text-xs sm:text-sm leading-relaxed ${
+                                          isSelected
+                                            ? "text-gray-300"
+                                            : "text-gray-500"
+                                        }`}
                                       >
                                         {option.description}
                                       </p>
@@ -1538,7 +1805,7 @@ export default function CoursesPage({ params }) {
                                 </div>
                               </motion.button>
                             );
-                          }
+                          },
                         )}
                       </div>
                     </motion.div>
@@ -1565,13 +1832,18 @@ export default function CoursesPage({ params }) {
                     ) : activeQuestion.is_multiple_select ? (
                       <button
                         onClick={handleNextQuestion}
-                        disabled={(answers[activeQuestion.id] || []).length === 0}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${(answers[activeQuestion.id] || []).length > 0
-                          ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          }`}
+                        disabled={
+                          (answers[activeQuestion.id] || []).length === 0
+                        }
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                          (answers[activeQuestion.id] || []).length > 0
+                            ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        }`}
                       >
-                        {currentQuestion < questions.length - 1 ? "Next" : "Get Results"}
+                        {currentQuestion < questions.length - 1
+                          ? "Next"
+                          : "Get Results"}
                         <FiChevronRight className="w-4 h-4" />
                       </button>
                     ) : null}
@@ -1621,7 +1893,12 @@ export default function CoursesPage({ params }) {
                     transition={{ duration: 0.2 }}
                     className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-[2px] px-0 sm:px-4"
                     onClick={(e) => {
-                      if (e.target === e.currentTarget && !enrollSubmitting && !enrollSuccess && enrollmentStep !== "courseFull") {
+                      if (
+                        e.target === e.currentTarget &&
+                        !enrollSubmitting &&
+                        !enrollSuccess &&
+                        enrollmentStep !== "courseFull"
+                      ) {
                         closeEnrollmentModal();
                       }
                     }}
@@ -1631,7 +1908,11 @@ export default function CoursesPage({ params }) {
                       initial={{ opacity: 0, y: 40 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 40 }}
-                      transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                      transition={{
+                        type: "spring",
+                        damping: 28,
+                        stiffness: 300,
+                      }}
                       className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg px-5 py-6 sm:p-8 relative max-h-[85vh] sm:max-h-[90vh] overflow-y-auto"
                     >
                       {/* ── Success State ── */}
@@ -1645,11 +1926,15 @@ export default function CoursesPage({ params }) {
                           </h2>
                           <p className="text-gray-500 text-sm sm:text-base mb-2">
                             You have been successfully enrolled in{" "}
-                            <span className="font-semibold text-gray-700">{enrolledCourseName}</span>.
+                            <span className="font-semibold text-gray-700">
+                              {enrolledCourseName}
+                            </span>
+                            .
                           </p>
                           {selectedBatch && selectedSession && (
                             <p className="text-gray-400 text-xs sm:text-sm mb-6">
-                              {selectedBatch.name} · {selectedSession.label} ({selectedSession.time})
+                              {selectedBatch.name} · {selectedSession.label} (
+                              {selectedSession.time})
                             </p>
                           )}
                           <button
@@ -1672,465 +1957,764 @@ export default function CoursesPage({ params }) {
                           </h2>
                           <p className="text-gray-500 text-sm sm:text-base mb-6">
                             We&apos;ll notify you when a slot opens up for{" "}
-                            <span className="font-semibold text-gray-700">{enrolledCourseName}</span>.
+                            <span className="font-semibold text-gray-700">
+                              {enrolledCourseName}
+                            </span>
+                            .
                           </p>
-                          <button onClick={closeEnrollmentModal} className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors">
+                          <button
+                            onClick={closeEnrollmentModal}
+                            className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
+                          >
                             Close
                           </button>
                         </div>
                       )}
 
                       {/* ── Step 1: Batch Selection ── */}
-                      {!enrollSuccess && !waitlistJoined && enrollmentStep === "batch" && (
-                        <>
-                          <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
-                            <FiX className="w-4.5 h-4.5" />
-                          </button>
+                      {!enrollSuccess &&
+                        !waitlistJoined &&
+                        enrollmentStep === "batch" && (
+                          <>
+                            <button
+                              onClick={closeEnrollmentModal}
+                              className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                            >
+                              <FiX className="w-4.5 h-4.5" />
+                            </button>
 
-                          {/* Step indicator */}
-                          <div className="flex items-center gap-1.5 mb-5">
-                            {["Batch", "Session", "Confirm"].map((label, i) => (
-                              <React.Fragment key={label}>
-                                <div className={`flex items-center gap-1 ${i === 0 ? "text-yellow-600" : "text-gray-300"}`}>
-                                  <div className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${i === 0 ? "bg-yellow-400 text-gray-900" : "bg-gray-100 text-gray-400"}`}>{i + 1}</div>
-                                  <span className="text-[11px] font-medium">{label}</span>
-                                </div>
-                                {i < 2 && <div className="flex-1 h-px bg-gray-200" />}
-                              </React.Fragment>
-                            ))}
-                          </div>
-
-                          {/* Mobile drag handle */}
-                          <div className="flex justify-center mb-3 sm:hidden"><div className="w-8 h-1 bg-gray-200 rounded-full" /></div>
-
-                          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-0.5">When would you like to start?</h2>
-                          <p className="text-gray-400 text-[11px] sm:text-sm mb-4 sm:mb-5 line-clamp-1">
-                            {enrolledCourseName}
-                          </p>
-                          <div className="space-y-2">
-                            {MOCK_BATCHES.map((batch) => {
-                              const isFull = batch.availableSlots === 0;
-                              const fillPct = ((batch.totalSlots - batch.availableSlots) / batch.totalSlots) * 100;
-                              const startStr = new Date(batch.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-                              const endStr = new Date(batch.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-                              return (
-                                <button
-                                  key={batch.id}
-                                  onClick={() => handleBatchSelect(batch)}
-                                  disabled={isFull}
-                                  className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all duration-200 group ${
-                                    isFull
-                                      ? "bg-gray-50/80 border-gray-100 cursor-not-allowed"
-                                      : "bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.99]"
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    {/* Date badge */}
-                                    <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 ${
-                                      isFull ? "bg-gray-100" : "bg-gradient-to-br from-yellow-50 to-orange-50 group-hover:from-yellow-100 group-hover:to-orange-100"
-                                    } transition-colors`}>
-                                      <span className={`text-[10px] font-medium leading-none ${isFull ? "text-gray-400" : "text-yellow-700"}`}>
-                                        {new Date(batch.startDate).toLocaleDateString("en-GB", { month: "short" })}
-                                      </span>
-                                      <span className={`text-base font-bold leading-tight ${isFull ? "text-gray-400" : "text-gray-900"}`}>
-                                        {new Date(batch.startDate).getDate()}
+                            {/* Step indicator */}
+                            <div className="flex items-center gap-1.5 mb-5">
+                              {["Batch", "Session", "Confirm"].map(
+                                (label, i) => (
+                                  <React.Fragment key={label}>
+                                    <div
+                                      className={`flex items-center gap-1 ${i === 0 ? "text-yellow-600" : "text-gray-300"}`}
+                                    >
+                                      <div
+                                        className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${i === 0 ? "bg-yellow-400 text-gray-900" : "bg-gray-100 text-gray-400"}`}
+                                      >
+                                        {i + 1}
+                                      </div>
+                                      <span className="text-[11px] font-medium">
+                                        {label}
                                       </span>
                                     </div>
-
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-0.5">
-                                        <span className={`text-sm font-semibold ${isFull ? "text-gray-400" : "text-gray-900 group-hover:text-yellow-700"} transition-colors`}>{batch.name}</span>
-                                        {isFull && <span className="px-1.5 py-0.5 bg-red-50 text-red-500 text-[10px] font-medium rounded-full">Full</span>}
-                                      </div>
-                                      <div className={`text-[11px] sm:text-xs ${isFull ? "text-gray-300" : "text-gray-500"} mb-1.5`}>
-                                        {startStr} — {endStr}<span className="hidden sm:inline"> · {batch.duration} days</span>
-                                      </div>
-                                      {/* Capacity bar */}
-                                      <div className="flex items-center gap-2">
-                                        <div className="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
-                                          <div className={`h-full rounded-full transition-all ${isFull ? "bg-red-300" : fillPct > 70 ? "bg-orange-400" : "bg-green-400"}`} style={{ width: `${fillPct}%` }} />
-                                        </div>
-                                        <span className={`text-[10px] tabular-nums ${isFull ? "text-gray-300" : batch.availableSlots <= 5 ? "text-orange-600 font-medium" : "text-gray-400"}`}>
-                                          {batch.availableSlots} left
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {!isFull && <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-
-                      {/* ── Step 2: Session Selection ── */}
-                      {!enrollSuccess && !waitlistJoined && enrollmentStep === "session" && (
-                        <>
-                          <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
-                            <FiX className="w-4.5 h-4.5" />
-                          </button>
-
-                          {/* Step indicator */}
-                          <div className="flex items-center gap-1.5 mb-5">
-                            {["Batch", "Session", "Confirm"].map((label, i) => (
-                              <React.Fragment key={label}>
-                                <div className={`flex items-center gap-1 ${i <= 1 ? (i < 1 ? "text-green-500" : "text-yellow-600") : "text-gray-300"}`}>
-                                  <div className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${i < 1 ? "bg-green-500 text-white" : i === 1 ? "bg-yellow-400 text-gray-900" : "bg-gray-100 text-gray-400"}`}>
-                                    {i < 1 ? <FiCheckCircle className="w-3 h-3" /> : i + 1}
-                                  </div>
-                                  <span className="text-[11px] font-medium">{label}</span>
-                                </div>
-                                {i < 2 && <div className={`flex-1 h-px ${i < 1 ? "bg-green-300" : "bg-gray-200"}`} />}
-                              </React.Fragment>
-                            ))}
-                          </div>
-
-                          {/* Mobile drag handle */}
-                          <div className="flex justify-center mb-3 sm:hidden"><div className="w-8 h-1 bg-gray-200 rounded-full" /></div>
-
-                          <button onClick={() => setEnrollmentStep("batch")} className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 transition-colors mb-3">
-                            <FiArrowLeft className="w-3 h-3" /> Back
-                          </button>
-                          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Choose your session</h2>
-
-                          {/* Batch summary — compact on mobile */}
-                          <div className="mb-4 px-2.5 py-1.5 bg-gradient-to-r from-yellow-50/80 to-transparent rounded-lg inline-flex items-center gap-1.5 text-[11px] sm:text-xs">
-                            <FiCalendar className="w-3 h-3 text-yellow-600 flex-shrink-0" />
-                            <span className="font-medium text-gray-600">{selectedBatch?.name}</span>
-                          </div>
-
-                          <div className="space-y-2">
-                            {MOCK_SESSIONS.map((session) => {
-                              const isSelected = selectedSession?.id === session.id;
-                              return (
-                                <button
-                                  key={session.id}
-                                  onClick={() => handleSessionSelect(session)}
-                                  className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all duration-200 group active:scale-[0.99] ${
-                                    isSelected ? "bg-gray-900 text-white border-gray-900 shadow-lg" : "bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md"
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
-                                      isSelected ? "bg-yellow-400" : "bg-gradient-to-br from-yellow-50 to-orange-50 group-hover:from-yellow-100 group-hover:to-orange-100"
-                                    }`}>
-                                      <FiClock className={`w-4 h-4 ${isSelected ? "text-gray-900" : "text-yellow-600"}`} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-semibold">{session.label}</div>
-                                      <div className={`text-[11px] sm:text-xs ${isSelected ? "text-yellow-400" : "text-gray-900"}`}>{session.time}</div>
-                                    </div>
-                                    {!isSelected && <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-
-                      {/* ── Support Question (first step) ── */}
-                      {!enrollSuccess && !waitlistJoined && enrollmentStep === "support" && (
-                        <>
-                          <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
-                            <FiX className="w-4.5 h-4.5" />
-                          </button>
-                          {/* Mobile drag handle */}
-                          <div className="flex justify-center mb-3 sm:hidden"><div className="w-8 h-1 bg-gray-200 rounded-full" /></div>
-
-                          <div className="text-center mb-5">
-                            <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">One quick question</h2>
-                            <p className="text-gray-400 text-[11px] sm:text-sm line-clamp-1">
-                              Enrolling in <span className="text-gray-600">{enrolledCourseName}</span>
-                            </p>
-                          </div>
-
-                          <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 mb-3 text-center">
-                            Do you need any accessibility support?
-                          </h3>
-                          <div className="grid grid-cols-2 gap-2.5 mb-4">
-                            <button
-                              onClick={() => handleSupportAnswer(true)}
-                              disabled={enrollSubmitting}
-                              className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                            >
-                              Yes, I do
-                            </button>
-                            <button
-                              onClick={() => handleSupportAnswer(false)}
-                              disabled={enrollSubmitting}
-                              className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700 flex items-center justify-center gap-2"
-                            >
-                              {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "No, enroll me"}
-                            </button>
-                          </div>
-                          <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">
-                            Cancel
-                          </button>
-                        </>
-                      )}
-
-                      {/* ── Confirm Enrollment (after batch + session) ── */}
-                      {!enrollSuccess && !waitlistJoined && enrollmentStep === "confirm" && (
-                        <>
-                          <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
-                            <FiX className="w-4.5 h-4.5" />
-                          </button>
-                          {/* Mobile drag handle */}
-                          <div className="flex justify-center mb-3 sm:hidden"><div className="w-8 h-1 bg-gray-200 rounded-full" /></div>
-
-                          {/* Step indicator */}
-                          <div className="flex items-center gap-1.5 mb-5">
-                            {["Batch", "Session", "Confirm"].map((label, i) => (
-                              <React.Fragment key={label}>
-                                <div className={`flex items-center gap-1 ${i < 2 ? "text-green-500" : "text-yellow-600"}`}>
-                                  <div className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${i < 2 ? "bg-green-500 text-white" : "bg-yellow-400 text-gray-900"}`}>
-                                    {i < 2 ? <FiCheckCircle className="w-3 h-3" /> : i + 1}
-                                  </div>
-                                  <span className="text-[11px] font-medium">{label}</span>
-                                </div>
-                                {i < 2 && <div className="flex-1 h-px bg-green-300" />}
-                              </React.Fragment>
-                            ))}
-                          </div>
-
-                          <button onClick={() => setEnrollmentStep("session")} className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 transition-colors mb-3">
-                            <FiArrowLeft className="w-3 h-3" /> Back
-                          </button>
-
-                          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Confirm enrollment</h2>
-
-                          {/* Enrollment summary card */}
-                          <div className="mb-5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 border border-gray-200 overflow-hidden">
-                            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-gray-200/60">
-                              <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 line-clamp-1">{enrolledCourseName}</h3>
-                              <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 line-clamp-1">{selectedCentre?.title}</p>
+                                    {i < 2 && (
+                                      <div className="flex-1 h-px bg-gray-200" />
+                                    )}
+                                  </React.Fragment>
+                                ),
+                              )}
                             </div>
-                            <div className="px-3 sm:px-4 py-2 space-y-1.5">
-                              <div className="flex items-center justify-between text-[11px] sm:text-xs">
-                                <span className="text-gray-400">Batch</span>
-                                <span className="font-medium text-gray-700">{selectedBatch?.name}</span>
-                              </div>
-                              <div className="flex items-center justify-between text-[11px] sm:text-xs">
-                                <span className="text-gray-400">Session</span>
-                                <span className="font-medium text-gray-700">{selectedSession?.label} · {selectedSession?.time}</span>
-                              </div>
-                            </div>
-                          </div>
 
-                          <div className="flex items-center gap-2.5">
-                            <button onClick={closeEnrollmentModal} className="flex-1 py-3 bg-gray-50 hover:bg-gray-100 text-gray-500 font-medium text-sm rounded-xl transition-colors">
-                              Cancel
-                            </button>
-                            <button
-                              onClick={handleEnrollSubmit}
-                              disabled={enrollSubmitting}
-                              className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.97] ${!enrollSubmitting ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900 shadow-sm" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
-                            >
-                              {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "Confirm Enrollment"}
-                            </button>
-                          </div>
-                        </>
-                      )}
-
-                      {/* ── Centre Full — Recommend other centres ── */}
-                      {!enrollSuccess && !waitlistJoined && enrollmentStep === "courseFull" && (
-                        <>
-                          <div className="flex justify-center mb-3 sm:hidden"><div className="w-8 h-1 bg-gray-200 rounded-full" /></div>
-                          <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
-                            <FiX className="w-4.5 h-4.5" />
-                          </button>
-                          <div className="text-center mb-5 sm:mb-6">
-                            <div className="w-12 h-12 bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3 ring-4 ring-orange-50">
-                              <FiAlertCircle className="w-6 h-6 text-orange-500" />
+                            {/* Mobile drag handle */}
+                            <div className="flex justify-center mb-3 sm:hidden">
+                              <div className="w-8 h-1 bg-gray-200 rounded-full" />
                             </div>
-                            <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
-                              Centre is full
+
+                            <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-0.5">
+                              When would you like to start?
                             </h2>
-                            <p className="text-gray-500 text-[11px] sm:text-sm font-medium line-clamp-1 mb-0.5">
+                            <p className="text-gray-400 text-[11px] sm:text-sm mb-4 sm:mb-5 line-clamp-1">
                               {enrolledCourseName}
                             </p>
-                            <p className="text-gray-400 text-[11px] sm:text-xs line-clamp-1">
-                              No open batches at {selectedCentre?.title}
-                            </p>
-                          </div>
-
-                          {/* Other centres running the same course */}
-                          <div className="mb-5">
-                            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Available at other centres</h3>
                             <div className="space-y-2">
+                              {MOCK_BATCHES.map((batch) => {
+                                const isFull = batch.availableSlots === 0;
+                                const fillPct =
+                                  ((batch.totalSlots - batch.availableSlots) /
+                                    batch.totalSlots) *
+                                  100;
+                                const startStr = new Date(
+                                  batch.startDate,
+                                ).toLocaleDateString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                });
+                                const endStr = new Date(
+                                  batch.endDate,
+                                ).toLocaleDateString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                });
+                                return (
+                                  <button
+                                    key={batch.id}
+                                    onClick={() => handleBatchSelect(batch)}
+                                    disabled={isFull}
+                                    className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all duration-200 group ${
+                                      isFull
+                                        ? "bg-gray-50/80 border-gray-100 cursor-not-allowed"
+                                        : "bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.99]"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      {/* Date badge */}
+                                      <div
+                                        className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 ${
+                                          isFull
+                                            ? "bg-gray-100"
+                                            : "bg-gradient-to-br from-yellow-50 to-orange-50 group-hover:from-yellow-100 group-hover:to-orange-100"
+                                        } transition-colors`}
+                                      >
+                                        <span
+                                          className={`text-[10px] font-medium leading-none ${isFull ? "text-gray-400" : "text-yellow-700"}`}
+                                        >
+                                          {new Date(
+                                            batch.startDate,
+                                          ).toLocaleDateString("en-GB", {
+                                            month: "short",
+                                          })}
+                                        </span>
+                                        <span
+                                          className={`text-base font-bold leading-tight ${isFull ? "text-gray-400" : "text-gray-900"}`}
+                                        >
+                                          {new Date(batch.startDate).getDate()}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                          <span
+                                            className={`text-sm font-semibold ${isFull ? "text-gray-400" : "text-gray-900 group-hover:text-yellow-700"} transition-colors`}
+                                          >
+                                            {batch.name}
+                                          </span>
+                                          {isFull && (
+                                            <span className="px-1.5 py-0.5 bg-red-50 text-red-500 text-[10px] font-medium rounded-full">
+                                              Full
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div
+                                          className={`text-[11px] sm:text-xs ${isFull ? "text-gray-300" : "text-gray-500"} mb-1.5`}
+                                        >
+                                          {startStr} — {endStr}
+                                          <span className="hidden sm:inline">
+                                            {" "}
+                                            · {batch.duration} days
+                                          </span>
+                                        </div>
+                                        {/* Capacity bar */}
+                                        <div className="flex items-center gap-2">
+                                          <div className="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
+                                            <div
+                                              className={`h-full rounded-full transition-all ${isFull ? "bg-red-300" : fillPct > 70 ? "bg-orange-400" : "bg-green-400"}`}
+                                              style={{ width: `${fillPct}%` }}
+                                            />
+                                          </div>
+                                          <span
+                                            className={`text-[10px] tabular-nums ${isFull ? "text-gray-300" : batch.availableSlots <= 5 ? "text-orange-600 font-medium" : "text-gray-400"}`}
+                                          >
+                                            {batch.availableSlots} left
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {!isFull && (
+                                        <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
+                                      )}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+
+                      {/* ── Step 2: Session Selection ── */}
+                      {!enrollSuccess &&
+                        !waitlistJoined &&
+                        enrollmentStep === "session" && (
+                          <>
+                            <button
+                              onClick={closeEnrollmentModal}
+                              className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                            >
+                              <FiX className="w-4.5 h-4.5" />
+                            </button>
+
+                            {/* Step indicator */}
+                            <div className="flex items-center gap-1.5 mb-5">
+                              {["Batch", "Session", "Confirm"].map(
+                                (label, i) => (
+                                  <React.Fragment key={label}>
+                                    <div
+                                      className={`flex items-center gap-1 ${i <= 1 ? (i < 1 ? "text-green-500" : "text-yellow-600") : "text-gray-300"}`}
+                                    >
+                                      <div
+                                        className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${i < 1 ? "bg-green-500 text-white" : i === 1 ? "bg-yellow-400 text-gray-900" : "bg-gray-100 text-gray-400"}`}
+                                      >
+                                        {i < 1 ? (
+                                          <FiCheckCircle className="w-3 h-3" />
+                                        ) : (
+                                          i + 1
+                                        )}
+                                      </div>
+                                      <span className="text-[11px] font-medium">
+                                        {label}
+                                      </span>
+                                    </div>
+                                    {i < 2 && (
+                                      <div
+                                        className={`flex-1 h-px ${i < 1 ? "bg-green-300" : "bg-gray-200"}`}
+                                      />
+                                    )}
+                                  </React.Fragment>
+                                ),
+                              )}
+                            </div>
+
+                            {/* Mobile drag handle */}
+                            <div className="flex justify-center mb-3 sm:hidden">
+                              <div className="w-8 h-1 bg-gray-200 rounded-full" />
+                            </div>
+
+                            <button
+                              onClick={() => setEnrollmentStep("batch")}
+                              className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 transition-colors mb-3"
+                            >
+                              <FiArrowLeft className="w-3 h-3" /> Back
+                            </button>
+                            <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">
+                              Choose your session
+                            </h2>
+
+                            {/* Batch summary — compact on mobile */}
+                            <div className="mb-4 px-2.5 py-1.5 bg-gradient-to-r from-yellow-50/80 to-transparent rounded-lg inline-flex items-center gap-1.5 text-[11px] sm:text-xs">
+                              <FiCalendar className="w-3 h-3 text-yellow-600 flex-shrink-0" />
+                              <span className="font-medium text-gray-600">
+                                {selectedBatch?.name}
+                              </span>
+                            </div>
+
+                            <div className="space-y-2">
+                              {MOCK_SESSIONS.map((session) => {
+                                const isSelected =
+                                  selectedSession?.id === session.id;
+                                return (
+                                  <button
+                                    key={session.id}
+                                    onClick={() => handleSessionSelect(session)}
+                                    className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all duration-200 group active:scale-[0.99] ${
+                                      isSelected
+                                        ? "bg-gray-900 text-white border-gray-900 shadow-lg"
+                                        : "bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div
+                                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+                                          isSelected
+                                            ? "bg-yellow-400"
+                                            : "bg-gradient-to-br from-yellow-50 to-orange-50 group-hover:from-yellow-100 group-hover:to-orange-100"
+                                        }`}
+                                      >
+                                        <FiClock
+                                          className={`w-4 h-4 ${isSelected ? "text-gray-900" : "text-yellow-600"}`}
+                                        />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold">
+                                          {session.time}
+                                        </div>
+                                        {/* <div className={`text-[11px] sm:text-xs ${isSelected ? "text-yellow-400" : "text-gray-900"}`}>{session.time}</div> */}
+                                      </div>
+                                      {!isSelected && (
+                                        <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
+                                      )}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+
+                      {/* ── Support Question (first step) ── */}
+                      {!enrollSuccess &&
+                        !waitlistJoined &&
+                        enrollmentStep === "support" && (
+                          <>
+                            <button
+                              onClick={closeEnrollmentModal}
+                              className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                            >
+                              <FiX className="w-4.5 h-4.5" />
+                            </button>
+                            {/* Mobile drag handle */}
+                            <div className="flex justify-center mb-3 sm:hidden">
+                              <div className="w-8 h-1 bg-gray-200 rounded-full" />
+                            </div>
+
+                            <div className="text-center mb-5">
+                              <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
+                                One quick question
+                              </h2>
+                              <p className="text-gray-400 text-[11px] sm:text-sm line-clamp-1">
+                                Enrolling in{" "}
+                                <span className="text-gray-600">
+                                  {enrolledCourseName}
+                                </span>
+                              </p>
+                            </div>
+
+                            <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 mb-3 text-center">
+                              Do you need any accessibility support?
+                            </h3>
+                            <div className="grid grid-cols-2 gap-2.5 mb-4">
+                              <button
+                                onClick={() => handleSupportAnswer(true)}
+                                disabled={enrollSubmitting}
+                                className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
+                              >
+                                Yes, I do
+                              </button>
+                              <button
+                                onClick={() => handleSupportAnswer(false)}
+                                disabled={enrollSubmitting}
+                                className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700 flex items-center justify-center gap-2"
+                              >
+                                {enrollSubmitting ? (
+                                  <>
+                                    <FiLoader className="w-4 h-4 animate-spin" />
+                                    Enrolling...
+                                  </>
+                                ) : (
+                                  "No, enroll me"
+                                )}
+                              </button>
+                            </div>
+                            <button
+                              onClick={closeEnrollmentModal}
+                              className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+
+                      {/* ── Confirm Enrollment (after batch + session) ── */}
+                      {!enrollSuccess &&
+                        !waitlistJoined &&
+                        enrollmentStep === "confirm" && (
+                          <>
+                            <button
+                              onClick={closeEnrollmentModal}
+                              className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                            >
+                              <FiX className="w-4.5 h-4.5" />
+                            </button>
+                            {/* Mobile drag handle */}
+                            <div className="flex justify-center mb-3 sm:hidden">
+                              <div className="w-8 h-1 bg-gray-200 rounded-full" />
+                            </div>
+
+                            {/* Step indicator */}
+                            <div className="flex items-center gap-1.5 mb-5">
+                              {["Batch", "Session", "Confirm"].map(
+                                (label, i) => (
+                                  <React.Fragment key={label}>
+                                    <div
+                                      className={`flex items-center gap-1 ${i < 2 ? "text-green-500" : "text-yellow-600"}`}
+                                    >
+                                      <div
+                                        className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${i < 2 ? "bg-green-500 text-white" : "bg-yellow-400 text-gray-900"}`}
+                                      >
+                                        {i < 2 ? (
+                                          <FiCheckCircle className="w-3 h-3" />
+                                        ) : (
+                                          i + 1
+                                        )}
+                                      </div>
+                                      <span className="text-[11px] font-medium">
+                                        {label}
+                                      </span>
+                                    </div>
+                                    {i < 2 && (
+                                      <div className="flex-1 h-px bg-green-300" />
+                                    )}
+                                  </React.Fragment>
+                                ),
+                              )}
+                            </div>
+
+                            <button
+                              onClick={() => setEnrollmentStep("session")}
+                              className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 transition-colors mb-3"
+                            >
+                              <FiArrowLeft className="w-3 h-3" /> Back
+                            </button>
+
+                            <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">
+                              Confirm enrollment
+                            </h2>
+
+                            {/* Enrollment summary card */}
+                            <div className="mb-5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 border border-gray-200 overflow-hidden">
+                              <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-gray-200/60">
+                                <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 line-clamp-1">
+                                  {enrolledCourseName}
+                                </h3>
+                                <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 line-clamp-1">
+                                  {selectedCentre?.title}
+                                </p>
+                              </div>
+                              <div className="px-3 sm:px-4 py-2 space-y-1.5">
+                                <div className="flex items-center justify-between text-[11px] sm:text-xs">
+                                  <span className="text-gray-400">Batch</span>
+                                  <span className="font-medium text-gray-700">
+                                    {selectedBatch?.name}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-[11px] sm:text-xs">
+                                  <span className="text-gray-400">Session</span>
+                                  <span className="font-medium text-gray-700">
+                                    {selectedSession?.label} ·{" "}
+                                    {selectedSession?.time}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2.5">
+                              <button
+                                onClick={closeEnrollmentModal}
+                                className="flex-1 py-3 bg-gray-50 hover:bg-gray-100 text-gray-500 font-medium text-sm rounded-xl transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={handleEnrollSubmit}
+                                disabled={enrollSubmitting}
+                                className={`flex-1 py-3 font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.97] ${!enrollSubmitting ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900 shadow-sm" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
+                              >
+                                {enrollSubmitting ? (
+                                  <>
+                                    <FiLoader className="w-4 h-4 animate-spin" />
+                                    Enrolling...
+                                  </>
+                                ) : (
+                                  "Confirm Enrollment"
+                                )}
+                              </button>
+                            </div>
+                          </>
+                        )}
+
+                      {/* ── Centre Full — Recommend other centres ── */}
+                      {!enrollSuccess &&
+                        !waitlistJoined &&
+                        enrollmentStep === "courseFull" && (
+                          <>
+                            <div className="flex justify-center mb-3 sm:hidden">
+                              <div className="w-8 h-1 bg-gray-200 rounded-full" />
+                            </div>
+                            <button
+                              onClick={closeEnrollmentModal}
+                              className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                            >
+                              <FiX className="w-4.5 h-4.5" />
+                            </button>
+                            <div className="text-center mb-5 sm:mb-6">
+                              <div className="w-12 h-12 bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3 ring-4 ring-orange-50">
+                                <FiAlertCircle className="w-6 h-6 text-orange-500" />
+                              </div>
+                              <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
+                                Centre is full
+                              </h2>
+                              <p className="text-gray-500 text-[11px] sm:text-sm font-medium line-clamp-1 mb-0.5">
+                                {enrolledCourseName}
+                              </p>
+                              <p className="text-gray-400 text-[11px] sm:text-xs line-clamp-1">
+                                No open batches at {selectedCentre?.title}
+                              </p>
+                            </div>
+
+                            {/* Other centres running the same course */}
+                            <div className="mb-5">
+                              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                                Available at other centres
+                              </h3>
+                              <div className="space-y-2">
+                                {MOCK_ALT_CENTRES.map((alt) => (
+                                  <button
+                                    key={alt.id}
+                                    onClick={() => {
+                                      setSelectedCentre({
+                                        id: alt.id,
+                                        title: alt.name,
+                                      });
+                                      setEnrollingCentreId(alt.id);
+                                      setSelectedBatch(null);
+                                      setSelectedSession(null);
+                                      setEnrollmentStep("batch");
+                                    }}
+                                    className="w-full text-left p-3 sm:p-3.5 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center flex-shrink-0 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors">
+                                        <FiMapPin className="w-4 h-4 text-blue-600" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors truncate">
+                                          {alt.name}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                                        <span className="text-xs font-bold text-green-600">
+                                          {alt.availableSlots} slots
+                                        </span>
+                                        <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" />
+                                      </div>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Other courses at their original centre */}
+                            <div className="mb-5">
+                              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                                Other courses at {selectedCentre?.title}
+                              </h3>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {MOCK_ALT_COURSES.map((alt) => (
+                                  <button
+                                    key={alt.id}
+                                    onClick={() => {
+                                      setEnrolledCourseName(alt.title);
+                                      setEnrollingCourseId(alt.id);
+                                      setSelectedBatch(null);
+                                      setSelectedSession(null);
+                                      setEnrollmentStep("batch");
+                                    }}
+                                    className="text-left rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] overflow-hidden"
+                                  >
+                                    <div className="relative h-20 sm:h-24 bg-gray-100">
+                                      {alt.image &&
+                                      !imageErrors[`alt-${alt.id}`] ? (
+                                        <Image
+                                          src={alt.image}
+                                          alt={alt.title}
+                                          fill
+                                          className="object-cover"
+                                          onError={() =>
+                                            setImageErrors((prev) => ({
+                                              ...prev,
+                                              [`alt-${alt.id}`]: true,
+                                            }))
+                                          }
+                                        />
+                                      ) : (
+                                        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                                          <Image
+                                            src="/images/one-million-coders-logo.png"
+                                            alt="One Million Coders"
+                                            width={60}
+                                            height={20}
+                                            className="opacity-15"
+                                          />
+                                        </div>
+                                      )}
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                                      <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-green-500/90 text-white text-[9px] sm:text-[10px] font-bold rounded-full backdrop-blur-sm">
+                                        {alt.availableSlots} slots
+                                      </div>
+                                      {alt.matchPercentage && (
+                                        <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-[9px] sm:text-[10px] font-medium rounded-full backdrop-blur-sm text-yellow-700">
+                                          <FiStar className="w-2.5 h-2.5" />
+                                          {alt.matchPercentage}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="p-2 sm:p-2.5">
+                                      <h4 className="text-[11px] sm:text-xs font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors line-clamp-2 leading-tight mb-1">
+                                        {alt.title}
+                                      </h4>
+                                      <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                                        <FiClock className="w-2.5 h-2.5" />
+                                        <span>{alt.duration}</span>
+                                      </div>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Enroll without support / Waitlist */}
+                            <div className="pt-4 border-t border-gray-100 space-y-2">
+                              <p className="text-[11px] sm:text-xs text-gray-400 mb-1">
+                                Or:
+                              </p>
+
+                              {/* Enroll without support */}
+                              <button
+                                onClick={() => handleSupportAnswer(false)}
+                                disabled={enrollSubmitting}
+                                className="w-full p-3 sm:p-3.5 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center flex-shrink-0 group-hover:from-green-100 group-hover:to-emerald-100 transition-colors">
+                                    <FiCheckCircle className="w-4 h-4 text-green-600" />
+                                  </div>
+                                  <div className="text-left flex-1">
+                                    <div className="text-sm font-semibold text-gray-900">
+                                      Enroll without support
+                                    </div>
+                                    <div className="text-[11px] sm:text-xs text-gray-400">
+                                      Skip support and enroll at this centre now
+                                    </div>
+                                  </div>
+                                  {enrollSubmitting && (
+                                    <FiLoader className="w-4 h-4 text-gray-400 animate-spin flex-shrink-0" />
+                                  )}
+                                </div>
+                              </button>
+
+                              {/* Waitlist */}
+                              <button
+                                onClick={() => setWaitlistJoined(true)}
+                                className="w-full p-3 sm:p-3.5 rounded-xl border border-dashed border-gray-300 hover:border-yellow-400 hover:bg-yellow-50/30 transition-all duration-200 group active:scale-[0.99]"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center flex-shrink-0 group-hover:bg-yellow-100 transition-colors">
+                                    <FiClock className="w-4 h-4 text-yellow-600" />
+                                  </div>
+                                  <div className="text-left flex-1">
+                                    <div className="text-sm font-semibold text-gray-900">
+                                      Join the waitlist
+                                    </div>
+                                    <div className="text-[11px] sm:text-xs text-gray-400 line-clamp-1">
+                                      Wait for a supported slot at{" "}
+                                      {selectedCentre?.title || "your centre"}
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+                            </div>
+                          </>
+                        )}
+
+                      {/* ── Batch Full (after confirm) — Show alternatives ── */}
+                      {!enrollSuccess &&
+                        !waitlistJoined &&
+                        enrollmentStep === "batchFull" && (
+                          <>
+                            <div className="flex justify-center mb-3 sm:hidden">
+                              <div className="w-8 h-1 bg-gray-200 rounded-full" />
+                            </div>
+                            <button
+                              onClick={closeEnrollmentModal}
+                              className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                            >
+                              <FiX className="w-4.5 h-4.5" />
+                            </button>
+                            <div className="text-center mb-5 sm:mb-6">
+                              <div className="w-12 h-12 bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3 ring-4 ring-orange-50">
+                                <FiAlertCircle className="w-6 h-6 text-orange-500" />
+                              </div>
+                              <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
+                                Batch just filled up
+                              </h2>
+                              <p className="text-gray-400 text-[11px] sm:text-sm">
+                                The last slot was just taken
+                              </p>
+                            </div>
+
+                            {/* Pick a different batch */}
+                            <button
+                              onClick={() => {
+                                setEnrollmentStep("batch");
+                                setSelectedBatch(null);
+                                setSelectedSession(null);
+                              }}
+                              className="w-full mb-2 p-3 sm:p-3.5 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-50 to-orange-50 flex items-center justify-center flex-shrink-0 group-hover:from-yellow-100 group-hover:to-orange-100 transition-colors">
+                                  <FiCalendar className="w-4 h-4 text-yellow-600" />
+                                </div>
+                                <div className="flex-1 text-left">
+                                  <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors">
+                                    Pick a different batch
+                                  </div>
+                                  <div className="text-xs text-gray-400">
+                                    Other batches may still have slots
+                                  </div>
+                                </div>
+                                <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" />
+                              </div>
+                            </button>
+
+                            {/* Other centres */}
+                            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-4 mb-2.5">
+                              Or try another centre
+                            </h3>
+                            <div className="space-y-2 mb-4">
                               {MOCK_ALT_CENTRES.map((alt) => (
                                 <button
                                   key={alt.id}
                                   onClick={() => {
-                                    setSelectedCentre({ id: alt.id, title: alt.name });
+                                    setSelectedCentre({
+                                      id: alt.id,
+                                      title: alt.name,
+                                    });
                                     setEnrollingCentreId(alt.id);
                                     setSelectedBatch(null);
                                     setSelectedSession(null);
                                     setEnrollmentStep("batch");
                                   }}
-                                  className="w-full text-left p-3 sm:p-3.5 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]"
+                                  className="w-full text-left p-3 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]"
                                 >
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center flex-shrink-0 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors">
+                                    <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
                                       <FiMapPin className="w-4 h-4 text-blue-600" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors truncate">{alt.name}</div>
+                                      <div className="text-sm font-medium text-gray-900 group-hover:text-yellow-700 transition-colors truncate">
+                                        {alt.name}
+                                      </div>
+                                      <div className="text-xs text-gray-400">
+                                        {alt.distance}
+                                      </div>
                                     </div>
                                     <div className="flex items-center gap-1.5 flex-shrink-0">
-                                      <span className="text-xs font-bold text-green-600">{alt.availableSlots} slots</span>
-                                      <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" />
+                                      <span className="text-xs font-bold text-green-600">
+                                        {alt.availableSlots} slots
+                                      </span>
+                                      <FiChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" />
                                     </div>
                                   </div>
                                 </button>
                               ))}
                             </div>
-                          </div>
-
-                          {/* Other courses at their original centre */}
-                          <div className="mb-5">
-                            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Other courses at {selectedCentre?.title}</h3>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                              {MOCK_ALT_COURSES.map((alt) => (
-                                <button
-                                  key={alt.id}
-                                  onClick={() => {
-                                    setEnrolledCourseName(alt.title);
-                                    setEnrollingCourseId(alt.id);
-                                    setSelectedBatch(null);
-                                    setSelectedSession(null);
-                                    setEnrollmentStep("batch");
-                                  }}
-                                  className="text-left rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] overflow-hidden"
-                                >
-                                  <div className="relative h-20 sm:h-24 bg-gray-100">
-                                    {alt.image && !imageErrors[`alt-${alt.id}`] ? (
-                                      <Image src={alt.image} alt={alt.title} fill className="object-cover" onError={() => setImageErrors((prev) => ({ ...prev, [`alt-${alt.id}`]: true }))} />
-                                    ) : (
-                                      <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-                                        <Image src="/images/one-million-coders-logo.png" alt="One Million Coders" width={60} height={20} className="opacity-15" />
-                                      </div>
-                                    )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                                    <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-green-500/90 text-white text-[9px] sm:text-[10px] font-bold rounded-full backdrop-blur-sm">
-                                      {alt.availableSlots} slots
-                                    </div>
-                                    {alt.matchPercentage && (
-                                      <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-[9px] sm:text-[10px] font-medium rounded-full backdrop-blur-sm text-yellow-700">
-                                        <FiStar className="w-2.5 h-2.5" />
-                                        {alt.matchPercentage}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="p-2 sm:p-2.5">
-                                    <h4 className="text-[11px] sm:text-xs font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors line-clamp-2 leading-tight mb-1">
-                                      {alt.title}
-                                    </h4>
-                                    <div className="flex items-center gap-1 text-[10px] text-gray-400">
-                                      <FiClock className="w-2.5 h-2.5" />
-                                      <span>{alt.duration}</span>
-                                    </div>
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Enroll without support / Waitlist */}
-                          <div className="pt-4 border-t border-gray-100 space-y-2">
-                            <p className="text-[11px] sm:text-xs text-gray-400 mb-1">Or:</p>
-
-                            {/* Enroll without support */}
-                            <button
-                              onClick={() => handleSupportAnswer(false)}
-                              disabled={enrollSubmitting}
-                              className="w-full p-3 sm:p-3.5 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center flex-shrink-0 group-hover:from-green-100 group-hover:to-emerald-100 transition-colors">
-                                  <FiCheckCircle className="w-4 h-4 text-green-600" />
-                                </div>
-                                <div className="text-left flex-1">
-                                  <div className="text-sm font-semibold text-gray-900">Enroll without support</div>
-                                  <div className="text-[11px] sm:text-xs text-gray-400">Skip support and enroll at this centre now</div>
-                                </div>
-                                {enrollSubmitting && <FiLoader className="w-4 h-4 text-gray-400 animate-spin flex-shrink-0" />}
-                              </div>
-                            </button>
 
                             {/* Waitlist */}
-                            <button onClick={() => setWaitlistJoined(true)} className="w-full p-3 sm:p-3.5 rounded-xl border border-dashed border-gray-300 hover:border-yellow-400 hover:bg-yellow-50/30 transition-all duration-200 group active:scale-[0.99]">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center flex-shrink-0 group-hover:bg-yellow-100 transition-colors">
-                                  <FiClock className="w-4 h-4 text-yellow-600" />
-                                </div>
-                                <div className="text-left flex-1">
-                                  <div className="text-sm font-semibold text-gray-900">Join the waitlist</div>
-                                  <div className="text-[11px] sm:text-xs text-gray-400 line-clamp-1">Wait for a supported slot at {selectedCentre?.title || "your centre"}</div>
-                                </div>
-                              </div>
-                            </button>
-                          </div>
-                        </>
-                      )}
-
-                      {/* ── Batch Full (after confirm) — Show alternatives ── */}
-                      {!enrollSuccess && !waitlistJoined && enrollmentStep === "batchFull" && (
-                        <>
-                          <div className="flex justify-center mb-3 sm:hidden"><div className="w-8 h-1 bg-gray-200 rounded-full" /></div>
-                          <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
-                            <FiX className="w-4.5 h-4.5" />
-                          </button>
-                          <div className="text-center mb-5 sm:mb-6">
-                            <div className="w-12 h-12 bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3 ring-4 ring-orange-50">
-                              <FiAlertCircle className="w-6 h-6 text-orange-500" />
-                            </div>
-                            <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">Batch just filled up</h2>
-                            <p className="text-gray-400 text-[11px] sm:text-sm">The last slot was just taken</p>
-                          </div>
-
-                          {/* Pick a different batch */}
-                          <button onClick={() => { setEnrollmentStep("batch"); setSelectedBatch(null); setSelectedSession(null); }} className="w-full mb-2 p-3 sm:p-3.5 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-50 to-orange-50 flex items-center justify-center flex-shrink-0 group-hover:from-yellow-100 group-hover:to-orange-100 transition-colors">
-                                <FiCalendar className="w-4 h-4 text-yellow-600" />
-                              </div>
-                              <div className="flex-1 text-left">
-                                <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors">Pick a different batch</div>
-                                <div className="text-xs text-gray-400">Other batches may still have slots</div>
-                              </div>
-                              <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" />
-                            </div>
-                          </button>
-
-                          {/* Other centres */}
-                          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-4 mb-2.5">Or try another centre</h3>
-                          <div className="space-y-2 mb-4">
-                            {MOCK_ALT_CENTRES.map((alt) => (
-                              <button key={alt.id} onClick={() => { setSelectedCentre({ id: alt.id, title: alt.name }); setEnrollingCentreId(alt.id); setSelectedBatch(null); setSelectedSession(null); setEnrollmentStep("batch"); }} className="w-full text-left p-3 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]">
+                            <div className="pt-3 border-t border-gray-100">
+                              <button
+                                onClick={() => setWaitlistJoined(true)}
+                                className="w-full p-3 rounded-xl border border-dashed border-gray-300 hover:border-yellow-400 hover:bg-yellow-50/30 transition-all duration-200 group active:scale-[0.99]"
+                              >
                                 <div className="flex items-center gap-3">
-                                  <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors"><FiMapPin className="w-4 h-4 text-blue-600" /></div>
-                                  <div className="flex-1 min-w-0"><div className="text-sm font-medium text-gray-900 group-hover:text-yellow-700 transition-colors truncate">{alt.name}</div><div className="text-xs text-gray-400">{alt.distance}</div></div>
-                                  <div className="flex items-center gap-1.5 flex-shrink-0"><span className="text-xs font-bold text-green-600">{alt.availableSlots} slots</span><FiChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" /></div>
+                                  <div className="w-9 h-9 rounded-lg bg-yellow-50 flex items-center justify-center flex-shrink-0 group-hover:bg-yellow-100 transition-colors">
+                                    <FiClock className="w-4 h-4 text-yellow-600" />
+                                  </div>
+                                  <div className="text-left">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      Join the waitlist
+                                    </div>
+                                    <div className="text-xs text-gray-400">
+                                      Get notified when a slot opens
+                                    </div>
+                                  </div>
                                 </div>
                               </button>
-                            ))}
-                          </div>
-
-                          {/* Waitlist */}
-                          <div className="pt-3 border-t border-gray-100">
-                            <button onClick={() => setWaitlistJoined(true)} className="w-full p-3 rounded-xl border border-dashed border-gray-300 hover:border-yellow-400 hover:bg-yellow-50/30 transition-all duration-200 group active:scale-[0.99]">
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-lg bg-yellow-50 flex items-center justify-center flex-shrink-0 group-hover:bg-yellow-100 transition-colors"><FiClock className="w-4 h-4 text-yellow-600" /></div>
-                                <div className="text-left"><div className="text-sm font-medium text-gray-900">Join the waitlist</div><div className="text-xs text-gray-400">Get notified when a slot opens</div></div>
-                              </div>
-                            </button>
-                          </div>
-                        </>
-                      )}
+                            </div>
+                          </>
+                        )}
                     </motion.div>
                   </motion.div>
                 )}
@@ -2158,7 +2742,10 @@ export default function CoursesPage({ params }) {
                       className="rounded-lg bg-white border border-gray-200 overflow-hidden"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
+                      transition={{
+                        duration: 0.2,
+                        delay: Math.min(index * 0.04, 0.2),
+                      }}
                     >
                       <div className="relative h-28 sm:h-32 bg-gray-100">
                         {course.image && !imageErrors[course.id] ? (
@@ -2167,7 +2754,12 @@ export default function CoursesPage({ params }) {
                             alt={course.title}
                             fill
                             className="object-cover"
-                            onError={() => setImageErrors((prev) => ({ ...prev, [course.id]: true }))}
+                            onError={() =>
+                              setImageErrors((prev) => ({
+                                ...prev,
+                                [course.id]: true,
+                              }))
+                            }
                           />
                         ) : (
                           <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -2186,10 +2778,11 @@ export default function CoursesPage({ params }) {
                         <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
                           {course.match_percentage != null && (
                             <span
-                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${course.match_percentage.split("%")[0] >= 70
-                                ? "bg-green-50/90 text-green-700"
-                                : "bg-yellow-50/90 text-yellow-700"
-                                }`}
+                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm ${
+                                course.match_percentage.split("%")[0] >= 70
+                                  ? "bg-green-50/90 text-green-700"
+                                  : "bg-yellow-50/90 text-yellow-700"
+                              }`}
                             >
                               <FiStar className="w-2.5 h-2.5" />
                               {course.match_percentage}
@@ -2222,9 +2815,17 @@ export default function CoursesPage({ params }) {
                               ) : (
                                 <FiGlobe className="w-2.5 h-2.5 text-purple-600" />
                               )}
-                              <span className={`text-[10px] sm:text-[11px] font-medium ${course.mode_of_delivery === "Online" ? "text-blue-700" :
-                                course.mode_of_delivery === "In Person" ? "text-green-700" : "text-purple-700"
-                                }`}>{course.mode_of_delivery}</span>
+                              <span
+                                className={`text-[10px] sm:text-[11px] font-medium ${
+                                  course.mode_of_delivery === "Online"
+                                    ? "text-blue-700"
+                                    : course.mode_of_delivery === "In Person"
+                                      ? "text-green-700"
+                                      : "text-purple-700"
+                                }`}
+                              >
+                                {course.mode_of_delivery}
+                              </span>
                             </div>
                             {userStatus && (
                               <a
@@ -2233,7 +2834,9 @@ export default function CoursesPage({ params }) {
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1 mb-2 transition-colors"
                               >
-                                <span className="text-[10px] sm:text-[11px] font-medium text-green-700">View Details</span>
+                                <span className="text-[10px] sm:text-[11px] font-medium text-green-700">
+                                  View Details
+                                </span>
                                 <FiInfo className="w-2.5 h-2.5 text-green-700" />
                               </a>
                             )}
@@ -2275,7 +2878,11 @@ export default function CoursesPage({ params }) {
               {/* Actions */}
               <div className="mt-8 sm:mt-10 flex justify-center">
                 <Button
-                  onClick={() => router.push(`/programmes?user_id=${id}${selectedCentre ? `&centre_id=${selectedCentre.id}` : ''}${token ? `&token=${token}` : ''}`)}
+                  onClick={() =>
+                    router.push(
+                      `/programmes?user_id=${id}${selectedCentre ? `&centre_id=${selectedCentre.id}` : ""}${token ? `&token=${token}` : ""}`,
+                    )
+                  }
                   className="min-h-[44px]"
                 >
                   View All Courses
