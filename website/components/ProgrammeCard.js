@@ -8,7 +8,7 @@ import { FiClock, FiArrowRight, FiCheckCircle, FiX, FiLoader, FiGlobe, FiInfo, F
 import Button from "./Button";
 import { confirmCourse } from "../services/pages";
 
-const ProgrammeCard = ({ programme, userId, centreId }) => {
+const ProgrammeCard = ({ programme, userId, centreId, token }) => {
   const router = useRouter();
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [needsSupport, setNeedsSupport] = useState(null);
@@ -26,7 +26,7 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
         course_id: programme.course_id || programme.id,
         support: needsSupport === true,
         ...(centreId && { centre_id: centreId }),
-      });
+      }, token);
       setEnrollSuccess(true);
     } catch (err) {
       const apiErrors = err.response?.data?.errors;
@@ -241,7 +241,7 @@ const ProgrammeCard = ({ programme, userId, centreId }) => {
                     course_id: programme.course_id || programme.id,
                     support: false,
                     ...(centreId && { centre_id: centreId }),
-                  });
+                  }, token);
                   setEnrollSuccess(true);
                   setShowEnrollModal(true);
                 } catch (err) {
