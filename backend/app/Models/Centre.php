@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\AppConfig;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -28,6 +29,9 @@ class Centre extends Model
         'constituency_id',
         'status',
         'is_ready',
+        'seat_count',
+        'short_slots_per_day',
+        'long_slots_per_day',
         'gps_address',
         'is_pwd_friendly',
         'wheelchair_accessible',
@@ -45,7 +49,10 @@ class Centre extends Model
     ];
 
     protected $casts = [
-        'constituency_id' => 'integer',
+        'constituency_id'   => 'integer',
+        'seat_count'        => 'integer',
+        'short_slots_per_day' => 'integer',
+        'long_slots_per_day'  => 'integer',
         'status' => 'boolean',
         'is_ready' => 'boolean',
         'is_pwd_friendly' => 'boolean',
@@ -99,6 +106,36 @@ class Centre extends Model
     {
         return $this->belongsToMany(District::class, 'district_centre', 'centre_id', 'district_id')
             ->withTimestamps();
+    }
+
+    /**
+     * Resolved short-course slots per day.
+     * Falls back to SHORT_SLOTS_PERCENTAGE of seat_count when null.
+     */
+    public function resolvedShortSlotsPerDay(): int
+    {
+        if ($this->short_slots_per_day !== null) {
+            return (int) $this->short_slots_per_day;
+        }
+
+        $pct = (int) AppConfig::getValue('SHORT_SLOTS_PERCENTAGE', 40);
+
+        return (int) ceil(($this->seat_count ?? 0) * $pct / 100);
+    }
+
+    /**
+     * Resolved long-course slots per day.
+     * Falls back to LONG_SLOTS_PERCENTAGE of seat_count when null.
+     */
+    public function resolvedLongSlotsPerDay(): int
+    {
+        if ($this->long_slots_per_day !== null) {
+            return (int) $this->long_slots_per_day;
+        }
+
+        $pct = (int) AppConfig::getValue('LONG_SLOTS_PERCENTAGE', 60);
+
+        return (int) ceil(($this->seat_count ?? 0) * $pct / 100);
     }
 
     protected static function booted()

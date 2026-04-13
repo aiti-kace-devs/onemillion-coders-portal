@@ -425,6 +425,30 @@ class CentreCrudController extends CrudController
 
         $this->addIsActiveField([true => 'True', false => 'False'], 'Staff Trained for PWDs', 'staff_trained_for_pwd');
 
+        CRUD::addField([
+            'name'    => 'seat_count',
+            'label'   => 'Total Seat Count',
+            'type'    => 'number',
+            'hint'    => 'Total number of seats at this centre.',
+            'wrapper' => ['class' => 'form-group col-4'],
+        ]);
+
+        CRUD::addField([
+            'name'    => 'short_slots_per_day',
+            'label'   => 'Short-Course Slots / Day',
+            'type'    => 'number',
+            'hint'    => 'Leave blank to derive from SHORT_SLOTS_PERCENTAGE config.',
+            'wrapper' => ['class' => 'form-group col-4'],
+        ]);
+
+        CRUD::addField([
+            'name'    => 'long_slots_per_day',
+            'label'   => 'Long-Course Slots / Day',
+            'type'    => 'number',
+            'hint'    => 'Leave blank to derive from LONG_SLOTS_PERCENTAGE config.',
+            'wrapper' => ['class' => 'form-group col-4'],
+        ]);
+
         $this->addIsActiveField([true => 'True', false => 'False'], 'Is Ready', 'is_ready');
 
         $this->addIsActiveField([true => 'True', false => 'False'], 'Status', 'status');
@@ -443,6 +467,7 @@ class CentreCrudController extends CrudController
             'title', 'branch_id', 'constituency_id', 'constituency_dependency_script',
             'district_id', 'district_dependency_script', 'gps_address', 'pwd_notes', 'images', 'video',
         ]);
+        $this->addFieldsToTab('Quota', true, ['seat_count', 'short_slots_per_day', 'long_slots_per_day']);
         $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'is_ready', 'status']);
         $this->addFieldsToTab('GPS Location', true, ['gps_location']);
         $this->addFieldsToTab('Sessions', true, ['centre_sessions_manager']);

@@ -2,21 +2,21 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Requests\CourseRequest;
+use App\Http\Requests\CourseBatchRequest;
+use App\Events\CourseBatchCreated;
+use App\Models\Attendance;
+use App\Models\Batch;
+use App\Models\CourseBatch;
+use App\Models\Course;
+use App\Models\Oex_result;
+use App\Models\User;
+use App\Models\UserAdmission;
+use App\Helpers\FilterHelper;
+use App\Services\CourseBatchService;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-use App\Models\Course;
-use App\Models\Batch;
-use App\Models\Programme;
-use App\Models\Centre;
-use App\Models\UserAdmission;
-use App\Models\Attendance;
-use App\Models\User;
-use App\Models\Oex_result;
-use App\Helpers\FilterHelper;
-use App\Helpers\CourseFieldHelpers;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+
 /**
  * Class CourseBatchCrudController
  * @package App\Http\Controllers\Admin
@@ -25,155 +25,86 @@ use Illuminate\Support\Facades\DB;
 class CourseBatchCrudController extends CrudController
 {
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation {
+        store as traitStore;
+    }
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
-    /**
-     * Configure the CrudPanel object. Apply settings to all operations.
-     * 
-     * @return void
-     */
     public function setup()
     {
-        CRUD::setModel(Course::class);
+        CRUD::setModel(CourseBatch::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/course-batch');
-        CRUD::setEntityNameStrings('Manage Course Batches', 'Manage Course Batches');
+        CRUD::setEntityNameStrings('Programme Batch', 'Programme Batches');
     }
 
-    /**
-     * Define what happens when the List operation is loaded.
-     * 
-     * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
-     * @return void
-     */
     protected function setupListOperation()
     {
         $this->setupFilters();
 
         CRUD::addColumn([
-            'name' => 'course_name',
-            'label' => 'Course Name',
-            'type' => 'text',
-        ]);
-
-        
-        FilterHelper::addGenericRelationshipColumn('batch', 'Batch', 'batch', 'title');
-        FilterHelper::addGenericRelationshipColumn('centre', 'Centre', 'centre', 'title');   
-
-        CRUD::addColumn([
-            'name' => 'duration',
-            'label' => 'Duration',
-            'type' => 'text',
+            'name'  => 'course',
+            'label' => 'Course',
+            'type'  => 'relationship',
+            'attribute' => 'course_name',
         ]);
 
         CRUD::addColumn([
-            'name' => 'start_date',
+            'name'  => 'batch',
+            'label' => 'Admission Batch',
+            'type'  => 'relationship',
+            'attribute' => 'title',
+        ]);
+
+        CRUD::addColumn([
+            'name'  => 'duration',
+            'label' => 'Duration (days)',
+            'type'  => 'number',
+        ]);
+
+        CRUD::addColumn([
+            'name'  => 'start_date',
             'label' => 'Start Date',
-            'type' => 'date',
+            'type'  => 'date',
         ]);
 
         CRUD::addColumn([
-            'name' => 'end_date',
+            'name'  => 'end_date',
             'label' => 'End Date',
-            'type' => 'date',
+            'type'  => 'date',
         ]);
 
         CRUD::addColumn([
-            'name' => 'status',
-            'label' => 'Status',
-            'type' => 'view',
-            'view' => 'admin.status_toggle.status_column',
-            'toggle_url' => 'course-batch/{id}/toggle',
+            'name'  => 'available_slots',
+            'label' => 'Available Slots',
+            'type'  => 'number',
         ]);
     }
 
-    /**
-     * Define what happens when the Show operation is loaded.
-     * 
-     * @return void
-     */
     protected function setupShowOperation()
     {
         CRUD::set('show.setFromDb', false);
-        
-        // Use custom show view
         CRUD::set('show.view', 'vendor.backpack.crud.course_batch_show');
-        
-        // // Basic info columns
-        // CRUD::addColumn([
-        //     'name' => 'course_name',
-        //     'label' => 'Course Name',
-        //     'type' => 'text',
-        // ]);
-
-        // CRUD::addColumn([
-        //     'name' => 'batch_title',
-        //     'label' => 'Batch',
-        //     'type' => 'closure',
-        //     'function_count' => 1,
-        //     'function' => function($entry) {
-        //         $url = url('admin/batch/'.$entry->batch_id.'/show');
-        //         return '<a href="'.$url.'" class="text-primary font-bold">'.$entry->batch->title.'</a>';
-        //     },
-        //     'escaped' => false,
-        // ]);
-
-        // CRUD::addColumn([
-        //     'name' => 'centre_title',
-        //     'label' => 'Centre',
-        //     'type' => 'closure',
-        //     'function_count' => 1,
-        //     'function' => function($entry) {
-        //         $url = url('admin/centre/'.$entry->centre_id.'/show');
-        //         return '<a href="'.$url.'" class="text-primary font-bold">'.$entry->centre->name.'</a>';
-        //     },
-        //     'escaped' => false,
-        // ]);
-
-        // CRUD::addColumn([
-        //     'name' => 'duration',
-        //     'label' => 'Duration',
-        //     'label' => 'Duration',
-        //     'type' => 'text',
-        // ]);
-
-        // CRUD::addColumn([
-        //     'name' => 'start_date',
-        //     'label' => 'Start Date',
-        //     'type' => 'date',
-        // ]);
-
-        // CRUD::addColumn([
-        //     'name' => 'end_date',
-        //     'label' => 'End Date',
-        //     'type' => 'date',
-        // ]);
     }
 
-    /**
-     * Add filters to the list operation.
-     */
     protected function setupFilters()
     {
-
         CRUD::filter('ongoing')
-        ->type('simple')
-        ->label('Ongoing Batch Courses')
-        ->whenActive(function () {
-            $this->crud->query->whereHas('batch', function ($query) {
-                $query->whereDate('start_date', '<=', now()->toDateString())
-                      ->whereDate('end_date', '>=', now()->toDateString());
+            ->type('simple')
+            ->label('Ongoing Batches')
+            ->whenActive(function () {
+                $this->crud->query->whereHas('batch', function ($query) {
+                    $query->whereDate('start_date', '<=', now()->toDateString())
+                          ->whereDate('end_date', '>=', now()->toDateString());
+                });
             });
-        });
-        
-        // Batch filter
+
         $batches = Batch::all()->pluck('title', 'id')->toArray();
         CRUD::addFilter([
-            'name' => 'batch_id',
-            'type' => 'select2',
-            'label' => 'Batch',
+            'name'        => 'batch_id',
+            'type'        => 'select2',
+            'label'       => 'Admission Batch',
             'placeholder' => 'Select a batch',
         ], function () use ($batches) {
             return $batches;
@@ -183,12 +114,11 @@ class CourseBatchCrudController extends CrudController
             }
         });
 
-        // Course filter - handle array of course_ids from URL
         $courses = Course::all()->pluck('course_name', 'id')->toArray();
         CRUD::addFilter([
-            'name' => 'course_id',
-            'type' => 'select2_multiple',
-            'label' => 'Course',
+            'name'        => 'course_id',
+            'type'        => 'select2_multiple',
+            'label'       => 'Course',
             'placeholder' => 'Select courses',
         ], function () use ($courses) {
             return $courses;
@@ -204,79 +134,114 @@ class CourseBatchCrudController extends CrudController
         });
     }
 
-    /**
-     * Define what happens when the Create operation is loaded.
-     * 
-     * @see https://backpackforlaravel.com/docs/crud-operation-create
-     * @return void
-     */
     protected function setupCreateOperation()
     {
-        CRUD::setValidation(CourseRequest::class);
+        CRUD::setValidation(CourseBatchRequest::class);
 
         CRUD::addField([
-            'name' => 'batch_id',
-            'label' => 'Batch',
-            'type' => 'select2',
-            'entity' => 'batch',
-            'attribute' => 'title',
-            'model' => \App\Models\Batch::class,
+            'name'        => 'course_id',
+            'label'       => 'Course',
+            'type'        => 'select2',
+            'entity'      => 'course',
+            'attribute'   => 'course_name',
+            'model'       => Course::class,
+            'placeholder' => 'Select a course',
+        ]);
+
+        CRUD::addField([
+            'name'        => 'batch_id',
+            'label'       => 'Admission Batch',
+            'type'        => 'select2',
+            'entity'      => 'batch',
+            'attribute'   => 'title',
+            'model'       => Batch::class,
             'placeholder' => 'Select a batch',
         ]);
 
         CRUD::addField([
-            'name' => 'programme_id',
-            'label' => 'Programme',
-            'type' => 'select2',
-            'entity' => 'programme',
-            'attribute' => 'title',
-            'model' => \App\Models\Programme::class,
-            'placeholder' => 'Select a programme',
-        ]);
-
-        CRUD::addField([
-            'name' => 'centre_id',
-            'label' => 'Centre',
-            'type' => 'select2',
-            'entity' => 'centre',
-            'attribute' => 'name',
-            'model' => \App\Models\Centre::class,
-            'placeholder' => 'Select a centre',
-        ]);
-
-        CRUD::addField([
-            'name' => 'duration',
-            'label' => 'Duration',
-            'type' => 'text',
-            'hint' => 'e.g., 4 Weeks, 2 Months',
-        ]);
-
-        CRUD::addField([
-            'name' => 'start_date',
+            'name'  => 'start_date',
             'label' => 'Start Date',
-            'type' => 'date',
+            'type'  => 'date',
         ]);
 
         CRUD::addField([
-            'name' => 'end_date',
+            'name'  => 'end_date',
             'label' => 'End Date',
-            'type' => 'date',
+            'type'  => 'date',
+        ]);
+
+        CRUD::addField([
+            'name'  => 'duration',
+            'label' => 'Duration (days)',
+            'type'  => 'number',
+            'hint'  => 'Number of days for this programme batch',
+        ]);
+
+        CRUD::addField([
+            'name'  => 'available_slots',
+            'label' => 'Available Slots',
+            'type'  => 'number',
+            'hint'  => 'Number of available seats for this batch',
         ]);
     }
 
-    /**
-     * Define what happens when the Update operation is loaded.
-     * 
-     * @see https://backpackforlaravel.com/docs/crud-operation-update
-     * @return void
-     */
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
     }
 
     /**
-     * Toggle course status from the List/Show view.
+     * Override store to fire CourseBatchCreated event after creation.
+     */
+    public function store()
+    {
+        $response = $this->traitStore();
+
+        $entry = $this->crud->getCurrentEntry();
+        if ($entry instanceof CourseBatch) {
+            event(new CourseBatchCreated($entry));
+        }
+
+        return $response;
+    }
+
+    /**
+     * Auto-generate programme batches for a course within an admission batch.
+     * POST admin/course-batch/generate/{courseId}
+     */
+    public function generate(Request $request, int $courseId, CourseBatchService $service)
+    {
+        if (!backpack_user()->can('batch.update.all')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $data = $request->validate([
+            'batch_id' => 'required|integer|exists:admission_batches,id',
+        ]);
+
+        $course = Course::findOrFail($courseId);
+        $batch  = Batch::findOrFail($data['batch_id']);
+
+        try {
+            $batches = $service->generateForCourse($course, $batch);
+        } catch (\RuntimeException $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => "Generated {$batches->count()} programme batch(es) for course [{$course->course_name}].",
+            'batches' => $batches->map(fn($b) => [
+                'id'              => $b->id,
+                'start_date'      => $b->start_date?->toDateString(),
+                'end_date'        => $b->end_date?->toDateString(),
+                'available_slots' => $b->available_slots,
+            ]),
+        ]);
+    }
+
+    /**
+     * Toggle course status.
      */
     public function toggleStatus(Request $request, $id)
     {
@@ -293,29 +258,28 @@ class CourseBatchCrudController extends CrudController
         $course->save();
 
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Course status updated successfully.',
-            'value' => $course->status ? 1 : 0,
+            'value'   => $course->status ? 1 : 0,
         ]);
     }
 
+    /**
+     * DataTables-compatible admitted students for a programme batch.
+     */
     public function admittedStudentsData($id, Request $request)
     {
-        Course::findOrFail($id);
-        $currentAdmin = backpack_user();
-        $isSuperAdmin = $currentAdmin && method_exists($currentAdmin, 'isSuper') && $currentAdmin->isSuper();
+        $programmeBatch = CourseBatch::findOrFail($id);
 
-        $draw = (int) $request->input('draw', 0);
-        $start = max(0, (int) $request->input('start', 0));
-        $length = (int) $request->input('length', 10);
-        if ($length <= 0) $length = 10;
-        $length = min($length, 100);
+        $draw   = (int) $request->input('draw', 0);
+        $start  = max(0, (int) $request->input('start', 0));
+        $length = min(max((int) $request->input('length', 10), 1), 100);
 
         $searchValue = trim((string) $request->input('search.value', ''));
-        $searchLike = '%' . $searchValue . '%';
+        $searchLike  = '%' . $searchValue . '%';
 
         $baseQuery = UserAdmission::query()
-            ->where('course_id', $id)
+            ->where('programme_batch_id', $id)
             ->whereNotNull('confirmed');
 
         $recordsTotal = (clone $baseQuery)->count();
@@ -327,10 +291,6 @@ class CourseBatchCrudController extends CrudController
                     ->orWhereHas('user', function ($uq) use ($searchLike) {
                         $uq->where('name', 'like', $searchLike)
                             ->orWhere('email', 'like', $searchLike);
-                    })
-                    ->orWhereHas('courseSession', function ($sq) use ($searchLike) {
-                        $sq->where('name', 'like', $searchLike)
-                            ->orWhere('course_time', 'like', $searchLike);
                     });
             });
         }
@@ -339,10 +299,7 @@ class CourseBatchCrudController extends CrudController
 
         $admissions = (clone $filteredQuery)
             ->select(['id', 'user_id', 'session', 'confirmed'])
-            ->with([
-                'user:id,name,email,userId',
-                'courseSession:id,name,course_time',
-            ])
+            ->with(['user:id,name,email,userId', 'courseSession:id,name,course_time'])
             ->orderByDesc('confirmed')
             ->skip($start)
             ->take($length)
@@ -352,9 +309,7 @@ class CourseBatchCrudController extends CrudController
             ->filter(fn($a) => $a->user === null && $a->user_id !== null && ctype_digit((string) $a->user_id))
             ->pluck('user_id')
             ->map(fn($v) => (int) $v)
-            ->unique()
-            ->values()
-            ->all();
+            ->unique()->values()->all();
 
         $fallbackUsersById = collect();
         if (!empty($fallbackUserInternalIds)) {
@@ -368,15 +323,11 @@ class CourseBatchCrudController extends CrudController
             ->map(function ($a) use ($fallbackUsersById) {
                 if ($a->user?->id) return (int) $a->user->id;
                 if ($a->user_id !== null && ctype_digit((string) $a->user_id)) {
-                    $candidate = (int) $a->user_id;
-                    return $fallbackUsersById->has($candidate) ? $candidate : $candidate;
+                    return (int) $a->user_id;
                 }
                 return null;
             })
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+            ->filter()->unique()->values()->all();
 
         $latestExamByUserId = collect();
         if (!empty($internalIdsForExamLookup)) {
@@ -402,10 +353,9 @@ class CourseBatchCrudController extends CrudController
             }
 
             $latestExam = $userInternalId ? ($latestExamByUserId[$userInternalId] ?? null) : null;
-            $hasExam = $latestExam !== null;
-
-            $userName = $user?->name ?? ($admission->user_id ?? 'N/A');
-            $userEmail = $user?->email ?? 'N/A';
+            $hasExam    = $latestExam !== null;
+            $userName   = $user?->name ?? ($admission->user_id ?? 'N/A');
+            $userEmail  = $user?->email ?? 'N/A';
 
             $studentHtml = $userInternalId && $user
                 ? '<a href="' . e(backpack_url('user/' . $userInternalId . '/show')) . '">' . e($userName) . '</a>'
@@ -414,19 +364,17 @@ class CourseBatchCrudController extends CrudController
             $sessionName = $admission->courseSession?->name
                 ?? ($admission->session ? ('Session #' . $admission->session) : 'Unassigned');
 
-            $examTitle = '-';
-            $scoreHtml = '-';
+            $examTitle  = '-';
+            $scoreHtml  = '-';
             $resultHtml = '-';
             $actionsHtml = '-';
 
             if ($hasExam) {
-                $examTitle = e($latestExam?->exam?->title ?? ('Exam #' . ($latestExam->exam_id ?? '')));
-
-                $totalAns = (int) ($latestExam->yes_ans ?? 0) + (int) ($latestExam->no_ans ?? 0);
-                $scorePct = $totalAns > 0 ? round(((int) $latestExam->yes_ans / $totalAns) * 100, 1) : 0;
-                $passed = $scorePct >= 50;
-
-                $scoreHtml = '<span class="badge bg-info text-dark">' . e((string) $scorePct) . '%</span>';
+                $examTitle  = e($latestExam?->exam?->title ?? ('Exam #' . ($latestExam->exam_id ?? '')));
+                $totalAns   = (int) ($latestExam->yes_ans ?? 0) + (int) ($latestExam->no_ans ?? 0);
+                $scorePct   = $totalAns > 0 ? round(((int) $latestExam->yes_ans / $totalAns) * 100, 1) : 0;
+                $passed     = $scorePct >= 50;
+                $scoreHtml  = '<span class="badge bg-info text-dark">' . e((string) $scorePct) . '%</span>';
                 $resultHtml = '<span class="badge ' . ($passed ? 'bg-success' : 'bg-danger') . '">' . ($passed ? 'Pass' : 'Fail') . '</span>';
             } else {
                 $examTitle = '<span class="badge bg-secondary text-dark">Not taken</span>';
@@ -445,41 +393,42 @@ class CourseBatchCrudController extends CrudController
             $actionsHtml = !empty($actions) ? implode(' ', $actions) : '-';
 
             $data[] = [
-                'index' => $start + $idx + 1,
-                'student' => $studentHtml,
-                'email' => e($userEmail),
-                'session' => e($sessionName),
+                'index'     => $start + $idx + 1,
+                'student'   => $studentHtml,
+                'email'     => e($userEmail),
+                'session'   => e($sessionName),
                 'admission' => '<span class="badge bg-success text-dark">Confirmed</span>',
-                'exam' => $examTitle,
-                'score' => $scoreHtml,
-                'result' => $resultHtml,
-                'actions' => $actionsHtml,
+                'exam'      => $examTitle,
+                'score'     => $scoreHtml,
+                'result'    => $resultHtml,
+                'actions'   => $actionsHtml,
             ];
         }
 
         return response()->json([
-            'draw' => $draw,
-            'recordsTotal' => $recordsTotal,
+            'draw'            => $draw,
+            'recordsTotal'    => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
-            'data' => $data,
+            'data'            => $data,
         ]);
     }
 
+    /**
+     * DataTables-compatible attendance history for a course.
+     */
     public function attendanceHistoryData($id, Request $request)
     {
-        $course = Course::findOrFail($id);
+        $programmeBatch = CourseBatch::findOrFail($id);
+        $course = Course::findOrFail($programmeBatch->course_id);
 
-        $draw = (int) $request->input('draw', 0);
-        $start = max(0, (int) $request->input('start', 0));
-        $length = (int) $request->input('length', 10);
-        if ($length <= 0) $length = 10;
-        $length = min($length, 100);
+        $draw   = (int) $request->input('draw', 0);
+        $start  = max(0, (int) $request->input('start', 0));
+        $length = min(max((int) $request->input('length', 10), 1), 100);
 
         $searchValue = trim((string) $request->input('search.value', ''));
-        $searchLike = '%' . $searchValue . '%';
+        $searchLike  = '%' . $searchValue . '%';
 
-        $baseQuery = Attendance::query()
-            ->where('course_id', $id);
+        $baseQuery = Attendance::query()->where('course_id', $course->id);
 
         $recordsTotal = (clone $baseQuery)->count();
 
@@ -509,9 +458,7 @@ class CourseBatchCrudController extends CrudController
             ->filter(fn($r) => $r->user === null && $r->user_id !== null && ctype_digit((string) $r->user_id))
             ->pluck('user_id')
             ->map(fn($v) => (int) $v)
-            ->unique()
-            ->values()
-            ->all();
+            ->unique()->values()->all();
 
         $fallbackUsersById = collect();
         if (!empty($fallbackUserInternalIds)) {
@@ -530,7 +477,6 @@ class CourseBatchCrudController extends CrudController
 
             $studentName = $user?->name ?? ($record->user_id ?? 'N/A');
 
-            $dateStr = 'N/A';
             try {
                 $dateStr = $record->date ? \Carbon\Carbon::parse($record->date)->format('Y-m-d') : 'N/A';
             } catch (\Throwable $e) {
@@ -538,17 +484,17 @@ class CourseBatchCrudController extends CrudController
             }
 
             $data[] = [
-                'date' => e($dateStr),
+                'date'    => e($dateStr),
                 'student' => e($studentName),
-                'course' => e($course->course_name ?? 'N/A'),
+                'course'  => e($course->course_name ?? 'N/A'),
             ];
         }
 
         return response()->json([
-            'draw' => $draw,
-            'recordsTotal' => $recordsTotal,
+            'draw'            => $draw,
+            'recordsTotal'    => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
-            'data' => $data,
+            'data'            => $data,
         ]);
     }
 }

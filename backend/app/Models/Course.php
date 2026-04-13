@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\CourseBatch;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -94,6 +95,11 @@ class Course extends Model
     public function sessions()
     {
         return $this->hasMany(CourseSession::class, 'course_id');
+    }
+
+    public function programmeBatches()
+    {
+        return $this->hasMany(CourseBatch::class, 'course_id');
     }
 
     public function tags()

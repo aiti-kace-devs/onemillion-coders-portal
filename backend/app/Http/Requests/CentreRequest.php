@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class CentreRequest extends FormRequest
 {
@@ -29,6 +30,9 @@ class CentreRequest extends FormRequest
             'branch_id' => 'required|integer|exists:branches,id',
             'title' => 'required|string|max:255',
             'is_ready' => 'nullable|boolean',
+            'seat_count' => 'nullable|integer|min:0|max:255',
+            'short_slots_per_day' => 'nullable|integer|min:0|max:255',
+            'long_slots_per_day' => 'nullable|integer|min:0|max:255',
             'constituency_id' => [
                 'required',
                 'integer',
@@ -60,6 +64,27 @@ class CentreRequest extends FormRequest
             'constituency_id' => 'Constituency',
             'district_id' => 'District',
         ];
+    }
+
+    /**
+     * Cross-field validation: short_slots_per_day + long_slots_per_day must equal seat_count when all three are set.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v) {
+            $seat  = $this->input('seat_count');
+            $short = $this->input('short_slots_per_day');
+            $long  = $this->input('long_slots_per_day');
+
+            if ($seat !== null && $short !== null && $long !== null) {
+                if ((int) $short + (int) $long !== (int) $seat) {
+                    $v->errors()->add(
+                        'short_slots_per_day',
+                        'Short-course slots + long-course slots must equal the total seat count (' . $seat . ').'
+                    );
+                }
+            }
+        });
     }
 
     /**

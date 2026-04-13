@@ -5,6 +5,10 @@ namespace App\Providers;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
+use App\Services\AdmissionRevocationService;
+use App\Services\CourseBatchService;
+use App\Services\CourseRecommendationService;
+use App\Services\QuotaService;
 use Illuminate\Support\ServiceProvider;
 use Statamic\Facades\CP\Nav;
 use Illuminate\Support\Facades\Validator;
@@ -40,6 +44,15 @@ class AppServiceProvider extends ServiceProvider
         );
 
         $this->app->singleton(JwtService::class, fn() => JwtService::fromConfig());
+
+        $this->app->singleton(QuotaService::class);
+        $this->app->singleton(CourseBatchService::class, fn($app) => new CourseBatchService(
+            $app->make(QuotaService::class)
+        ));
+        $this->app->singleton(CourseRecommendationService::class, fn($app) => new CourseRecommendationService(
+            $app->make(QuotaService::class)
+        ));
+        $this->app->singleton(AdmissionRevocationService::class);
     }
 
     /**

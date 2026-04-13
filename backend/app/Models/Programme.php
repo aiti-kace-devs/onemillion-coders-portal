@@ -26,6 +26,8 @@ class Programme extends Model
         'title',
         'sub_title',
         'duration',
+        'duration_in_days',
+        'time_allocation',
         'start_date',
         'end_date',
         'description',
@@ -42,8 +44,10 @@ class Programme extends Model
     ];
 
     protected $casts = [
-        'status' => 'boolean',
-        'overview' => 'array'
+        'status'          => 'boolean',
+        'overview'        => 'array',
+        'duration_in_days' => 'integer',
+        'time_allocation'  => 'integer',
     ];
 
     public function centre()
@@ -115,6 +119,30 @@ class Programme extends Model
                 'what_you_will_learn' => $whatYouWillLearn,
                 'why_choose_this_course' => $whyChoose
             ];
+
+            // Auto-calculate duration_in_days and time_allocation from duration hours
+            $hours = (int) filter_var($programme->duration, FILTER_SANITIZE_NUMBER_INT);
+            if ($hours > 0) {
+                if ($hours < 40) {
+                    $programme->time_allocation  = 2;
+                    $programme->duration_in_days = (int) ceil($hours / 2);
+                } elseif ($hours <= 80) {
+                    $programme->time_allocation  = 4;
+                    $programme->duration_in_days = 20;
+                } elseif ($hours <= 120) {
+                    $programme->time_allocation  = 4;
+                    $programme->duration_in_days = 30;
+                } elseif ($hours <= 160) {
+                    $programme->time_allocation  = 4;
+                    $programme->duration_in_days = 40;
+                } elseif ($hours <= 200) {
+                    $programme->time_allocation  = 4;
+                    $programme->duration_in_days = 50;
+                } else {
+                    $programme->time_allocation  = 4;
+                    $programme->duration_in_days = 60;
+                }
+            }
         });
 
         static::saved(function ($programme) {

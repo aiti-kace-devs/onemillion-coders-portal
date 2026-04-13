@@ -164,6 +164,7 @@ Route::group([
     Route::post('course-batch/{id}/toggle', [CourseBatchCrudController::class, 'toggleStatus']);
     Route::get('course-batch/{id}/admitted-students-data', [CourseBatchCrudController::class, 'admittedStudentsData'])->name('course-batch.admitted-students-data');
     Route::get('course-batch/{id}/attendance-history-data', [CourseBatchCrudController::class, 'attendanceHistoryData'])->name('course-batch.attendance-history-data');
+    Route::post('course-batch/generate/{courseId}', [CourseBatchCrudController::class, 'generate'])->name('course-batch.generate');
     Route::crud('course-batch', 'CourseBatchCrudController');
     Route::post('district/{id}/toggle', [DistrictCrudController::class, 'toggleStatus']);
     Route::post('constituency/{id}/toggle', [ConstituencyCrudController::class, 'toggleStatus']);

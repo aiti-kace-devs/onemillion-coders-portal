@@ -2,11 +2,14 @@
 
 namespace App\Providers;
 
+use App\Events\AdmissionSlotFreed;
+use App\Events\CourseBatchCreated;
 use App\Events\FormSubmittedEvent;
 use App\Events\UserRegistered;
 use App\Events\CourseChanged;
 use App\Listeners\EmailSentListener;
 use App\Listeners\FormSubmitedListener;
+use App\Listeners\NotifyWaitlistedUsers;
 use App\Listeners\SendExamLoginCredentials;
 use App\Listeners\CourseChangedListener;
 use Illuminate\Auth\Events\Registered;
@@ -36,7 +39,13 @@ class EventServiceProvider extends ServiceProvider
         ],
         \Illuminate\Queue\Events\JobProcessed::class => [
             EmailSentListener::class
-        ]
+        ],
+        AdmissionSlotFreed::class => [
+            NotifyWaitlistedUsers::class,
+        ],
+        CourseBatchCreated::class => [
+            NotifyWaitlistedUsers::class,
+        ],
     ];
 
     /**

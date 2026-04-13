@@ -7,6 +7,8 @@ use App\Http\Controllers\StatamicEntryApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
+use App\Http\Controllers\Admin\Api\SlotRecommendationApiController;
+use App\Http\Controllers\Admin\Api\WaitlistApiController;
 use App\Http\Controllers\Admin\BatchCrudController;
 use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
 /*
@@ -22,6 +24,16 @@ use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
 Route::post('batch/add-courses/{batch}', [BatchCrudController::class, 'addCourses'])
     ->name('batch.add-courses');
 Route::post('/recommend/courses', [CourseMatchAPIController::class, 'recommendCourses']);
+
+// Waitlist
+Route::prefix('waitlist')->group(function () {
+    Route::post('join',    [WaitlistApiController::class, 'join']);
+    Route::delete('leave', [WaitlistApiController::class, 'leave']);
+    Route::get('status',   [WaitlistApiController::class, 'status']);
+});
+
+// Slot recommendation
+Route::post('slots/recommend', [SlotRecommendationApiController::class, 'recommend']);
 // Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
 // Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
 
