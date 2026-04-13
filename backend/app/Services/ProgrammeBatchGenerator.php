@@ -25,6 +25,7 @@ class ProgrammeBatchGenerator
     public function generate(Batch $admissionBatch, ?Programme $programme = null, ?Centre $centre = null): Collection
     {
         $generated = collect();
+        $newlyCreated = collect();
 
         $centres = $centre ? collect([$centre]) : $admissionBatch->centres;
         $programmes = $programme ? collect([$programme]) : $admissionBatch->programmes;
@@ -35,14 +36,14 @@ class ProgrammeBatchGenerator
                     continue;
                 }
 
-                $batches = $this->generateForPair($admissionBatch, $programme, $centre);
-                $generated = $generated->merge($batches);
+                [$all, $new] = $this->generateForPair($admissionBatch, $programme, $centre);
+                $generated = $generated->merge($all);
+                $newlyCreated = $newlyCreated->merge($new);
             }
         }
 
-        if ($created->isNotEmpty()) {
-            // Only fire the event with genuinely newly created batches
-            event(new ProgrammeBatchCreated($admissionBatch, $created));
+        if ($newlyCreated->isNotEmpty()) {
+            event(new ProgrammeBatchCreated($admissionBatch, $newlyCreated));
         }
 
         return $generated;
@@ -50,8 +51,10 @@ class ProgrammeBatchGenerator
 
     /**
      * Generate continuous, non-overlapping batches for a single (batch × programme × centre).
+     *
+     * @return array{0: Collection, 1: Collection} [allBatches, newlyCreatedBatches]
      */
-    private function generateForPair(Batch $admissionBatch, Programme $programme, Centre $centre): Collection
+    private function generateForPair(Batch $admissionBatch, Programme $programme, Centre $centre): array
     {
         $admissionStart = Carbon::parse($admissionBatch->start_date);
         $admissionEnd = Carbon::parse($admissionBatch->end_date);
@@ -64,17 +67,18 @@ class ProgrammeBatchGenerator
         $programmeWeeks = (int) ceil($programme->duration_in_days / 5);
 
         if ($programmeWeeks <= 0 || $admissionBatchWeeks < $programmeWeeks) {
-            return collect();
+            return [collect(), collect()];
         }
 
         // Number of complete batches that fit
         $count = (int) floor($admissionBatchWeeks / $programmeWeeks);
 
         if ($count <= 0) {
-            return collect();
+            return [collect(), collect()];
         }
 
-        $created = collect();
+        $all = collect();
+        $newlyCreated = collect();
         $currentStart = $admissionStart->copy();
 
         for ($i = 0; $i < $count; $i++) {
@@ -105,15 +109,16 @@ class ProgrammeBatchGenerator
                     'available_slots' => $centre->seat_count ?? 0,
                     'status' => true,
                 ]);
-                $created->push($batch);
+                $all->push($batch);
+                $newlyCreated->push($batch);
             } else {
-                $created->push($existing);
+                $all->push($existing);
             }
 
             // Next batch starts the next school day after this one ends
             $currentStart = SchoolDayCalculator::add($currentEnd, 1);
         }
 
-        return $created;
+        return [$all, $newlyCreated];
     }
 }
