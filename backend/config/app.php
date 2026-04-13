@@ -243,6 +243,7 @@ return [
     'super_admin_password' => env('SUPER_ADMIN_PASSWORD', Str::random()),
     'super_admin_name' => env('SUPER_ADMIN_NAME', 'Super Admin'),
     'use_basset_cloud' => env('USE_BASSET_CLOUD', false),
+    'basset_disk' => env('BASSET_DISK', 'basset'),
     'fulldate_format' => 'l, jS F, Y',
     'ignore_csp_policies' => env('IGNORE_POLICY', true),
     'horizon_path' => env('HORI', 'horizon'),

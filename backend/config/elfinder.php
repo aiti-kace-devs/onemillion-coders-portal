@@ -1,5 +1,19 @@
 <?php
 
+$diskToAdd = [];
+
+if (config('filesystems.default') === 's3') {
+    $diskToAdd[] = ['s3' => [
+        'URL' => env('AWS_URL'),
+        'alias' => CLOUD_STORAGE_ALIAS,
+    ]];
+} else {
+    $diskToAdd[] = ['gcs' => [
+        'URL' => env('GOOGLE_CLOUD_STORAGE_API_URI'),
+        'alias' => CLOUD_STORAGE_ALIAS,
+    ]];
+}
+
 return [
 
     /*
@@ -25,16 +39,12 @@ return [
     |        'alias' => 'Local storage',
     |    ]
     */
-    'disks' => [
+    'disks' => array_merge($diskToAdd, [
         'public' => [
             'URL' => config('app.url') . '/storage',
             'alias' => 'Public Storage',
         ],
-        'gcs' => [
-            'URL' => env('GOOGLE_CLOUD_STORAGE_API_URI'),
-            'alias' => CLOUD_STORAGE_ALIAS,
-        ],
-    ],
+    ]),
 
     /*
     |--------------------------------------------------------------------------
