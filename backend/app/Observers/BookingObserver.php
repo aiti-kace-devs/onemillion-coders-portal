@@ -14,10 +14,7 @@ class BookingObserver
      */
     public function created(Booking $booking): void
     {
-        if ($booking->user_admission_id || $booking->status !== Booking::STATUS_CONFIRMED) {
-            return;
-        }
-
+       
         $admission = UserAdmission::where('user_id', $booking->user_id)->first();
         if (!$admission) {
             return;
@@ -32,16 +29,19 @@ class BookingObserver
         $booking->saveQuietly();
     }
 
-    public function deleted(Booking $booking): void
-    {
-        if ($booking->user_admission_id) {
-            UserAdmission::where('id', $booking->user_admission_id)
-                ->update(['programme_batch_id' => null]);
-            return;
-        }
+    // public function deleted(Booking $booking): void
+    // {
+    //     if ($booking->user_admission_id) {
+    //         UserAdmission::where('id', $booking->user_admission_id)
+    //             ->update(['programme_batch_id' => null]);
+    //         return;
+    //     }
 
-        UserAdmission::where('user_id', $booking->user_id)
-            ->where('programme_batch_id', $booking->programme_batch_id)
-            ->update(['programme_batch_id' => null]);
-    }
+    //     UserAdmission::where('user_id', $booking->user_id)
+    //         ->where('programme_batch_id', $booking->programme_batch_id)
+    //         ->update(['programme_batch_id' => null]);
+    // }
+
+
+
 }

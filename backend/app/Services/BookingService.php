@@ -6,6 +6,7 @@ use App\Events\AdmissionSlotFreed;
 use App\Models\Booking;
 use App\Models\Course;
 use App\Models\CourseSession;
+use App\Models\MasterSession;
 use App\Models\ProgrammeBatch;
 use App\Models\User;
 use App\Models\UserAdmission;
@@ -23,7 +24,7 @@ class BookingService
      *
      * @throws Exception when either capacity is exhausted or the session is incompatible.
      */
-    public function book(User $user, Course $course, ProgrammeBatch $batch, CourseSession $session): Booking
+    public function book(User $user, Course $course, ProgrammeBatch $batch, MasterSession $session): Booking
     {
         return DB::transaction(function () use ($user, $course, $batch, $session) {
             $lockedBatch = ProgrammeBatch::with('centre')
@@ -35,16 +36,11 @@ class BookingService
                 throw new Exception('No available slots for this programme batch.');
             }
 
-            if ((int) $session->course_id !== (int) $course->id || (int) $session->centre_id !== (int) $lockedBatch->centre_id) {
-                throw new Exception('Course session does not match course/centre.');
-            }
-
             $courseType = Booking::resolveCourseType($course->id);
-            $sessionCapacity = $lockedBatch->centre?->slotCapacityFor($courseType);
+            $sessionCapacity = $course->centre?->slotCapacityFor($courseType);
 
             if ($sessionCapacity !== null) {
-                $sessionUsed = Booking::confirmed()
-                    ->where('course_session_id', $session->id)
+                $sessionUsed = Booking::where('master_session_id', $session->id)
                     ->lockForUpdate()
                     ->count();
 
@@ -53,8 +49,7 @@ class BookingService
                 }
             }
 
-            $existing = Booking::confirmed()
-                ->where('user_id', $user->userId)
+            $existing = Booking::where('user_id', $user->userId)
                 ->where('programme_batch_id', $batch->id)
                 ->first();
 
@@ -62,8 +57,7 @@ class BookingService
                 return $existing;
             }
 
-            $previous = Booking::confirmed()
-                ->where('user_id', $user->userId)
+            $previous = Booking::where('user_id', $user->userId)
                 ->where('programme_batch_id', '!=', $batch->id)
                 ->first();
 
@@ -73,7 +67,7 @@ class BookingService
 
             $lockedBatch->decrement('available_slots');
             AvailabilityService::clearCache(
-                $lockedBatch->centre_id,
+                $course->centre_id,
                 $course->id,
                 $lockedBatch->start_date,
                 $lockedBatch->end_date
@@ -92,11 +86,11 @@ class BookingService
             return Booking::create([
                 'user_id' => $user->userId,
                 'programme_batch_id' => $batch->id,
-                'course_session_id' => $session->id,
+                'master_session_id' => $session->id,
                 'centre_id' => $lockedBatch->centre_id,
                 'course_id' => $course->id,
                 'course_type' => $courseType,
-                'status' => Booking::STATUS_CONFIRMED,
+                'status' => true,
                 'booked_at' => now(),
                 'user_admission_id' => $admission->id,
             ]);

@@ -21,6 +21,7 @@ class Booking extends Model
         'user_id',
         'programme_batch_id',
         'course_session_id',
+        'master_session_id',
         'centre_id',
         'course_id',
         'course_type',
@@ -33,6 +34,7 @@ class Booking extends Model
     protected $casts = [
         'booked_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'status' => 'boolean',
     ];
 
     public function getActivitylogOptions(): LogOptions
@@ -43,9 +45,6 @@ class Booking extends Model
             ->useLogName('booking')
             ->setDescriptionForEvent(fn (string $event) => "Booking {$event}");
     }
-
-    public const STATUS_CONFIRMED = 'confirmed';
-    public const STATUS_CANCELLED = 'cancelled';
 
     protected static function booted(): void
     {
@@ -74,6 +73,20 @@ class Booking extends Model
         return $this->belongsTo(CourseSession::class, 'course_session_id');
     }
 
+    public function masterSession(): BelongsTo
+    {
+        return $this->belongsTo(MasterSession::class, 'master_session_id');
+    }
+
+    public function session()
+    {
+        if ($this->course_session_id) {
+            return $this->belongsTo(CourseSession::class, 'course_session_id');
+        } else {
+            return $this->belongsTo(MasterSession::class, 'master_session_id');
+        }
+    }
+
     public function centre(): BelongsTo
     {
         return $this->belongsTo(Centre::class);
@@ -89,8 +102,10 @@ class Booking extends Model
         return $this->belongsTo(UserAdmission::class, 'user_admission_id');
     }
 
-    public function scopeConfirmed($query)
+    public function user()
     {
-        return $query->where('status', self::STATUS_CONFIRMED);
+        return $this->belongsTo(User::class, 'user_id', 'userId');
     }
+
+
 }

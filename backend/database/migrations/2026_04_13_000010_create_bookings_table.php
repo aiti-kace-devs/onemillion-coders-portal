@@ -11,7 +11,8 @@ return new class extends Migration {
             $table->id();
             $table->string('user_id'); // mirrors users.userId
             $table->foreignId('programme_batch_id')->constrained('programme_batches')->cascadeOnDelete();
-            $table->foreignId('course_session_id')->constrained('course_sessions')->cascadeOnDelete();
+            $table->foreignId('course_session_id')->nullable()->constrained('course_sessions')->cascadeOnDelete();
+            $table->foreignId('master_session_id')->constrained('master_sessions')->cascadeOnDelete();
             $table->foreignId('centre_id')->constrained('centres')->cascadeOnDelete();
             $table->foreignId('course_id')->constrained('courses')->cascadeOnDelete();
             $table->enum('course_type', ['short', 'long']);
@@ -29,6 +30,8 @@ return new class extends Migration {
             $table->index(['centre_id', 'course_type', 'status']);
             $table->index(['programme_batch_id', 'status']);
             $table->index(['course_session_id', 'status']);
+            $table->index(['master_session_id', 'status']);
+
         });
     }
 
