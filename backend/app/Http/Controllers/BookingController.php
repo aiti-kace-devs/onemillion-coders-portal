@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\CourseSession;
 use App\Models\MasterSession;
 use App\Models\ProgrammeBatch;
+use App\Models\User;
 use App\Services\AvailabilityService;
 use App\Services\BookingService;
 use Carbon\Carbon;
@@ -32,10 +33,12 @@ class BookingController extends Controller
             ], 422);
         }
 
-        $user = $request->user();
-        if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
-        }
+        //TODO: remove random user
+        // $user = $request->user();
+        // if (!$user) {
+        //     return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
+        // }
+        $user = User::inRandomOrder()->first();
 
         $course = Course::find($validated['course_id']);
         $session = MasterSession::find($validated['session_id']);

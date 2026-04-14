@@ -133,11 +133,11 @@ class Programme extends Model
             // Auto-compute duration_in_days and time_allocation from duration
             if ($programme->duration) {
                 $hours = (int) $programme->duration;
-                $programme->time_allocation = $hours < 40
+                $programme->time_allocation = $hours <= 40
                     ? self::TIME_ALLOCATION_SHORT
                     : self::TIME_ALLOCATION_LONG;
 
-                if ($hours < 40) {
+                if ($hours <= 40) {
                     $programme->duration_in_days = (int) ceil($hours / 2);
                 } elseif ($hours <= 80) {
                     $programme->duration_in_days = 20;
@@ -150,6 +150,8 @@ class Programme extends Model
                 } else {
                     $programme->duration_in_days = 60;
                 }
+
+                $programme->duration = $hours . ' hours';
             }
         });
 

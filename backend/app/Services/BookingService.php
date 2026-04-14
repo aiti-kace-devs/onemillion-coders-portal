@@ -43,6 +43,7 @@ class BookingService
                 // Bypass the cache and compute remaining seats fresh inside the lock
                 $remaining = $this->computeRemainingSeats($centreId, $batch, $session);
 
+
                 if ($remaining <= 0) {
                     throw new Exception('Course session is full.');
                 }
@@ -51,6 +52,7 @@ class BookingService
                 $existing = Booking::where('user_id', $user->userId)
                     ->where('programme_batch_id', $batch->id)
                     ->first();
+
 
                 if ($existing) {
                     return $existing;
@@ -76,7 +78,6 @@ class BookingService
                     ['user_id' => $user->userId],
                     [
                         'course_id' => $course->id,
-                        'batch_id' => $batch->admission_batch_id,
                         'programme_batch_id' => $batch->id,
                         'email_sent' => now(),
                     ]

@@ -43,7 +43,7 @@ class Booking extends Model
             ->logFillable()
             ->logOnlyDirty()
             ->useLogName('booking')
-            ->setDescriptionForEvent(fn (string $event) => "Booking {$event}");
+            ->setDescriptionForEvent(fn(string $event) => "Booking {$event}");
     }
 
     protected static function booted(): void
@@ -59,8 +59,9 @@ class Booking extends Model
 
     public static function resolveCourseType(int $courseId): string
     {
-        return Course::with('programme:id,time_allocation')->find($courseId)?->programme?->courseType()
-            ?? Programme::COURSE_TYPE_SHORT;
+        $course = Course::with('programme:id,time_allocation')->find($courseId);
+        return $course?->programme?->courseType()
+            ?? ($course->programme->time_allocation == 2 ? Programme::COURSE_TYPE_SHORT : Programme::COURSE_TYPE_LONG);
     }
 
     public function programmeBatch(): BelongsTo

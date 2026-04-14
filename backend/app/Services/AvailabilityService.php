@@ -128,19 +128,24 @@ class AvailabilityService
             return ['available' => 0, 'quota_source' => 'standard', 'recommendations' => []];
         }
 
+
         // Query programme_batches overlapping [from, to]
         $batches = ProgrammeBatch::where('admission_batch_id', $admissionBatch->id)
             ->where('programme_id', $programme->id)
             ->where('status', true)
             ->where(function ($q) use ($from, $to) {
                 $q->whereBetween('start_date', [$from, $to])
-                  ->orWhereBetween('end_date', [$from, $to])
-                  ->orWhere(function ($q2) use ($from, $to) {
-                      $q2->where('start_date', '<=', $from)
-                         ->where('end_date', '>=', $to);
-                  });
+                    ->orWhereBetween('end_date', [$from, $to])
+                    ->orWhere(function ($q2) use ($from, $to) {
+                        $q2->where('start_date', '<=', $from)
+                            ->where('end_date', '>=', $to);
+                    });
             })
             ->get();
+
+        if ($batches->isEmpty()) {
+            return ['available' => 0, 'quota_source' => 'standard', 'recommendations' => []];
+        }
 
         // Resolve quota source and capacity via IQS
         $quotaSource = 'standard';
