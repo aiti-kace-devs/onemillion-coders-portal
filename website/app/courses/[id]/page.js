@@ -95,6 +95,7 @@ export default function CoursesPage({ params }) {
   const [selectedSession, setSelectedSession] = useState(null);
   const [showCourseFull, setShowCourseFull] = useState(false);
   const [waitlistJoined, setWaitlistJoined] = useState(false);
+  const [courseFullTab, setCourseFullTab] = useState("centres"); // "centres" | "courses"
   const isDemo = searchParams.get("demo") === "true";
 
   // ── Mock data (not connected to API) ──
@@ -2404,7 +2405,7 @@ export default function CoursesPage({ params }) {
                           </>
                         )}
 
-                      {/* ── Centre Full — Recommend other centres ── */}
+                      {/* ── Centre Full — Tabbed recommendations ── */}
                       {!enrollSuccess &&
                         !waitlistJoined &&
                         enrollmentStep === "courseFull" && (
@@ -2418,7 +2419,7 @@ export default function CoursesPage({ params }) {
                             >
                               <FiX className="w-4.5 h-4.5" />
                             </button>
-                            <div className="text-center mb-5 sm:mb-6">
+                            <div className="text-center mb-4 sm:mb-5">
                               <div className="w-12 h-12 bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3 ring-4 ring-orange-50">
                                 <FiAlertCircle className="w-6 h-6 text-orange-500" />
                               </div>
@@ -2433,124 +2434,119 @@ export default function CoursesPage({ params }) {
                               </p>
                             </div>
 
-                            {/* Other centres running the same course */}
-                            <div className="mb-5">
-                              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                                Available at other centres
-                              </h3>
-                              <div className="space-y-2">
-                                {MOCK_ALT_CENTRES.map((alt) => (
-                                  <button
-                                    key={alt.id}
-                                    onClick={() => {
-                                      setSelectedCentre({
-                                        id: alt.id,
-                                        title: alt.name,
-                                      });
-                                      setEnrollingCentreId(alt.id);
-                                      setSelectedBatch(null);
-                                      setSelectedSession(null);
-                                      setEnrollmentStep("batch");
-                                    }}
-                                    className="w-full text-left p-3 sm:p-3.5 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]"
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center flex-shrink-0 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors">
-                                        <FiMapPin className="w-4 h-4 text-blue-600" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors truncate">
-                                          {alt.name}
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                                        <span className="text-xs font-bold text-green-600">
-                                          {alt.availableSlots} slots
-                                        </span>
-                                        <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" />
-                                      </div>
-                                    </div>
-                                  </button>
-                                ))}
-                              </div>
+                            {/* Tabs */}
+                            <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
+                              <button
+                                onClick={() => setCourseFullTab("centres")}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                                  courseFullTab === "centres"
+                                    ? "bg-white text-gray-900 shadow-sm"
+                                    : "text-gray-500 hover:text-gray-700"
+                                }`}
+                              >
+                                <FiMapPin className="w-3.5 h-3.5" />
+                                Same course
+                              </button>
+                              <button
+                                onClick={() => setCourseFullTab("courses")}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                                  courseFullTab === "courses"
+                                    ? "bg-white text-gray-900 shadow-sm"
+                                    : "text-gray-500 hover:text-gray-700"
+                                }`}
+                              >
+                                <FiTarget className="w-3.5 h-3.5" />
+                                Same centre
+                              </button>
                             </div>
 
-                            {/* Other courses at their original centre */}
+                            {/* Tab content */}
                             <div className="mb-5">
-                              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                                Other courses at {selectedCentre?.title}
-                              </h3>
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {MOCK_ALT_COURSES.map((alt) => (
-                                  <button
-                                    key={alt.id}
-                                    onClick={() => {
-                                      setEnrolledCourseName(alt.title);
-                                      setEnrollingCourseId(alt.id);
-                                      setSelectedBatch(null);
-                                      setSelectedSession(null);
-                                      setEnrollmentStep("batch");
-                                    }}
-                                    className="text-left rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] overflow-hidden"
-                                  >
-                                    <div className="relative h-20 sm:h-24 bg-gray-100">
-                                      {alt.image &&
-                                      !imageErrors[`alt-${alt.id}`] ? (
-                                        <Image
-                                          src={alt.image}
-                                          alt={alt.title}
-                                          fill
-                                          className="object-cover"
-                                          onError={() =>
-                                            setImageErrors((prev) => ({
-                                              ...prev,
-                                              [`alt-${alt.id}`]: true,
-                                            }))
-                                          }
-                                        />
-                                      ) : (
-                                        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-                                          <Image
-                                            src="/images/one-million-coders-logo.png"
-                                            alt="One Million Coders"
-                                            width={60}
-                                            height={20}
-                                            className="opacity-15"
-                                          />
+                              {courseFullTab === "centres" && (
+                                <>
+                                  <p className="text-[11px] sm:text-xs text-gray-400 mb-3">
+                                    Other centres running <span className="text-gray-600">{enrolledCourseName}</span>:
+                                  </p>
+                                  <div className="space-y-2">
+                                    {MOCK_ALT_CENTRES.map((alt) => (
+                                      <button
+                                        key={alt.id}
+                                        onClick={() => {
+                                          setSelectedCentre({ id: alt.id, title: alt.name });
+                                          setEnrollingCentreId(alt.id);
+                                          setSelectedBatch(null);
+                                          setSelectedSession(null);
+                                          setCourseFullTab("centres");
+                                          setEnrollmentStep("batch");
+                                        }}
+                                        className="w-full text-left p-3 sm:p-3.5 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]"
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center flex-shrink-0 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors">
+                                            <FiMapPin className="w-4 h-4 text-blue-600" />
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors truncate">{alt.name}</div>
+                                          </div>
+                                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                                            <span className="text-xs font-bold text-green-600">{alt.availableSlots} slots</span>
+                                            <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" />
+                                          </div>
                                         </div>
-                                      )}
-                                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                                      <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-green-500/90 text-white text-[9px] sm:text-[10px] font-bold rounded-full backdrop-blur-sm">
-                                        {alt.availableSlots} slots
-                                      </div>
-                                      {alt.matchPercentage && (
-                                        <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-[9px] sm:text-[10px] font-medium rounded-full backdrop-blur-sm text-yellow-700">
-                                          <FiStar className="w-2.5 h-2.5" />
-                                          {alt.matchPercentage}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+
+                              {courseFullTab === "courses" && (
+                                <>
+                                  <p className="text-[11px] sm:text-xs text-gray-400 mb-3">
+                                    Available courses at <span className="text-gray-600">{selectedCentre?.title}</span>:
+                                  </p>
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    {MOCK_ALT_COURSES.map((alt) => (
+                                      <button
+                                        key={alt.id}
+                                        onClick={() => {
+                                          setEnrolledCourseName(alt.title);
+                                          setEnrollingCourseId(alt.id);
+                                          setSelectedBatch(null);
+                                          setSelectedSession(null);
+                                          setCourseFullTab("centres");
+                                          setEnrollmentStep("batch");
+                                        }}
+                                        className="text-left rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] overflow-hidden"
+                                      >
+                                        <div className="relative h-20 sm:h-24 bg-gray-100">
+                                          {alt.image && !imageErrors[`alt-${alt.id}`] ? (
+                                            <Image src={alt.image} alt={alt.title} fill className="object-cover" onError={() => setImageErrors((prev) => ({ ...prev, [`alt-${alt.id}`]: true }))} />
+                                          ) : (
+                                            <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                                              <Image src="/images/one-million-coders-logo.png" alt="One Million Coders" width={60} height={20} className="opacity-15" />
+                                            </div>
+                                          )}
+                                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                                          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-green-500/90 text-white text-[9px] sm:text-[10px] font-bold rounded-full backdrop-blur-sm">{alt.availableSlots} slots</div>
+                                          {alt.matchPercentage && (
+                                            <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-[9px] sm:text-[10px] font-medium rounded-full backdrop-blur-sm text-yellow-700">
+                                              <FiStar className="w-2.5 h-2.5" />{alt.matchPercentage}
+                                            </div>
+                                          )}
                                         </div>
-                                      )}
-                                    </div>
-                                    <div className="p-2 sm:p-2.5">
-                                      <h4 className="text-[11px] sm:text-xs font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors line-clamp-2 leading-tight mb-1">
-                                        {alt.title}
-                                      </h4>
-                                      <div className="flex items-center gap-1 text-[10px] text-gray-400">
-                                        <FiClock className="w-2.5 h-2.5" />
-                                        <span>{alt.duration}</span>
-                                      </div>
-                                    </div>
-                                  </button>
-                                ))}
-                              </div>
+                                        <div className="p-2 sm:p-2.5">
+                                          <h4 className="text-[11px] sm:text-xs font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors line-clamp-2 leading-tight mb-1">{alt.title}</h4>
+                                          <div className="flex items-center gap-1 text-[10px] text-gray-400"><FiClock className="w-2.5 h-2.5" /><span>{alt.duration}</span></div>
+                                        </div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
                             </div>
 
-                            {/* Enroll without support / Waitlist */}
+                            {/* Fixed bottom: Enroll without support / Waitlist */}
                             <div className="pt-4 border-t border-gray-100 space-y-2">
-                              <p className="text-[11px] sm:text-xs text-gray-400 mb-1">
-                                Or:
-                              </p>
-
-                              {/* Enroll without support */}
                               <button
                                 onClick={() => handleSupportAnswer(false)}
                                 disabled={enrollSubmitting}
@@ -2561,20 +2557,12 @@ export default function CoursesPage({ params }) {
                                     <FiCheckCircle className="w-4 h-4 text-green-600" />
                                   </div>
                                   <div className="text-left flex-1">
-                                    <div className="text-sm font-semibold text-gray-900">
-                                      Enroll without support
-                                    </div>
-                                    <div className="text-[11px] sm:text-xs text-gray-400">
-                                      Skip support and enroll at this centre now
-                                    </div>
+                                    <div className="text-sm font-semibold text-gray-900">Enroll without support</div>
+                                    <div className="text-[11px] sm:text-xs text-gray-400">Skip support and enroll now</div>
                                   </div>
-                                  {enrollSubmitting && (
-                                    <FiLoader className="w-4 h-4 text-gray-400 animate-spin flex-shrink-0" />
-                                  )}
+                                  {enrollSubmitting && <FiLoader className="w-4 h-4 text-gray-400 animate-spin flex-shrink-0" />}
                                 </div>
                               </button>
-
-                              {/* Waitlist */}
                               <button
                                 onClick={() => setWaitlistJoined(true)}
                                 className="w-full p-3 sm:p-3.5 rounded-xl border border-dashed border-gray-300 hover:border-yellow-400 hover:bg-yellow-50/30 transition-all duration-200 group active:scale-[0.99]"
@@ -2584,13 +2572,8 @@ export default function CoursesPage({ params }) {
                                     <FiClock className="w-4 h-4 text-yellow-600" />
                                   </div>
                                   <div className="text-left flex-1">
-                                    <div className="text-sm font-semibold text-gray-900">
-                                      Join the waitlist
-                                    </div>
-                                    <div className="text-[11px] sm:text-xs text-gray-400 line-clamp-1">
-                                      Wait for a supported slot at{" "}
-                                      {selectedCentre?.title || "your centre"}
-                                    </div>
+                                    <div className="text-sm font-semibold text-gray-900">Join the waitlist</div>
+                                    <div className="text-[11px] sm:text-xs text-gray-400 line-clamp-1">Wait for a supported slot at {selectedCentre?.title || "your centre"}</div>
                                   </div>
                                 </div>
                               </button>
