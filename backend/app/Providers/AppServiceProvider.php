@@ -53,10 +53,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        // Register model observers
-        Booking::observe(BookingObserver::class);
-        ProgrammeBatch::observe(ProgrammeBatchObserver::class);
-
         // Paginator::useBootstrapFour();
 
         if ($this->app->isLocal()) {

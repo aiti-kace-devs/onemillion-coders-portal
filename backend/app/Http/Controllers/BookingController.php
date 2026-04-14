@@ -33,12 +33,10 @@ class BookingController extends Controller
             ], 422);
         }
 
-        //TODO: remove random user
-        // $user = $request->user();
-        // if (!$user) {
-        //     return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
-        // }
-        $user = User::inRandomOrder()->first();
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
+        }
 
         $course = Course::find($validated['course_id']);
         $session = MasterSession::find($validated['session_id']);
