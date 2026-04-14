@@ -22,11 +22,8 @@ class ProgrammeBatchRequest extends FormRequest
         return [
             'admission_batch_id' => 'required|exists:admission_batches,id',
             'programme_id' => 'required|exists:programmes,id',
-            'centre_id' => 'required|exists:centres,id',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'max_enrolments' => 'required|integer|min:0',
-            'available_slots' => 'required|integer|min:0',
             'status' => 'nullable|boolean',
         ];
     }

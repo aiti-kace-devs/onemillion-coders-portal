@@ -277,4 +277,92 @@ class BookingService
 
         return $remainingDays < $smallestLongDuration;
     }
+
+    /**
+     * Batch fetch remaining seats for multiple batches and sessions at once.
+     *
+     * This avoids N+1 query problems by loading all data in bulk and
+     * computing seats with minimal database queries.
+     *
+     * @param int $centreId The centre ID
+     * @param array $batchIds Array of programme batch IDs
+     * @param array $sessionIds Array of master session IDs
+     * @return array Map of "batchId:sessionId" => remainingSeats
+     */
+    public function getRemainingSeatsBatch(int $centreId, array $batchIds, array $sessionIds): array
+    {
+        if (empty($batchIds) || empty($sessionIds)) {
+            return [];
+        }
+
+        $centre = Centre::find($centreId);
+        if (!$centre) {
+            return [];
+        }
+
+        // Load all batches and sessions at once
+        $batches = ProgrammeBatch::whereIn('id', $batchIds)->get()->keyBy('id');
+        $sessions = MasterSession::whereIn('id', $sessionIds)->get()->keyBy('id');
+
+        // Fetch all occupancy data in one query
+        $occupancyData = DB::table('daily_session_occupancy')
+            ->where('centre_id', $centreId)
+            ->whereIn('master_session_id', $sessionIds)
+            ->get()
+            ->groupBy(function ($row) {
+                return $row->master_session_id;
+            });
+
+        $results = [];
+
+        foreach ($batchIds as $batchId) {
+            $batch = $batches->get($batchId);
+            if (!$batch) {
+                continue;
+            }
+
+            foreach ($sessionIds as $sessionId) {
+                $session = $sessions->get($sessionId);
+                if (!$session) {
+                    $results["{$batchId}:{$sessionId}"] = 0;
+                    continue;
+                }
+
+                $key = "{$batchId}:{$sessionId}";
+
+                // Try cache first for this specific combination
+                $cacheKey = "remaining_seats:{$centreId}:{$batchId}:{$sessionId}";
+                $cached = Cache::get($cacheKey);
+                if ($cached !== null) {
+                    $results[$key] = (int) $cached;
+                    continue;
+                }
+
+                // Compute and cache
+                $courseType = $session->course_type ?? Programme::COURSE_TYPE_SHORT;
+                $capacity = $this->resolveEffectiveCapacity($centre, $courseType, $batch);
+
+                if ($capacity === null || $capacity <= 0) {
+                    $results[$key] = 0;
+                    Cache::put($cacheKey, 0, now()->addHour());
+                    continue;
+                }
+
+                // Get max occupancy for this session within the batch date range
+                $sessionOccupancy = $occupancyData->get($sessionId, collect());
+                $maxOccupied = $sessionOccupancy
+                    ->filter(function ($row) use ($batch) {
+                        $date = Carbon::parse($row->date);
+                        return $date->between($batch->start_date, $batch->end_date);
+                    })
+                    ->max('occupied_count') ?? 0;
+
+                $remaining = max(0, $capacity - $maxOccupied);
+                $results[$key] = $remaining;
+                Cache::put($cacheKey, $remaining, now()->addHour());
+            }
+        }
+
+        return $results;
+    }
 }

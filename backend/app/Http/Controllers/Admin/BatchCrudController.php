@@ -140,14 +140,16 @@ class BatchCrudController extends CrudController
 
         CRUD::setValidation(BatchRequest::class);
 
+        // Set up common fields first
+        $this->setupCommonBatchFields();
+
         // Hide extra save buttons - only show "Save and edit this item"
         CRUD::removeButton('save_and_new');
         CRUD::removeButton('save_and_preview');
         CRUD::removeButton('preview');
 
+        // Then add courses management section
         $this->addCoursesManagementSection();
-
-        $this->setupCommonBatchFields();
     }
 
 
@@ -202,12 +204,12 @@ class BatchCrudController extends CrudController
             'name' => 'regenerate_batches',
             'type' => 'custom_html',
             'value' => '<div class="mb-3">
-                <a href="' . url('admin/batch/' . $batch->id . '/regenerate-batches') . '"
-                   class="btn btn-warning"
-                   onclick="event.preventDefault(); if(confirm(\'Regenerate programme batches for this admission? This may overwrite existing batches.\')) { document.getElementById(\'regenerate-batches-form\').submit(); }">
+                <button type="button"
+                   id="btn-regenerate-batches"
+                   class="btn btn-warning">
                     <i class="la la-refresh"></i> Regenerate Programme Batches
-                </a>
-                <form id="regenerate-batches-form" action="' . url('admin/batch/' . $batch->id . '/regenerate-batches') . '" method="POST" style="display: none;">
+                </button>
+                <form id="regenerate-batches-form-' . $batch->id . '" action="' . url('admin/batch/' . $batch->id . '/regenerate-batches') . '" method="POST" style="display: none;">
                     ' . csrf_field() . '
                 </form>
             </div>',
@@ -261,14 +263,12 @@ class BatchCrudController extends CrudController
 
     public function update()
     {
-        // Check permissions
-        if (!backpack_user()->can('batch.update.self')) {
+        // Check permissions - must match setupUpdateOperation
+        if (!backpack_user()->can('batch.update.all')) {
             abort(403, 'Unauthorized action.');
         }
 
-        $response = $this->traitUpdate();
-
-        return $response;
+        return $this->traitUpdate();
     }
 
     /**
@@ -483,12 +483,17 @@ class BatchCrudController extends CrudController
      */
     public function regenerate(Request $request, int $id)
     {
-        $batch = Batch::findOrFail($id);
+        try {
+            $batch = Batch::findOrFail($id);
 
-        $generator = app(ProgrammeBatchGenerator::class);
-        $generated = $generator->generate($batch);
+            $generator = app(ProgrammeBatchGenerator::class);
+            $generated = $generator->generate($batch);
 
-        return redirect()->back()
-            ->with('success', "Regenerated {$generated->count()} programme batches for '{$batch->title}'.");
+            return redirect()->back()
+                ->with('success', "Regenerated {$generated->count()} programme batches for '{$batch->title}'.");
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Failed to regenerate programme batches: ' . $e->getMessage());
+        }
     }
 }

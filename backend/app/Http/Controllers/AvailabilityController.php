@@ -40,28 +40,23 @@ class AvailabilityController extends Controller
      * with per-session remaining seats from the occupancy engine.
      *
      * GET /api/availability/batches?course_id=X&centre_id=Y
+     * POST /api/availability/batches { "course_id": X, "centre_id": Y }
      */
     public function batches(Request $request, BookingService $bookingService): JsonResponse
     {
         $request->validate([
             'course_id' => 'required|integer|exists:courses,id',
-            // 'centre_id' => 'required|integer|exists:centres,id',
         ]);
 
-        $courseId = (int) $request->query('course_id');
-        // $centreId = (int) $request->query('centre_id');
+        $courseId = (int) $request->input('course_id');
 
         $course = Course::with(['programme', 'centre'])->find($courseId);
-        $centre = $course->centre;
 
-        if (!$course || !$course->programme || !$centre) {
+        if (!$course || !$course->programme || !$course->centre) {
             return response()->json(['success' => false, 'message' => 'Course or centre not found.'], 404);
         }
 
-        if ((int) $course->centre_id !== $centre->id) {
-            return response()->json(['success' => false, 'message' => 'Course does not belong to this centre.'], 422);
-        }
-
+        $centre = $course->centre;
         $programme = $course->programme;
         $courseType = $programme->courseType();
 
@@ -83,25 +78,43 @@ class AvailabilityController extends Controller
             ]);
         }
 
-        // Find active programme batches
+        // Find active programme batches with eager loading
         $batches = ProgrammeBatch::where('admission_batch_id', $admissionBatch->id)
             ->where('programme_id', $programme->id)
             ->where('status', true)
             ->orderBy('start_date')
             ->get();
 
+        if ($batches->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'centre' => ['id' => $centre->id, 'title' => $centre->title],
+                'course_type' => $courseType,
+                'capacity' => $centre->slotCapacityFor($courseType),
+                'batches' => [],
+            ]);
+        }
+
         // Get active master sessions for this course type
         $sessions = MasterSession::where('course_type', $courseType)
             ->where('status', true)
             ->get();
 
-        $batchData = $batches->map(function ($batch) use ($course, $sessions, $bookingService) {
-            $sessionData = $sessions->map(function ($session) use ($course, $batch, $bookingService) {
+        // Batch fetch all remaining seats at once
+        $remainingSeats = $bookingService->getRemainingSeatsBatch(
+            $centre->id,
+            $batches->pluck('id')->toArray(),
+            $sessions->pluck('id')->toArray()
+        );
+
+        $batchData = $batches->map(function ($batch) use ($sessions, $remainingSeats) {
+            $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats) {
+                $key = "{$batch->id}:{$session->id}";
                 return [
                     'session_id' => $session->id,
-                    'session_name' => $session->master_name,
+                    'session_name' => "{$session->session_type} Session",
                     'time' => $session->time,
-                    'remaining' => $bookingService->getRemainingSeats($course->centre->id, $batch->id, $session->id),
+                    'remaining' => $remainingSeats[$key] ?? 0,
                 ];
             })->values()->toArray();
 
@@ -171,10 +184,28 @@ class AvailabilityController extends Controller
             ->where('status', true)
             ->get();
 
+        if ($siblingCentres->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'origin_centre' => ['id' => $centre->id, 'title' => $centre->title],
+                'programme' => ['id' => $programme->id, 'title' => $programme->title],
+                'alternatives' => [],
+            ]);
+        }
+
         // Get active master sessions for this course type
         $sessions = MasterSession::where('course_type', $courseType)
             ->where('status', true)
             ->get();
+
+        if ($sessions->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'origin_centre' => ['id' => $centre->id, 'title' => $centre->title],
+                'programme' => ['id' => $programme->id, 'title' => $programme->title],
+                'alternatives' => [],
+            ]);
+        }
 
         $alternatives = [];
 
@@ -197,11 +228,23 @@ class AvailabilityController extends Controller
                 ->orderBy('start_date')
                 ->get();
 
+            if ($batches->isEmpty()) {
+                continue;
+            }
+
+            // Batch fetch all remaining seats for this centre
+            $remainingSeats = $bookingService->getRemainingSeatsBatch(
+                $siblingCentre->id,
+                $batches->pluck('id')->toArray(),
+                $sessions->pluck('id')->toArray()
+            );
+
             $totalAvailable = 0;
 
-            $batchData = $batches->map(function ($batch) use ($siblingCentre, $sessions, $bookingService, &$totalAvailable) {
-                $sessionData = $sessions->map(function ($session) use ($siblingCentre, $batch, $bookingService, &$totalAvailable) {
-                    $remaining = $bookingService->getRemainingSeats($siblingCentre->id, $batch->id, $session->id);
+            $batchData = $batches->map(function ($batch) use ($sessions, $remainingSeats, &$totalAvailable) {
+                $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, &$totalAvailable) {
+                    $key = "{$batch->id}:{$session->id}";
+                    $remaining = $remainingSeats[$key] ?? 0;
                     $totalAvailable += $remaining;
 
                     return [

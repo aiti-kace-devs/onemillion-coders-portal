@@ -123,6 +123,10 @@
     <x-backpack::menu-item title="Admission Batches" icon="la la-users" :link="backpack_url('batch')" />
 @endcan
 
+@can('programme-batch.read.all')
+    <x-backpack::menu-item title="Programme Batches" icon="la la-calendar" :link="backpack_url('programme-batch')" />
+@endcan
+
 {{-- @can('branch.read.all')
     <x-backpack::menu-item title="Branches" icon="la la-code-branch" :link="backpack_url('branch')" />
 @endcan --}}
