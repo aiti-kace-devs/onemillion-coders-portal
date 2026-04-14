@@ -44,45 +44,20 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
   const [enrollingCentreId, setEnrollingCentreId] = useState(null);
   const [enrollingCentreTitle, setEnrollingCentreTitle] = useState(null);
   const [courseFullTab, setCourseFullTab] = useState("centres");
+  const [selectedBatchMonth, setSelectedBatchMonth] = useState(null);
 
   // Mock data
   const MOCK_BATCHES = [
-    {
-      id: 1,
-      name: "Batch A — Cohort 2026",
-      startDate: "2026-05-12",
-      endDate: "2026-08-12",
-      duration: 90,
-      totalSlots: 40,
-      availableSlots: 12,
-    },
-    {
-      id: 2,
-      name: "Batch B — Cohort 2026",
-      startDate: "2026-06-16",
-      endDate: "2026-09-16",
-      duration: 90,
-      totalSlots: 40,
-      availableSlots: 28,
-    },
-    {
-      id: 3,
-      name: "Batch C — Cohort 2026",
-      startDate: "2026-09-01",
-      endDate: "2026-12-01",
-      duration: 90,
-      totalSlots: 40,
-      availableSlots: 40,
-    },
-    {
-      id: 4,
-      name: "Batch D — Cohort 2026",
-      startDate: "2026-10-06",
-      endDate: "2027-01-06",
-      duration: 90,
-      totalSlots: 40,
-      availableSlots: 0,
-    },
+    { id: 1, name: "Batch A", startDate: "2026-05-05", endDate: "2026-06-03", duration: 30, totalSlots: 40, availableSlots: 3 },
+    { id: 2, name: "Batch B", startDate: "2026-05-19", endDate: "2026-06-17", duration: 30, totalSlots: 40, availableSlots: 18 },
+    { id: 3, name: "Batch C", startDate: "2026-06-02", endDate: "2026-07-01", duration: 30, totalSlots: 40, availableSlots: 32 },
+    { id: 4, name: "Batch D", startDate: "2026-06-16", endDate: "2026-07-15", duration: 30, totalSlots: 40, availableSlots: 40 },
+    { id: 5, name: "Batch E", startDate: "2026-07-07", endDate: "2026-08-05", duration: 30, totalSlots: 40, availableSlots: 40 },
+    { id: 6, name: "Batch F", startDate: "2026-07-21", endDate: "2026-08-19", duration: 30, totalSlots: 40, availableSlots: 0 },
+    { id: 7, name: "Batch G", startDate: "2026-08-04", endDate: "2026-09-02", duration: 30, totalSlots: 40, availableSlots: 25 },
+    { id: 8, name: "Batch H", startDate: "2026-09-01", endDate: "2026-09-30", duration: 30, totalSlots: 40, availableSlots: 40 },
+    { id: 9, name: "Batch I", startDate: "2026-10-05", endDate: "2026-11-03", duration: 30, totalSlots: 40, availableSlots: 0 },
+    { id: 10, name: "Batch J", startDate: "2026-10-19", endDate: "2026-11-17", duration: 30, totalSlots: 40, availableSlots: 15 },
   ];
   const MOCK_SESSIONS = [
     {
@@ -325,29 +300,20 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
 
   // Step indicator component
   const StepIndicator = ({ current }) => {
-    const steps = ["Batch", "Session", "Confirm"];
+    const steps = [{ label: "Batch", step: "batch" }, { label: "Session", step: "session" }, { label: "Confirm", step: "confirm" }];
     return (
       <div className="flex items-center gap-1.5 mb-5">
-        {steps.map((label, i) => {
-          const isCurrent = i === current;
+        {steps.map(({ label, step: s }, i) => {
           const isDone = i < current;
+          const isCurrent = i === current;
+          const canClick = isDone;
           return (
             <React.Fragment key={label}>
-              <div
-                className={`flex items-center gap-1 ${isDone ? "text-green-500" : isCurrent ? "text-yellow-600" : "text-gray-300"}`}
-              >
-                <div
-                  className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${isDone ? "bg-green-500 text-white" : isCurrent ? "bg-yellow-400 text-gray-900" : "bg-gray-100 text-gray-400"}`}
-                >
-                  {isDone ? <FiCheckCircle className="w-3 h-3" /> : i + 1}
-                </div>
+              <button disabled={!canClick} onClick={() => canClick && setEnrollmentStep(s)} className={`flex items-center gap-1 ${isDone ? "text-green-500 cursor-pointer" : isCurrent ? "text-yellow-600" : "text-gray-300"} ${canClick ? "hover:opacity-80" : ""}`}>
+                <div className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${isDone ? "bg-green-500 text-white" : isCurrent ? "bg-yellow-400 text-gray-900" : "bg-gray-100 text-gray-400"}`}>{isDone ? <FiCheckCircle className="w-3 h-3" /> : i + 1}</div>
                 <span className="text-[11px] font-medium">{label}</span>
-              </div>
-              {i < 2 && (
-                <div
-                  className={`flex-1 h-px ${isDone ? "bg-green-300" : "bg-gray-200"}`}
-                />
-              )}
+              </button>
+              {i < 2 && <div className={`flex-1 h-px ${isDone ? "bg-green-300" : "bg-gray-200"}`} />}
             </React.Fragment>
           );
         })}
@@ -612,118 +578,73 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                   </>
                 )}
 
-              {/* Batch Selection */}
-              {!enrollSuccess &&
-                !waitlistJoined &&
-                enrollmentStep === "batch" && (
+              {/* Batch Selection with Month Tabs */}
+              {!enrollSuccess && !waitlistJoined && enrollmentStep === "batch" && (() => {
+                const monthMap = {};
+                MOCK_BATCHES.forEach((b) => { const key = b.startDate.slice(0, 7); if (!monthMap[key]) monthMap[key] = []; monthMap[key].push(b); });
+                const months = Object.keys(monthMap).sort();
+                const activeMonth = selectedBatchMonth || months[0];
+                const filteredBatches = monthMap[activeMonth] || [];
+                const availCount = (m) => (monthMap[m] || []).filter((b) => b.availableSlots > 0).length;
+                return (
                   <>
-                    <button
-                      onClick={closeEnrollmentModal}
-                      className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
-                    >
-                      <FiX className="w-4.5 h-4.5" />
-                    </button>
-                    <div className="flex justify-center mb-3 sm:hidden">
-                      <div className="w-8 h-1 bg-gray-200 rounded-full" />
-                    </div>
+                    <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"><FiX className="w-4.5 h-4.5" /></button>
+                    <div className="flex justify-center mb-3 sm:hidden"><div className="w-8 h-1 bg-gray-200 rounded-full" /></div>
                     <StepIndicator current={0} />
-                    <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-0.5">
-                      When would you like to start?
-                    </h2>
-                    <p className="text-gray-400 text-[11px] sm:text-sm mb-4 sm:mb-5 line-clamp-1">
-                      {enrolledCourseName}
-                    </p>
-                    <div className="space-y-2">
-                      {MOCK_BATCHES.map((batch) => {
-                        const isFull = batch.availableSlots === 0;
-                        const fillPct =
-                          ((batch.totalSlots - batch.availableSlots) /
-                            batch.totalSlots) *
-                          100;
-                        const startStr = new Date(
-                          batch.startDate,
-                        ).toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "short",
-                        });
-                        const endStr = new Date(
-                          batch.endDate,
-                        ).toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        });
+                    <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-0.5">When would you like to start?</h2>
+                    <p className="text-gray-400 text-[11px] sm:text-sm mb-4 line-clamp-1">{enrolledCourseName}</p>
+
+                    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 mb-4 -mx-1 px-1">
+                      {months.map((m) => {
+                        const isActive = m === activeMonth;
+                        const count = availCount(m);
+                        const label = new Date(m + "-01").toLocaleDateString("en-GB", { month: "short" });
                         return (
-                          <button
-                            key={batch.id}
-                            onClick={() => handleBatchSelect(batch)}
-                            disabled={isFull}
-                            className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all duration-200 group ${isFull ? "bg-gray-50/80 border-gray-100 cursor-not-allowed" : "bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.99]"}`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 ${isFull ? "bg-gray-100" : "bg-gradient-to-br from-yellow-50 to-orange-50 group-hover:from-yellow-100 group-hover:to-orange-100"} transition-colors`}
-                              >
-                                <span
-                                  className={`text-[10px] font-medium leading-none ${isFull ? "text-gray-400" : "text-yellow-700"}`}
-                                >
-                                  {new Date(batch.startDate).toLocaleDateString(
-                                    "en-GB",
-                                    { month: "short" },
-                                  )}
-                                </span>
-                                <span
-                                  className={`text-base font-bold leading-tight ${isFull ? "text-gray-400" : "text-gray-900"}`}
-                                >
-                                  {new Date(batch.startDate).getDate()}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-0.5">
-                                  <span
-                                    className={`text-sm font-semibold ${isFull ? "text-gray-400" : "text-gray-900 group-hover:text-yellow-700"} transition-colors`}
-                                  >
-                                    {batch.name}
-                                  </span>
-                                  {isFull && (
-                                    <span className="px-1.5 py-0.5 bg-red-50 text-red-500 text-[10px] font-medium rounded-full">
-                                      Full
-                                    </span>
-                                  )}
-                                </div>
-                                <div
-                                  className={`text-[11px] sm:text-xs ${isFull ? "text-gray-300" : "text-gray-500"} mb-1.5`}
-                                >
-                                  {startStr} — {endStr}
-                                  <span className="hidden sm:inline">
-                                    {" "}
-                                    · {batch.duration} days
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
-                                    <div
-                                      className={`h-full rounded-full transition-all ${isFull ? "bg-red-300" : fillPct > 70 ? "bg-orange-400" : "bg-green-400"}`}
-                                      style={{ width: `${fillPct}%` }}
-                                    />
-                                  </div>
-                                  <span
-                                    className={`text-[10px] tabular-nums ${isFull ? "text-gray-300" : batch.availableSlots <= 5 ? "text-orange-600 font-medium" : "text-gray-400"}`}
-                                  >
-                                    {batch.availableSlots} left
-                                  </span>
-                                </div>
-                              </div>
-                              {!isFull && (
-                                <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
-                              )}
-                            </div>
+                          <button key={m} onClick={() => setSelectedBatchMonth(m)}
+                            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${isActive ? "bg-gray-900 text-white" : count > 0 ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-gray-50 text-gray-400"}`}>
+                            {label}
                           </button>
                         );
                       })}
                     </div>
+
+                    <div className="space-y-2">
+                      {filteredBatches.map((batch) => {
+                        const isFull = batch.availableSlots === 0;
+                        const fillPct = ((batch.totalSlots - batch.availableSlots) / batch.totalSlots) * 100;
+                        const startStr = new Date(batch.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+                        const endStr = new Date(batch.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+                        return (
+                          <button key={batch.id} onClick={() => handleBatchSelect(batch)} disabled={isFull}
+                            className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all duration-200 group ${isFull ? "bg-gray-50/80 border-gray-100 cursor-not-allowed" : "bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.99]"}`}>
+                            <div className="flex items-center gap-3">
+                              <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 ${isFull ? "bg-gray-100" : "bg-gradient-to-br from-yellow-50 to-orange-50 group-hover:from-yellow-100 group-hover:to-orange-100"} transition-colors`}>
+                                <span className={`text-[10px] font-medium leading-none ${isFull ? "text-gray-400" : "text-yellow-700"}`}>{new Date(batch.startDate).toLocaleDateString("en-GB", { month: "short" })}</span>
+                                <span className={`text-base font-bold leading-tight ${isFull ? "text-gray-400" : "text-gray-900"}`}>{new Date(batch.startDate).getDate()}</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <span className={`text-sm font-semibold ${isFull ? "text-gray-400" : "text-gray-900 group-hover:text-yellow-700"} transition-colors`}>{batch.name}</span>
+                                  {isFull && <span className="px-1.5 py-0.5 bg-red-50 text-red-500 text-[10px] font-medium rounded-full">Full</span>}
+                                </div>
+                                <div className={`text-[11px] sm:text-xs ${isFull ? "text-gray-300" : "text-gray-500"} mb-1.5`}>{startStr} — {endStr}<span className="hidden sm:inline"> · {batch.duration} days</span></div>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
+                                    <div className={`h-full rounded-full transition-all ${isFull ? "bg-red-300" : fillPct > 70 ? "bg-orange-400" : "bg-green-400"}`} style={{ width: `${fillPct}%` }} />
+                                  </div>
+                                  <span className={`text-[10px] tabular-nums ${isFull ? "text-gray-300" : batch.availableSlots <= 5 ? "text-orange-600 font-medium" : "text-gray-400"}`}>{batch.availableSlots} left</span>
+                                </div>
+                              </div>
+                              {!isFull && <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {filteredBatches.length === 0 && <div className="text-center py-8 text-gray-400 text-sm">No batches this month</div>}
+                    </div>
                   </>
-                )}
+                );
+              })()}
 
               {/* Session Selection */}
               {!enrollSuccess &&
@@ -823,7 +744,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                         <div className="flex items-center justify-between text-[11px] sm:text-xs">
                           <span className="text-gray-400">Batch</span>
                           <span className="font-medium text-gray-700">
-                            {selectedBatch?.name}
+                            {selectedBatch?.name} · {selectedBatch?.startDate && new Date(selectedBatch.startDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-[11px] sm:text-xs">
@@ -870,45 +791,45 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                 enrollmentStep === "courseFull" && (
                   <>
                     <div className="flex justify-center mb-3 sm:hidden"><div className="w-8 h-1 bg-gray-200 rounded-full" /></div>
-                    <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"><FiX className="w-4.5 h-4.5" /></button>
-                    <div className="text-center mb-4 sm:mb-5">
-                      <div className="w-12 h-12 bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3 ring-4 ring-orange-50"><FiAlertCircle className="w-6 h-6 text-orange-500" /></div>
-                      <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">Centre is full</h2>
-                      <p className="text-gray-500 text-[11px] sm:text-sm font-medium line-clamp-1 mb-0.5">{enrolledCourseName}</p>
-                      <p className="text-gray-400 text-[11px] sm:text-xs line-clamp-1">No open batches at {centreTitle}</p>
+                    <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 z-10 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"><FiX className="w-4.5 h-4.5" /></button>
+
+                    <div className="text-center mb-5">
+                      <div className="w-11 h-11 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center mx-auto mb-3"><FiAlertCircle className="w-5 h-5 text-yellow-700" /></div>
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1.5">Centre is full</h2>
+                      <p className="text-sm sm:text-base font-semibold text-gray-700 mb-1">{enrolledCourseName}</p>
+                      <div className="flex items-center justify-center gap-1.5 text-xs sm:text-sm text-gray-700"><FiMapPin className="w-3 h-3" /><span>No open batches · {centreTitle}</span></div>
                     </div>
 
-                    {/* Tabs */}
-                    <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
-                      <button onClick={() => setCourseFullTab("centres")} className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs sm:text-sm font-medium transition-all ${courseFullTab === "centres" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
-                        <FiMapPin className="w-3.5 h-3.5" />Same course
-                      </button>
-                      <button onClick={() => setCourseFullTab("courses")} className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs sm:text-sm font-medium transition-all ${courseFullTab === "courses" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
-                        <FiTarget className="w-3.5 h-3.5" />Same centre
-                      </button>
+                    <div className="flex bg-gray-200/70 rounded-xl p-1 mb-5">
+                      <button onClick={() => setCourseFullTab("centres")} className={`flex-1 py-3 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center ${courseFullTab === "centres" ? "bg-white text-gray-900 shadow-md ring-1 ring-gray-200/50" : "text-gray-500 hover:text-gray-800"}`}>Find another centre</button>
+                      <button onClick={() => setCourseFullTab("courses")} className={`flex-1 py-3 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center ${courseFullTab === "courses" ? "bg-white text-gray-900 shadow-md ring-1 ring-gray-200/50" : "text-gray-500 hover:text-gray-800"}`}>Explore other courses</button>
                     </div>
 
-                    <div className="mb-5">
+                    <div className="mb-5 min-h-[140px]">
+                      <AnimatePresence mode="wait" initial={false}>
                       {courseFullTab === "centres" && (
-                        <>
-                          <p className="text-[11px] sm:text-xs text-gray-400 mb-3">Other centres running <span className="text-gray-600">{enrolledCourseName}</span>:</p>
+                        <motion.div key="centres-tab" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.2 }}>
+                          <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-700 uppercase tracking-widest mb-3">Available nearby</h4>
                           <div className="space-y-2">
-                            {MOCK_ALT_CENTRES.map((alt) => (
-                              <button key={alt.id} onClick={() => { setEnrollingCentreId(alt.id); setEnrollingCentreTitle(alt.name); setSelectedBatch(null); setSelectedSession(null); setCourseFullTab("centres"); setEnrollmentStep("batch"); }}
-                                className="w-full text-left p-3 sm:p-3.5 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center flex-shrink-0 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors"><FiMapPin className="w-4 h-4 text-blue-600" /></div>
-                                  <div className="flex-1 min-w-0"><div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors truncate">{alt.name}</div></div>
-                                  <div className="flex items-center gap-1.5 flex-shrink-0"><span className="text-xs font-bold text-green-600">{alt.availableSlots} slots</span><FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" /></div>
+                            {MOCK_ALT_CENTRES.map((alt, idx) => (
+                              <motion.button key={alt.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, delay: idx * 0.05 }}
+                                onClick={() => { setEnrollingCentreId(alt.id); setEnrollingCentreTitle(alt.name); setSelectedBatch(null); setSelectedSession(null); setCourseFullTab("centres"); setEnrollmentStep("batch"); }}
+                                className="w-full text-left p-3 sm:p-4 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98]">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors truncate">{alt.name}</div>
+                                    <div className="text-xs text-green-600 font-medium mt-0.5">{alt.availableSlots} slots available</div>
+                                  </div>
+                                  <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
                                 </div>
-                              </button>
+                              </motion.button>
                             ))}
                           </div>
-                        </>
+                        </motion.div>
                       )}
                       {courseFullTab === "courses" && (
-                        <>
-                          <p className="text-[11px] sm:text-xs text-gray-400 mb-3">Available courses at <span className="text-gray-600">{centreTitle}</span>:</p>
+                        <motion.div key="courses-tab" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.2 }}>
+                          <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-700 uppercase tracking-widest mb-3">Available here</h4>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {MOCK_ALT_COURSES.map((alt) => (
                               <button key={alt.id} onClick={() => { setEnrolledCourseName(alt.title); setSelectedBatch(null); setSelectedSession(null); setCourseFullTab("centres"); setEnrollmentStep("batch"); }}
@@ -919,9 +840,11 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                                   ) : (
                                     <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center"><Image src="/images/one-million-coders-logo.png" alt="One Million Coders" width={60} height={20} className="opacity-15" /></div>
                                   )}
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                                  <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-green-500/90 text-white text-[9px] sm:text-[10px] font-bold rounded-full backdrop-blur-sm">{alt.availableSlots} slots</div>
-                                  {alt.matchPercentage && <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-[9px] sm:text-[10px] font-medium rounded-full backdrop-blur-sm text-yellow-700"><FiStar className="w-2.5 h-2.5" />{alt.matchPercentage}</div>}
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                                  <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between">
+                                    <span className={`px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold rounded-full backdrop-blur-sm ${alt.availableSlots > 0 ? "bg-green-500/90 text-white" : "bg-red-500/90 text-white"}`}>{alt.availableSlots > 0 ? `${alt.availableSlots} slots` : "Full"}</span>
+                                    {alt.matchPercentage && <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-[9px] sm:text-[10px] font-medium rounded-full backdrop-blur-sm text-yellow-700"><FiStar className="w-2.5 h-2.5" />{alt.matchPercentage}</span>}
+                                  </div>
                                 </div>
                                 <div className="p-2 sm:p-2.5">
                                   <h4 className="text-[11px] sm:text-xs font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors line-clamp-2 leading-tight mb-1">{alt.title}</h4>
@@ -930,24 +853,27 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                               </button>
                             ))}
                           </div>
-                        </>
+                        </motion.div>
                       )}
+                      </AnimatePresence>
                     </div>
 
-                    <div className="pt-4 border-t border-gray-100 space-y-2">
-                      <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="w-full p-3 sm:p-3.5 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center flex-shrink-0 group-hover:from-green-100 group-hover:to-emerald-100 transition-colors"><FiCheckCircle className="w-4 h-4 text-green-600" /></div>
-                          <div className="text-left flex-1"><div className="text-sm font-semibold text-gray-900">Enroll without support</div><div className="text-[11px] sm:text-xs text-gray-400">Skip support and enroll now</div></div>
-                          {enrollSubmitting && <FiLoader className="w-4 h-4 text-gray-400 animate-spin flex-shrink-0" />}
-                        </div>
-                      </button>
-                      <button onClick={() => setWaitlistJoined(true)} className="w-full p-3 sm:p-3.5 rounded-xl border border-dashed border-gray-300 hover:border-yellow-400 hover:bg-yellow-50/30 transition-all duration-200 group active:scale-[0.99]">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center flex-shrink-0 group-hover:bg-yellow-100 transition-colors"><FiClock className="w-4 h-4 text-yellow-600" /></div>
-                          <div className="text-left flex-1"><div className="text-sm font-semibold text-gray-900">Join the waitlist</div><div className="text-[11px] sm:text-xs text-gray-400 line-clamp-1">Wait for a supported slot at {centreTitle}</div></div>
-                        </div>
-                      </button>
+                    <div className="pt-4 border-t border-gray-100">
+                      <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-700 uppercase tracking-widest text-center mb-3">Or</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="p-3 sm:p-4 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] text-center">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center mx-auto mb-2 group-hover:from-green-100 group-hover:to-emerald-100 transition-colors">
+                            {enrollSubmitting ? <FiLoader className="w-4 h-4 text-green-600 animate-spin" /> : <FiCheckCircle className="w-4 h-4 text-green-600" />}
+                          </div>
+                          <div className="text-xs sm:text-sm font-semibold text-gray-900 mb-0.5">Enroll without support</div>
+                          <div className="text-[10px] sm:text-[11px] text-gray-400 leading-tight">Skip support, enroll now</div>
+                        </button>
+                        <button onClick={() => setWaitlistJoined(true)} className="p-3 sm:p-4 rounded-xl bg-white border border-dashed border-gray-300 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] text-center">
+                          <div className="w-9 h-9 rounded-xl bg-yellow-50 flex items-center justify-center mx-auto mb-2 group-hover:bg-yellow-100 transition-colors"><FiClock className="w-4 h-4 text-yellow-600" /></div>
+                          <div className="text-xs sm:text-sm font-semibold text-gray-900 mb-0.5">Join the waitlist</div>
+                          <div className="text-[10px] sm:text-[11px] text-gray-400 leading-tight">Get notified when available</div>
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}
