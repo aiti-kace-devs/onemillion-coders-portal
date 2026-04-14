@@ -17,11 +17,8 @@ class ProgrammeBatch extends Model
     protected $fillable = [
         'admission_batch_id',
         'programme_id',
-        'centre_id',
         'start_date',
         'end_date',
-        'max_enrolments',
-        'available_slots',
         'status',
     ];
 
@@ -39,11 +36,6 @@ class ProgrammeBatch extends Model
     public function programme()
     {
         return $this->belongsTo(Programme::class, 'programme_id');
-    }
-
-    public function centre()
-    {
-        return $this->belongsTo(Centre::class, 'centre_id');
     }
 
     public function userAdmissions()

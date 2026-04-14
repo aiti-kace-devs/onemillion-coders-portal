@@ -10,9 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ResolveUserFromToken
 {
-    public function __construct(private readonly JwtService $jwt)
-    {
-    }
+    public function __construct(private readonly JwtService $jwt) {}
 
     /**
      * Resolve user from JWT (Bearer, token, or user_id). Set user on request; return 401 if invalid.
@@ -35,7 +33,7 @@ class ResolveUserFromToken
             return response()->json(['status' => 'error', 'message' => 'User not found.'], 401);
         }
 
-        $request->setUserResolver(fn () => $user);
+        $request->setUserResolver(fn() => $user);
 
         return $next($request);
     }

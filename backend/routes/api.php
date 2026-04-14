@@ -27,6 +27,12 @@ Route::post('/recommend/courses', [CourseMatchAPIController::class, 'recommendCo
 Route::get('/availability', [\App\Http\Controllers\AvailabilityController::class, 'index'])
     ->name('api.availability');
 
+// Availability endpoints — authenticated (iframed into student portal)
+Route::prefix('availability')->name('api.availability.')->middleware('user.token')->group(function () {
+    Route::get('/batches', [\App\Http\Controllers\AvailabilityController::class, 'batches'])->name('batches');
+    Route::get('/sibling-centres', [\App\Http\Controllers\AvailabilityController::class, 'siblingCentres'])->name('sibling-centres');
+});
+
 // Booking endpoints — student reserves/cancels a programme_batch slot
 Route::prefix('bookings')->name('api.bookings.')->middleware('user.token')->group(function () {
     Route::get('/mine', [\App\Http\Controllers\BookingController::class, 'mine'])->name('mine');

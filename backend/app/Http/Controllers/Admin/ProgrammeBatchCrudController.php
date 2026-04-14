@@ -8,7 +8,6 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use App\Models\ProgrammeBatch;
 use App\Models\Batch;
 use App\Models\Programme;
-use App\Models\Centre;
 use App\Services\ProgrammeBatchGenerator;
 use Illuminate\Http\Request;
 
@@ -65,18 +64,6 @@ class ProgrammeBatchCrudController extends CrudController
             }
         });
 
-        CRUD::addFilter([
-            'name' => 'centre_id',
-            'type' => 'select2',
-            'label' => 'Centre',
-            'placeholder' => 'Select a centre',
-        ], function () {
-            return Centre::pluck('title', 'id')->toArray();
-        }, function ($value) {
-            if ($value) {
-                $this->crud->addClause('where', 'centre_id', $value);
-            }
-        });
 
         CRUD::addColumn([
             'name' => 'admissionBatch',
@@ -97,15 +84,6 @@ class ProgrammeBatchCrudController extends CrudController
         ]);
 
         CRUD::addColumn([
-            'name' => 'centre',
-            'label' => 'Centre',
-            'type' => 'select',
-            'entity' => 'centre',
-            'attribute' => 'title',
-            'model' => Centre::class,
-        ]);
-
-        CRUD::addColumn([
             'name' => 'start_date',
             'label' => 'Start Date',
             'type' => 'date',
@@ -115,18 +93,6 @@ class ProgrammeBatchCrudController extends CrudController
             'name' => 'end_date',
             'label' => 'End Date',
             'type' => 'date',
-        ]);
-
-        CRUD::addColumn([
-            'name' => 'max_enrolments',
-            'label' => 'Max Enrolments',
-            'type' => 'number',
-        ]);
-
-        CRUD::addColumn([
-            'name' => 'available_slots',
-            'label' => 'Available Slots',
-            'type' => 'number',
         ]);
 
         CRUD::addColumn([
@@ -164,16 +130,6 @@ class ProgrammeBatchCrudController extends CrudController
         ]);
 
         CRUD::addField([
-            'name' => 'centre_id',
-            'label' => 'Centre',
-            'type' => 'select2',
-            'entity' => 'centre',
-            'attribute' => 'title',
-            'model' => Centre::class,
-            'placeholder' => 'Select a centre',
-        ]);
-
-        CRUD::addField([
             'name' => 'start_date',
             'label' => 'Start Date',
             'type' => 'date',
@@ -183,18 +139,6 @@ class ProgrammeBatchCrudController extends CrudController
             'name' => 'end_date',
             'label' => 'End Date',
             'type' => 'date',
-        ]);
-
-        CRUD::addField([
-            'name' => 'max_enrolments',
-            'label' => 'Max Enrolments',
-            'type' => 'number',
-        ]);
-
-        CRUD::addField([
-            'name' => 'available_slots',
-            'label' => 'Available Slots',
-            'type' => 'number',
         ]);
 
         CRUD::addField([

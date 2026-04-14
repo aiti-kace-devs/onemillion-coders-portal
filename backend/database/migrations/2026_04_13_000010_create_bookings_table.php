@@ -16,9 +16,8 @@ return new class extends Migration {
             $table->foreignId('centre_id')->constrained('centres')->cascadeOnDelete();
             $table->foreignId('course_id')->constrained('courses')->cascadeOnDelete();
             $table->enum('course_type', ['short', 'long']);
-            $table->enum('status', ['confirmed', 'cancelled'])->default('confirmed');
+            $table->boolean('status')->default(true);
             $table->timestamp('booked_at')->useCurrent();
-            $table->timestamp('cancelled_at')->nullable();
             $table->unsignedBigInteger('user_admission_id')->nullable();
             $table->timestamps();
 
@@ -26,12 +25,16 @@ return new class extends Migration {
                 ->references('id')->on('user_admission')
                 ->nullOnDelete();
 
+            // userId foreign key to users table
+            $table->foreign('user_id')
+                ->references('userId')->on('users')
+                ->cascadeOnDelete();
+
             $table->unique(['user_id', 'programme_batch_id']);
-            $table->index(['centre_id', 'course_type', 'status']);
+            $table->index(['course_type', 'status']);
             $table->index(['programme_batch_id', 'status']);
             $table->index(['course_session_id', 'status']);
             $table->index(['master_session_id', 'status']);
-
         });
     }
 

@@ -10,6 +10,10 @@ use Statamic\Facades\CP\Nav;
 use Illuminate\Support\Facades\Validator;
 use App\Rules\Recaptcha;
 use App\Services\JwtService;
+use App\Models\Booking;
+use App\Models\ProgrammeBatch;
+use App\Observers\BookingObserver;
+use App\Observers\ProgrammeBatchObserver;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -49,6 +53,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        // Register model observers
+        Booking::observe(BookingObserver::class);
+        ProgrammeBatch::observe(ProgrammeBatchObserver::class);
+
         // Paginator::useBootstrapFour();
 
         if ($this->app->isLocal()) {

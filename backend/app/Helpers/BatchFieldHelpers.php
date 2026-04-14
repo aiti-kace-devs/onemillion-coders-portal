@@ -840,8 +840,6 @@ trait BatchFieldHelpers
         return redirect()
             ->back()
             ->with('success', 'Course sessions saved successfully.');
+
     }
-
-
-
 }
