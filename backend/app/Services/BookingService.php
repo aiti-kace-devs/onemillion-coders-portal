@@ -74,12 +74,16 @@ class BookingService
                     $batch->end_date
                 );
 
+                $user->registered_course = $course->id;
+                $user->save();
+
                 $admission = UserAdmission::updateOrCreate(
                     ['user_id' => $user->userId],
                     [
                         'course_id' => $course->id,
                         'programme_batch_id' => $batch->id,
                         'email_sent' => now(),
+                        'confirmed' => now(),
                     ]
                 );
 
