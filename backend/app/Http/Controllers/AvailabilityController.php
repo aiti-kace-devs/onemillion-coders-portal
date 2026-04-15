@@ -52,7 +52,7 @@ class AvailabilityController extends Controller
 
         $course = Course::with(['programme', 'centre'])->find($courseId);
 
-        if (!$course || !$course->programme || !$course->centre) {
+        if (! $course || ! $course->programme || ! $course->centre) {
             return response()->json(['success' => false, 'message' => 'Course or centre not found.'], 404);
         }
 
@@ -68,7 +68,7 @@ class AvailabilityController extends Controller
             ->where('completed', false)
             ->first();
 
-        if (!$admissionBatch) {
+        if (! $admissionBatch) {
             return response()->json([
                 'success' => true,
                 'centre' => ['id' => $centre->id, 'title' => $centre->title],
@@ -107,9 +107,10 @@ class AvailabilityController extends Controller
             $sessions->pluck('id')->toArray()
         );
 
-        $batchData = $batches->map(function ($batch) use ($sessions, $remainingSeats) {
+        $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats) {
             $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats) {
                 $key = "{$batch->id}:{$session->id}";
+
                 return [
                     'session_id' => $session->id,
                     'session_name' => "{$session->session_type} Session",
@@ -120,6 +121,7 @@ class AvailabilityController extends Controller
 
             return [
                 'id' => $batch->id,
+                'batch' => 'Batch '.($index + 1),
                 'start_date' => $batch->start_date->format('Y-m-d'),
                 'end_date' => $batch->end_date->format('Y-m-d'),
                 'sessions' => $sessionData,
@@ -151,10 +153,25 @@ class AvailabilityController extends Controller
         $courseId = (int) $request->query('course_id');
         $centreId = (int) $request->query('centre_id');
 
+        $filter = $request->query('filter');
+        $sort = $request->query('sort');
+        $order = strtolower((string) $request->query('order', 'asc'));
+        $limit = $request->query('limit');
+
+        if (is_string($sort) && str_starts_with($sort, '-')) {
+            $sort = ltrim($sort, '-');
+            $order = 'desc';
+        }
+
+        $limit = is_numeric($limit) ? (int) $limit : null;
+        if ($limit !== null && $limit <= 0) {
+            $limit = null;
+        }
+
         $course = Course::with('programme')->find($courseId);
         $centre = Centre::find($centreId);
 
-        if (!$course || !$course->programme || !$centre || !$centre->branch_id) {
+        if (! $course || ! $course->programme || ! $centre || ! $centre->branch_id) {
             return response()->json(['success' => false, 'message' => 'Course or centre not found.'], 404);
         }
 
@@ -169,7 +186,7 @@ class AvailabilityController extends Controller
             ->where('completed', false)
             ->first();
 
-        if (!$admissionBatch) {
+        if (! $admissionBatch) {
             return response()->json([
                 'success' => true,
                 'origin_centre' => ['id' => $centre->id, 'title' => $centre->title],
@@ -217,7 +234,7 @@ class AvailabilityController extends Controller
                 ->where('status', true)
                 ->first();
 
-            if (!$siblingCourse) {
+            if (! $siblingCourse) {
                 continue;
             }
 
@@ -249,7 +266,7 @@ class AvailabilityController extends Controller
 
                     return [
                         'session_id' => $session->id,
-                        'session_name' => $session->master_name,
+                        'session_name' => "{$session->session_type} Session",
                         'time' => $session->time,
                         'remaining' => $remaining,
                     ];
@@ -276,11 +293,77 @@ class AvailabilityController extends Controller
             }
         }
 
+        // Convert to collection for filtering, sorting, and limiting
+        $alternatives = collect($alternatives);
+
+        // Apply filter to alternatives
+        if (is_string($filter) && $filter !== '') {
+            $filterLower = strtolower($filter);
+            $alternatives = $alternatives->filter(function ($alternative) use ($filterLower) {
+                return $this->centreMatchesFilter($alternative, $filterLower);
+            })->values();
+        }
+
+        // Apply sort to alternatives
+        if (is_string($sort) && $sort !== '') {
+            $alternatives = $this->sortCentres($alternatives, $sort, $order);
+        }
+
+        // Apply limit to alternatives
+        if ($limit !== null) {
+            $alternatives = $alternatives->take($limit)->values();
+        }
+
         return response()->json([
             'success' => true,
             'origin_centre' => ['id' => $centre->id, 'title' => $centre->title],
             'programme' => ['id' => $programme->id, 'title' => $programme->title],
-            'alternatives' => $alternatives,
+            'alternatives' => $alternatives->values()->all(),
         ]);
+    }
+
+    /**
+     * Check if a centre alternative matches the given filter string.
+     * Searches in centre_name.
+     */
+    protected function centreMatchesFilter(array $alternative, string $filterLower): bool
+    {
+        $searchableFields = [
+            'centre_name',
+        ];
+
+        foreach ($searchableFields as $field) {
+            $value = $alternative[$field] ?? null;
+            if ($value !== null && str_contains(strtolower((string) $value), $filterLower)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Sort a collection of centre alternatives by the specified field and order.
+     */
+    protected function sortCentres($centres, string $sortField, string $order): \Illuminate\Support\Collection
+    {
+        $sortableFields = [
+            'centre_name',
+            'available',
+            'centre_id',
+        ];
+
+        if (! in_array($sortField, $sortableFields, true)) {
+            return $centres;
+        }
+
+        return $centres->sortBy(function ($centre) use ($sortField) {
+            $value = $centre[$sortField] ?? null;
+            if ($sortField === 'available') {
+                return is_int($value) ? $value : PHP_INT_MAX;
+            }
+
+            return strtolower((string) $value);
+        }, SORT_NATURAL)->when($order === 'desc', fn ($collection) => $collection->reverse())->values();
     }
 }
