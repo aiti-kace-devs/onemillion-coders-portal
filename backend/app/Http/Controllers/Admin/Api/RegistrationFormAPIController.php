@@ -246,6 +246,15 @@ class RegistrationFormAPIController extends Controller
             $user->registered_course = $course->id;
             $user->save();
 
+            UserAdmission::updateOrCreate(
+                ['user_id' => $user->userId],
+                [
+                    'course_id' => $course->id,
+                    'email_sent' => now(),
+                    'confirmed' => now(),
+                ]
+            );
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -257,15 +266,6 @@ class RegistrationFormAPIController extends Controller
         if ($withSupport) {
             $user->support = true;
             $user->save();
-
-            UserAdmission::updateOrCreate(
-                ['user_id' => $user->userId],
-                [
-                    'course_id' => $course->id,
-                    'email_sent' => now(),
-                    'confirmed' => now(),
-                ]
-            );
 
             return response()->json([
                 'success' => true,
