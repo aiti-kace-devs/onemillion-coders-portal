@@ -42,6 +42,18 @@ Route::prefix('bookings')->name('api.bookings.')->middleware(['user.token', 'stu
     Route::post('/', [\App\Http\Controllers\BookingController::class, 'store'])->name('store');
     Route::delete('/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('destroy');
 });
+
+
+// Waitlist endpoints — authenticated
+Route::prefix('waitlist')->name('api.waitlist.')->middleware('user.token')->group(function () {
+    Route::get('/mine', [\App\Http\Controllers\AdmissionWaitlistController::class, 'index'])->name('mine');
+    Route::post('/add', [\App\Http\Controllers\AdmissionWaitlistController::class, 'store'])->name('add');
+    Route::post('/convert/{waitlistId}', [\App\Http\Controllers\AdmissionWaitlistController::class, 'convert'])->name('convert');
+    Route::get('/check/{courseId}', [\App\Http\Controllers\AdmissionWaitlistController::class, 'check'])->name('check');
+    Route::get('/count/{courseId}', [\App\Http\Controllers\AdmissionWaitlistController::class, 'count'])->name('count');
+    Route::delete('/{courseId}', [\App\Http\Controllers\AdmissionWaitlistController::class, 'destroy'])->name('destroy');
+});
+
 Route::get('/courses/slot-left', [CourseMatchAPIController::class, 'courseSlotLeft']);
 Route::get('/courses/{courseId}/slot-left', [CourseMatchAPIController::class, 'courseSlotLeft']);
 // Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);

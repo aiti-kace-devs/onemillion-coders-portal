@@ -15,6 +15,7 @@ use App\Models\CourseBatch;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use App\Models\UserAdmission;
 
 class CourseProgrammeController extends Controller
 {
@@ -691,6 +692,7 @@ class CourseProgrammeController extends Controller
                     return [
                         'id' => $centre->id,
                         'title' => $centre->title,
+                        'is_ready' => $centre->is_ready,
                         'is_pwd_friendly' => $centre->is_pwd_friendly,
                         'status' => $centre->status,
                         'gps_location' => $centre->gps_location ?? [],
