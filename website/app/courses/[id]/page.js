@@ -594,7 +594,7 @@ export default function CoursesPage({ params }) {
       setEnrollSubmitting(true);
       setEnrollmentStep("support"); // Show modal with loading
       setError(null);
-      await switchToSelfPaced(id, token);
+      await switchToSelfPaced(id, enrollingCourseId, token);
       setEnrollSuccess(true);
       updateQueryParams({ step: null, region: null, district: null, centre: null });
     } catch (err) {

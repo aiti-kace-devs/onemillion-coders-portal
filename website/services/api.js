@@ -314,16 +314,17 @@ export const createBooking = async (data, token) => {
 };
 
 /**
- * Switch a user to self-paced learning (no centre support needed)
+ * Enroll a user in self-paced learning (no centre support needed)
  * @param {string} userId
+ * @param {number} courseId
  * @param {string} token
  * @returns {Promise<Object>}
  */
-export const switchToSelfPaced = async (userId, token) => {
+export const switchToSelfPaced = async (userId, courseId, token) => {
   try {
-    const response = await apiRequest('switch-to-self-paced', {
+    const response = await apiRequest('confirm-course-for-self-paced', {
       method: 'POST',
-      data: { userId },
+      data: { userId, course_id: courseId },
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response;
