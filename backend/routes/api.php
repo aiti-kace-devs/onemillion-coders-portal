@@ -37,7 +37,7 @@ Route::prefix('availability')->name('api.availability.')->middleware('user.token
 
 
 // Booking endpoints — student reserves/cancels a programme_batch slot
-Route::prefix('bookings')->name('api.bookings.')->middleware('user.token')->group(function () {
+Route::prefix('bookings')->name('api.bookings.')->middleware(['user.token', 'student.verification.flow'])->group(function () {
     Route::get('/mine', [\App\Http\Controllers\BookingController::class, 'mine'])->name('mine');
     Route::post('/', [\App\Http\Controllers\BookingController::class, 'store'])->name('store');
     Route::delete('/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('destroy');
@@ -55,9 +55,12 @@ Route::get('/courses/{courseId}/slot-left', [CourseMatchAPIController::class, 'c
 //         return $request->user();
 //     });
 // });
-Route::post('/ghana-card/verify', [\App\Http\Controllers\Api\GhanaCardController::class, 'verify']);
+Route::prefix('ghana-card')->middleware('user.token')->group(function () {
+    Route::post('/verify', [\App\Http\Controllers\Api\GhanaCardController::class, 'verify']);
+    Route::get('/status', [\App\Http\Controllers\Api\GhanaCardController::class, 'status']);
+});
 
-Route::prefix('v1/student')->middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+Route::prefix('v1/student')->middleware(['auth:sanctum', 'throttle:api', 'student.verification.flow'])->group(function () {
     Route::get('session-options', [StudentSessionController::class, 'sessionOptions']);
     Route::post('session-confirm', [StudentSessionController::class, 'sessionConfirm']);
 });

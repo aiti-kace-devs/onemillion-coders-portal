@@ -4,13 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\VerifyGhanaCard;
-use App\Models\User;
+use App\Services\GhanaCardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class GhanaCardController extends Controller
 {
+    public function __construct(private readonly GhanaCardService $ghanaCardService) {}
+
     /**
      * Submit Ghana Card for verification.
      */
@@ -32,10 +34,8 @@ class GhanaCardController extends Controller
         }
 
         // 2. Check retry limit (failed attempts)
-        $maxAttempts = config('GHANA_CARD_MAX_ATTEMPTS', 5);
-        $failedAttemptsCount = \App\Models\GhanaCardVerification::where('user_id', $user->id)
-            ->where('code', '!=', '00')
-            ->count();
+        $maxAttempts = $this->ghanaCardService->maxAttempts();
+        $failedAttemptsCount = $this->ghanaCardService->failedAttempts($user);
 
         if ($failedAttemptsCount >= $maxAttempts) {
             return response()->json([
@@ -68,6 +68,17 @@ class GhanaCardController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Ghana Card verification has been queued. You will be notified once processed.',
+        ]);
+    }
+
+    public function status(Request $request)
+    {
+        $user = $request->user();
+        $status = $this->ghanaCardService->buildStatus($user);
+
+        return response()->json([
+            'success' => true,
+            'data' => $status,
         ]);
     }
 }

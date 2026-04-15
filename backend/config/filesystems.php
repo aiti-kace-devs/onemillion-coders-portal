@@ -101,7 +101,7 @@ return [
         'private_cloud' => array_merge($baseConfig, [
             'visibility' => 'private',
             'bucket' => env('PRIVATE_CLOUD_BUCKET', 'omcp-private'),
-            'url' => $baseConfig['url'] . '/' . env('PRIVATE_CLOUD_BUCKET', 'omcp-private'),
+            'url' => rtrim((string) ($baseConfig['url'] ?? env('APP_URL', '')), '/') . '/' . env('PRIVATE_CLOUD_BUCKET', 'omcp-private'),
             'throw' => false,
         ]),
 

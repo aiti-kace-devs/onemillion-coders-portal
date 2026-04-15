@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\CourseSession;
 use App\Models\User;
 use App\Models\UserAdmission;
+use App\Services\GhanaCardService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -15,6 +16,7 @@ class ConfirmStudentSessionService
 {
     public function __construct(
         private ProgrammeQuotaService $quotaService,
+        private GhanaCardService $ghanaCardService,
     ) {}
 
     /**
@@ -33,6 +35,10 @@ class ConfirmStudentSessionService
         $admission = UserAdmission::where('user_id', $user->userId)->first();
         if (! $admission) {
             return $this->fail('no_admission', 'No course admission found for this account.');
+        }
+
+        if (! $this->ghanaCardService->isVerified($user)) {
+            return $this->fail('verification_required', 'Please complete Ghana Card verification before confirming your session.');
         }
 
         $course = Course::query()->with('programme')->find($admission->course_id);

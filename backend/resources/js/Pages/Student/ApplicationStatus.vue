@@ -10,6 +10,7 @@ const props = defineProps({
     user_exam: Object,
     user_admission: Object,
     user_assessment: Object,
+    verification_status: Object,
 });
 
 const collapse = ref([true, false, false, false, false]);
@@ -31,6 +32,12 @@ function isStepReached(idx) {
 }
 function closeRevokeModal() {
     showRevokeModal.value = false;
+}
+
+function flowState(completed, partial = false) {
+    if (completed) return "completed";
+    if (partial) return "partial";
+    return "pending";
 }
 </script>
 
@@ -66,6 +73,54 @@ function closeRevokeModal() {
                 </div>
 
                 <div class="p-6 bg-white sm:rounded-lg shadow">
+                    <p class="font-medium text-lg text-gray-900 mb-3">
+                        Expected Flow
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+                        <div
+                            class="rounded-lg border p-3"
+                            :class="{
+                                'border-green-200 bg-green-50': flowState(!!props.user.registered_course) === 'completed',
+                                'border-amber-200 bg-amber-50': flowState(false, !props.user.registered_course) === 'partial',
+                                'border-gray-200 bg-gray-50': flowState(false) === 'pending'
+                            }"
+                        >
+                            <p class="text-xs uppercase text-gray-500">1</p>
+                            <p class="font-semibold text-sm">Course Selection / Change</p>
+                        </div>
+                        <div
+                            class="rounded-lg border p-3"
+                            :class="{
+                                'border-green-200 bg-green-50': flowState(!!props.user_assessment?.completed) === 'completed',
+                                'border-gray-200 bg-gray-50': flowState(!!props.user_assessment?.completed) !== 'completed'
+                            }"
+                        >
+                            <p class="text-xs uppercase text-gray-500">2</p>
+                            <p class="font-semibold text-sm">Assessment</p>
+                        </div>
+                        <div
+                            class="rounded-lg border p-3"
+                            :class="{
+                                'border-green-200 bg-green-50': flowState(!!props.verification_status?.verified) === 'completed',
+                                'border-red-200 bg-red-50': flowState(false, !!props.verification_status?.blocked) === 'partial',
+                                'border-gray-200 bg-gray-50': !props.verification_status?.verified && !props.verification_status?.blocked
+                            }"
+                        >
+                            <p class="text-xs uppercase text-gray-500">3</p>
+                            <p class="font-semibold text-sm">Verification</p>
+                        </div>
+                        <div
+                            class="rounded-lg border p-3"
+                            :class="{
+                                'border-green-200 bg-green-50': flowState(!!props.user_admission?.confirmed) === 'completed',
+                                'border-gray-200 bg-gray-50': !props.user_admission?.confirmed
+                            }"
+                        >
+                            <p class="text-xs uppercase text-gray-500">4</p>
+                            <p class="font-semibold text-sm">Session Booking</p>
+                        </div>
+                    </div>
+
                     <p class="font-medium text-lg text-gray-900">
                         Application Status
                     </p>

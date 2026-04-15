@@ -2,21 +2,25 @@
 
 namespace App\Services;
 
+use App\Models\AppConfig;
 use App\Models\GhanaCardVerification;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Intervention\Image\Facades\Image;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class GhanaCardService
 {
     protected string $baseUrl;
     protected string $merchantKey;
+    private const DEFAULT_IMAGE_DISK = 'private_cloud';
+    private const DEFAULT_IMAGE_DIR = 'omcp/users-profile';
 
     public function __construct()
     {
-        $this->baseUrl = config('services.ghana_card.base_url');
-        $this->merchantKey = config('services.ghana_card.merchant_key');
+        $this->baseUrl = (string) config('services.ghana_card.base_url', '');
+        $this->merchantKey = (string) config('services.ghana_card.merchant_key', '');
     }
 
     /**
@@ -134,21 +138,17 @@ class GhanaCardService
         try {
             // Set sync flag to bypass model-level protection for verified users
             $user->is_nia_syncing = true;
-
-            $forenames = trim($person['forenames'] ?? '');
-            $parts = explode(' ', $forenames);
-
-            $firstName = array_shift($parts);
-            $middleName = implode(' ', $parts);
-
+            $nameData = $this->extractNameParts($person, $user);
             $userData = [
-                'first_name' => $firstName ?: $user->first_name,
-                'middle_name' => $middleName ?: $user->middle_name,
-                'last_name' => $person['surname'] ?? $user->last_name,
+                'first_name' => $nameData['first_name'] ?: $user->first_name,
+                'middle_name' => $nameData['middle_name'] ?: $user->middle_name,
+                'last_name' => $nameData['last_name'] ?: $user->last_name,
+                'name' => $nameData['name'] ?: $user->name,
             ];
 
-            // Update name field as well (Full Name)
-            $userData['name'] = trim($userData['first_name'] . ' ' . ($userData['middle_name'] ? $userData['middle_name'] . ' ' : '') . $userData['last_name']);
+            if (! empty($nameData['previous_name'])) {
+                $userData['previous_name'] = $nameData['previous_name'];
+            }
 
             // Handle Gender if present
             if (isset($person['gender'])) {
@@ -182,11 +182,14 @@ class GhanaCardService
             $imageData = base64_decode($base64Image);
             if ($imageData) {
                 $studentId = $user->student_id ?? $user->userId;
-                $path = 'verified-student-images/' . $studentId . '.png';
+                $storage = $this->storeVerifiedProfileImage($studentId, $imageData, 'png');
+                $this->persistImageMetadata($user, $storage);
 
-                \Illuminate\Support\Facades\Storage::disk('private_cloud')->put($path, $imageData);
-
-                Log::info('Stored NIA verified image for student', ['path' => $path, 'user_id' => $user->id]);
+                Log::info('Stored NIA verified image for student', [
+                    'path' => $storage['path'],
+                    'disk' => $storage['disk'],
+                    'user_id' => $user->id
+                ]);
             }
         } catch (\Exception $e) {
             Log::error('Failed to store NIA face image', [
@@ -194,5 +197,202 @@ class GhanaCardService
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    public function isVerified(User $user): bool
+    {
+        return GhanaCardVerification::query()
+            ->where('user_id', $user->id)
+            ->where('code', '00')
+            ->where('verified', true)
+            ->exists();
+    }
+
+    public function buildStatus(User $user): array
+    {
+        $maxAttempts = $this->maxAttempts();
+        $usedAttempts = $this->failedAttempts($user);
+        $latest = GhanaCardVerification::query()
+            ->where('user_id', $user->id)
+            ->latest('id')
+            ->first();
+
+        $imageInfo = $this->resolveProfileImageInfo($user);
+
+        return [
+            'verified' => $this->isVerified($user),
+            'blocked' => (bool) $user->is_verification_blocked,
+            'attempts' => [
+                'used' => $usedAttempts,
+                'max' => $maxAttempts,
+                'remaining' => max(0, $maxAttempts - $usedAttempts),
+            ],
+            'latest_attempt' => $latest ? [
+                'code' => $latest->code,
+                'success' => (bool) $latest->success,
+                'verified' => (bool) $latest->verified,
+                'status_message' => $latest->status_message,
+                'response_timestamp' => optional($latest->response_timestamp)?->toIso8601String(),
+            ] : null,
+            'profile' => [
+                'name' => $user->name,
+                'first_name' => $user->first_name,
+                'middle_name' => $user->middle_name,
+                'last_name' => $user->last_name,
+                'previous_name' => $user->previous_name,
+                'date_of_birth' => data_get($user->data ?? [], 'date_of_birth'),
+            ],
+            'image' => $imageInfo,
+        ];
+    }
+
+    public function failedAttempts(User $user): int
+    {
+        return GhanaCardVerification::query()
+            ->where('user_id', $user->id)
+            ->where('code', '!=', '00')
+            ->count();
+    }
+
+    public function maxAttempts(): int
+    {
+        return (int) AppConfig::getValue(GHANA_CARD_MAX_ATTEMPTS, config('GHANA_CARD_MAX_ATTEMPTS', 5));
+    }
+
+    private function extractNameParts(array $person, User $user): array
+    {
+        $previousName = trim((string) ($person['previousName'] ?? ''));
+        $firstName = trim((string) ($person['firstName'] ?? ''));
+        $middleName = trim((string) ($person['middleName'] ?? ''));
+        $lastName = trim((string) ($person['surname'] ?? $person['lastName'] ?? ''));
+
+        if ($firstName === '' && $lastName === '') {
+            $fullName = trim((string) ($person['fullName'] ?? $person['forenames'] ?? ''));
+            if ($fullName !== '') {
+                $tokens = preg_split('/\s+/', $fullName) ?: [];
+                $firstName = $tokens[0] ?? '';
+                $lastName = count($tokens) > 1 ? (string) end($tokens) : ($user->last_name ?? '');
+                $middleTokens = count($tokens) > 2 ? array_slice($tokens, 1, -1) : [];
+                $middleName = trim(implode(' ', $middleTokens));
+            }
+        }
+
+        if ($firstName === '' && ! empty($person['forenames'])) {
+            $forenameTokens = preg_split('/\s+/', trim((string) $person['forenames'])) ?: [];
+            $firstName = $forenameTokens[0] ?? '';
+            if ($middleName === '' && count($forenameTokens) > 1) {
+                $middleName = implode(' ', array_slice($forenameTokens, 1));
+            }
+        }
+
+        $computedName = trim(implode(' ', array_filter([$firstName, $middleName, $lastName])));
+
+        return [
+            'name' => $computedName !== '' ? $computedName : $user->name,
+            'first_name' => $firstName,
+            'middle_name' => $middleName !== '' ? $middleName : null,
+            'last_name' => $lastName,
+            'previous_name' => $previousName !== '' ? $previousName : null,
+        ];
+    }
+
+    private function storeVerifiedProfileImage(string $studentId, string $imageData, string $extension): array
+    {
+        $enabled = (bool) AppConfig::getValue('VERIFICATION_PROFILE_IMAGE_ENABLED', true);
+        if (! $enabled) {
+            return [
+                'disk' => self::DEFAULT_IMAGE_DISK,
+                'path' => '',
+                'url' => '',
+            ];
+        }
+
+        $timeout = (int) AppConfig::getValue('VERIFICATION_PROFILE_IMAGE_TIMEOUT_SECONDS', 15);
+        $uploadUrl = (string) AppConfig::getValue('VERIFICATION_PROFILE_IMAGE_UPLOAD_URL', '');
+        $disk = (string) AppConfig::getValue('VERIFICATION_PROFILE_IMAGE_STORAGE_DISK', self::DEFAULT_IMAGE_DISK);
+        $directory = trim((string) AppConfig::getValue('VERIFICATION_PROFILE_IMAGE_STORAGE_DIR', self::DEFAULT_IMAGE_DIR), '/');
+        $filename = $studentId . '.' . strtolower($extension);
+        $path = $directory . '/' . $filename;
+
+        if ($uploadUrl !== '') {
+            try {
+                $response = Http::timeout($timeout)
+                    ->attach('file', $imageData, $filename)
+                    ->post($uploadUrl, [
+                        'student_id' => $studentId,
+                        'path' => $path,
+                    ]);
+
+                if ($response->successful()) {
+                    $payload = (array) $response->json();
+                    return [
+                        'disk' => $disk,
+                        'path' => (string) ($payload['path'] ?? $path),
+                        'url' => (string) ($payload['url'] ?? ''),
+                    ];
+                }
+            } catch (\Throwable $exception) {
+                Log::warning('External profile image upload failed, using fallback storage.', [
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        Storage::disk($disk)->put($path, $imageData);
+        $url = method_exists(Storage::disk($disk), 'url') ? (string) Storage::disk($disk)->url($path) : '';
+
+        return [
+            'disk' => $disk,
+            'path' => $path,
+            'url' => $url,
+        ];
+    }
+
+    private function persistImageMetadata(User $user, array $storage): void
+    {
+        $data = $user->data ?? [];
+        $data['verified_profile_image_path'] = $storage['path'];
+        $data['verified_profile_image_disk'] = $storage['disk'];
+        if (! empty($storage['url'])) {
+            $data['verified_profile_image_url'] = $storage['url'];
+        }
+
+        $user->is_nia_syncing = true;
+        $user->data = $data;
+        $user->saveQuietly();
+        $user->is_nia_syncing = false;
+        $user->saveQuietly();
+    }
+
+    private function resolveProfileImageInfo(User $user): array
+    {
+        $data = $user->data ?? [];
+        $disk = (string) data_get($data, 'verified_profile_image_disk', AppConfig::getValue('VERIFICATION_PROFILE_IMAGE_STORAGE_DISK', self::DEFAULT_IMAGE_DISK));
+        $path = (string) data_get($data, 'verified_profile_image_path', '');
+        $url = (string) data_get($data, 'verified_profile_image_url', '');
+
+        if ($path === '') {
+            $studentId = $user->student_id ?? $user->userId;
+            $legacyPath = 'verified-student-images/' . $studentId . '.png';
+            if (Storage::disk(self::DEFAULT_IMAGE_DISK)->exists($legacyPath)) {
+                $disk = self::DEFAULT_IMAGE_DISK;
+                $path = $legacyPath;
+            }
+        }
+
+        if ($url === '' && $path !== '' && method_exists(Storage::disk($disk), 'url')) {
+            try {
+                $url = (string) Storage::disk($disk)->url($path);
+            } catch (\Throwable) {
+                $url = '';
+            }
+        }
+
+        return [
+            'available' => $path !== '',
+            'url' => $url,
+            'storage_disk' => $disk,
+            'storage_path' => $path,
+        ];
     }
 }

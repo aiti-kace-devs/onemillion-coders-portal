@@ -156,6 +156,7 @@ class StudentSessionController extends Controller
             $code = $result['error']['code'] ?? 'unknown';
             $status = match ($code) {
                 'session_change_disabled', 'session_full', 'programme_quota_full', 'invalid_session', 'block_required' => 409,
+                'verification_required' => 403,
                 'no_admission', 'no_course', 'no_programme' => 404,
                 'server_error' => 500,
                 default => 409,

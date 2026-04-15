@@ -32,6 +32,8 @@ use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
 use App\Http\Controllers\NotificationController;
 use App\Models\Notification;
+use App\Services\GhanaCardService;
+use App\Services\JwtService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
@@ -98,10 +100,42 @@ class StudentOperation extends Controller
             $userFields[] = 'student_level';
         }
 
+        $verificationStatus = app(GhanaCardService::class)->buildStatus($user);
+
         return Inertia::render('Student/ApplicationStatus', [
             'user' => $user->only($userFields),
             'user_admission' => $user_admission,
             'user_assessment' => $user_assessment ? $user_assessment->only(['id', 'completed']) : null,
+            'verification_status' => $verificationStatus,
+        ]);
+    }
+
+    public function verification()
+    {
+        $user = Auth::guard('web')->user();
+        $verificationStatus = app(GhanaCardService::class)->buildStatus($user);
+        $token = app(JwtService::class)->generate($user->id);
+
+        $verifyBaseUrl = rtrim((string) config('app.quiz_frontend_url', ''), '/');
+        $embedUrl = $verifyBaseUrl !== ''
+            ? $verifyBaseUrl . '/verify/user?token=' . urlencode($token)
+            : null;
+
+        return Inertia::render('Student/Verification', [
+            'verification_status' => $verificationStatus,
+            'verification_embed_url' => $embedUrl,
+            'verification_embed_available' => ! empty($embedUrl),
+        ]);
+    }
+
+    public function verification_status()
+    {
+        $user = Auth::guard('web')->user();
+        $status = app(GhanaCardService::class)->buildStatus($user);
+
+        return response()->json([
+            'success' => true,
+            'data' => $status,
         ]);
     }
 
@@ -488,6 +522,7 @@ class StudentOperation extends Controller
                     'session_change_disabled' => 'Unable to change session at this time. Contact administrator',
                     'session_full' => 'Unable to confirm session. No slots available',
                     'programme_quota_full' => 'This programme has reached its enrolment limit for your selection.',
+                    'verification_required' => 'Please complete Ghana Card verification before confirming your session.',
                     'invalid_session' => 'Unable to confirm session. Try again later',
                     'block_required' => 'You must complete a centre time-slot booking before confirming this session.',
                     'no_admission' => 'No admission found for your account.',

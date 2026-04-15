@@ -174,6 +174,16 @@ const user = auth?.user || {};
                         </span>
                     </SidebarNavLink>
 
+                    <SidebarNavLink
+                        :href="route('student.verification.index')"
+                        :active="route().current('student.verification.*')"
+                        :label="'Verification'"
+                    >
+                        <span class="material-symbols-outlined">
+                            verified_user
+                        </span>
+                    </SidebarNavLink>
+
                     <template v-if="user.isAdmitted">
                         <SidebarNavLink
                             :active="route().current('student.attendance.show')"
