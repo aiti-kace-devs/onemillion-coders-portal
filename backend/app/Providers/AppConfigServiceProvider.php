@@ -44,6 +44,12 @@ class AppConfigServiceProvider extends ServiceProvider
 
         // Ghana Card Verification settings
         defined('GHANA_CARD_MAX_ATTEMPTS') or define('GHANA_CARD_MAX_ATTEMPTS', 'GHANA_CARD_MAX_ATTEMPTS');
+
+        // Booking System parameters
+        defined('SHORT_SLOTS_PERCENTAGE') or define('SHORT_SLOTS_PERCENTAGE', 'SHORT_SLOTS_PERCENTAGE');
+        defined('LONG_SLOTS_PERCENTAGE') or define('LONG_SLOTS_PERCENTAGE', 'LONG_SLOTS_PERCENTAGE');
+        defined('WAITLIST_NOTIFY_LIMIT') or define('WAITLIST_NOTIFY_LIMIT', 'WAITLIST_NOTIFY_LIMIT');
+        defined('AVAILABILITY_CACHE_TTL') or define('AVAILABILITY_CACHE_TTL', 'AVAILABILITY_CACHE_TTL');
     }
 
     /**
