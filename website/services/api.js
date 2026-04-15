@@ -354,3 +354,26 @@ export const joinWaitlist = async (userId, courseId, token) => {
     throw error;
   }
 };
+
+/**
+ * Submit Ghana Card verification (image + optional PIN)
+ * @param {FormData} formData - Contains 'image' (selfie file) and optionally 'pin' (Ghana Card PIN)
+ * @param {string} token - Bearer token
+ * @returns {Promise<Object>} - { success, message }
+ */
+export const submitGhanaCardVerification = async (formData, token) => {
+  try {
+    const response = await apiRequest('ghana-card/verify', {
+      method: 'POST',
+      data: formData,
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to submit Ghana Card verification:', error);
+    throw error;
+  }
+};
