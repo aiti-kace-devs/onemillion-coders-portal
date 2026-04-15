@@ -114,6 +114,7 @@ class RegistrationFormAPIController extends Controller
                     'registered_course' => null,
                     'student_level' => $user->student_level,
                     'userId' => $user->userId,
+                    'support' => $user->support,
                 ],
             ]);
         }
@@ -239,5 +240,56 @@ class RegistrationFormAPIController extends Controller
         ]);
     }
 
+
+
+
+
+        public function enrollSelfPacedStudent(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'userId' => 'required|exists:users,userId',
+            'course_id' => 'required|integer|exists:courses,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
+        $user = User::where('userId', $data['userId'])->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ]);
+        }
+
+        $course = Course::with('programme')
+            ->where('id', $data['course_id'])
+            ->where('centre_id', $data['centre_id'])
+            ->first();
+        if (! $course) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Course not found for the selected centre.',
+            ], 404);
+        }
+
+        $user->registered_course = $course->id;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'message' => 'Course registration confirmed successfully.',
+            ],
+        ]);
+    }
 
 }
