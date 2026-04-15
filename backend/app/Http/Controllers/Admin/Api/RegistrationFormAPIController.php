@@ -229,8 +229,19 @@ class RegistrationFormAPIController extends Controller
         $selfPaced = filter_var($request->query('self-paced', 'false'), FILTER_VALIDATE_BOOLEAN);
         $withSupport = filter_var($request->query('with-support', 'false'), FILTER_VALIDATE_BOOLEAN);
 
+        $course = Course::with('programme')
+            ->where('id', $data['course_id'])
+            ->where('centre_id', $data['centre_id'])
+            ->first();
+        if (! $course) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Course not found for the selected centre.',
+            ], 404);
+        }
         if ($selfPaced) {
             $user->support = false;
+            $user->registered_course = $course->id;
             $user->save();
 
             return response()->json([
