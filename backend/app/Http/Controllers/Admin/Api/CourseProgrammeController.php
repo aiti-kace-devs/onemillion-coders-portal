@@ -691,6 +691,7 @@ class CourseProgrammeController extends Controller
                     return [
                         'id' => $centre->id,
                         'title' => $centre->title,
+                        'is_ready' => $centre->is_ready,
                         'is_pwd_friendly' => $centre->is_pwd_friendly,
                         'status' => $centre->status,
                         'gps_location' => $centre->gps_location ?? [],
