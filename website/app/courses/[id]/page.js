@@ -579,13 +579,7 @@ export default function CoursesPage({ params }) {
     setSelectedBatchMonth(null);
     setCourseFullTab("centres");
 
-    // If centre is_ready, show support question; otherwise just confirm enrollment
-    if (selectedCentre?.is_ready) {
-      setEnrollmentStep("support");
-    } else {
-      // Centre not ready for support → enroll directly via confirmCourse
-      handleDirectEnroll();
-    }
+    setEnrollmentStep("support");
   };
 
   // Direct enrollment without support (via confirmCourse)
@@ -594,7 +588,7 @@ export default function CoursesPage({ params }) {
       setEnrollSubmitting(true);
       setEnrollmentStep("support"); // Show modal with loading
       setError(null);
-      await switchToSelfPaced(id, enrollingCourseId, token);
+      await switchToSelfPaced(id, enrollingCourseId, enrollingCentreId || selectedCentre?.id, token);
       setEnrollSuccess(true);
       updateQueryParams({ step: null, region: null, district: null, centre: null });
     } catch (err) {

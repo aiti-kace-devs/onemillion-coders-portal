@@ -320,11 +320,11 @@ export const createBooking = async (data, token) => {
  * @param {string} token
  * @returns {Promise<Object>}
  */
-export const switchToSelfPaced = async (userId, courseId, token) => {
+export const switchToSelfPaced = async (userId, courseId, centreId, token) => {
   try {
     const response = await apiRequest('confirm-course-for-self-paced', {
       method: 'POST',
-      data: { userId, course_id: courseId },
+      data: { userId, course_id: courseId, ...(centreId && { centre_id: centreId }) },
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response;
