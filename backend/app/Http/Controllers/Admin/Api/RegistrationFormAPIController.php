@@ -205,6 +205,8 @@ class RegistrationFormAPIController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'userId' => 'required|exists:users,userId',
+            'course_id' => 'required|integer|exists:courses,id',
+            'centre_id' => 'required|integer|exists:centres,id',
         ]);
 
         if ($validator->fails()) {
