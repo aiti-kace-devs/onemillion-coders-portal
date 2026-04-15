@@ -280,7 +280,7 @@ export const getSiblingCentres = async (courseId, centreId, token, limit = 3) =>
  */
 export const getSiblingCourses = async (userId, token, limit = 3) => {
   try {
-    const response = await apiRequest(`sibling-courses?userId=${userId}&limit=${limit}`, {
+    const response = await apiRequest(`availability/sibling-courses?userId=${userId}&limit=${limit}`, {
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response;
