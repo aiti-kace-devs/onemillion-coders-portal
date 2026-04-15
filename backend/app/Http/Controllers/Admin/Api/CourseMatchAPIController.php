@@ -108,14 +108,26 @@ class CourseMatchAPIController extends Controller
         ]);
     }
 
-    public function getUserRecommendedCoursesWithAvailableCourses(Request $request, string $userId)
+    public function siblingCourses(Request $request)
     {
+        $data = $request->validate([
+            'userId' => 'required|exists:users,userId',
+        ]);
+
+        $userId = $data['userId'];
         $user = User::with('course')->where('userId', $userId)->first();
 
         if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found.',
+            ]);
+        }
+        $registeredCourseId = $user->registered_course ? (int) $user->registered_course : null;
+        if (! $registeredCourseId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User has no registered course.',
             ]);
         }
 
