@@ -65,4 +65,9 @@ class UserAdmission extends Model
     {
         return $this->belongsTo(User::class, 'user_id', 'userId');
     }
+
+    public function programmeBatch()
+    {
+        return $this->belongsTo(ProgrammeBatch::class, 'programme_batch_id');
+    }
 }

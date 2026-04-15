@@ -19,16 +19,54 @@ use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+
 Route::post('batch/add-courses/{batch}', [BatchCrudController::class, 'addCourses'])
     ->name('batch.add-courses');
 Route::post('/recommend/courses', [CourseMatchAPIController::class, 'recommendCourses']);
+
+// Availability endpoint
+Route::get('/availability', [\App\Http\Controllers\AvailabilityController::class, 'index'])->name('api.availability');
+
+// Availability endpoints — authenticated (iframed into student portal)
+Route::prefix('availability')->name('api.availability.')->middleware('user.token')->group(function () {
+    Route::get('/batches', [\App\Http\Controllers\AvailabilityController::class, 'batches'])->name('batches');
+    Route::get('/sibling-centres', [\App\Http\Controllers\AvailabilityController::class, 'siblingCentres'])->name('sibling-centres');
+    Route::get('/sibling-courses', [App\Http\Controllers\Admin\Api\CourseMatchAPIController::class, 'siblingCourses'])->name('sibling-courses');
+});
+
+
+// Booking endpoints — student reserves/cancels a programme_batch slot
+Route::prefix('bookings')->name('api.bookings.')->middleware('user.token')->group(function () {
+    Route::get('/mine', [\App\Http\Controllers\BookingController::class, 'mine'])->name('mine');
+    Route::post('/', [\App\Http\Controllers\BookingController::class, 'store'])->name('store');
+    Route::delete('/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('destroy');
+});
+
+
+// Waitlist endpoints — authenticated
+Route::prefix('waitlist')->name('api.waitlist.')->middleware('user.token')->group(function () {
+    Route::get('/mine', [\App\Http\Controllers\AdmissionWaitlistController::class, 'index'])->name('mine');
+    Route::post('/add', [\App\Http\Controllers\AdmissionWaitlistController::class, 'store'])->name('add');
+    Route::post('/convert/{waitlistId}', [\App\Http\Controllers\AdmissionWaitlistController::class, 'convert'])->name('convert');
+    Route::get('/check/{courseId}', [\App\Http\Controllers\AdmissionWaitlistController::class, 'check'])->name('check');
+    Route::get('/count/{courseId}', [\App\Http\Controllers\AdmissionWaitlistController::class, 'count'])->name('count');
+    Route::delete('/{courseId}', [\App\Http\Controllers\AdmissionWaitlistController::class, 'destroy'])->name('destroy');
+});
+
+Route::get('/courses/slot-left', [CourseMatchAPIController::class, 'courseSlotLeft']);
+Route::get('/courses/{courseId}/slot-left', [CourseMatchAPIController::class, 'courseSlotLeft']);
 // Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
 // Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
 
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+// Route::middleware('auth:sanctum')->group(function () {
+//         Route::group(function () {
+
+//             Route::get('/user', function (Request $request) {
+//         return $request->user();
+//     });
+// });
+Route::post('/ghana-card/verify', [\App\Http\Controllers\Api\GhanaCardController::class, 'verify']);
 
 
 // Route::middleware('apikey.check')->group(function () {
@@ -47,6 +85,8 @@ Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->middleware('
     Route::post('/submit', [StudentOperation::class, 'submit_assessment_answer'])->name('submit');
     Route::post('/record-violation', [StudentOperation::class, 'record_assessment_violation'])->name('record-violation');
 });
+
+// Route::get('/recommended-courses', [StudentOperation::class, 'recommendCourses'])->name('recommended-courses');
 /*
 |--------------------------------------------------------------------------
 | Statamic Custom API Routes

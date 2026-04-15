@@ -41,6 +41,15 @@ class AppConfigServiceProvider extends ServiceProvider
         defined('ASSESSMENT_MAX_QUESTIONS') or define('ASSESSMENT_MAX_QUESTIONS', 'ASSESSMENT_MAX_QUESTIONS');
         defined('ASSESSMENT_PASSING_SCORE') or define('ASSESSMENT_PASSING_SCORE', 'ASSESSMENT_PASSING_SCORE');
         defined('ASSESSMENT_LEVEL_TIMEOUT_SECONDS') or define('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 'ASSESSMENT_LEVEL_TIMEOUT_SECONDS');
+
+        // Ghana Card Verification settings
+        defined('GHANA_CARD_MAX_ATTEMPTS') or define('GHANA_CARD_MAX_ATTEMPTS', 'GHANA_CARD_MAX_ATTEMPTS');
+
+        // Booking System parameters
+        defined('SHORT_SLOTS_PERCENTAGE') or define('SHORT_SLOTS_PERCENTAGE', 'SHORT_SLOTS_PERCENTAGE');
+        defined('LONG_SLOTS_PERCENTAGE') or define('LONG_SLOTS_PERCENTAGE', 'LONG_SLOTS_PERCENTAGE');
+        defined('WAITLIST_NOTIFY_LIMIT') or define('WAITLIST_NOTIFY_LIMIT', 'WAITLIST_NOTIFY_LIMIT');
+        defined('AVAILABILITY_CACHE_TTL') or define('AVAILABILITY_CACHE_TTL', 'AVAILABILITY_CACHE_TTL');
     }
 
     /**
