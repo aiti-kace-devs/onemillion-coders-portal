@@ -212,7 +212,23 @@ class BatchCrudController extends CrudController
                 <form id="regenerate-batches-form-' . $batch->id . '" action="' . url('admin/batch/' . $batch->id . '/regenerate-batches') . '" method="POST" style="display: none;">
                     ' . csrf_field() . '
                 </form>
-            </div>',
+            </div>
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    var btn = document.getElementById("btn-regenerate-batches");
+                    if (btn) {
+                        btn.addEventListener("click", function(e) {
+                            e.preventDefault();
+                            if(confirm("Regenerate programme batches for this admission? This may overwrite existing batches.")) {
+                                var form = document.getElementById("regenerate-batches-form-' . $batch->id . '");
+                                if (form) {
+                                    form.submit();
+                                }
+                            }
+                        });
+                    }
+                });
+            </script>',
             'tab' => 'Assign Courses',
         ]);
 
