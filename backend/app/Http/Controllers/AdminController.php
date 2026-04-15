@@ -856,21 +856,17 @@ class AdminController extends Controller
         ]);
     }
 
-    public function delete_admission($user_id, Request $request)
+    public function delete_admission($user_id, Request $request, \App\Services\AdmissionRevocationService $revocationService)
     {
         $delete_user_admission = UserAdmission::where('user_id', $user_id)->first();
 
         if ($delete_user_admission) {
-            $delete_user_admission->delete();
-            AdmissionRejection::create([
-                'user_id' => $user_id,
-                'course_id' => $delete_user_admission->course_id,
-                'rejected_at' => now(),
-            ]);
+            $result = $revocationService->revoke($delete_user_admission);
 
-            User::where('userId', $user_id)->update(['shortlist' => 0]);
-
-            return response()->json(['message' => 'User admission and shortlisted deleted successfully.'], 200);
+            return response()->json([
+                'message' => 'User admission and shortlisted deleted successfully.',
+                'slot_restored' => $result['slot_restored'],
+            ], 200);
         } else {
             return response()->json(['message' => 'User admission not found.'], 404);
         }

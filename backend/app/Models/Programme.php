@@ -13,6 +13,18 @@ class Programme extends Model
     use CrudTrait;
     use HasFactory, LogsActivity;
 
+    public const TIME_ALLOCATION_SHORT = 2;
+    public const TIME_ALLOCATION_LONG = 4;
+    public const COURSE_TYPE_SHORT = 'short';
+    public const COURSE_TYPE_LONG = 'long';
+
+    public function courseType(): string
+    {
+        return (int) $this->time_allocation === self::TIME_ALLOCATION_LONG
+            ? self::COURSE_TYPE_LONG
+            : self::COURSE_TYPE_SHORT;
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -26,6 +38,8 @@ class Programme extends Model
         'title',
         'sub_title',
         'duration',
+        'duration_in_days',
+        'time_allocation',
         'start_date',
         'end_date',
         'description',
@@ -119,6 +133,30 @@ class Programme extends Model
                 'what_you_will_learn' => $whatYouWillLearn,
                 'why_choose_this_course' => $whyChoose
             ];
+
+            // Auto-compute duration_in_days and time_allocation from duration
+            if ($programme->duration) {
+                $hours = (int) $programme->duration;
+                $programme->time_allocation = $hours <= 40
+                    ? self::TIME_ALLOCATION_SHORT
+                    : self::TIME_ALLOCATION_LONG;
+
+                if ($hours <= 40) {
+                    $programme->duration_in_days = (int) ceil($hours / 2);
+                } elseif ($hours <= 80) {
+                    $programme->duration_in_days = 20;
+                } elseif ($hours <= 120) {
+                    $programme->duration_in_days = 30;
+                } elseif ($hours <= 160) {
+                    $programme->duration_in_days = 40;
+                } elseif ($hours <= 200) {
+                    $programme->duration_in_days = 50;
+                } else {
+                    $programme->duration_in_days = 60;
+                }
+
+                $programme->duration = $hours . ' hours';
+            }
         });
 
         static::saved(function ($programme) {

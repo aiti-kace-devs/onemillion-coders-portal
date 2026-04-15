@@ -31,6 +31,7 @@ class CourseSession extends Model
 
     protected $fillable = [
         'name',
+        'master_session_id',
         'course_id',
         'centre_id',
         'session_type',
@@ -54,6 +55,11 @@ class CourseSession extends Model
     public function centre()
     {
         return $this->belongsTo(Centre::class, 'centre_id');
+    }
+
+    public function masterSession()
+    {
+        return $this->belongsTo(MasterSession::class, 'master_session_id');
     }
 
     protected static function boot()
@@ -103,12 +109,20 @@ class CourseSession extends Model
         return $query->where('session_type', self::TYPE_CENTRE);
     }
 
-    public function slotLeft()
+    public function slotLeft(): ?int
     {
-        $sessionIds = $this->sharedSessionIds();
-        $used = UserAdmission::whereIn('session', $sessionIds)->whereNotNull('confirmed')->count();
+        $limit = (int) ($this->limit ?? 0);
 
-        return $this->limit - $used;
+        if ($limit < 1) {
+            return null;
+        }
+
+        $sessionIds = $this->sharedSessionIds();
+        $used = UserAdmission::whereIn('session', $sessionIds)
+            ->whereNotNull('confirmed')
+            ->count();
+
+        return max(0, $limit - $used);
     }
 
     protected function sharedSessionIds(): array

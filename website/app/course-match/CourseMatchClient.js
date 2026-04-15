@@ -750,7 +750,7 @@ export default function CourseMatchClient() {
                       variant="outline"
                       className="min-h-[44px]"
                     >
-                      Retake Quiz
+                      Get New Recommendations
                     </Button>
                     <Link href="/programmes">
                       <Button variant="ghost" className="min-h-[44px]">
@@ -769,7 +769,7 @@ export default function CourseMatchClient() {
                     className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white font-semibold text-sm rounded-xl transition-colors"
                   >
                     <FiTarget className="w-4 h-4" />
-                    Retake Quiz
+                    Get New Recommendations
                   </button>
                   <Link href="/programmes">
                     <button className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-sm rounded-xl border border-gray-200 transition-colors">

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class CentreRequest extends FormRequest
 {
@@ -25,6 +26,8 @@ class CentreRequest extends FormRequest
      */
     public function rules()
     {
+        $isUpdating = $this->isMethod('PUT') || $this->isMethod('PATCH');
+
         return [
             'branch_id' => 'required|integer|exists:branches,id',
             'title' => 'required|string|max:255',
@@ -43,6 +46,9 @@ class CentreRequest extends FormRequest
                     $query->where('branch_id', (int) $this->input('branch_id'));
                 }),
             ],
+            'seat_count' => 'nullable|integer|min:1|max:255',
+            'short_slots_per_day' => 'nullable|integer|min:0|max:255',
+            'long_slots_per_day' => 'nullable|integer|min:0|max:255',
         ];
     }
 
@@ -78,5 +84,31 @@ class CentreRequest extends FormRequest
             'constituency_id.exists' => 'The selected constituency is invalid for the selected region.',
             'district_id.exists' => 'The selected district is invalid for the selected region.',
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $seatCount = $this->input('seat_count');
+            $shortSlots = $this->input('short_slots_per_day');
+            $longSlots = $this->input('long_slots_per_day');
+
+            // Validate that short + long = seat_count when all three are provided
+            if ($seatCount && $shortSlots !== null && $longSlots !== null) {
+                if (($shortSlots + $longSlots) !== (int) $seatCount) {
+                    $validator->errors()->add(
+                        'short_slots_per_day',
+                        'Short slots + Long slots must equal Seat Count.'
+                    );
+                    $validator->errors()->add(
+                        'long_slots_per_day',
+                        'Short slots + Long slots must equal Seat Count.'
+                    );
+                }
+            }
+        });
     }
 }

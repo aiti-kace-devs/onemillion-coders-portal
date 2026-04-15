@@ -85,6 +85,14 @@ class Batch extends Model
     }
 
     /**
+     * Get all programme batches for this admission batch
+     */
+    public function programmeBatches()
+    {
+        return $this->hasMany(ProgrammeBatch::class, 'admission_batch_id');
+    }
+
+    /**
      * Get all courses for this batch (direct relationship via batch_id)
      */
     public function courses()

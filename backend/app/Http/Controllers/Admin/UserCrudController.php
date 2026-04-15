@@ -133,7 +133,6 @@ class UserCrudController extends CrudController
         $this->crud->setShowView('vendor.backpack.crud.manage_student_show');
 
         CRUD::addButtonFromView('line', 'manage_student_actions', 'view', 'crud::buttons.manage_student_actions', 'end');
-
     }
     /**
      * Define what happens when the Create operation is loaded.
@@ -151,10 +150,8 @@ class UserCrudController extends CrudController
         CRUD::setValidation(UserRequest::class);
         CRUD::setFromDb(); // set fields from db columns.
 
-        /**
-         * Fields can be defined using the fluent syntax:
-         * - CRUD::field('price')->type('number');
-         */
+        CRUD::field('ghcard')->label('Ghana Card Number')->hint('Format: GHA-XXXXXXXXX-X');
+        CRUD::field('is_verification_blocked')->type('boolean')->label('Ghana Card Verification Blocked')->hint('Check to block further automated verification attempts');
     }
 
     /**
@@ -171,6 +168,20 @@ class UserCrudController extends CrudController
         }
 
         $this->setupCreateOperation();
+
+        /** @var \App\Models\User $user */
+        $user = $this->crud->getCurrentEntry();
+        if ($user && $user->isVerifiedByGhanaCard()) {
+            $this->crud->field('first_name')->attributes(['readonly' => 'readonly', 'placeholder' => 'Verified by NIA']);
+            $this->crud->field('last_name')->attributes(['readonly' => 'readonly', 'placeholder' => 'Verified by NIA']);
+            $this->crud->field('middle_name')->attributes(['readonly' => 'readonly', 'placeholder' => 'Verified by NIA']);
+            $this->crud->field('name')->attributes(['readonly' => 'readonly', 'placeholder' => 'Verified by NIA']);
+            $this->crud->field('ghcard')->attributes(['readonly' => 'readonly']);
+            $this->crud->field('date_of_birth')->attributes(['readonly' => 'readonly']);
+
+            // Helpful hint for the admin
+            $this->crud->field('is_verification_blocked')->hint('User is already verified. Changes to personal name fields are disabled.');
+        }
     }
 
     /**
@@ -361,5 +372,4 @@ class UserCrudController extends CrudController
         $activities = $user->actions()->latest()->get();
         return view('admin.users.activities', compact('user', 'activities'));
     }
-
 }
