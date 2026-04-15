@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Branch;
 use App\Models\Centre;
+use App\Services\CentreDeletionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -35,10 +36,8 @@ class CentreController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-
     public function store(Request $request)
     {
         if ($request->ajax()) {
@@ -67,11 +66,10 @@ class CentreController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => 'Centre created successfully!',
-                'reload'  => route('admin.centre.index')
+                'reload' => route('admin.centre.index'),
             ], 200);
         }
     }
-
 
     /**
      * Display the specified resource.
@@ -101,7 +99,6 @@ class CentreController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
@@ -133,7 +130,7 @@ class CentreController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => 'Centre updated successfully!',
-                'reload'  => route('admin.centre.index')
+                'reload' => route('admin.centre.index'),
             ], 200);
         }
     }
@@ -146,8 +143,8 @@ class CentreController extends Controller
      */
     public function destroy($id)
     {
-        $centre = Centre::find($id);
-        $centre->delete();
+        $centre = Centre::findOrFail($id);
+        app(CentreDeletionService::class)->delete($centre);
 
         return redirect()->route('admin.centre.index');
     }

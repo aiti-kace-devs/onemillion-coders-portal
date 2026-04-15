@@ -716,7 +716,9 @@ class CourseProgrammeController extends Controller
 
     public function getTotalCentresCount()
     {
-        $totalCentres = Centre::where('status', 1)->count();
+        $totalCentres = Centre::where('status', 1)
+        ->where('is_ready', 1)
+        ->count();
 
         return response()->json([
             'success' => true,
