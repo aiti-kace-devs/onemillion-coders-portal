@@ -125,7 +125,6 @@ trait BatchFieldHelpers
 
         $this->addIsActiveField([true  => 'True', false => 'False'], 'Status', 'status', 'General Info');
         $this->addIsActiveField([true  => 'True', false => 'False'], 'Completed', 'completed', 'General Info');
-        $this->addFieldsToTab('General Info', true, ['title', 'description', 'start_date', 'end_date', 'status', 'completed']);
 
         // Prompt user if they try to activate a batch while another batch is already active.
         $activeBatches = Batch::query()
@@ -840,8 +839,6 @@ trait BatchFieldHelpers
         return redirect()
             ->back()
             ->with('success', 'Course sessions saved successfully.');
+
     }
-
-
-
 }

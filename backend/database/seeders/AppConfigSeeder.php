@@ -141,6 +141,11 @@ class AppConfigSeeder extends Seeder
 
                 // Ghana Card Verification
                 ['key' => GHANA_CARD_MAX_ATTEMPTS, 'value' => 5, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                // Booking System parameters
+                ['key' => SHORT_SLOTS_PERCENTAGE, 'value' => 60, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => LONG_SLOTS_PERCENTAGE, 'value' => 40, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => WAITLIST_NOTIFY_LIMIT, 'value' => 5, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => AVAILABILITY_CACHE_TTL, 'value' => 300, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
             ]);
         } catch (\Exception $e) {
             echo $e->getMessage();

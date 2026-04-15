@@ -18,6 +18,7 @@ class CentreSession extends Model
 
     protected $fillable = [
         'name',
+        'master_session_id',
         'course_id',
         'centre_id',
         'session_type',
@@ -45,6 +46,11 @@ class CentreSession extends Model
     public function centre()
     {
         return $this->belongsTo(Centre::class, 'centre_id', 'id');
+    }
+
+    public function masterSession()
+    {
+        return $this->belongsTo(MasterSession::class, 'master_session_id');
     }
 
     protected static function boot()

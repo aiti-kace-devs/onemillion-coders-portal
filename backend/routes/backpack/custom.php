@@ -59,9 +59,11 @@ Route::group([
     Route::post('batch/course/{courseId}/sessions', [BatchCrudController::class, 'saveCourseSessions']);
     Route::post('batch/{id}/toggle', [BatchCrudController::class, 'toggleStatus']);
     Route::post('batch/{id}/toggle-completed', [BatchCrudController::class, 'toggleCompleted']);
+    Route::post('batch/{id}/regenerate-batches', [BatchCrudController::class, 'regenerate']);
     Route::crud('tag', 'TagCrudController');
     Route::crud('tag-type', 'TagTypeCrudController');
     Route::crud('course-session', 'CourseSessionCrudController');
+    Route::crud('master-session', 'MasterSessionCrudController');
     Route::crud('email-template', 'EmailTemplateCrudController');
     Route::crud('form', 'FormCrudController');
     Route::post('form/{id}/toggle', 'FormCrudController@toggleStatus');
@@ -167,6 +169,8 @@ Route::group([
     Route::get('course-batch/{id}/admitted-students-data', [CourseBatchCrudController::class, 'admittedStudentsData'])->name('course-batch.admitted-students-data');
     Route::get('course-batch/{id}/attendance-history-data', [CourseBatchCrudController::class, 'attendanceHistoryData'])->name('course-batch.attendance-history-data');
     Route::crud('course-batch', 'CourseBatchCrudController');
+    Route::crud('programme-batch', 'ProgrammeBatchCrudController');
+    Route::post('programme-batch/{batchId}/regenerate', 'ProgrammeBatchCrudController@regenerate');
     Route::post('district/{id}/toggle', [DistrictCrudController::class, 'toggleStatus']);
     Route::post('constituency/{id}/toggle', [ConstituencyCrudController::class, 'toggleStatus']);
     Route::post('district/{districtId}/add-centres', [DistrictCrudController::class, 'addCentres'])->name('district.add-centres');
