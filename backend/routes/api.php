@@ -42,12 +42,11 @@ Route::prefix('bookings')->name('api.bookings.')->middleware('user.token')->grou
     Route::delete('/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('destroy');
 });
 
-Route::post('/waitlist/add', [\App\Http\Controllers\AdmissionWaitlistController::class, 'store'])->name('add');
 
 // Waitlist endpoints — authenticated
 Route::prefix('waitlist')->name('api.waitlist.')->middleware('user.token')->group(function () {
     Route::get('/mine', [\App\Http\Controllers\AdmissionWaitlistController::class, 'index'])->name('mine');
-    // Route::post('/add', [\App\Http\Controllers\AdmissionWaitlistController::class, 'store'])->name('add');
+    Route::post('/add', [\App\Http\Controllers\AdmissionWaitlistController::class, 'store'])->name('add');
     Route::post('/convert/{waitlistId}', [\App\Http\Controllers\AdmissionWaitlistController::class, 'convert'])->name('convert');
     Route::get('/check/{courseId}', [\App\Http\Controllers\AdmissionWaitlistController::class, 'check'])->name('check');
     Route::get('/count/{courseId}', [\App\Http\Controllers\AdmissionWaitlistController::class, 'count'])->name('count');
