@@ -42,6 +42,8 @@ Route::prefix('bookings')->name('api.bookings.')->middleware('user.token')->grou
     Route::post('/', [\App\Http\Controllers\BookingController::class, 'store'])->name('store');
     Route::delete('/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('destroy');
 });
+Route::get('/courses/slot-left', [CourseMatchAPIController::class, 'courseSlotLeft']);
+Route::get('/courses/{courseId}/slot-left', [CourseMatchAPIController::class, 'courseSlotLeft']);
 // Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
 // Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
 
@@ -67,6 +69,8 @@ Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->middleware('
     Route::post('/submit', [StudentOperation::class, 'submit_assessment_answer'])->name('submit');
     Route::post('/record-violation', [StudentOperation::class, 'record_assessment_violation'])->name('record-violation');
 });
+
+// Route::get('/recommended-courses', [StudentOperation::class, 'recommendCourses'])->name('recommended-courses');
 /*
 |--------------------------------------------------------------------------
 | Statamic Custom API Routes
