@@ -10,6 +10,10 @@ use Statamic\Facades\CP\Nav;
 use Illuminate\Support\Facades\Validator;
 use App\Rules\Recaptcha;
 use App\Services\JwtService;
+use App\Models\Booking;
+use App\Models\ProgrammeBatch;
+use App\Observers\BookingObserver;
+use App\Observers\ProgrammeBatchObserver;
 
 
 class AppServiceProvider extends ServiceProvider

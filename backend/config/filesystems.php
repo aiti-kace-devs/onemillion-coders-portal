@@ -29,12 +29,13 @@ $defaultDiskConfigs = [
         'driver' => 's3',
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
-        'region' => env('AWS_DEFAULT_REGION'),
+        'region' => env('AWS_REGION', 'gh'),
         'bucket' => env('AWS_BUCKET'),
         'url' => env('AWS_URL'),
         'endpoint' => env('AWS_ENDPOINT'),
-        'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+        'use_path_style_endpoint' => true,
     ],
+
 ];
 
 $baseConfig = $defaultDiskConfigs[$defaultDriver] ?? $defaultDiskConfigs['local'];
@@ -67,7 +68,8 @@ return [
     |
     */
 
-    'cdn_url' =>  env('GOOGLE_CLOUD_STORAGE_API_URI'),
+    'cdn_url' =>  env('CDN_URL'),
+    'default_cloud_storage' => env('DEFAULT_CLOUD_STORAGE', 'gcs'),
 
     'disks' => [
 
@@ -83,11 +85,24 @@ return [
             'visibility' => 'public',
         ],
 
-        's3' => $defaultDiskConfigs['s3'],
+        's3' => array_merge($defaultDiskConfigs['s3'], [
+            'url' => env('AWS_URL') . '/' . env('AWS_BUCKET'),
+        ]),
+        's3_basset' => array_merge($defaultDiskConfigs['s3'], [
+            'url' => env('AWS_URL') . '/' . env('BASSET_CLOUD_BUCKET', 'omcp-asset'),
+            'bucket' => env('BASSET_CLOUD_BUCKET', 'omcp-asset'),
+        ]),
         'gcs' => $gcs,
         'gcs_uploads' => array_merge($gcs, [
             'root' => 'uploads',
             'url' => env('GOOGLE_CLOUD_STORAGE_API_URI') . '/uploads',
+        ]),
+
+        'private_cloud' => array_merge($baseConfig, [
+            'visibility' => 'private',
+            'bucket' => env('PRIVATE_CLOUD_BUCKET', 'omcp-private'),
+            'url' => $baseConfig['url'] . '/' . env('PRIVATE_CLOUD_BUCKET', 'omcp-private'),
+            'throw' => false,
         ]),
 
         MediaHelper::DISK_PROGRAMME_IMAGES => array_merge(

@@ -409,6 +409,31 @@ class CentreCrudController extends CrudController
             value: $this->crud->getCurrentEntry() ? $this->crud->getCurrentEntry()->video ?? '' : '',
         );
 
+        // Capacity fields for programme batch quota management
+        CRUD::addField([
+            'name' => 'seat_count',
+            'label' => 'Seat Count',
+            'type' => 'number',
+            'wrapper' => ['class' => 'form-group col-4'],
+            'hint' => 'Maximum students per batch slot at this centre',
+        ]);
+
+        CRUD::addField([
+            'name' => 'short_slots_per_day',
+            'label' => 'Short Slots/Day',
+            'type' => 'number',
+            'wrapper' => ['class' => 'form-group col-4'],
+            'hint' => 'Auto-derived from seat_count if not set (short courses: 2h/day)',
+        ]);
+
+        CRUD::addField([
+            'name' => 'long_slots_per_day',
+            'label' => 'Long Slots/Day',
+            'type' => 'number',
+            'wrapper' => ['class' => 'form-group col-4'],
+            'hint' => 'Auto-derived from seat_count if not set (long courses: 4h/day)',
+        ]);
+
         $this->addIsActiveField([true => 'True', false => 'False'], 'Is PWD Friendly', 'is_pwd_friendly');
 
         $this->addIsActiveField([true => 'True', false => 'False'], 'Wheelchair Accessible', 'wheelchair_accessible');
@@ -442,6 +467,7 @@ class CentreCrudController extends CrudController
         $this->addFieldsToTab('General', true, [
             'title', 'branch_id', 'constituency_id', 'constituency_dependency_script',
             'district_id', 'district_dependency_script', 'gps_address', 'pwd_notes', 'images', 'video',
+            'seat_count', 'short_slots_per_day', 'long_slots_per_day',
         ]);
         $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'is_ready', 'status']);
         $this->addFieldsToTab('GPS Location', true, ['gps_location']);

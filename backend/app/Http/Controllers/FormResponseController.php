@@ -131,12 +131,22 @@ class FormResponseController extends Controller
 
             switch ($field['type']) {
                 case 'text':
-                case 'textarea': $rules[] = 'string'; break;
+                case 'textarea':
+                    $rules[] = 'string';
+                    break;
                 case 'radio':
-                case 'select': $rules[] = 'string'; break;
-                case 'number': $rules[] = 'numeric'; break;
-                case 'email': $rules[] = 'email'; break;
-                case 'checkbox': $rules[] = 'array'; break;
+                case 'select':
+                    $rules[] = 'string';
+                    break;
+                case 'number':
+                    $rules[] = 'numeric';
+                    break;
+                case 'email':
+                    $rules[] = 'email';
+                    break;
+                case 'checkbox':
+                    $rules[] = 'array';
+                    break;
                 case 'file':
                     $rules[] = 'file';
                     $rules[] = 'max:2048';
@@ -146,9 +156,6 @@ class FormResponseController extends Controller
                         $allowedMimes = array_map('trim', explode(',', strtolower($field['options'])));
                         $rules[] = 'mimes:' . implode(',', $allowedMimes);
                     }
-                    break;
-                case 'select_course':
-                    $rules[] = 'exists:courses,id';
                     break;
                 case 'phonenumber':
                     $rules[] = 'phone';
@@ -343,15 +350,15 @@ class FormResponseController extends Controller
             }
         }
         // $response = DB::transaction(function () use ($form, $responseData, $emailField, $emailValue) {
-            // $response = new FormResponse([
-            //     'form_id' => $form->id,
-            //     'response_data' => $responseData,
-            // ]);
-            // $form->responses()->save($response);
+        // $response = new FormResponse([
+        //     'form_id' => $form->id,
+        //     'response_data' => $responseData,
+        // ]);
+        // $form->responses()->save($response);
 
 
 
-            // return $response;
+        // return $response;
         // });
 
         FormSubmittedEvent::dispatch($responseData, $phoneFieldName);

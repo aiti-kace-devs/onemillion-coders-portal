@@ -16,7 +16,7 @@
     </x-backpack::menu-dropdown>
 @endcan
 
-@if (auth()->user()->can('student.read.all') || auth()->user()->can('student-verification.read.all'))
+@if (auth()->user()->can('student.read.all') || auth()->user()->can('student-verification.read.all') || auth()->user()->can('ghana-card-verification.read.all'))
     <x-backpack::menu-dropdown title="Student Management" icon="la la-users">
         @can('student.read.all')
             <x-backpack::menu-dropdown-item title="Manage Students" icon="la la-user-graduate" :link="backpack_url('manage-student')" />
@@ -25,6 +25,9 @@
         @can('student-verification.read.all')
             <x-backpack::menu-dropdown-item title="Student Verifications" icon="la la-check-circle" :link="backpack_url('student-verification')" />
         @endcan
+        @canany(['ghana-card-verification.read.all', 'ghana-card-verification.index'])
+            <x-backpack::menu-dropdown-item title="Ghana Card Verifications" icon="la la-id-card" :link="backpack_url('ghana-card-verification')" />
+        @endcanany
     </x-backpack::menu-dropdown>
 @endif
 
@@ -66,6 +69,9 @@
 @endcan -->
     @can('course-session.read.all')
         <x-backpack::menu-dropdown-item title="Course Sessions" icon="la la-clock" :link="backpack_url('course-session')" />
+    @endcan
+    @can('course-session.read.all')
+        <x-backpack::menu-dropdown-item title="Master Sessions" icon="la la-clock-o" :link="backpack_url('master-session')" />
     @endcan
     @can('course-category.read.all')
         <x-backpack::menu-dropdown-item title="Course Categories" icon="la la-layer-group" :link="backpack_url('course-category')" />
@@ -118,6 +124,10 @@
 
 @can('batch.read.all')
     <x-backpack::menu-item title="Admission Batches" icon="la la-users" :link="backpack_url('batch')" />
+@endcan
+
+@can('programme-batch.read.all')
+    <x-backpack::menu-item title="Programme Batches" icon="la la-calendar" :link="backpack_url('programme-batch')" />
 @endcan
 
 {{-- @can('branch.read.all')

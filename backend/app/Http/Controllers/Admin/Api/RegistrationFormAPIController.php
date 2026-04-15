@@ -185,7 +185,8 @@ class RegistrationFormAPIController extends Controller
         }
 
         $user->registered_course = $course->id;
-        $user->support = $supportRequested;
+        $user->shortlist = true;
+        $user->support = filter_var($data['support'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
         $user->save();
 
         return response()->json([
@@ -198,4 +199,45 @@ class RegistrationFormAPIController extends Controller
             ],
         ]);
     }
+
+
+
+
+        public function switchToSelfPaced(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'userId' => 'required|exists:users,userId'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
+        $user = User::where('userId', $data['userId'])->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ]);
+        }
+
+        $user->support = false;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'message' => 'You have successfully switched to self-paced learning. Resource support has been removed from your registration.',
+            ],
+        ]);
+    }
+
+
 }

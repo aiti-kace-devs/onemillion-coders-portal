@@ -51,7 +51,10 @@ class User extends Authenticatable
         'student_level',
         'data',
         'support',
-        'student_id'
+        'student_id',
+        'is_verification_blocked',
+        'is_nia_syncing',
+        'middle_name'
     ];
 
     /**
@@ -77,6 +80,7 @@ class User extends Authenticatable
         'pwd' => 'boolean',
         'data' => 'array',
         'support' => 'boolean',
+        'is_verification_blocked' => 'boolean',
     ];
 
 
@@ -94,6 +98,35 @@ class User extends Authenticatable
                         'email_sent' => null
                     ]
                 );
+            }
+        });
+
+        static::updating(function ($user) {
+            // Prevent updates to NIA verified fields if the user is already verified
+            // and this is not a system sync.
+            if ($user->isVerifiedByGhanaCard() && !($user->is_nia_syncing ?? false)) {
+                $protectedFields = ['name', 'first_name', 'last_name'];
+                
+                foreach ($protectedFields as $field) {
+                    if ($user->isDirty($field)) {
+                        $user->{$field} = $user->getOriginal($field);
+                        Log::warning("Blocked manual update to verified field: {$field}", ['user_id' => $user->id]);
+                    }
+                }
+
+                // Protect date_of_birth in the 'data' JSON column
+                if ($user->isDirty('data')) {
+                    $originalData = $user->getOriginal('data');
+                    $newData = $user->data;
+                    
+                    if (isset($originalData['date_of_birth']) && isset($newData['date_of_birth'])) {
+                        if ($originalData['date_of_birth'] !== $newData['date_of_birth']) {
+                            $newData['date_of_birth'] = $originalData['date_of_birth'];
+                            $user->data = $newData;
+                            Log::warning("Blocked manual update to verified date_of_birth in data column", ['user_id' => $user->id]);
+                        }
+                    }
+                }
             }
         });
     }
@@ -343,5 +376,20 @@ class User extends Authenticatable
     public function getVerificationDateAttribute()
     {
         return $this->admission?->confirmed;
+    }
+
+    public function ghanaCardVerifications()
+    {
+        return $this->hasMany(GhanaCardVerification::class);
+    }
+
+    public function latestGhanaCardVerification()
+    {
+        return $this->hasOne(GhanaCardVerification::class)->latestOfMany();
+    }
+
+    public function isVerifiedByGhanaCard(): bool
+    {
+        return $this->ghanaCardVerifications()->where('code', '00')->exists();
     }
 }
