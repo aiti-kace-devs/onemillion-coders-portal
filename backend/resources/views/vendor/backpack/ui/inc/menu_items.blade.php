@@ -67,6 +67,9 @@
     @can('course-session.read.all')
         <x-backpack::menu-dropdown-item title="Course Sessions" icon="la la-clock" :link="backpack_url('course-session')" />
     @endcan
+    @can('course-session.read.all')
+        <x-backpack::menu-dropdown-item title="Master Sessions" icon="la la-clock-o" :link="backpack_url('master-session')" />
+    @endcan
     @can('course-category.read.all')
         <x-backpack::menu-dropdown-item title="Course Categories" icon="la la-layer-group" :link="backpack_url('course-category')" />
     @endcan
@@ -118,6 +121,10 @@
 
 @can('batch.read.all')
     <x-backpack::menu-item title="Admission Batches" icon="la la-users" :link="backpack_url('batch')" />
+@endcan
+
+@can('programme-batch.read.all')
+    <x-backpack::menu-item title="Programme Batches" icon="la la-calendar" :link="backpack_url('programme-batch')" />
 @endcan
 
 {{-- @can('branch.read.all')
