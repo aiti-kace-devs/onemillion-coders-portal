@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+
 Route::post('batch/add-courses/{batch}', [BatchCrudController::class, 'addCourses'])
     ->name('batch.add-courses');
 Route::post('/recommend/courses', [CourseMatchAPIController::class, 'recommendCourses']);
@@ -46,9 +47,14 @@ Route::get('/courses/{courseId}/slot-left', [CourseMatchAPIController::class, 'c
 // Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
 
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+// Route::middleware('auth:sanctum')->group(function () {
+//         Route::group(function () {
+
+//             Route::get('/user', function (Request $request) {
+//         return $request->user();
+//     });
+// });
+Route::post('/ghana-card/verify', [\App\Http\Controllers\Api\GhanaCardController::class, 'verify']);
 
 
 // Route::middleware('apikey.check')->group(function () {

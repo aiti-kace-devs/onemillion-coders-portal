@@ -41,6 +41,9 @@ class AppConfigServiceProvider extends ServiceProvider
         defined('ASSESSMENT_MAX_QUESTIONS') or define('ASSESSMENT_MAX_QUESTIONS', 'ASSESSMENT_MAX_QUESTIONS');
         defined('ASSESSMENT_PASSING_SCORE') or define('ASSESSMENT_PASSING_SCORE', 'ASSESSMENT_PASSING_SCORE');
         defined('ASSESSMENT_LEVEL_TIMEOUT_SECONDS') or define('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 'ASSESSMENT_LEVEL_TIMEOUT_SECONDS');
+
+        // Ghana Card Verification settings
+        defined('GHANA_CARD_MAX_ATTEMPTS') or define('GHANA_CARD_MAX_ATTEMPTS', 'GHANA_CARD_MAX_ATTEMPTS');
     }
 
     /**
