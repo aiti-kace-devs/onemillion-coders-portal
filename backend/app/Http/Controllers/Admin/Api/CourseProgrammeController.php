@@ -15,6 +15,7 @@ use App\Models\CourseBatch;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use App\Models\UserAdmission;
 
 class CourseProgrammeController extends Controller
 {
