@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class CourseMatchAPIController extends Controller
 {
@@ -47,7 +48,7 @@ class CourseMatchAPIController extends Controller
         $user = User::where('userId', $userId)->first();
         $registeredCourseId = $user ? (int) $user->registered_course : null;
 
-        $recommendations = \Illuminate\Support\Facades\DB::table('user_course_recommendations')
+        $recommendations = DB::table('user_course_recommendations')
             ->where('user_id', $userId)
             ->orderBy('rank')
             ->get();
