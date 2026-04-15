@@ -7,6 +7,7 @@ const props = defineProps({
     history:        { type: Object, required: true },
     stats:          { type: Object, required: true },
     relatedCourses: { type: Array,  default: () => [] },
+    canEnroll:      { type: Boolean, default: false },
 });
 
 const page = usePage();
@@ -43,10 +44,10 @@ const total = computed(() => props.stats?.total ?? 0);
 function pct(n) { return (!total.value || !n) ? 0 : Math.round((n / total.value) * 100); }
 
 const statCards = computed(() => [
-    { label: "Total Enrolled", count: total.value,               bar: "bg-gray-500",   pct: 100,                           sub: "All cohorts",          left: "border-l-gray-400"   },
-    { label: "Admitted",       count: props.stats?.admitted ?? 0, bar: "bg-blue-500",   pct: pct(props.stats?.admitted),    sub: "Awaiting confirmation", left: "border-l-blue-500"   },
-    { label: "Active Courses", count: props.stats?.confirmed ?? 0,bar: "bg-violet-500", pct: pct(props.stats?.confirmed),   sub: "Currently enrolled",   left: "border-l-violet-500" },
-    { label: "Revoked",        count: props.stats?.revoked ?? 0,  bar: "bg-red-400",    pct: pct(props.stats?.revoked),     sub: "Access removed",       left: "border-l-red-400"    },
+    { label: "Total Enrolled", count: total.value,               icon: "school",        sub: "All cohorts"           },
+    { label: "Admitted",       count: props.stats?.admitted ?? 0, icon: "pending",       sub: "Awaiting confirmation" },
+    { label: "Active Courses", count: props.stats?.confirmed ?? 0,icon: "check_circle",  sub: "Currently enrolled"    },
+    { label: "Revoked",        count: props.stats?.revoked ?? 0,  icon: "block",         sub: "Access removed"        },
 ]);
 
 // ── Dates ────────────────────────────────────────────────────────────────────
@@ -80,10 +81,7 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-baseline gap-3">
-                <h2 class="font-semibold text-xl text-gray-900 leading-tight">My Learning History</h2>
-                <span class="text-sm text-gray-400 font-normal">OMCP · GI-KACE</span>
-            </div>
+            <h2 class="font-semibold text-xl text-gray-900 leading-tight">My Learning History</h2>
         </template>
 
         <div class="w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-8 space-y-8">
@@ -91,19 +89,28 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
             <!-- ══════════════════════════════════════════════════════
                  STAT CARDS
             ══════════════════════════════════════════════════════ -->
-            <div class="flex flex-row gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div
                     v-for="card in statCards"
                     :key="card.label"
-                    class="flex-1 min-w-0 bg-white rounded-xl border border-gray-100 border-l-4 px-5 py-5"
-                    :class="card.left"
+                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col border border-gray-100/80 overflow-hidden"
                 >
-                    <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">{{ card.label }}</p>
-                    <p class="text-4xl font-bold text-gray-900 tabular-nums leading-none">{{ card.count.toLocaleString() }}</p>
-                    <div class="h-1 bg-gray-100 rounded-full overflow-hidden mt-3 mb-2">
-                        <div class="h-full rounded-full transition-all duration-700" :class="card.bar" :style="{ width: card.pct + '%' }"/>
+                    <!-- Hover Accent Line -->
+                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                    <!-- Icon and Title -->
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900">
+                            <span class="material-symbols-outlined">{{ card.icon }}</span>
+                        </span>
+                        <div class="flex-1 text-left">
+                            <h3 class="text-lg font-bold text-gray-800">{{ card.label }}</h3>
+                        </div>
                     </div>
-                    <p class="text-[11px] text-gray-400 uppercase tracking-wide font-medium">{{ card.sub }}</p>
+                    <!-- Count and subtitle -->
+                    <div class="mt-2 space-y-1 text-left">
+                        <p class="text-3xl font-bold text-gray-900 tabular-nums">{{ card.count.toLocaleString() }}</p>
+                        <p class="text-sm text-gray-500">{{ card.sub }}</p>
+                    </div>
                 </div>
             </div>
 
@@ -261,6 +268,7 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
                                 <span v-if="course.duration" class="shrink-0">{{ course.duration }}</span>
                             </div>
                             <Link
+                                v-if="canEnroll"
                                 :href="route('student.application-status')"
                                 class="mt-3 flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors"
                             >
@@ -269,6 +277,12 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
                                 </svg>
                             </Link>
+                            <span
+                                v-else
+                                class="mt-3 flex items-center justify-center w-full py-2 px-3 rounded-md bg-gray-100 text-gray-400 text-[10px] font-medium cursor-not-allowed"
+                            >
+                                Complete current course to apply
+                            </span>
                         </div>
                     </div>
                 </div>

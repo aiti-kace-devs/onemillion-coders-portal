@@ -83,10 +83,16 @@ class CourseHistoryController extends Controller
                 ]);
         }
 
+        // Student can only enroll if they have no active (admitted/confirmed) course
+        $hasActiveCourse = StudentCourseHistory::where('user_id', $userId)
+            ->whereIn('status', ['admitted', 'confirmed'])
+            ->exists();
+
         return Inertia::render('Student/CourseHistory', [
             'history'        => $history,
             'stats'          => $stats,
             'relatedCourses' => $relatedCourses,
+            'canEnroll'      => !$hasActiveCourse,
         ]);
     }
 
