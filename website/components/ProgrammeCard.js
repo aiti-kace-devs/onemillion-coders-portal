@@ -96,7 +96,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
       try {
         setEnrollSubmitting(true);
         setEnrollError(null);
-        await switchToSelfPaced(userId, enrollingCourseId, token);
+        await switchToSelfPaced(userId, enrollingCourseId, enrollingCentreId || centreId, token);
         setEnrollSuccess(true);
       } catch (err) {
         const apiErrors = err.response?.data?.errors;
