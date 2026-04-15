@@ -21,7 +21,7 @@ import {
   FiStar,
 } from "react-icons/fi";
 import Button from "./Button";
-import { getAvailableBatches, getSiblingCentres, getSiblingCourses, createBooking, switchToSelfPaced, joinWaitlist } from "../services/api";
+import { getAvailableBatches, getSiblingCentres, getSiblingCourses, createBooking, setLearningMode, joinWaitlist } from "../services/api";
 
 const ProgrammeCard = ({ programme, userId, centreId, token }) => {
   const router = useRouter();
@@ -92,26 +92,33 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
 
   const handleSupportAnswer = async (needs) => {
     setNeedsSupport(needs);
-    if (!needs) {
-      try {
-        setEnrollSubmitting(true);
-        setEnrollError(null);
-        await switchToSelfPaced(userId, enrollingCourseId, enrollingCentreId || centreId, token);
+    const centreIdVal = enrollingCentreId || centreId;
+    const payload = { userId, course_id: enrollingCourseId, ...(centreIdVal && { centre_id: centreIdVal }) };
+
+    try {
+      setEnrollSubmitting(true);
+      setEnrollError(null);
+      await setLearningMode(payload, !needs, token);
+
+      if (!needs) {
         setEnrollSuccess(true);
-      } catch (err) {
-        const apiErrors = err.response?.data?.errors;
-        const apiMessage = err.response?.data?.message;
-        setEnrollError(apiErrors ? Object.values(apiErrors).flat().join(". ") : (apiMessage || "Failed to enroll. Please try again."));
-      } finally { setEnrollSubmitting(false); }
-    } else {
-      setBatchesLoading(true);
-      setEnrollmentStep("batch");
-      const batches = await fetchBatchesForCourse(enrollingCourseId);
-      const hasAvailable = batches.some((b) => b.sessions?.some((s) => s.remaining > 0));
-      if (!hasAvailable) {
-        await fetchAlternatives(enrollingCourseId, enrollingCentreId || centreId);
-        setEnrollmentStep("courseFull");
+      } else {
+        setEnrollSubmitting(false);
+        setBatchesLoading(true);
+        setEnrollmentStep("batch");
+        const batches = await fetchBatchesForCourse(enrollingCourseId);
+        const hasAvailable = batches.some((b) => b.sessions?.some((s) => s.remaining > 0));
+        if (!hasAvailable) {
+          await fetchAlternatives(enrollingCourseId, centreIdVal);
+          setEnrollmentStep("courseFull");
+        }
       }
+    } catch (err) {
+      const apiErrors = err.response?.data?.errors;
+      const apiMessage = err.response?.data?.message;
+      setEnrollError(apiErrors ? Object.values(apiErrors).flat().join(". ") : (apiMessage || "Failed to enroll. Please try again."));
+    } finally {
+      setEnrollSubmitting(false);
     }
   };
 

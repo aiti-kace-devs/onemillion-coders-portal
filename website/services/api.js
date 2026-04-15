@@ -314,22 +314,22 @@ export const createBooking = async (data, token) => {
 };
 
 /**
- * Enroll a user in self-paced learning (no centre support needed)
- * @param {string} userId
- * @param {number} courseId
+ * Set learning mode (self-paced or with support)
+ * @param {{ userId: string, course_id: number, centre_id?: number }} data
+ * @param {boolean} selfPaced - true for self-paced, false for with support
  * @param {string} token
  * @returns {Promise<Object>}
  */
-export const switchToSelfPaced = async (userId, courseId, centreId, token) => {
+export const setLearningMode = async (data, selfPaced, token) => {
   try {
-    const response = await apiRequest('confirm-course-for-self-paced', {
+    const response = await apiRequest(`switch-to-self-paced-or-with-support?self-paced=${selfPaced}&with-support=${!selfPaced}`, {
       method: 'POST',
-      data: { userId, course_id: courseId, ...(centreId && { centre_id: centreId }) },
+      data,
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response;
   } catch (error) {
-    console.error('Failed to switch to self-paced:', error);
+    console.error('Failed to set learning mode:', error);
     throw error;
   }
 };
