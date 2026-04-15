@@ -41,7 +41,7 @@ import {
   getSiblingCentres,
   getSiblingCourses,
   createBooking,
-  switchToSelfPaced,
+  setLearningMode,
   joinWaitlist,
 } from "../../../services/api";
 import Button from "../../../components/Button";
@@ -584,41 +584,39 @@ export default function CoursesPage({ params }) {
     setEnrollmentStep("support");
   };
 
-  // Direct enrollment without support (via confirmCourse)
-  const handleDirectEnroll = async () => {
+  // Support answer: both Yes and No hit the endpoint, then branch
+  const handleSupportAnswer = async (needs) => {
+    setNeedsSupport(needs);
+    const centreIdVal = enrollingCentreId || selectedCentre?.id;
+    const payload = { userId: id, course_id: enrollingCourseId, ...(centreIdVal && { centre_id: centreIdVal }) };
+
     try {
       setEnrollSubmitting(true);
-      setEnrollmentStep("support"); // Show modal with loading
       setError(null);
-      await switchToSelfPaced(id, enrollingCourseId, enrollingCentreId || selectedCentre?.id, token);
-      setEnrollSuccess(true);
-      updateQueryParams({ step: null, region: null, district: null, centre: null });
+      await setLearningMode(payload, !needs, token);
+
+      if (!needs) {
+        // No support → enrolled as self-paced, done
+        setEnrollSuccess(true);
+        updateQueryParams({ step: null, region: null, district: null, centre: null });
+      } else {
+        // With support → continue to batch/session flow
+        setEnrollSubmitting(false);
+        setBatchesLoading(true);
+        setEnrollmentStep("batch");
+        const batches = await fetchBatchesForCourse(enrollingCourseId);
+        const hasAvailable = batches.some((b) => b.sessions?.some((s) => s.remaining > 0));
+        if (!hasAvailable) {
+          await fetchAlternatives(enrollingCourseId, centreIdVal);
+          setEnrollmentStep("courseFull");
+        }
+      }
     } catch (err) {
       const apiErrors = err.response?.data?.errors;
       const apiMessage = err.response?.data?.message;
       setError(apiErrors ? Object.values(apiErrors).flat().join(". ") : (apiMessage || "Failed to enroll. Please try again."));
     } finally {
       setEnrollSubmitting(false);
-    }
-  };
-
-  // Support answer: No → confirmCourse directly, Yes → fetch batches → batch selection
-  const handleSupportAnswer = async (needs) => {
-    setNeedsSupport(needs);
-    if (!needs) {
-      await handleDirectEnroll();
-    } else {
-      // Fetch real batches from API
-      setBatchesLoading(true);
-      setEnrollmentStep("batch");
-      const batches = await fetchBatchesForCourse(enrollingCourseId);
-      // Check if any sessions have remaining slots
-      const hasAvailable = batches.some((b) => b.sessions?.some((s) => s.remaining > 0));
-      if (!hasAvailable) {
-        // Centre is full → fetch alternatives and show courseFull
-        await fetchAlternatives(enrollingCourseId, enrollingCentreId || selectedCentre?.id);
-        setEnrollmentStep("courseFull");
-      }
     }
   };
 
