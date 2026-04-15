@@ -1019,15 +1019,28 @@ export default function CoursesPage({ params }) {
                       <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">One quick question</h2>
                       <p className="text-gray-400 text-[11px] sm:text-sm line-clamp-1">Enrolling in <span className="text-gray-600">{enrolledCourseName}</span></p>
                     </div>
-                    <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 mb-3 text-center">Do you need any accessibility support?</h3>
-                    {error && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{error}</p></div>}
-                    <div className="grid grid-cols-2 gap-2.5 mb-4">
-                      <button onClick={() => handleSupportAnswer(true)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700">Yes, I do</button>
-                      <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700 flex items-center justify-center gap-2">
-                        {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "No, enroll me"}
-                      </button>
-                    </div>
-                    <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
+                    {selectedCentre?.is_ready === false ? (
+                      <>
+                        <p className="text-[13px] sm:text-sm text-gray-500 mb-4 text-center">Accessibility support is not yet available at this centre</p>
+                        {error && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{error}</p></div>}
+                        <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="w-full p-3.5 rounded-xl border-2 text-sm font-semibold transition-all active:scale-[0.97] bg-yellow-400 hover:bg-yellow-500 text-gray-900 flex items-center justify-center gap-2 mb-3">
+                          {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "Enroll as self-paced"}
+                        </button>
+                        <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 mb-3 text-center">Do you need any accessibility support?</h3>
+                        {error && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{error}</p></div>}
+                        <div className="grid grid-cols-2 gap-2.5 mb-4">
+                          <button onClick={() => handleSupportAnswer(true)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700">Yes, I do</button>
+                          <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700 flex items-center justify-center gap-2">
+                            {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "No, enroll me"}
+                          </button>
+                        </div>
+                        <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
+                      </>
+                    )}
                   </>
                 )}
               </motion.div>
@@ -2190,38 +2203,28 @@ export default function CoursesPage({ params }) {
                               </p>
                             </div>
 
-                            <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 mb-3 text-center">
-                              Do you need any accessibility support?
-                            </h3>
-                            <div className="grid grid-cols-2 gap-2.5 mb-4">
-                              <button
-                                onClick={() => handleSupportAnswer(true)}
-                                disabled={enrollSubmitting}
-                                className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700"
-                              >
-                                Yes, I do
-                              </button>
-                              <button
-                                onClick={() => handleSupportAnswer(false)}
-                                disabled={enrollSubmitting}
-                                className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700 flex items-center justify-center gap-2"
-                              >
-                                {enrollSubmitting ? (
-                                  <>
-                                    <FiLoader className="w-4 h-4 animate-spin" />
-                                    Enrolling...
-                                  </>
-                                ) : (
-                                  "No, enroll me"
-                                )}
-                              </button>
-                            </div>
-                            <button
-                              onClick={closeEnrollmentModal}
-                              className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors"
-                            >
-                              Cancel
-                            </button>
+                            {selectedCentre?.is_ready === false ? (
+                              <>
+                                <p className="text-[13px] sm:text-sm text-gray-500 mb-4 text-center">Accessibility support is not yet available at this centre</p>
+                                {error && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{error}</p></div>}
+                                <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="w-full p-3.5 rounded-xl border-2 text-sm font-semibold transition-all active:scale-[0.97] bg-yellow-400 hover:bg-yellow-500 text-gray-900 flex items-center justify-center gap-2 mb-3">
+                                  {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "Enroll as self-paced"}
+                                </button>
+                                <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
+                              </>
+                            ) : (
+                              <>
+                                <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 mb-3 text-center">Do you need any accessibility support?</h3>
+                                {error && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{error}</p></div>}
+                                <div className="grid grid-cols-2 gap-2.5 mb-4">
+                                  <button onClick={() => handleSupportAnswer(true)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700">Yes, I do</button>
+                                  <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700 flex items-center justify-center gap-2">
+                                    {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "No, enroll me"}
+                                  </button>
+                                </div>
+                                <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
+                              </>
+                            )}
                           </>
                         )}
 
