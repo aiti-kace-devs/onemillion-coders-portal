@@ -9,7 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-
+use App\Models\UserAdmission;
 class RegistrationFormAPIController extends Controller
 {
     public function index(Request $request)
@@ -257,6 +257,15 @@ class RegistrationFormAPIController extends Controller
         if ($withSupport) {
             $user->support = true;
             $user->save();
+
+            UserAdmission::updateOrCreate(
+                ['user_id' => $user->userId],
+                [
+                    'course_id' => $course->id,
+                    'email_sent' => now(),
+                    'confirmed_at' => now(),
+                ]
+            );
 
             return response()->json([
                 'success' => true,
