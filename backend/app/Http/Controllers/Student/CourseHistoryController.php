@@ -24,7 +24,6 @@ class CourseHistoryController extends Controller
                 'course:id,course_name,centre_id,programme_id,duration,start_date,end_date',
                 'course.centre:id,title',
                 'course.programme:id,title',
-                'course.assignedAdmins:id,name',
                 'session:id,session,course_time',
             ])
             ->orderByDesc('created_at')
@@ -45,7 +44,6 @@ class CourseHistoryController extends Controller
             'programme'    => $h->course?->programme?->title,
             'duration'     => $h->course?->duration,
             'centre'       => $h->course?->centre?->title ?? '—',
-            'instructor'   => $h->course?->assignedAdmins?->first()?->name ?? '—',
             'session'      => $h->session?->session ?? 'Self-paced',
             'session_time' => $h->session?->course_time,
             'support'      => $h->support_status ? 'With support' : 'Self-paced',

@@ -11,12 +11,11 @@ const props = defineProps({
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user ?? {});
-const viewMode = ref("list");
 
-// ── Status config (single source of truth) ──────────────────────────────────
+// ── Status config ────────────────────────────────────────────────────────────
 const STATUS = {
     admitted:  { badge: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",    dot: "bg-blue-500",    label: "Admitted"  },
-    confirmed: { badge: "bg-violet-50 text-violet-700 ring-1 ring-violet-200", dot: "bg-violet-500", label: "Confirmed" },
+    confirmed: { badge: "bg-violet-50 text-violet-700 ring-1 ring-violet-200", dot: "bg-violet-500", label: "Enrolled" },
     completed: { badge: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200", dot: "bg-emerald-500", label: "Completed" },
     revoked:   { badge: "bg-red-50 text-red-700 ring-1 ring-red-200",        dot: "bg-red-400",     label: "Revoked"   },
 };
@@ -24,14 +23,29 @@ function statusCfg(s) {
     return STATUS[s] ?? { badge: "bg-gray-100 text-gray-500 ring-1 ring-gray-200", dot: "bg-gray-400", label: s ?? "—" };
 }
 
-// ── Stat cards — 4 in one row ────────────────────────────────────────────────
+// ── Status filter ────────────────────────────────────────────────────────────
+const statusFilter = ref("all");
+const filterOptions = [
+    { value: "all",       label: "All" },
+    { value: "confirmed", label: "Enrolled" },
+    { value: "completed", label: "Completed" },
+    { value: "admitted",  label: "Admitted" },
+    { value: "revoked",   label: "Revoked" },
+];
+
+const filteredHistory = computed(() => {
+    if (statusFilter.value === "all") return props.history.data;
+    return props.history.data.filter(item => item.status === statusFilter.value);
+});
+
+// ── Stat cards ───────────────────────────────────────────────────────────────
 const total = computed(() => props.stats?.total ?? 0);
 function pct(n) { return (!total.value || !n) ? 0 : Math.round((n / total.value) * 100); }
 
 const statCards = computed(() => [
     { label: "Total Enrolled", count: total.value,               bar: "bg-gray-500",   pct: 100,                           sub: "All cohorts",          left: "border-l-gray-400"   },
     { label: "Admitted",       count: props.stats?.admitted ?? 0, bar: "bg-blue-500",   pct: pct(props.stats?.admitted),    sub: "Awaiting confirmation", left: "border-l-blue-500"   },
-    { label: "Active Courses",  count: props.stats?.confirmed ?? 0,bar: "bg-violet-500", pct: pct(props.stats?.confirmed),   sub: "Currently enrolled",   left: "border-l-violet-500" },
+    { label: "Active Courses", count: props.stats?.confirmed ?? 0,bar: "bg-violet-500", pct: pct(props.stats?.confirmed),   sub: "Currently enrolled",   left: "border-l-violet-500" },
     { label: "Revoked",        count: props.stats?.revoked ?? 0,  bar: "bg-red-400",    pct: pct(props.stats?.revoked),     sub: "Access removed",       left: "border-l-red-400"    },
 ]);
 
@@ -45,7 +59,7 @@ function formatDateRange(item) {
     return item.ended_at ? `${s} – ${shortDate(item.ended_at)}` : `${s} – present`;
 }
 
-// ── Course avatar ─────────────────────────────────────────────────────────────
+// ── Course avatar ────────────────────────────────────────────────────────────
 const STATUS_AVATAR = {
     admitted: "bg-blue-100 text-blue-700", confirmed: "bg-violet-100 text-violet-700",
     completed: "bg-emerald-100 text-emerald-700", revoked: "bg-red-100 text-red-500",
@@ -72,11 +86,10 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
             </div>
         </template>
 
-        <div class="w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-8 space-y-6">
+        <div class="w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-8 space-y-8">
 
             <!-- ══════════════════════════════════════════════════════
-                 STAT CARDS — 4 cards in one horizontal row
-                 Uses flex so it never wraps regardless of container
+                 STAT CARDS
             ══════════════════════════════════════════════════════ -->
             <div class="flex flex-row gap-4">
                 <div
@@ -85,139 +98,78 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
                     class="flex-1 min-w-0 bg-white rounded-xl border border-gray-100 border-l-4 px-5 py-5"
                     :class="card.left"
                 >
-                    <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                        {{ card.label }}
-                    </p>
-                    <p class="text-4xl font-bold text-gray-900 tabular-nums leading-none">
-                        {{ card.count.toLocaleString() }}
-                    </p>
+                    <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">{{ card.label }}</p>
+                    <p class="text-4xl font-bold text-gray-900 tabular-nums leading-none">{{ card.count.toLocaleString() }}</p>
                     <div class="h-1 bg-gray-100 rounded-full overflow-hidden mt-3 mb-2">
-                        <div
-                            class="h-full rounded-full transition-all duration-700"
-                            :class="card.bar"
-                            :style="{ width: card.pct + '%' }"
-                        />
+                        <div class="h-full rounded-full transition-all duration-700" :class="card.bar" :style="{ width: card.pct + '%' }"/>
                     </div>
-                    <p class="text-[11px] text-gray-400 uppercase tracking-wide font-medium">
-                        {{ card.sub }}
-                    </p>
+                    <p class="text-[11px] text-gray-400 uppercase tracking-wide font-medium">{{ card.sub }}</p>
                 </div>
             </div>
 
             <!-- ══════════════════════════════════════════════════════
-                 MAIN LAYOUT: courses + related (8) | timeline (4)
+                 MAIN LAYOUT: courses grid (8) | timeline (4)
             ══════════════════════════════════════════════════════ -->
-            <div class="grid grid-cols-12 gap-5 items-start">
+            <div class="grid grid-cols-12 gap-6 items-start">
 
-                <!-- ▌Left column — Course list + Related courses ▌ -->
-                <div class="col-span-12 lg:col-span-8 space-y-5">
+                <!-- ▌Left column ▌ -->
+                <div class="col-span-12 lg:col-span-8 space-y-8">
 
-                    <!-- All courses card -->
+                    <!-- All courses — list view with filter -->
                     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-
-                        <!-- header -->
                         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                             <div class="flex items-center gap-2">
                                 <h3 class="text-sm font-semibold text-gray-800">All courses</h3>
                                 <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500">
-                                    {{ history.data.length }}
+                                    {{ filteredHistory.length }}
                                 </span>
                             </div>
-                            <div class="flex rounded-lg border border-gray-200 overflow-hidden">
+                            <div class="flex items-center gap-1">
                                 <button
-                                    @click="viewMode = 'list'"
-                                    class="px-2.5 py-1.5 transition-colors"
-                                    :class="viewMode==='list' ? 'bg-gray-100 text-gray-800' : 'text-gray-400 hover:bg-gray-50'"
-                                    title="List view"
+                                    v-for="opt in filterOptions"
+                                    :key="opt.value"
+                                    @click="statusFilter = opt.value"
+                                    class="px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors"
+                                    :class="statusFilter === opt.value
+                                        ? 'bg-gray-900 text-white'
+                                        : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'"
                                 >
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
-                                    </svg>
-                                </button>
-                                <button
-                                    @click="viewMode = 'grid'"
-                                    class="px-2.5 py-1.5 border-l border-gray-200 transition-colors"
-                                    :class="viewMode==='grid' ? 'bg-gray-100 text-gray-800' : 'text-gray-400 hover:bg-gray-50'"
-                                    title="Grid view"
-                                >
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <rect x="3" y="3" width="7" height="7" rx="1"/>
-                                        <rect x="14" y="3" width="7" height="7" rx="1"/>
-                                        <rect x="3" y="14" width="7" height="7" rx="1"/>
-                                        <rect x="14" y="14" width="7" height="7" rx="1"/>
-                                    </svg>
+                                    {{ opt.label }}
                                 </button>
                             </div>
                         </div>
 
-                        <!-- List view -->
-                        <template v-if="viewMode === 'list'">
-                            <div v-if="history.data.length > 0" class="divide-y divide-gray-50">
-                                <div
-                                    v-for="item in history.data"
-                                    :key="item.id"
-                                    class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/60 transition-colors"
-                                >
-                                    <div class="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold" :class="avatarClass(item)">
-                                        {{ courseInitial(item.course_name) }}
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center gap-2 flex-wrap">
-                                            <h4 class="text-sm font-semibold text-gray-900 truncate">{{ item.course_name ?? "—" }}</h4>
-                                            <span class="shrink-0 inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase" :class="statusCfg(item.status).badge">
-                                                {{ statusCfg(item.status).label }}
-                                            </span>
-                                        </div>
-                                        <p class="text-[11px] text-gray-400 mt-0.5 truncate">
-                                            <span v-if="item.centre">{{ item.centre }}</span>
-                                            <span v-if="item.centre && item.instructor"> · </span>
-                                            <span v-if="item.instructor">{{ item.instructor }}</span>
-                                        </p>
-                                    </div>
+                        <div v-if="filteredHistory.length > 0" class="divide-y divide-gray-50">
+                            <div
+                                v-for="item in filteredHistory"
+                                :key="item.id"
+                                class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/60 transition-colors"
+                            >
+                                <div class="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold" :class="avatarClass(item)">
+                                    {{ courseInitial(item.course_name) }}
                                 </div>
-                            </div>
-                            <div v-else class="flex flex-col items-center justify-center py-20 text-center">
-                                <div class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center mb-3">
-                                    <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"/>
-                                    </svg>
-                                </div>
-                                <p class="text-sm font-medium text-gray-400">No course history yet</p>
-                                <p class="text-xs text-gray-300 mt-1">Courses you enrol in will appear here</p>
-                            </div>
-                        </template>
-
-                        <!-- Grid view -->
-                        <template v-else>
-                            <div v-if="history.data.length > 0" class="p-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                <div
-                                    v-for="item in history.data"
-                                    :key="item.id"
-                                    class="rounded-xl border border-gray-100 p-4 hover:border-gray-200 hover:shadow-sm transition-all"
-                                >
-                                    <div class="flex items-center justify-between mb-3">
-                                        <div class="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold" :class="avatarClass(item)">
-                                            {{ courseInitial(item.course_name) }}
-                                        </div>
-                                        <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase" :class="statusCfg(item.status).badge">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <h4 class="text-sm font-semibold text-gray-900 truncate">{{ item.course_name ?? "—" }}</h4>
+                                        <span class="shrink-0 inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase" :class="statusCfg(item.status).badge">
                                             {{ statusCfg(item.status).label }}
                                         </span>
                                     </div>
-                                    <h4 class="text-sm font-semibold text-gray-900 truncate mb-0.5">{{ item.course_name ?? "—" }}</h4>
-                                    <p class="text-[11px] text-gray-400 truncate">{{ item.centre ?? "—" }}</p>
-                                    <p class="text-[11px] text-gray-400">{{ item.instructor ?? "—" }}</p>
+                                    <p class="text-[11px] text-gray-400 mt-0.5 truncate">{{ item.centre ?? "—" }}</p>
                                 </div>
                             </div>
-                            <div v-else class="flex flex-col items-center justify-center py-20 text-center">
-                                <div class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center mb-3">
-                                    <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                                        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-                                    </svg>
-                                </div>
-                                <p class="text-sm font-medium text-gray-400">No course history yet</p>
+                        </div>
+                        <div v-else class="flex flex-col items-center justify-center py-20 text-center">
+                            <div class="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center mb-3">
+                                <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"/>
+                                </svg>
                             </div>
-                        </template>
+                            <p class="text-sm font-medium text-gray-400">
+                                {{ statusFilter === 'all' ? 'No course history yet' : 'No ' + filterOptions.find(o => o.value === statusFilter)?.label.toLowerCase() + ' courses' }}
+                            </p>
+                            <p v-if="statusFilter === 'all'" class="text-xs text-gray-300 mt-1">Courses you enrol in will appear here</p>
+                        </div>
 
                         <!-- Pagination -->
                         <div v-if="history.last_page > 1" class="flex items-center justify-center gap-1 px-5 py-3 border-t border-gray-50">
@@ -232,61 +184,10 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
                         </div>
                     </div>
 
-                    <!-- Related courses (below All courses) -->
-                    <div v-if="relatedCourses.length > 0" class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                            <div class="flex items-center gap-2">
-                                <h3 class="text-sm font-semibold text-gray-800">Other Courses at Your Centre</h3>
-                                <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-600">
-                                    Same centre
-                                </span>
-                            </div>
-                        </div>
-                        <div class="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            <div
-                                v-for="course in relatedCourses"
-                                :key="course.id"
-                                class="rounded-lg border border-gray-100 overflow-hidden hover:border-gray-200 hover:shadow-sm transition-all flex flex-col"
-                            >
-                                <!-- Programme image -->
-                                <div class="h-24 bg-gray-50 overflow-hidden">
-                                    <img
-                                        v-if="course.image"
-                                        :src="course.image"
-                                        :alt="course.course_name"
-                                        class="w-full h-full object-cover"
-                                    />
-                                    <div v-else class="w-full h-full flex items-center justify-center">
-                                        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold" :class="hashColor(course.course_name)">
-                                            {{ courseInitial(course.course_name) }}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="p-3 flex flex-col flex-1">
-                                    <h4 class="text-xs font-semibold text-gray-900 truncate">{{ course.course_name }}</h4>
-                                    <p class="text-[10px] text-gray-400 truncate mt-0.5">{{ course.programme }}</p>
-                                    <div class="flex items-center gap-2 text-[10px] text-gray-400 mt-1">
-                                        <span v-if="course.centre" class="truncate">{{ course.centre }}</span>
-                                        <span v-if="course.duration" class="shrink-0">{{ course.duration }}</span>
-                                    </div>
-                                    <Link
-                                        :href="route('student.application-status')"
-                                        class="mt-2 flex items-center justify-center gap-1 w-full py-1.5 px-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold transition-colors"
-                                    >
-                                        Apply
-                                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
-                                        </svg>
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
 
-                <!-- ▌Right column — Timeline (4 cols) ▌ -->
-                <div class="col-span-12 lg:col-span-4 bg-white rounded-xl border border-gray-100 p-5">
+                <!-- ▌Right column — Timeline ▌ -->
+                <div class="col-span-12 lg:col-span-4 bg-white rounded-xl border border-gray-100 p-5 lg:sticky lg:top-6">
                     <h3 class="text-sm font-semibold text-gray-800 mb-5">Timeline</h3>
 
                     <div v-if="history.data.length > 0" class="relative">
@@ -298,6 +199,14 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
                                     <p class="text-[12px] font-semibold text-gray-800 leading-snug truncate">{{ item.course_name ?? "—" }}</p>
                                     <p class="text-[11px] text-gray-400 mt-0.5">
                                         {{ statusCfg(item.status).label }} &middot; {{ formatDateRange(item) }}
+                                    </p>
+                                    <p v-if="item.session || item.session_time" class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
+                                        <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <span v-if="item.session">{{ item.session }}</span>
+                                        <span v-if="item.session && item.session_time"> · </span>
+                                        <span v-if="item.session_time">{{ item.session_time }}</span>
                                     </p>
                                 </div>
                             </div>
@@ -315,6 +224,56 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
                 </div>
 
             </div>
+
+            <!-- ══════════════════════════════════════════════════════
+                 OTHER COURSES — full width, outside the 2-col grid
+            ══════════════════════════════════════════════════════ -->
+            <div v-if="relatedCourses.length > 0">
+                <div class="flex items-center gap-2 mb-4">
+                    <h3 class="text-base font-bold text-gray-900">Other Courses at Your Centre</h3>
+                    <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-600">
+                        Same centre
+                    </span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div
+                        v-for="course in relatedCourses"
+                        :key="course.id"
+                        class="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col"
+                    >
+                        <div class="aspect-video bg-gray-100 overflow-hidden">
+                            <img
+                                v-if="course.image"
+                                :src="course.image"
+                                :alt="course.course_name"
+                                class="w-full h-full object-cover"
+                            />
+                            <div v-else class="w-full h-full flex items-center justify-center" :class="hashColor(course.course_name)">
+                                <span class="text-2xl font-bold opacity-60">{{ courseInitial(course.course_name) }}</span>
+                            </div>
+                        </div>
+                        <div class="p-3.5 flex-1 flex flex-col">
+                            <h4 class="text-sm font-bold text-gray-900 leading-snug line-clamp-2">{{ course.course_name }}</h4>
+                            <p class="text-[11px] text-gray-400 mt-1 truncate">{{ course.programme }}</p>
+                            <div class="flex items-center gap-2 text-[11px] text-gray-400 mt-0.5">
+                                <span v-if="course.centre" class="truncate">{{ course.centre }}</span>
+                                <span v-if="course.centre && course.duration" class="text-gray-200">·</span>
+                                <span v-if="course.duration" class="shrink-0">{{ course.duration }}</span>
+                            </div>
+                            <Link
+                                :href="route('student.application-status')"
+                                class="mt-3 flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors"
+                            >
+                                Apply
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
+                                </svg>
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </AuthenticatedLayout>
 </template>
