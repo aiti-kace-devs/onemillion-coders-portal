@@ -16,7 +16,7 @@
     </x-backpack::menu-dropdown>
 @endcan
 
-@if (auth()->user()->can('student.read.all') || auth()->user()->can('student-verification.read.all'))
+@if (auth()->user()->can('student.read.all') || auth()->user()->can('student-verification.read.all') || auth()->user()->can('ghana-card-verification.read.all'))
     <x-backpack::menu-dropdown title="Student Management" icon="la la-users">
         @can('student.read.all')
             <x-backpack::menu-dropdown-item title="Manage Students" icon="la la-user-graduate" :link="backpack_url('manage-student')" />
@@ -25,6 +25,9 @@
         @can('student-verification.read.all')
             <x-backpack::menu-dropdown-item title="Student Verifications" icon="la la-check-circle" :link="backpack_url('student-verification')" />
         @endcan
+        @canany(['ghana-card-verification.read.all', 'ghana-card-verification.index'])
+            <x-backpack::menu-dropdown-item title="Ghana Card Verifications" icon="la la-id-card" :link="backpack_url('ghana-card-verification')" />
+        @endcanany
     </x-backpack::menu-dropdown>
 @endif
 

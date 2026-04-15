@@ -50,4 +50,8 @@ return [
         'use_gcs_fuse' => env('USE_GCS_FUSE', false),
         'gcs_fuse_path' => env('GCS_FUSE_PATH', storage_path('app/public/basset')),
     ],
+    'ghana_card' => [
+        'base_url' => env('GHANA_CARD_API_BASE_URL'),
+        'merchant_key' => env('GHANA_CARD_MERCHANT_KEY'),
+    ],
 ];

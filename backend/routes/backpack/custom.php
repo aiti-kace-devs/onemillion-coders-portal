@@ -146,6 +146,8 @@ Route::group([
     // Reset Result for a student (admin panel, Backpack)
     Route::get('reset-exam/{exam_id}/student/{user_id}', 'UserCrudController@resetResult')->name('results.reset');
     Route::crud('student-verification', 'StudentVerificationCrudController');
+    Route::crud('ghana-card-verification', 'GhanaCardVerificationCrudController');
+    Route::post('ghana-card-verification/reset-block/{user_id}', 'GhanaCardVerificationCrudController@resetBlock')->name('ghana-card.reset-block');
     Route::crud('course-certification', 'CourseCertificationCrudController');
     Route::crud('course-match', 'CourseMatchCrudController');
     Route::post('course-match/{id}/toggle', 'CourseMatchCrudController@toggleStatus');
