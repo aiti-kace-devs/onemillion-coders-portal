@@ -263,7 +263,7 @@ class RegistrationFormAPIController extends Controller
                 [
                     'course_id' => $course->id,
                     'email_sent' => now(),
-                    'confirmed_at' => now(),
+                    'confirmed' => now(),
                 ]
             );
 
