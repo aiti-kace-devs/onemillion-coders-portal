@@ -228,3 +228,129 @@ export const recordViolation = async (userId, violationCount, token) => {
     throw error;
   }
 };
+
+// ──────────────────────────────────────────────
+// Booking & Availability APIs
+// ──────────────────────────────────────────────
+
+/**
+ * Fetch available batches and sessions for a course at a centre
+ * @param {number} courseId
+ * @param {string} token
+ * @returns {Promise<Object>} - { success, centre, course_type, capacity, batches }
+ */
+export const getAvailableBatches = async (courseId, token) => {
+  try {
+    const response = await apiRequest(`availability/batches?course_id=${courseId}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to fetch available batches:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch sibling centres offering the same course
+ * @param {number} courseId
+ * @param {number} centreId
+ * @param {string} token
+ * @param {number} limit
+ * @returns {Promise<Object>} - { success, origin_centre, programme, alternatives }
+ */
+export const getSiblingCentres = async (courseId, centreId, token, limit = 3) => {
+  try {
+    const response = await apiRequest(`availability/sibling-centres?course_id=${courseId}&centre_id=${centreId}&limit=${limit}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to fetch sibling centres:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch sibling courses (recommended + available) for a user
+ * @param {string} userId
+ * @param {string} token
+ * @param {number} limit
+ * @returns {Promise<Object>} - { success, matches, available_courses }
+ */
+export const getSiblingCourses = async (userId, token, limit = 3) => {
+  try {
+    const response = await apiRequest(`availability/sibling-courses?userId=${userId}&limit=${limit}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to fetch sibling courses:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create a booking (reserve a slot)
+ * @param {{ programme_batch_id: number, course_id: number, session_id: number }} data
+ * @param {string} token
+ * @returns {Promise<Object>} - Booking confirmation or 409 if full
+ */
+export const createBooking = async (data, token) => {
+  try {
+    const response = await apiRequest('bookings', {
+      method: 'POST',
+      data,
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    if (error.response?.status === 409) {
+      return { conflict: true, ...error.response.data };
+    }
+    console.error('Failed to create booking:', error);
+    throw error;
+  }
+};
+
+/**
+ * Set learning mode (self-paced or with support)
+ * @param {{ userId: string, course_id: number, centre_id?: number }} data
+ * @param {boolean} selfPaced - true for self-paced, false for with support
+ * @param {string} token
+ * @returns {Promise<Object>}
+ */
+export const setLearningMode = async (data, selfPaced, token) => {
+  try {
+    const response = await apiRequest(`switch-to-self-paced-or-with-support?self-paced=${selfPaced}&with-support=${!selfPaced}`, {
+      method: 'POST',
+      data,
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to set learning mode:', error);
+    throw error;
+  }
+};
+
+/**
+ * Add a user to the waitlist for a course
+ * @param {string} userId
+ * @param {number} courseId
+ * @param {string} token
+ * @returns {Promise<Object>}
+ */
+export const joinWaitlist = async (userId, courseId, token) => {
+  try {
+    const response = await apiRequest('waitlist/add', {
+      method: 'POST',
+      data: { userId, course_id: courseId },
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to join waitlist:', error);
+    throw error;
+  }
+};

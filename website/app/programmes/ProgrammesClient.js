@@ -32,7 +32,7 @@ export default function ProgrammesClient({ initialCategory }) {
       try {
         setIsLoading(true);
         const [programmesData, categoriesData] = await Promise.all([
-          getProgrammesData(),
+          getProgrammesData(centreId ? `/programmes?centre_id=${centreId}` : "/programmes"),
           getCategoriesData()
         ]);
         setProgrammes(programmesData || []);
