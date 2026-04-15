@@ -18,9 +18,11 @@ class CentreSession extends Model
 
     protected $fillable = [
         'name',
+        'master_session_id',
         'course_id',
         'centre_id',
         'session_type',
+        'centre_sync_key',
         'limit',
         'course_time',
         'session',
@@ -38,12 +40,17 @@ class CentreSession extends Model
             ->logFillable()
             ->logOnlyDirty()
             ->useLogName('centre_session')
-            ->setDescriptionForEvent(fn(string $event) => "Centre Session {$event}");
+            ->setDescriptionForEvent(fn (string $event) => "Centre Session {$event}");
     }
 
     public function centre()
     {
         return $this->belongsTo(Centre::class, 'centre_id', 'id');
+    }
+
+    public function masterSession()
+    {
+        return $this->belongsTo(MasterSession::class, 'master_session_id');
     }
 
     protected static function boot()
@@ -57,6 +64,9 @@ class CentreSession extends Model
         static::creating(function ($model) {
             if (empty($model->uuid)) {
                 $model->uuid = (string) Str::uuid();
+            }
+            if (empty($model->centre_sync_key)) {
+                $model->centre_sync_key = (string) Str::uuid();
             }
             $model->session_type = CourseSession::TYPE_CENTRE;
             $model->course_id = null;

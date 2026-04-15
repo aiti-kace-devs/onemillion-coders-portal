@@ -52,7 +52,13 @@ class CourseCategoryCrudController extends CrudController
 
         CRUD::column('title')->type('textarea');
         CRUD::column('description')->type('textarea');
-        FilterHelper::addBooleanColumn('status', 'status');
+        CRUD::addColumn([
+            'name' => 'status',
+            'label' => 'Status',
+            'type' => 'view',
+            'view' => 'admin.status_toggle.status_column',
+        ]);
+        // FilterHelper::addBooleanColumn('status', 'status');
         CRUD::column('created_at');
         FilterHelper::addBooleanFilter('status', 'Status');
         FilterHelper::addDateRangeFilter('created_at', 'Created Date');
@@ -101,6 +107,25 @@ class CourseCategoryCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    public function toggleStatus(\Illuminate\Http\Request $request, $id)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $data = $request->validate([
+            'value' => 'required|boolean',
+        ]);
+
+        $courseCategory = \App\Models\CourseCategory::findOrFail($id);
+        $courseCategory->status = (bool) $data['value'];
+        $courseCategory->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Course category status updated successfully.',
+            'value' => $courseCategory->status ? 1 : 0,
+        ]);
     }
 
     public function destroy($id)

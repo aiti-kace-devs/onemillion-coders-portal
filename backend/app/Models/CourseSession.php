@@ -15,6 +15,7 @@ class CourseSession extends Model
     use HasFactory, LogsActivity;
 
     public const TYPE_COURSE = 'course';
+
     public const TYPE_CENTRE = 'centre';
 
     public function getActivitylogOptions(): LogOptions
@@ -23,16 +24,18 @@ class CourseSession extends Model
             ->logFillable()
             ->logOnlyDirty()
             ->useLogName('course_session')
-            ->setDescriptionForEvent(fn(string $event) => "Course Session {$event}");
+            ->setDescriptionForEvent(fn (string $event) => "Course Session {$event}");
     }
 
     protected $table = 'course_sessions';
 
     protected $fillable = [
         'name',
+        'master_session_id',
         'course_id',
         'centre_id',
         'session_type',
+        'centre_sync_key',
         'limit',
         'course_time',
         'session',
@@ -47,6 +50,11 @@ class CourseSession extends Model
     public function course()
     {
         return $this->belongsTo(Course::class, 'course_id', 'id');
+    }
+
+    public function masterSession()
+    {
+        return $this->belongsTo(MasterSession::class, 'master_session_id');
     }
 
     protected static function boot()
@@ -96,17 +104,26 @@ class CourseSession extends Model
         return $query->where('session_type', self::TYPE_CENTRE);
     }
 
-    public function slotLeft()
+    public function slotLeft(): ?int
     {
+        $limit = (int) ($this->limit ?? 0);
+
+        if ($limit < 1) {
+            return null;
+        }
+
         $sessionIds = $this->sharedSessionIds();
-        $used = UserAdmission::whereIn('session', $sessionIds)->whereNotNull('confirmed')->count();
-        return $this->limit - $used;
+        $used = UserAdmission::whereIn('session', $sessionIds)
+            ->whereNotNull('confirmed')
+            ->count();
+
+        return max(0, $limit - $used);
     }
 
     protected function sharedSessionIds(): array
     {
         $course = $this->course;
-        if (!$course || !$course->isOnlineProgramme()) {
+        if (! $course || ! $course->isOnlineProgramme()) {
             return [$this->id];
         }
 

@@ -3,7 +3,7 @@
     <div class="modal-dialog modal-xl" role="document" style="margin-top: 50px;">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addCentreSessionModalLabel">Add Session</h5>
+                <h5 class="modal-title" id="addCentreSessionModalLabel">Manage Centre Sessions</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -14,6 +14,9 @@
                 <div class="modal-body">
                     <input type="hidden" id="centre_session_modal_centre_id" value="">
                     <p id="centre_session_modal_centre_name" class="text-muted mb-3"></p>
+                    <div class="alert alert-info py-2 px-3 small">
+                        Session rows added here apply only to this centre. Changes to existing rows stay on this centre, and removing an existing row saves it as inactive for this centre only.
+                    </div>
 
                     <div id="centreSessionRowsContainer"></div>
 
@@ -35,12 +38,14 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <strong class="centre-session-row-title">Session</strong>
+                <span class="badge bg-light text-dark master-session-badge" style="display:none;">Master Session</span>
                 <button type="button" class="btn btn-link btn-sm text-danger centre-remove-session-row">
                     <i class="la la-trash"></i> Remove
                 </button>
             </div>
 
             <input type="hidden" class="centre-session-id" value="">
+            <input type="hidden" class="centre-session-master-id" value="">
 
             <div class="row">
                 <div class="form-group col-md-4">
@@ -237,14 +242,21 @@
         if (!rowEl) return null;
 
         const idInput = rowEl.querySelector('.centre-session-id');
+        const masterIdInput = rowEl.querySelector('.centre-session-master-id');
         const nameInput = rowEl.querySelector('.centre-session-name');
         const limitInput = rowEl.querySelector('.centre-session-limit');
         const timeInput = rowEl.querySelector('.centre-session-time');
         const linkInput = rowEl.querySelector('.centre-session-link');
         const statusInput = rowEl.querySelector('.centre-session-status');
         const removeBtn = rowEl.querySelector('.centre-remove-session-row');
+        const badge = rowEl.querySelector('.master-session-badge');
+
+        const masterSessionId = rowData.master_session_id ? String(rowData.master_session_id) : '';
+        const hasOverrideId = Boolean((rowData.id ? String(rowData.id) : '').trim());
+        const isMasterSession = masterSessionId !== '' && !hasOverrideId;
 
         if (idInput) idInput.value = rowData.id ? String(rowData.id) : '';
+        if (masterIdInput) masterIdInput.value = masterSessionId;
         if (nameInput) nameInput.value = rowData.session ? String(rowData.session) : '';
         if (limitInput) limitInput.value = rowData.limit ? String(rowData.limit) : '';
         if (timeInput) timeInput.value = rowData.course_time ? String(rowData.course_time) : '';
@@ -254,9 +266,34 @@
             statusInput.value = status ? '1' : '0';
         }
 
-        if (removeBtn) {
+        // Master sessions (no override): read-only, show badge, hide remove button
+        if (isMasterSession) {
+            if (nameInput) nameInput.disabled = true;
+            if (limitInput) limitInput.disabled = true;
+            if (timeInput) timeInput.disabled = true;
+            if (linkInput) linkInput.disabled = true;
+            if (statusInput) statusInput.disabled = true;
+            if (removeBtn) removeBtn.style.display = 'none';
+            if (badge) badge.style.display = 'inline';
+            rowEl.style.opacity = '0.85';
+        } else {
+            if (badge) badge.style.display = 'none';
+        }
+
+        updateRemoveButton(rowEl);
+
+        if (removeBtn && !isMasterSession) {
             removeBtn.addEventListener('click', () => {
                 const container = document.getElementById('centreSessionRowsContainer');
+                const hasSavedSession = Boolean((idInput?.value || '').trim());
+
+                if (hasSavedSession) {
+                    const confirmed = window.confirm('This session will be saved as inactive for this centre only. Continue?');
+                    if (!confirmed) {
+                        return;
+                    }
+                }
+
                 rowEl.remove();
                 renumberSessionRows();
                 if (container && container.querySelectorAll('.centre-session-row').length === 0) {
@@ -266,6 +303,29 @@
         }
 
         return rowEl;
+    }
+
+    function updateRemoveButton(rowEl) {
+        if (!rowEl) return;
+
+        const removeBtn = rowEl.querySelector('.centre-remove-session-row');
+        const id = (rowEl.querySelector('.centre-session-id')?.value || '').trim();
+        const masterId = (rowEl.querySelector('.centre-session-master-id')?.value || '').trim();
+
+        if (!removeBtn) return;
+
+        // Master session without override: hide remove button entirely
+        if (masterId && !id) {
+            removeBtn.style.display = 'none';
+            return;
+        }
+
+        if (id) {
+            removeBtn.innerHTML = '<i class="la la-ban"></i> Mark Inactive';
+            return;
+        }
+
+        removeBtn.innerHTML = '<i class="la la-trash"></i> Remove';
     }
 
     function renumberSessionRows() {
@@ -309,11 +369,17 @@
 
         Array.from(rows).forEach((row) => {
             const id = (row.querySelector('.centre-session-id')?.value || '').trim();
+            const masterId = (row.querySelector('.centre-session-master-id')?.value || '').trim();
             const session = (row.querySelector('.centre-session-name')?.value || '').trim();
             const limit = (row.querySelector('.centre-session-limit')?.value || '').trim();
             const courseTime = (row.querySelector('.centre-session-time')?.value || '').trim();
             const link = (row.querySelector('.centre-session-link')?.value || '').trim();
             const status = (row.querySelector('.centre-session-status')?.value || '1').trim();
+
+            // Skip read-only master session rows (no override) — backend merges them automatically
+            if (masterId && !id) {
+                return;
+            }
 
             if (!session && !limit && !courseTime && !link) {
                 return;
@@ -321,6 +387,7 @@
 
             data.push({
                 id,
+                master_session_id: masterId,
                 session,
                 limit,
                 course_time: courseTime,
@@ -361,11 +428,13 @@
                 '|' +
                 String(row.course_time || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
-            if (seenSignatures.has(signature)) {
-                return 'Session row ' + rowNo + ': the same session type and duration already exists above.';
-            }
+            if (row.status === '1' || row.status === 1 || row.status === true) {
+                if (seenSignatures.has(signature)) {
+                    return 'Session row ' + rowNo + ': the same active session type and duration already exists above.';
+                }
 
-            seenSignatures.add(signature);
+                seenSignatures.add(signature);
+            }
         }
 
         return '';
@@ -479,7 +548,7 @@
         }
 
         if (centreIdEl) centreIdEl.value = centreId;
-        if (titleEl) titleEl.textContent = mode === 'form' ? 'Manage Centre Sessions' : 'Add Session';
+        if (titleEl) titleEl.textContent = 'Manage Centre Sessions';
         if (centreNameEl) centreNameEl.textContent = 'Centre: ' + centreName;
 
         const container = document.getElementById('centreSessionRowsContainer');

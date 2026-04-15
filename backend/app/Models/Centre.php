@@ -19,7 +19,7 @@ class Centre extends Model
             ->logFillable()
             ->logOnlyDirty()
             ->useLogName('centre')
-            ->setDescriptionForEvent(fn(string $event) => "Centre {$event}");
+            ->setDescriptionForEvent(fn (string $event) => "Centre {$event}");
     }
 
     protected $fillable = [
@@ -27,6 +27,7 @@ class Centre extends Model
         'branch_id',
         'constituency_id',
         'status',
+        'is_ready',
         'gps_address',
         'is_pwd_friendly',
         'wheelchair_accessible',
@@ -40,13 +41,16 @@ class Centre extends Model
         'pwd_notes',
         'images',
         'video',
-        'gps_location'
+        'gps_location',
+        'seat_count',
+        'short_slots_per_day',
+        'long_slots_per_day',
     ];
-
 
     protected $casts = [
         'constituency_id' => 'integer',
         'status' => 'boolean',
+        'is_ready' => 'boolean',
         'is_pwd_friendly' => 'boolean',
         'wheelchair_accessible' => 'boolean',
         'has_access_ramp' => 'boolean',
@@ -62,7 +66,6 @@ class Centre extends Model
         'video' => 'string',
         'gps_location' => 'array',
     ];
-
 
     public function branch()
     {
@@ -101,11 +104,38 @@ class Centre extends Model
             ->withTimestamps();
     }
 
+    public function slotCapacityFor(string $courseType): ?int
+    {
+        $value = $courseType === Programme::COURSE_TYPE_LONG
+            ? $this->long_slots_per_day
+            : $this->short_slots_per_day;
+
+        return $value !== null ? (int) $value : null;
+    }
+
     protected static function booted()
     {
         static::saved(function ($centre) {
             if ($centre->wasChanged('title')) {
                 $centre->courses()->get()->each->save();
+                $centre->centreSessions()->get()->each->save();
+            }
+        });
+
+        static::saving(function ($centre) {
+            // Auto-derive slot counts from seat_count using AppConfig percentages if not explicitly set
+            if ($centre->seat_count && (!$centre->short_slots_per_day || !$centre->long_slots_per_day)) {
+                $shortPercent = (int) (\App\Models\AppConfig::getValue('SHORT_SLOTS_PERCENTAGE', 60));
+                $longPercent = (int) (\App\Models\AppConfig::getValue('LONG_SLOTS_PERCENTAGE', 40));
+
+                $centre->short_slots_per_day = (int) round($centre->seat_count * $shortPercent / 100);
+                $centre->long_slots_per_day = (int) round($centre->seat_count * $longPercent / 100);
+
+                // Adjust rounding so short + long = seat_count
+                $diff = $centre->seat_count - ($centre->short_slots_per_day + $centre->long_slots_per_day);
+                if ($diff !== 0) {
+                    $centre->short_slots_per_day += $diff;
+                }
             }
         });
     }

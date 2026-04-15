@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class CentreRequest extends FormRequest
 {
@@ -25,9 +26,12 @@ class CentreRequest extends FormRequest
      */
     public function rules()
     {
+        $isUpdating = $this->isMethod('PUT') || $this->isMethod('PATCH');
+
         return [
             'branch_id' => 'required|integer|exists:branches,id',
             'title' => 'required|string|max:255',
+            'is_ready' => 'nullable|boolean',
             'constituency_id' => [
                 'required',
                 'integer',
@@ -42,6 +46,9 @@ class CentreRequest extends FormRequest
                     $query->where('branch_id', (int) $this->input('branch_id'));
                 }),
             ],
+            'seat_count' => 'nullable|integer|min:1|max:255',
+            'short_slots_per_day' => 'nullable|integer|min:0|max:255',
+            'long_slots_per_day' => 'nullable|integer|min:0|max:255',
         ];
     }
 
@@ -54,6 +61,7 @@ class CentreRequest extends FormRequest
     {
         return [
             'branch_id' => 'Branch name',
+            'is_ready' => 'Ready status',
             'title' => 'Title',
             'constituency_id' => 'Constituency',
             'district_id' => 'District',
@@ -70,10 +78,37 @@ class CentreRequest extends FormRequest
         return [
             'branch_id.required' => 'The branch field is required.',
             'branch_id.exists' => 'The selected branch is invalid.',
+            'is_ready.boolean' => 'The ready status field must be true or false.',
             'title.required' => 'The title field is required.',
             'constituency_id.required' => 'The constituency field is required.',
             'constituency_id.exists' => 'The selected constituency is invalid for the selected region.',
             'district_id.exists' => 'The selected district is invalid for the selected region.',
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $seatCount = $this->input('seat_count');
+            $shortSlots = $this->input('short_slots_per_day');
+            $longSlots = $this->input('long_slots_per_day');
+
+            // Validate that short + long = seat_count when all three are provided
+            if ($seatCount && $shortSlots !== null && $longSlots !== null) {
+                if (($shortSlots + $longSlots) !== (int) $seatCount) {
+                    $validator->errors()->add(
+                        'short_slots_per_day',
+                        'Short slots + Long slots must equal Seat Count.'
+                    );
+                    $validator->errors()->add(
+                        'long_slots_per_day',
+                        'Short slots + Long slots must equal Seat Count.'
+                    );
+                }
+            }
+        });
     }
 }

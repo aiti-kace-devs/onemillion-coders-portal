@@ -48,6 +48,7 @@ Route::group([
     Route::crud('centre', 'CentreCrudController');
     Route::post('centre/{id}/toggle', 'CentreCrudController@toggleStatus');
     Route::post('centre/{id}/toggle-is-pwd-friendly', 'CentreCrudController@toggleIsPwdFriendly');
+    Route::post('centre/{id}/toggle-is-ready', 'CentreCrudController@toggleIsReady');
     Route::get('centre/{centreId}/sessions', [CentreCrudController::class, 'getCentreSessions']);
     Route::post('centre/{centreId}/sessions', [CentreCrudController::class, 'saveCentreSessions']);
     Route::crud('course', 'CourseCrudController');
@@ -58,9 +59,11 @@ Route::group([
     Route::post('batch/course/{courseId}/sessions', [BatchCrudController::class, 'saveCourseSessions']);
     Route::post('batch/{id}/toggle', [BatchCrudController::class, 'toggleStatus']);
     Route::post('batch/{id}/toggle-completed', [BatchCrudController::class, 'toggleCompleted']);
+    Route::post('batch/{id}/regenerate-batches', [BatchCrudController::class, 'regenerate']);
     Route::crud('tag', 'TagCrudController');
     Route::crud('tag-type', 'TagTypeCrudController');
     Route::crud('course-session', 'CourseSessionCrudController');
+    Route::crud('master-session', 'MasterSessionCrudController');
     Route::crud('email-template', 'EmailTemplateCrudController');
     Route::crud('form', 'FormCrudController');
     Route::post('form/{id}/toggle', 'FormCrudController@toggleStatus');
@@ -108,6 +111,7 @@ Route::group([
     Route::get('course-session/ajax-list', 'CourseSessionCrudController@ajaxList');
     Route::post('user/bulk-admit', 'UserCrudController@bulkAdmit');
     Route::crud('course-category', 'CourseCategoryCrudController');
+    Route::post('course-category/{id}/toggle', 'CourseCategoryCrudController@toggleStatus');
     Route::crud('course-module', 'CourseModuleCrudController');
     Route::get('qr-scanner', 'AttendanceCrudController@setupScanQrCodePage')->name('qr-scanner');
 
@@ -144,6 +148,8 @@ Route::group([
     // Reset Result for a student (admin panel, Backpack)
     Route::get('reset-exam/{exam_id}/student/{user_id}', 'UserCrudController@resetResult')->name('results.reset');
     Route::crud('student-verification', 'StudentVerificationCrudController');
+    Route::crud('ghana-card-verification', 'GhanaCardVerificationCrudController');
+    Route::post('ghana-card-verification/reset-block/{user_id}', 'GhanaCardVerificationCrudController@resetBlock')->name('ghana-card.reset-block');
     Route::crud('course-certification', 'CourseCertificationCrudController');
     Route::crud('course-match', 'CourseMatchCrudController');
     Route::post('course-match/{id}/toggle', 'CourseMatchCrudController@toggleStatus');
@@ -163,6 +169,8 @@ Route::group([
     Route::get('course-batch/{id}/admitted-students-data', [CourseBatchCrudController::class, 'admittedStudentsData'])->name('course-batch.admitted-students-data');
     Route::get('course-batch/{id}/attendance-history-data', [CourseBatchCrudController::class, 'attendanceHistoryData'])->name('course-batch.attendance-history-data');
     Route::crud('course-batch', 'CourseBatchCrudController');
+    Route::crud('programme-batch', 'ProgrammeBatchCrudController');
+    Route::post('programme-batch/{batchId}/regenerate', 'ProgrammeBatchCrudController@regenerate');
     Route::post('district/{id}/toggle', [DistrictCrudController::class, 'toggleStatus']);
     Route::post('constituency/{id}/toggle', [ConstituencyCrudController::class, 'toggleStatus']);
     Route::post('district/{districtId}/add-centres', [DistrictCrudController::class, 'addCentres'])->name('district.add-centres');

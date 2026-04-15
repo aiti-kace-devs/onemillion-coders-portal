@@ -56,7 +56,7 @@ Route::post('/api/add-student', [FormResponseController::class, 'store']);
 Route::get('/api/constituencies/{constituency}/metrics', [ConstituencyCrudController::class, 'metrics']);
 Route::get('/api/check-user/{userID}', [RegistrationFormAPIController::class, 'check_user_by_userID'])->middleware('user.token');
 Route::post('/api/confirm-course', [RegistrationFormAPIController::class, 'confirmCourse'])->middleware('user.token');
-
+Route::get('/api/check-user-recommended-courses/{userID}', [CourseMatchAPIController::class, 'checkUserRecommendedCourses'])->middleware('user.token');
 
 // OTP verification routes for registration
 Route::get('/api/otp/check-email', [OtpController::class, 'checkEmail'])->middleware('throttle:30,1');
@@ -87,6 +87,7 @@ Route::get('/api/branch/{branch}/centres', [CourseProgrammeController::class, 'c
 Route::get('/api/districts-by-branch', [CourseProgrammeController::class, 'districtsByBranch']);
 Route::get('/api/centres-by-district', [CourseProgrammeController::class, 'centresByDistrict']);
 Route::get('/api/constituencies-by-branch', [CourseProgrammeController::class, 'constituencyByRegion']);
+Route::get('/api/centres/count/total', [CourseProgrammeController::class, 'getTotalCentresCount']);
 
 Route::post('admin/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
