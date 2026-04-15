@@ -50,7 +50,7 @@ Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->middleware('
     Route::post('/record-violation', [StudentOperation::class, 'record_assessment_violation'])->name('record-violation');
 });
 
-Route::get('/recommended-courses', [StudentOperation::class, 'recommendCourses'])->name('recommended-courses');
+// Route::get('/recommended-courses', [StudentOperation::class, 'recommendCourses'])->name('recommended-courses');
 /*
 |--------------------------------------------------------------------------
 | Statamic Custom API Routes
