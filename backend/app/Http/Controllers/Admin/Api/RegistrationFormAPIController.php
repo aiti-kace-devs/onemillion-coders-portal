@@ -201,13 +201,10 @@ class RegistrationFormAPIController extends Controller
         ]);
     }
 
-
-
-
-        public function switchToSelfPaced(Request $request)
+    public function switchToSelfPacedOrWithSupport(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'userId' => 'required|exists:users,userId'
+            'userId' => 'required|exists:users,userId',
         ]);
 
         if ($validator->fails()) {
@@ -229,22 +226,40 @@ class RegistrationFormAPIController extends Controller
             ]);
         }
 
-        $user->support = false;
-        $user->save();
+        $selfPaced = filter_var($request->query('self-paced', 'false'), FILTER_VALIDATE_BOOLEAN);
+        $withSupport = filter_var($request->query('with-support', 'false'), FILTER_VALIDATE_BOOLEAN);
+
+        if ($selfPaced) {
+            $user->support = false;
+            $user->save();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => 'You have successfully switched to self-paced learning. Resource support has been removed from your registration.',
+                ],
+            ]);
+        }
+
+        if ($withSupport) {
+            $user->support = true;
+            $user->save();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => 'You have successfully enabled resource support for your registration.',
+                ],
+            ]);
+        }
 
         return response()->json([
-            'success' => true,
-            'data' => [
-                'message' => 'You have successfully switched to self-paced learning. Resource support has been removed from your registration.',
-            ],
-        ]);
+            'success' => false,
+            'message' => 'Invalid request. Please provide either ?self-paced=true or ?with-support=true.',
+        ], 422);
     }
 
-
-
-
-
-        public function enrollSelfPacedStudent(Request $request)
+    public function enrollSelfPacedStudent(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'userId' => 'required|exists:users,userId',
@@ -292,5 +307,4 @@ class RegistrationFormAPIController extends Controller
             ],
         ]);
     }
-
 }
