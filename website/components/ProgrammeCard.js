@@ -21,8 +21,7 @@ import {
   FiStar,
 } from "react-icons/fi";
 import Button from "./Button";
-import { confirmCourse } from "../services/pages";
-import { getAvailableBatches, getSiblingCentres, getSiblingCourses, createBooking } from "../services/api";
+import { getAvailableBatches, getSiblingCentres, getSiblingCourses, createBooking, switchToSelfPaced, joinWaitlist } from "../services/api";
 
 const ProgrammeCard = ({ programme, userId, centreId, token }) => {
   const router = useRouter();
@@ -97,7 +96,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
       try {
         setEnrollSubmitting(true);
         setEnrollError(null);
-        await confirmCourse({ userId, course_id: enrollingCourseId, support: false, ...(centreId && { centre_id: centreId }) }, token);
+        await switchToSelfPaced(userId, token);
         setEnrollSuccess(true);
       } catch (err) {
         const apiErrors = err.response?.data?.errors;
@@ -144,6 +143,17 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
       const apiErrors = err.response?.data?.errors;
       const apiMessage = err.response?.data?.message;
       setEnrollError(apiErrors ? Object.values(apiErrors).flat().join(". ") : (apiMessage || "Failed to enroll. Please try again."));
+    } finally { setEnrollSubmitting(false); }
+  };
+
+  const handleJoinWaitlist = async () => {
+    try {
+      setEnrollSubmitting(true);
+      await joinWaitlist(userId, enrollingCourseId, token);
+      setWaitlistJoined(true);
+    } catch (err) {
+      const apiMessage = err.response?.data?.message;
+      setEnrollError(apiMessage || "Failed to join waitlist. Please try again.");
     } finally { setEnrollSubmitting(false); }
   };
 
@@ -816,7 +826,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                           <div className="text-xs sm:text-sm font-semibold text-gray-900 mb-0.5">Enroll without support</div>
                           <div className="text-[10px] sm:text-[11px] text-gray-400 leading-tight">Skip support, enroll now</div>
                         </button>
-                        <button onClick={() => setWaitlistJoined(true)} className="p-3 sm:p-4 rounded-xl bg-white border border-dashed border-gray-300 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] text-center">
+                        <button onClick={handleJoinWaitlist} className="p-3 sm:p-4 rounded-xl bg-white border border-dashed border-gray-300 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] text-center">
                           <div className="w-9 h-9 rounded-xl bg-yellow-50 flex items-center justify-center mx-auto mb-2 group-hover:bg-yellow-100 transition-colors"><FiClock className="w-4 h-4 text-yellow-600" /></div>
                           <div className="text-xs sm:text-sm font-semibold text-gray-900 mb-0.5">Join the waitlist</div>
                           <div className="text-[10px] sm:text-[11px] text-gray-400 leading-tight">Get notified when available</div>
@@ -913,7 +923,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                     </div>
                     <div className="pt-3 border-t border-gray-100">
                       <button
-                        onClick={() => setWaitlistJoined(true)}
+                        onClick={handleJoinWaitlist}
                         className="w-full p-3 rounded-xl border border-dashed border-gray-300 hover:border-yellow-400 hover:bg-yellow-50/30 transition-all duration-200 group active:scale-[0.99]"
                       >
                         <div className="flex items-center gap-3">

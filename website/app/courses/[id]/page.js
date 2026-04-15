@@ -31,7 +31,6 @@ import {
   getAllRegions,
   getDistrictsByBranch,
   getCentresByDistrict,
-  confirmCourse,
 } from "../../../services/pages";
 import {
   checkUserStatus,
@@ -42,6 +41,8 @@ import {
   getSiblingCentres,
   getSiblingCourses,
   createBooking,
+  switchToSelfPaced,
+  joinWaitlist,
 } from "../../../services/api";
 import Button from "../../../components/Button";
 
@@ -583,20 +584,17 @@ export default function CoursesPage({ params }) {
       setEnrollmentStep("support");
     } else {
       // Centre not ready for support → enroll directly via confirmCourse
-      handleDirectEnroll(courseId, centreId);
+      handleDirectEnroll();
     }
   };
 
   // Direct enrollment without support (via confirmCourse)
-  const handleDirectEnroll = async (courseId, centreId) => {
+  const handleDirectEnroll = async () => {
     try {
       setEnrollSubmitting(true);
       setEnrollmentStep("support"); // Show modal with loading
       setError(null);
-      await confirmCourse(
-        { userId: id, course_id: courseId || enrollingCourseId, support: false, ...(centreId && { centre_id: centreId }) },
-        token,
-      );
+      await switchToSelfPaced(id, token);
       setEnrollSuccess(true);
       updateQueryParams({ step: null, region: null, district: null, centre: null });
     } catch (err) {
@@ -612,7 +610,7 @@ export default function CoursesPage({ params }) {
   const handleSupportAnswer = async (needs) => {
     setNeedsSupport(needs);
     if (!needs) {
-      await handleDirectEnroll(enrollingCourseId, enrollingCentreId || selectedCentre?.id);
+      await handleDirectEnroll();
     } else {
       // Fetch real batches from API
       setBatchesLoading(true);
@@ -672,6 +670,19 @@ export default function CoursesPage({ params }) {
       const apiErrors = err.response?.data?.errors;
       const apiMessage = err.response?.data?.message;
       setError(apiErrors ? Object.values(apiErrors).flat().join(". ") : (apiMessage || "Failed to enroll. Please try again."));
+    } finally {
+      setEnrollSubmitting(false);
+    }
+  };
+
+  const handleJoinWaitlist = async () => {
+    try {
+      setEnrollSubmitting(true);
+      await joinWaitlist(id, enrollingCourseId, token);
+      setWaitlistJoined(true);
+    } catch (err) {
+      const apiMessage = err.response?.data?.message;
+      setError(apiMessage || "Failed to join waitlist. Please try again.");
     } finally {
       setEnrollSubmitting(false);
     }
@@ -2364,7 +2375,7 @@ export default function CoursesPage({ params }) {
                                   <div className="text-xs sm:text-sm font-semibold text-gray-900 mb-0.5">Enroll without support</div>
                                   <div className="text-[10px] sm:text-[11px] text-gray-400 leading-tight">Skip support, enroll now</div>
                                 </button>
-                                <button onClick={() => setWaitlistJoined(true)}
+                                <button onClick={handleJoinWaitlist}
                                   className="p-3 sm:p-4 rounded-xl bg-white border border-dashed border-gray-300 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] text-center">
                                   <div className="w-9 h-9 rounded-xl bg-yellow-50 flex items-center justify-center mx-auto mb-2 group-hover:bg-yellow-100 transition-colors">
                                     <FiClock className="w-4 h-4 text-yellow-600" />
@@ -2470,7 +2481,7 @@ export default function CoursesPage({ params }) {
                             {/* Waitlist */}
                             <div className="pt-3 border-t border-gray-100">
                               <button
-                                onClick={() => setWaitlistJoined(true)}
+                                onClick={handleJoinWaitlist}
                                 className="w-full p-3 rounded-xl border border-dashed border-gray-300 hover:border-yellow-400 hover:bg-yellow-50/30 transition-all duration-200 group active:scale-[0.99]"
                               >
                                 <div className="flex items-center gap-3">

@@ -312,3 +312,44 @@ export const createBooking = async (data, token) => {
     throw error;
   }
 };
+
+/**
+ * Switch a user to self-paced learning (no centre support needed)
+ * @param {string} userId
+ * @param {string} token
+ * @returns {Promise<Object>}
+ */
+export const switchToSelfPaced = async (userId, token) => {
+  try {
+    const response = await apiRequest('switch-to-self-paced', {
+      method: 'POST',
+      data: { userId },
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to switch to self-paced:', error);
+    throw error;
+  }
+};
+
+/**
+ * Add a user to the waitlist for a course
+ * @param {string} userId
+ * @param {number} courseId
+ * @param {string} token
+ * @returns {Promise<Object>}
+ */
+export const joinWaitlist = async (userId, courseId, token) => {
+  try {
+    const response = await apiRequest('waitlist/add', {
+      method: 'POST',
+      data: { userId, course_id: courseId },
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to join waitlist:', error);
+    throw error;
+  }
+};
