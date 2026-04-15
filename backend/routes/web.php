@@ -582,6 +582,9 @@ Route::prefix('student')->name('student.')->group(function () {
 
         // Application status route
         Route::get('/application-status', [StudentOperation::class, 'application_status'])->name('application-status');
+
+        // Course history route
+        Route::get('/course-history', [\App\Http\Controllers\Student\CourseHistoryController::class, 'index'])->name('course-history');
         Route::get('/level-assessment', [StudentOperation::class, 'level_assessment'])->name('level-assessment');
 
         // Results route

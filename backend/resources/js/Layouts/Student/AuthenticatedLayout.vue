@@ -174,6 +174,16 @@ const user = auth?.user || {};
                         </span>
                     </SidebarNavLink>
 
+                    <SidebarNavLink
+                        :href="route('student.course-history')"
+                        :active="route().current('student.course-history')"
+                        :label="'Course History'"
+                    >
+                        <span class="material-symbols-outlined">
+                            history
+                        </span>
+                    </SidebarNavLink>
+
                     <template v-if="user.isAdmitted">
                         <SidebarNavLink
                             :active="route().current('student.attendance.show')"
