@@ -335,6 +335,7 @@ class User extends Authenticatable
     {
         return LogOptions::defaults()
             ->logFillable()
+            ->logExcept(['password'])
             ->logOnlyDirty()
             ->useLogName('student')
             ->setDescriptionForEvent(fn(string $event) => "Student {$event}")

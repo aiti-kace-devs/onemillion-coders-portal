@@ -20,7 +20,7 @@ const form = useForm({
   first_name: props.user.first_name || "",
   middle_name: props.user.middle_name || "",
   last_name: props.user.last_name || "",
-  card_type: props.user.card_type || "",
+  card_type: "ghcard",
   ghcard: props.user.ghcard || "",
   gender: props.user.gender || "",
   network_type: props.user.network_type || "",
@@ -136,8 +136,8 @@ const submit = () => {
 
     <form class="grid lg:grid-cols-2 gap-6 mt-6">
       <!-- Always show separate name fields -->
-        <div class="col-span-full">
-          <InputLabel for="first_name" value="First Name" />
+        <div>
+          <InputLabel for="first_name" value="First Name" :required="true" />
           <TextInput
             id="first_name"
             type="text"
@@ -150,21 +150,8 @@ const submit = () => {
           <InputError :message="form.errors.first_name" />
         </div>
 
-        <div class="col-span-full">
-          <InputLabel for="middle_name" value="Middle Name" />
-          <TextInput
-            id="middle_name"
-            type="text"
-            class="block w-full"
-            v-model="form.middle_name"
-            :disabled="detailsUpdated"
-            :class="{ 'border-red-600': form.errors.middle_name }"
-          />
-          <InputError :message="form.errors.middle_name" />
-        </div>
-
-        <div class="col-span-full">
-          <InputLabel for="last_name" value="Last Name" />
+        <div>
+          <InputLabel for="last_name" value="Last Name" :required="true" />
           <TextInput
             id="last_name"
             type="text"
@@ -177,96 +164,83 @@ const submit = () => {
           <InputError :message="form.errors.last_name" />
         </div>
 
+        <div>
+          <InputLabel for="middle_name" value="Middle Name (Optional)" />
+          <TextInput
+            id="middle_name"
+            type="text"
+            class="block w-full"
+            v-model="form.middle_name"
+            :disabled="detailsUpdated"
+            :class="{ 'border-red-600': form.errors.middle_name }"
+          />
+          <InputError :message="form.errors.middle_name" />
+        </div>
 
-      <div class="col-span-full">
-        <InputLabel for="gender" value="Gender" />
-        <SelectInput
-          id="gender"
-          v-model="form.gender"
-          :disabled="detailsUpdated"
-          required
-          class="block w-full"
-          :class="{ 'border-red-600': form.errors.gender }"
-        >
-          <option value="" disabled>-- Select Gender --</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-        </SelectInput>
-        <InputError :message="form.errors.gender" />
-      </div>
+        <div>
+          <InputLabel for="gender" value="Gender" :required="true" />
+          <SelectInput
+            id="gender"
+            v-model="form.gender"
+            :disabled="detailsUpdated"
+            required
+            class="block w-full"
+            :class="{ 'border-red-600': form.errors.gender }"
+          >
+            <option value="" disabled>-- Select Gender --</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </SelectInput>
+          <InputError :message="form.errors.gender" />
+        </div>
 
-      <div class="col-span-full">
-        <div class="grid grid-cols-2 gap-6">
-          <div>
-            <InputLabel for="card_type" value="Card Type" />
-            <SelectInput
-              id="card_type"
-              v-model="form.card_type"
-              :disabled="detailsUpdated"
-              required
-              class="block w-full"
-              :class="{ 'border-red-600': form.errors.card_type }"
+
+        <div class="col-span-full">
+          <InputLabel for="ghcard" value="Ghana Card Number" :required="true" />
+          <div class="flex">
+            <span
+              class="inline-flex items-center px-4 border border-r-0 text-gray-500 font-medium text-sm rounded-l-xl h-11 bg-gray-50 border-gray-200"
+              id="ghcard-addon"
+              :class="{
+                'text-green-600 border-green-600': cardVerified,
+                'border-red-600': form.errors.ghcard,
+                'cursor-not-allowed bg-gray-100 text-gray-400': detailsUpdated,
+              }"
+              >GHA-</span
             >
-              <option value="" disabled>-- Select Card Type --</option>
-              <option value="ghcard">Ghana Card</option>
-              <option value="voters_id">Voter's ID</option>
-              <option value="drivers_license">Driver's License</option>
-              <option value="passport">Passport</option>
-            </SelectInput>
-            <InputError :message="form.errors.card_type" />
+            <TextInput
+              id="ghcard"
+              type="text"
+              class="block w-full"
+              v-model="form.ghcard"
+              required
+              :disabled="detailsUpdated"
+              :class="{
+                'border-l-0 rounded-l-none': true,
+                'border-green-600': cardVerified,
+                'border-red-600': form.errors.ghcard,
+              }"
+              placeholder="123456789-1"
+              aria-describedby="ghcard-addon"
+            />
           </div>
-
-          <div>
-            <InputLabel for="ghcard" value="Card ID" />
-            <div class="flex">
-              <span
-                v-if="form.card_type === 'ghcard'"
-                class="inline-flex items-center px-4 border border-r-0 text-gray-500 font-medium text-sm rounded-l-xl h-11 bg-gray-50 border-gray-200"
-                id="ghcard-addon"
-                :class="{
-                  'text-green-600 border-green-600': cardVerified,
-                  'border-red-600': form.errors.ghcard,
-                  'cursor-not-allowed bg-gray-100 text-gray-400': detailsUpdated,
-                }"
-                >GHA-</span
-              >
-              <TextInput
-                id="ghcard"
-                type="text"
-                class="block w-full"
-                v-model="form.ghcard"
-                required
-                :disabled="detailsUpdated"
-                :class="{
-                  'border-l-0 rounded-l-none': form.card_type === 'ghcard',
-                  'border-green-600': cardVerified,
-                  'border-red-600': form.errors.ghcard,
-                }"
-                placeholder="123456789-1"
-                :aria-describedby="
-                  form.card_type === 'ghcard' ? 'ghcard-addon' : undefined
-                "
-              />
-            </div>
-            <InputError :message="form.errors.ghcard" />
+          <InputError :message="form.errors.ghcard" />
+          
+          <div
+            v-if="!form.errors.ghcard"
+            class="mt-1 text-xs inline-flex items-center"
+            :class="cardVerified ? 'text-green-600' : 'text-gray-700'"
+          >
+            {{
+              cardVerified
+                ? "Card verified successfully"
+                : "Card not verified (This will be done manually by an administrator)"
+            }}
           </div>
         </div>
-
-        <div
-          v-if="!form.errors.ghcard"
-          class="text-xs inline-flex items-center"
-          :class="cardVerified ? 'text-green-600' : 'text-gray-700'"
-        >
-          {{
-            cardVerified
-              ? "Card verified successfully"
-              : "Card not verified (This will be done manually by an administrator)"
-          }}
-        </div>
-      </div>
 
       <div>
-        <InputLabel for="network_type" value="Network Type" />
+        <InputLabel for="network_type" value="Network Type" :required="true" />
         <SelectInput
           id="network_type"
           v-model="form.network_type"
@@ -284,7 +258,7 @@ const submit = () => {
       </div>
 
       <div>
-        <InputLabel for="mobile_no" value="Phone Number" />
+        <InputLabel for="mobile_no" value="Phone Number" :required="true" />
         <TextInput
           id="mobile_no"
           type="text"
@@ -299,7 +273,7 @@ const submit = () => {
       </div>
 
       <div class="col-span-full">
-        <InputLabel for="email" value="Email" />
+        <InputLabel for="email" value="Email" :required="true" />
         <TextInput
           id="email"
           type="email"

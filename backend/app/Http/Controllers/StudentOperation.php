@@ -550,35 +550,35 @@ class StudentOperation extends Controller
 
     //Display change course form
 
-public function change_course()
-{
-    $user = Auth::guard('web')->user();
+    public function change_course()
+    {
+        $user = Auth::guard('web')->user();
 
-    if ($user->shortlist) {
-        return redirect()
-            ->route('student.application-status')
-            ->with([
-                'flash' => 'Your course selection is now locked because you have been shortlisted. If you need assistance, please contact support.',
-                'key' => 'info',
-            ]);
+        if ($user->shortlist) {
+            return redirect()
+                ->route('student.application-status')
+                ->with([
+                    'flash' => 'Your course selection is now locked because you have been shortlisted. If you need assistance, please contact support.',
+                    'key' => 'info',
+                ]);
+        }
+
+        if (!$user->userAssessment?->completed) {
+            return redirect()
+                ->route('student.application-status')
+                ->with([
+                    'flash' => 'Please complete the Level Determination Assessment first.',
+                    'key' => 'info',
+                ]);
+        }
+
+        $currentCourse = Course::find($user->registered_course);
+
+        return Inertia::render('Student/ChangeCourse', [
+            'user' => $user,
+            'currentCourse' => $currentCourse
+        ]);
     }
-
-    if (!$user->userAssessment?->completed) {
-        return redirect()
-            ->route('student.application-status')
-            ->with([
-                'flash' => 'Please complete the Level Determination Assessment first.',
-                'key' => 'info',
-            ]);
-    }
-
-    $currentCourse = Course::find($user->registered_course);
-
-    return Inertia::render('Student/ChangeCourse', [
-        'user' => $user,
-        'currentCourse' => $currentCourse
-    ]);
-}
     // Select training center
     public function select_center($branch_id)
     {
@@ -798,14 +798,19 @@ public function change_course()
             'gender' => 'sometimes|in:male,female',
             'mobile_no' => 'sometimes|string|phone',
             'network_type' => 'sometimes|in:mtn,telecel,airteltigo',
-            'card_type' => 'sometimes|in:ghcard,voters_id,drivers_license,passport',
         ];
 
-        if ($request->input('card_type') === 'ghcard') {
+        // Default card_type to ghcard if not provided, or keep existing
+        $cardType = $request->input('card_type', $user->card_type ?: 'ghcard');
+
+        if ($cardType === 'ghcard') {
             $rules['ghcard'] = ['sometimes', 'string', 'regex:/^GHA-[0-9]{9}-[0-9]{1}$/', 'max:16', Rule::unique('users', 'ghcard')->ignore($user->id)];
-            $request->merge([
-                'ghcard' => 'GHA-' . $request->ghcard,
-            ]);
+            
+            // Only prepend 'GHA-' if it's missing to avoid 'GHA-GHA-...'
+            $ghValue = $request->input('ghcard');
+            if (!empty($ghValue) && !str_starts_with($ghValue, 'GHA-')) {
+                $request->merge(['ghcard' => 'GHA-' . $ghValue]);
+            }
         } else {
             $rules['ghcard'] = ['sometimes', 'string', 'max:20', Rule::unique('users', 'ghcard')->ignore($user->id)];
         }
