@@ -228,3 +228,87 @@ export const recordViolation = async (userId, violationCount, token) => {
     throw error;
   }
 };
+
+// ──────────────────────────────────────────────
+// Booking & Availability APIs
+// ──────────────────────────────────────────────
+
+/**
+ * Fetch available batches and sessions for a course at a centre
+ * @param {number} courseId
+ * @param {string} token
+ * @returns {Promise<Object>} - { success, centre, course_type, capacity, batches }
+ */
+export const getAvailableBatches = async (courseId, token) => {
+  try {
+    const response = await apiRequest(`availability/batches?course_id=${courseId}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to fetch available batches:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch sibling centres offering the same course
+ * @param {number} courseId
+ * @param {number} centreId
+ * @param {string} token
+ * @param {number} limit
+ * @returns {Promise<Object>} - { success, origin_centre, programme, alternatives }
+ */
+export const getSiblingCentres = async (courseId, centreId, token, limit = 3) => {
+  try {
+    const response = await apiRequest(`availability/sibling-centres?course_id=${courseId}&centre_id=${centreId}&limit=${limit}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to fetch sibling centres:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch sibling courses (recommended + available) for a user
+ * @param {string} userId
+ * @param {string} token
+ * @param {number} limit
+ * @returns {Promise<Object>} - { success, matches, available_courses }
+ */
+export const getSiblingCourses = async (userId, token, limit = 3) => {
+  try {
+    const response = await apiRequest(`sibling-courses?userId=${userId}&limit=${limit}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to fetch sibling courses:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create a booking (reserve a slot)
+ * @param {{ programme_batch_id: number, course_id: number, session_id: number }} data
+ * @param {string} token
+ * @returns {Promise<Object>} - Booking confirmation or 409 if full
+ */
+export const createBooking = async (data, token) => {
+  try {
+    const response = await apiRequest('bookings', {
+      method: 'POST',
+      data,
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    if (error.response?.status === 409) {
+      return { conflict: true, ...error.response.data };
+    }
+    console.error('Failed to create booking:', error);
+    throw error;
+  }
+};

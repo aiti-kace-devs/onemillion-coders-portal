@@ -15,15 +15,14 @@ import {
   FiMonitor,
   FiMapPin,
   FiCalendar,
-  FiSun,
   FiArrowLeft,
   FiChevronRight,
   FiAlertCircle,
-  FiTarget,
   FiStar,
 } from "react-icons/fi";
 import Button from "./Button";
 import { confirmCourse } from "../services/pages";
+import { getAvailableBatches, getSiblingCentres, getSiblingCourses, createBooking } from "../services/api";
 
 const ProgrammeCard = ({ programme, userId, centreId, token }) => {
   const router = useRouter();
@@ -35,85 +34,49 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
   const [imageError, setImageError] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
 
-  // Enrollment sub-flow state (mockup)
+  // Enrollment sub-flow state
   const [enrollmentStep, setEnrollmentStep] = useState(null);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
   const [waitlistJoined, setWaitlistJoined] = useState(false);
   const [enrolledCourseName, setEnrolledCourseName] = useState("");
+  const [enrollingCourseId, setEnrollingCourseId] = useState(null);
   const [enrollingCentreId, setEnrollingCentreId] = useState(null);
   const [enrollingCentreTitle, setEnrollingCentreTitle] = useState(null);
   const [courseFullTab, setCourseFullTab] = useState("centres");
   const [selectedBatchMonth, setSelectedBatchMonth] = useState(null);
 
-  // Mock data
-  const MOCK_BATCHES = [
-    { id: 1, name: "Batch A", startDate: "2026-05-05", endDate: "2026-06-03", duration: 30, totalSlots: 40, availableSlots: 3 },
-    { id: 2, name: "Batch B", startDate: "2026-05-19", endDate: "2026-06-17", duration: 30, totalSlots: 40, availableSlots: 18 },
-    { id: 3, name: "Batch C", startDate: "2026-06-02", endDate: "2026-07-01", duration: 30, totalSlots: 40, availableSlots: 32 },
-    { id: 4, name: "Batch D", startDate: "2026-06-16", endDate: "2026-07-15", duration: 30, totalSlots: 40, availableSlots: 40 },
-    { id: 5, name: "Batch E", startDate: "2026-07-07", endDate: "2026-08-05", duration: 30, totalSlots: 40, availableSlots: 40 },
-    { id: 6, name: "Batch F", startDate: "2026-07-21", endDate: "2026-08-19", duration: 30, totalSlots: 40, availableSlots: 0 },
-    { id: 7, name: "Batch G", startDate: "2026-08-04", endDate: "2026-09-02", duration: 30, totalSlots: 40, availableSlots: 25 },
-    { id: 8, name: "Batch H", startDate: "2026-09-01", endDate: "2026-09-30", duration: 30, totalSlots: 40, availableSlots: 40 },
-    { id: 9, name: "Batch I", startDate: "2026-10-05", endDate: "2026-11-03", duration: 30, totalSlots: 40, availableSlots: 0 },
-    { id: 10, name: "Batch J", startDate: "2026-10-19", endDate: "2026-11-17", duration: 30, totalSlots: 40, availableSlots: 15 },
-  ];
-  const MOCK_SESSIONS = [
-    {
-      id: "morning",
-      label: "Morning",
-      time: "8:00 AM — 10:00 AM",
-      description: "Best for early risers",
-      hoursPerDay: 4,
-    },
-    {
-      id: "afternoon",
-      label: "Afternoon",
-      time: "10:00 AM — 12:00 PM",
-      description: "Perfect midday schedule",
-      hoursPerDay: 4,
-    },
-    {
-      id: "afternoon2",
-      label: "Afternoon",
-      time: "1:00 PM — 3:00 PM",
-      description: "Perfect midday schedule",
-      hoursPerDay: 4,
-    },
-    {
-      id: "evening",
-      label: "Evening",
-      time: "3:00 PM — 5:00 PM",
-      description: "Ideal for working professionals",
-      hoursPerDay: 3,
-    },
-  ];
-  const MOCK_ALT_CENTRES = [
-    { id: 101, name: "Accra Digital Centre — East Legon", availableSlots: 8 },
-    { id: 102, name: "Tema Innovation Hub", availableSlots: 15 },
-  ];
-  const MOCK_ALT_COURSES = [
-    {
-      id: 201,
-      title: "Cybersecurity Professional",
-      matchPercentage: "92%",
-      availableSlots: 6,
-      duration: "200 Hours",
-      image: "/images/courses/cybersecurity-professional.JPG",
-    },
-    {
-      id: 202,
-      title: "Data Analyst Associate",
-      matchPercentage: "85%",
-      availableSlots: 14,
-      duration: "80 Hours",
-      image: "/images/courses/data-analyst-associate.JPG",
-    },
-  ];
+  // API data
+  const [availableBatches, setAvailableBatches] = useState([]);
+  const [batchesLoading, setBatchesLoading] = useState(false);
+  const [siblingCentres, setSiblingCentres] = useState([]);
+  const [siblingCourses, setSiblingCourses] = useState({ matches: [], available_courses: [] });
+
+  const fetchBatchesForCourse = async (courseId) => {
+    try {
+      setBatchesLoading(true);
+      const data = await getAvailableBatches(courseId, token);
+      setAvailableBatches(data?.batches || []);
+      return data?.batches || [];
+    } catch { setAvailableBatches([]); return []; }
+    finally { setBatchesLoading(false); }
+  };
+
+  const fetchAlternatives = async (courseId, cId) => {
+    try {
+      const [centresData, coursesData] = await Promise.all([
+        getSiblingCentres(courseId, cId, token).catch(() => ({ alternatives: [] })),
+        getSiblingCourses(userId, token).catch(() => ({ matches: [], available_courses: [] })),
+      ]);
+      setSiblingCentres(centresData?.alternatives || []);
+      setSiblingCourses({ matches: coursesData?.matches || [], available_courses: coursesData?.available_courses || [] });
+    } catch { /* ignore */ }
+  };
 
   const handleEnrollClick = () => {
+    const courseId = programme.course_id || programme.id;
     setEnrolledCourseName(programme.title);
+    setEnrollingCourseId(courseId);
     setEnrollingCentreId(centreId);
     setEnrollingCentreTitle(null);
     setSelectedBatch(null);
@@ -122,6 +85,8 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
     setWaitlistJoined(false);
     setEnrollSuccess(false);
     setEnrollError(null);
+    setSelectedBatchMonth(null);
+    setCourseFullTab("centres");
     setEnrollmentStep("support");
     setShowEnrollModal(true);
   };
@@ -132,74 +97,54 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
       try {
         setEnrollSubmitting(true);
         setEnrollError(null);
-        await confirmCourse(
-          {
-            userId,
-            course_id: programme.course_id || programme.id,
-            support: false,
-            ...(centreId && { centre_id: centreId }),
-          },
-          token,
-        );
+        await confirmCourse({ userId, course_id: enrollingCourseId, support: false, ...(centreId && { centre_id: centreId }) }, token);
         setEnrollSuccess(true);
       } catch (err) {
         const apiErrors = err.response?.data?.errors;
         const apiMessage = err.response?.data?.message;
-        if (apiErrors) {
-          setEnrollError(Object.values(apiErrors).flat().join(". "));
-        } else {
-          setEnrollError(apiMessage || "Failed to enroll. Please try again.");
-        }
-      } finally {
-        setEnrollSubmitting(false);
-      }
+        setEnrollError(apiErrors ? Object.values(apiErrors).flat().join(". ") : (apiMessage || "Failed to enroll. Please try again."));
+      } finally { setEnrollSubmitting(false); }
     } else {
-      const hasAvailableBatch = MOCK_BATCHES.some((b) => b.availableSlots > 0);
-      setEnrollmentStep(hasAvailableBatch ? "batch" : "courseFull");
+      setBatchesLoading(true);
+      setEnrollmentStep("batch");
+      const batches = await fetchBatchesForCourse(enrollingCourseId);
+      const hasAvailable = batches.some((b) => b.sessions?.some((s) => s.remaining > 0));
+      if (!hasAvailable) {
+        await fetchAlternatives(enrollingCourseId, enrollingCentreId || centreId);
+        setEnrollmentStep("courseFull");
+      }
     }
   };
 
   const handleBatchSelect = (batch) => {
-    if (batch.availableSlots === 0) return;
+    const hasAvailableSession = batch.sessions?.some((s) => s.remaining > 0);
+    if (!hasAvailableSession) return;
     setSelectedBatch(batch);
     setEnrollmentStep("session");
   };
 
   const handleSessionSelect = (session) => {
+    if (session.remaining === 0) return;
     setSelectedSession(session);
     setEnrollmentStep("confirm");
   };
 
   const handleEnrollSubmit = async () => {
-    if (selectedBatch?.id === 1) {
-      setEnrollmentStep("batchFull");
-      return;
-    }
     try {
       setEnrollSubmitting(true);
       setEnrollError(null);
-      const cId = enrollingCentreId || centreId;
-      await confirmCourse(
-        {
-          userId,
-          course_id: programme.course_id || programme.id,
-          support: needsSupport === true,
-          ...(cId && { centre_id: cId }),
-        },
-        token,
-      );
-      setEnrollSuccess(true);
+      const result = await createBooking({ programme_batch_id: selectedBatch.id, course_id: enrollingCourseId, session_id: selectedSession.session_id }, token);
+      if (result.conflict) {
+        const batches = await fetchBatchesForCourse(enrollingCourseId);
+        const hasAvailable = batches.some((b) => b.sessions?.some((s) => s.remaining > 0));
+        if (hasAvailable) { setSelectedBatch(null); setSelectedSession(null); setSelectedBatchMonth(null); setEnrollmentStep("batchFull"); }
+        else { await fetchAlternatives(enrollingCourseId, enrollingCentreId || centreId); setEnrollmentStep("courseFull"); }
+      } else { setEnrollSuccess(true); }
     } catch (err) {
       const apiErrors = err.response?.data?.errors;
       const apiMessage = err.response?.data?.message;
-      if (apiErrors) {
-        setEnrollError(Object.values(apiErrors).flat().join(". "));
-      } else {
-        setEnrollError(apiMessage || "Failed to enroll. Please try again.");
-      }
-    } finally {
-      setEnrollSubmitting(false);
-    }
+      setEnrollError(apiErrors ? Object.values(apiErrors).flat().join(". ") : (apiMessage || "Failed to enroll. Please try again."));
+    } finally { setEnrollSubmitting(false); }
   };
 
   const closeEnrollmentModal = () => {
@@ -211,6 +156,11 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
     setWaitlistJoined(false);
     setEnrollSuccess(false);
     setEnrollError(null);
+    setAvailableBatches([]);
+    setSiblingCentres([]);
+    setSiblingCourses({ matches: [], available_courses: [] });
+    setSelectedBatchMonth(null);
+    setCourseFullTab("centres");
   };
 
   const centreTitle = enrollingCentreTitle || "your centre";
@@ -475,7 +425,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                   </p>
                   {selectedBatch && selectedSession && (
                     <p className="text-gray-400 text-xs sm:text-sm mb-6">
-                      {selectedBatch.name} · {selectedSession.label} (
+                      {selectedBatch.batch || `Batch ${selectedBatch.id}`} · {selectedSession.session_name} (
                       {selectedSession.time})
                     </p>
                   )}
@@ -581,11 +531,11 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
               {/* Batch Selection with Month Tabs */}
               {!enrollSuccess && !waitlistJoined && enrollmentStep === "batch" && (() => {
                 const monthMap = {};
-                MOCK_BATCHES.forEach((b) => { const key = b.startDate.slice(0, 7); if (!monthMap[key]) monthMap[key] = []; monthMap[key].push(b); });
+                availableBatches.forEach((b) => { const key = b.start_date.slice(0, 7); if (!monthMap[key]) monthMap[key] = []; monthMap[key].push(b); });
                 const months = Object.keys(monthMap).sort();
                 const activeMonth = selectedBatchMonth || months[0];
                 const filteredBatches = monthMap[activeMonth] || [];
-                const availCount = (m) => (monthMap[m] || []).filter((b) => b.availableSlots > 0).length;
+                const batchTotalRemaining = (b) => (b.sessions || []).reduce((sum, s) => sum + s.remaining, 0);
                 return (
                   <>
                     <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"><FiX className="w-4.5 h-4.5" /></button>
@@ -594,54 +544,55 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                     <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-0.5">When would you like to start?</h2>
                     <p className="text-gray-400 text-[11px] sm:text-sm mb-4 line-clamp-1">{enrolledCourseName}</p>
 
-                    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 mb-4 -mx-1 px-1">
-                      {months.map((m) => {
-                        const isActive = m === activeMonth;
-                        const count = availCount(m);
-                        const label = new Date(m + "-01").toLocaleDateString("en-GB", { month: "short" });
-                        return (
-                          <button key={m} onClick={() => setSelectedBatchMonth(m)}
-                            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${isActive ? "bg-gray-900 text-white" : count > 0 ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-gray-50 text-gray-400"}`}>
-                            {label}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="space-y-2">
-                      {filteredBatches.map((batch) => {
-                        const isFull = batch.availableSlots === 0;
-                        const fillPct = ((batch.totalSlots - batch.availableSlots) / batch.totalSlots) * 100;
-                        const startStr = new Date(batch.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-                        const endStr = new Date(batch.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-                        return (
-                          <button key={batch.id} onClick={() => handleBatchSelect(batch)} disabled={isFull}
-                            className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all duration-200 group ${isFull ? "bg-gray-50/80 border-gray-100 cursor-not-allowed" : "bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.99]"}`}>
-                            <div className="flex items-center gap-3">
-                              <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 ${isFull ? "bg-gray-100" : "bg-gradient-to-br from-yellow-50 to-orange-50 group-hover:from-yellow-100 group-hover:to-orange-100"} transition-colors`}>
-                                <span className={`text-[10px] font-medium leading-none ${isFull ? "text-gray-400" : "text-yellow-700"}`}>{new Date(batch.startDate).toLocaleDateString("en-GB", { month: "short" })}</span>
-                                <span className={`text-base font-bold leading-tight ${isFull ? "text-gray-400" : "text-gray-900"}`}>{new Date(batch.startDate).getDate()}</span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-0.5">
-                                  <span className={`text-sm font-semibold ${isFull ? "text-gray-400" : "text-gray-900 group-hover:text-yellow-700"} transition-colors`}>{batch.name}</span>
-                                  {isFull && <span className="px-1.5 py-0.5 bg-red-50 text-red-500 text-[10px] font-medium rounded-full">Full</span>}
-                                </div>
-                                <div className={`text-[11px] sm:text-xs ${isFull ? "text-gray-300" : "text-gray-500"} mb-1.5`}>{startStr} — {endStr}<span className="hidden sm:inline"> · {batch.duration} days</span></div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
-                                    <div className={`h-full rounded-full transition-all ${isFull ? "bg-red-300" : fillPct > 70 ? "bg-orange-400" : "bg-green-400"}`} style={{ width: `${fillPct}%` }} />
+                    {batchesLoading ? (
+                      <div className="flex items-center justify-center py-12"><FiLoader className="w-5 h-5 text-yellow-500 animate-spin" /></div>
+                    ) : (
+                      <>
+                        {months.length > 1 && (
+                          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 mb-4 -mx-1 px-1">
+                            {months.map((m) => {
+                              const isActive = m === activeMonth;
+                              const label = new Date(m + "-01").toLocaleDateString("en-GB", { month: "short" });
+                              return (
+                                <button key={m} onClick={() => setSelectedBatchMonth(m)}
+                                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${isActive ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <div className="space-y-2">
+                          {filteredBatches.map((batch) => {
+                            const totalRemaining = batchTotalRemaining(batch);
+                            const isFull = totalRemaining === 0;
+                            const startStr = new Date(batch.start_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+                            const endStr = new Date(batch.end_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+                            return (
+                              <button key={batch.id} onClick={() => handleBatchSelect(batch)} disabled={isFull}
+                                className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all duration-200 group ${isFull ? "bg-gray-50/80 border-gray-100 cursor-not-allowed" : "bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.99]"}`}>
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 ${isFull ? "bg-gray-100" : "bg-gradient-to-br from-yellow-50 to-orange-50 group-hover:from-yellow-100 group-hover:to-orange-100"} transition-colors`}>
+                                    <span className={`text-[10px] font-medium leading-none ${isFull ? "text-gray-400" : "text-yellow-700"}`}>{new Date(batch.start_date).toLocaleDateString("en-GB", { month: "short" })}</span>
+                                    <span className={`text-base font-bold leading-tight ${isFull ? "text-gray-400" : "text-gray-900"}`}>{new Date(batch.start_date).getDate()}</span>
                                   </div>
-                                  <span className={`text-[10px] tabular-nums ${isFull ? "text-gray-300" : batch.availableSlots <= 5 ? "text-orange-600 font-medium" : "text-gray-400"}`}>{batch.availableSlots} left</span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                      <span className={`text-sm font-semibold ${isFull ? "text-gray-400" : "text-gray-900 group-hover:text-yellow-700"} transition-colors`}>{batch.batch || `Batch ${batch.id}`}</span>
+                                      {isFull && <span className="px-1.5 py-0.5 bg-red-50 text-red-500 text-[10px] font-medium rounded-full">Full</span>}
+                                    </div>
+                                    <div className={`text-[11px] sm:text-xs ${isFull ? "text-gray-300" : "text-gray-500"} mb-1`}>{startStr} — {endStr}</div>
+                                    <div className="text-[10px] text-gray-400">{(batch.sessions || []).filter((s) => s.remaining > 0).length} of {(batch.sessions || []).length} sessions available</div>
+                                  </div>
+                                  {!isFull && <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />}
                                 </div>
-                              </div>
-                              {!isFull && <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />}
-                            </div>
-                          </button>
-                        );
-                      })}
-                      {filteredBatches.length === 0 && <div className="text-center py-8 text-gray-400 text-sm">No batches this month</div>}
-                    </div>
+                              </button>
+                            );
+                          })}
+                          {filteredBatches.length === 0 && <div className="text-center py-8 text-gray-400 text-sm">No batches this month</div>}
+                        </div>
+                      </>
+                    )}
                   </>
                 );
               })()}
@@ -673,35 +624,32 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                     <div className="mb-4 px-2.5 py-1.5 bg-gradient-to-r from-yellow-50/80 to-transparent rounded-lg inline-flex items-center gap-1.5 text-[11px] sm:text-xs">
                       <FiCalendar className="w-3 h-3 text-yellow-600 flex-shrink-0" />
                       <span className="font-medium text-gray-600">
-                        {selectedBatch?.name}
+                        {selectedBatch?.batch || `Batch ${selectedBatch?.id}`}
                       </span>
                     </div>
                     <div className="space-y-2">
-                      {MOCK_SESSIONS.map((session) => {
-                        const isSelected = selectedSession?.id === session.id;
+                      {(selectedBatch?.sessions || []).map((session) => {
+                        const isSelected = selectedSession?.session_id === session.session_id;
+                        const isFull = session.remaining === 0;
                         return (
-                          <button
-                            key={session.id}
-                            onClick={() => handleSessionSelect(session)}
-                            className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all duration-200 group active:scale-[0.99] ${isSelected ? "bg-gray-900 text-white border-gray-900 shadow-lg" : "bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md"}`}
-                          >
+                          <button key={session.session_id} onClick={() => handleSessionSelect(session)} disabled={isFull}
+                            className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all duration-200 group active:scale-[0.99] ${isFull ? "bg-gray-50/80 border-gray-100 cursor-not-allowed opacity-50" : isSelected ? "bg-gray-900 text-white border-gray-900 shadow-lg" : "bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md"}`}>
                             <div className="flex items-center gap-3">
-                              <div
-                                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? "bg-yellow-400" : "bg-gradient-to-br from-yellow-50 to-orange-50 group-hover:from-yellow-100 group-hover:to-orange-100"}`}
-                              >
-                                <FiClock
-                                  className={`w-4 h-4 ${isSelected ? "text-gray-900" : "text-yellow-600"}`}
-                                />
+                              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? "bg-yellow-400" : isFull ? "bg-gray-100" : "bg-gradient-to-br from-yellow-50 to-orange-50 group-hover:from-yellow-100 group-hover:to-orange-100"}`}>
+                                <FiClock className={`w-4 h-4 ${isSelected ? "text-gray-900" : isFull ? "text-gray-400" : "text-yellow-600"}`} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="text-sm font-semibold">
-                                  {session.time}
-                                </div>
-                                {/* <div className={`text-[11px] sm:text-xs ${isSelected ? "text-yellow-400" : "text-gray-900"}`}>{session.time}</div> */}
+                                <div className="text-sm font-semibold">{session.session_name}</div>
+                                <div className={`text-[11px] sm:text-xs ${isSelected ? "text-gray-300" : "text-gray-500"}`}>{session.time}</div>
                               </div>
-                              {!isSelected && (
-                                <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
-                              )}
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                {isFull ? (
+                                  <span className="text-[10px] text-red-500 font-medium">Full</span>
+                                ) : (
+                                  <span className={`text-[10px] tabular-nums ${isSelected ? "text-yellow-400" : session.remaining <= 5 ? "text-orange-600 font-medium" : "text-gray-400"}`}>{session.remaining} left</span>
+                                )}
+                                {!isFull && !isSelected && <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" />}
+                              </div>
                             </div>
                           </button>
                         );
@@ -744,13 +692,13 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                         <div className="flex items-center justify-between text-[11px] sm:text-xs">
                           <span className="text-gray-400">Batch</span>
                           <span className="font-medium text-gray-700">
-                            {selectedBatch?.name} · {selectedBatch?.startDate && new Date(selectedBatch.startDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
+                            {selectedBatch?.batch || `Batch ${selectedBatch?.id}`} · {selectedBatch?.start_date && new Date(selectedBatch.start_date).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-[11px] sm:text-xs">
                           <span className="text-gray-400">Session</span>
                           <span className="font-medium text-gray-700">
-                            {selectedSession?.label} · {selectedSession?.time}
+                            {selectedSession?.session_name} · {selectedSession?.time}
                           </span>
                         </div>
                       </div>
@@ -811,14 +759,14 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                         <motion.div key="centres-tab" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.2 }}>
                           <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-700 uppercase tracking-widest mb-3">Available nearby</h4>
                           <div className="space-y-2">
-                            {MOCK_ALT_CENTRES.map((alt, idx) => (
-                              <motion.button key={alt.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, delay: idx * 0.05 }}
-                                onClick={() => { setEnrollingCentreId(alt.id); setEnrollingCentreTitle(alt.name); setSelectedBatch(null); setSelectedSession(null); setCourseFullTab("centres"); setEnrollmentStep("batch"); }}
+                            {siblingCentres.map((alt, idx) => (
+                              <motion.button key={alt.centre_id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, delay: idx * 0.05 }}
+                                onClick={() => { setEnrollingCentreId(alt.centre_id); setEnrollingCentreTitle(alt.centre_name); setEnrollingCourseId(alt.course_id || enrollingCourseId); setSelectedBatch(null); setSelectedSession(null); setSelectedBatchMonth(null); setCourseFullTab("centres"); fetchBatchesForCourse(alt.course_id || enrollingCourseId).then(() => setEnrollmentStep("batch")); }}
                                 className="w-full text-left p-3 sm:p-4 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98]">
                                 <div className="flex items-center justify-between gap-3">
                                   <div className="min-w-0">
-                                    <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors truncate">{alt.name}</div>
-                                    <div className="text-xs text-green-600 font-medium mt-0.5">{alt.availableSlots} slots available</div>
+                                    <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors truncate">{alt.centre_name}</div>
+                                    <div className="text-xs text-green-600 font-medium mt-0.5">{alt.available} slots available</div>
                                   </div>
                                   <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
                                 </div>
@@ -831,19 +779,19 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                         <motion.div key="courses-tab" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.2 }}>
                           <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-700 uppercase tracking-widest mb-3">Available here</h4>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            {MOCK_ALT_COURSES.map((alt) => (
-                              <button key={alt.id} onClick={() => { setEnrolledCourseName(alt.title); setSelectedBatch(null); setSelectedSession(null); setCourseFullTab("centres"); setEnrollmentStep("batch"); }}
+                            {[...(siblingCourses.matches || []), ...(siblingCourses.available_courses || [])].slice(0, 6).map((alt) => (
+                              <button key={alt.course_id || alt.id} onClick={() => { setEnrolledCourseName(alt.title); setEnrollingCourseId(alt.course_id || alt.id); setEnrollingCentreId(alt.centre_id || enrollingCentreId); setSelectedBatch(null); setSelectedSession(null); setSelectedBatchMonth(null); setCourseFullTab("centres"); fetchBatchesForCourse(alt.course_id || alt.id).then(() => setEnrollmentStep("batch")); }}
                                 className="text-left rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] overflow-hidden">
                                 <div className="relative h-20 sm:h-24 bg-gray-100">
-                                  {alt.image && !imageErrors[`alt-${alt.id}`] ? (
-                                    <Image src={alt.image} alt={alt.title} fill className="object-cover" onError={() => setImageErrors((prev) => ({ ...prev, [`alt-${alt.id}`]: true }))} />
+                                  {alt.image && !imageErrors[`alt-${alt.course_id || alt.id}`] ? (
+                                    <Image src={alt.image} alt={alt.title} fill className="object-cover" onError={() => setImageErrors((prev) => ({ ...prev, [`alt-${alt.course_id || alt.id}`]: true }))} />
                                   ) : (
                                     <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center"><Image src="/images/one-million-coders-logo.png" alt="One Million Coders" width={60} height={20} className="opacity-15" /></div>
                                   )}
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                                   <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between">
-                                    <span className={`px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold rounded-full backdrop-blur-sm ${alt.availableSlots > 0 ? "bg-green-500/90 text-white" : "bg-red-500/90 text-white"}`}>{alt.availableSlots > 0 ? `${alt.availableSlots} slots` : "Full"}</span>
-                                    {alt.matchPercentage && <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-[9px] sm:text-[10px] font-medium rounded-full backdrop-blur-sm text-yellow-700"><FiStar className="w-2.5 h-2.5" />{alt.matchPercentage}</span>}
+                                    <span className={`px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold rounded-full backdrop-blur-sm ${(alt.slot_left || 0) > 0 ? "bg-green-500/90 text-white" : "bg-red-500/90 text-white"}`}>{(alt.slot_left || 0) > 0 ? `${alt.slot_left} slots` : "Full"}</span>
+                                    {alt.match_percentage && <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-white/90 text-[9px] sm:text-[10px] font-medium rounded-full backdrop-blur-sm text-yellow-700"><FiStar className="w-2.5 h-2.5" />{alt.match_percentage}</span>}
                                   </div>
                                 </div>
                                 <div className="p-2 sm:p-2.5">
@@ -930,15 +878,17 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                       Or try another centre
                     </h3>
                     <div className="space-y-2 mb-4">
-                      {MOCK_ALT_CENTRES.map((alt) => (
+                      {siblingCentres.map((alt) => (
                         <button
-                          key={alt.id}
+                          key={alt.centre_id}
                           onClick={() => {
-                            setEnrollingCentreId(alt.id);
-                            setEnrollingCentreTitle(alt.name);
+                            setEnrollingCentreId(alt.centre_id);
+                            setEnrollingCentreTitle(alt.centre_name);
+                            setEnrollingCourseId(alt.course_id || enrollingCourseId);
                             setSelectedBatch(null);
                             setSelectedSession(null);
-                            setEnrollmentStep("batch");
+                            setSelectedBatchMonth(null);
+                            fetchBatchesForCourse(alt.course_id || enrollingCourseId).then(() => setEnrollmentStep("batch"));
                           }}
                           className="w-full text-left p-3 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.99]"
                         >
@@ -948,12 +898,12 @@ const ProgrammeCard = ({ programme, userId, centreId, token }) => {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium text-gray-900 group-hover:text-yellow-700 transition-colors truncate">
-                                {alt.name}
+                                {alt.centre_name}
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               <span className="text-xs font-bold text-green-600">
-                                {alt.availableSlots} slots
+                                {alt.available} slots
                               </span>
                               <FiChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" />
                             </div>
