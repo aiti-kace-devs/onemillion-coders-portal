@@ -340,7 +340,7 @@ class CourseMatchAPIController extends Controller
                 ->values()
                 ->all();
 
-            $courseSessionConfirmed = DB::table('user_admission')
+            $courseSessionConfirmed = \Illuminate\Support\Facades\DB::table('user_admission')
                 ->whereIn('session', $courseSessionIds)
                 ->whereNotNull('confirmed')
                 ->selectRaw('session, COUNT(*) as count')
