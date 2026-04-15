@@ -47,7 +47,7 @@ class CourseMatchAPIController extends Controller
         $user = User::where('userId', $userId)->first();
         $registeredCourseId = $user ? (int) $user->registered_course : null;
 
-        $recommendations = DB::table('user_course_recommendations')
+        $recommendations = \Illuminate\Support\Facades\DB::table('user_course_recommendations')
             ->where('user_id', $userId)
             ->orderBy('rank')
             ->get();
