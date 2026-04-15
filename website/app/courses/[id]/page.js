@@ -527,6 +527,8 @@ export default function CoursesPage({ params }) {
     setAnswers({});
     setRecommendations([]);
     setShowResults(false);
+    setEnrollmentStep(null);
+    setEnrollSuccess(false);
   };
 
   const handleStartQuizFlow = () => {
@@ -2672,6 +2674,61 @@ export default function CoursesPage({ params }) {
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* Global Enrollment Modal — renders from any context (previous recommendations, step 4, etc.) */}
+      <AnimatePresence>
+        {(enrollmentStep || enrollSuccess) && !(step === 4 && selectedCentre && showResults) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-[2px] px-0 sm:px-4"
+            onClick={(e) => { if (e.target === e.currentTarget && !enrollSubmitting && !enrollSuccess && enrollmentStep !== "courseFull") { closeEnrollmentModal(); } }}
+          >
+            <motion.div
+              key={enrollmentStep || "success"}
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg px-5 py-6 sm:p-8 relative max-h-[85vh] sm:max-h-[90vh] overflow-y-auto"
+            >
+              {/* Re-use the same modal content — support question for previous recommendations */}
+
+              {/* Success */}
+              {enrollSuccess && (
+                <div className="text-center">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4"><FiCheckCircle className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" /></div>
+                  <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-2">You&apos;re enrolled!</h2>
+                  <p className="text-gray-500 text-sm sm:text-base mb-6">Successfully enrolled in <span className="font-semibold text-gray-700">{enrolledCourseName}</span>.</p>
+                  <button onClick={closeEnrollmentModal} className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors">Close</button>
+                </div>
+              )}
+
+              {/* Support Question */}
+              {!enrollSuccess && !waitlistJoined && enrollmentStep === "support" && (
+                <>
+                  <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"><FiX className="w-4.5 h-4.5" /></button>
+                  <div className="flex justify-center mb-3 sm:hidden"><div className="w-8 h-1 bg-gray-200 rounded-full" /></div>
+                  <div className="text-center mb-5">
+                    <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">One quick question</h2>
+                    <p className="text-gray-400 text-[11px] sm:text-sm line-clamp-1">Enrolling in <span className="text-gray-600">{enrolledCourseName}</span></p>
+                  </div>
+                  <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 mb-3 text-center">Do you need any accessibility support?</h3>
+                  <div className="grid grid-cols-2 gap-2.5 mb-4">
+                    <button onClick={() => handleSupportAnswer(true)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700">Yes, I do</button>
+                    <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700 flex items-center justify-center gap-2">
+                      {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "No, enroll me"}
+                    </button>
+                  </div>
+                  <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
