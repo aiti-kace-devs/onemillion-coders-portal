@@ -61,10 +61,6 @@ class Course extends Model
     /**
      * Virtual location for legacy code paths (DB column removed in data cleaning).
      */
-    public function getLocationAttribute(): ?string
-    {
-        return $this->centre?->title;
-    }
 
     public function programme()
     {
