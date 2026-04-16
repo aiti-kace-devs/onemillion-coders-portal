@@ -138,6 +138,12 @@ class Course extends Model
             // Ensure dependent records are removed first (FK constraints are restrict in the DB).
             $course->sessions()->delete();
             $course->assignedAdmins()->detach();
+
+            User::where('registered_course', $course->id)
+            ->update([
+                'registered_course' => null,
+                'shortlist' => false,
+            ]);
         });
 
         static::saving(function ($course) {

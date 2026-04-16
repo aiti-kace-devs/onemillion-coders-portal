@@ -211,7 +211,7 @@ class ProgrammeCrudController extends CrudController
         if ($this->crud->entry->mode_of_delivery === 'In Person') {
             // If there are existing courses, delete them
             if ($programme->courses()->count() > 0) {
-                $programme->courses()->delete();
+                $programme->courses->each->delete();
             }
         }
 
@@ -232,7 +232,7 @@ class ProgrammeCrudController extends CrudController
         CourseCertification::where('programme_id', $programme->id)->delete();
 
         // Delete related courses
-        $programme->courses()->delete();
+       $programme->courses->each->delete();
 
         return $this->traitDestroy($id);
     }
