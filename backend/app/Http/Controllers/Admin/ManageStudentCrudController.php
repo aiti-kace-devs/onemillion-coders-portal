@@ -18,6 +18,7 @@ use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
 use App\Helpers\CourseVisibilityHelper;
+use App\Services\GhanaCardService;
 use Illuminate\Support\Facades\View;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Traits\GetsFilteredQuery;
@@ -174,11 +175,13 @@ class ManageStudentCrudController extends CrudController
 
         $entry = $this->crud->getEntry($this->crud->getCurrentEntryId());
         $activities = $entry->actions()->latest()->get();
+        $verificationStatus = app(GhanaCardService::class)->buildStatus($entry);
 
         View::share([
             'courses' => $courses,
             'sessions' => $sessions,
             'activities' => $activities,
+            'verificationStatus' => $verificationStatus,
         ]);
     }
     /**
@@ -520,6 +523,21 @@ class ManageStudentCrudController extends CrudController
     public function chooseSession(ChooseSessionRequest $request, $userId)
     {
         return $this->traitChooseSession($request, $userId);
+    }
+
+    public function addVerificationAttempts(Request $request, $userId)
+    {
+        $validated = $request->validate([
+            'attempts' => 'required|integer|min:1|max:20',
+        ]);
+
+        $user = User::findOrFail($userId);
+        app(GhanaCardService::class)->addExtraAttempts($user, (int) $validated['attempts']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Additional verification attempts added successfully.',
+        ]);
     }
 
     /**

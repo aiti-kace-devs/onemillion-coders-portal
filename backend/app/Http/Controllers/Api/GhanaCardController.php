@@ -34,7 +34,7 @@ class GhanaCardController extends Controller
         }
 
         // 2. Check retry limit (failed attempts)
-        $maxAttempts = $this->ghanaCardService->maxAttempts();
+        $maxAttempts = $this->ghanaCardService->maxAttempts($user);
         $failedAttemptsCount = $this->ghanaCardService->failedAttempts($user);
 
         if ($failedAttemptsCount >= $maxAttempts) {

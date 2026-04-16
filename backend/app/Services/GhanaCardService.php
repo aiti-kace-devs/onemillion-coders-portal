@@ -287,8 +287,10 @@ class GhanaCardService
 
     public function buildStatus(User $user): array
     {
-        $maxAttempts = $this->maxAttempts();
+        $maxAttempts = $this->maxAttempts($user);
         $usedAttempts = $this->failedAttempts($user);
+        $this->syncAttemptLimitBlockState($user, $usedAttempts, $maxAttempts);
+        $user->refresh();
         $latest = GhanaCardVerification::query()
             ->where('user_id', $user->id)
             ->latest('id')
@@ -301,6 +303,7 @@ class GhanaCardService
             'blocked' => (bool) $user->is_verification_blocked,
             'block' => [
                 'reason' => $user->verification_block_reason,
+                'reason_label' => $this->resolveBlockReasonLabel($user->verification_block_reason),
                 'message' => $this->resolveBlockMessage($user),
             ],
             'attempts' => [
@@ -367,9 +370,15 @@ class GhanaCardService
             ->count();
     }
 
-    public function maxAttempts(): int
+    public function maxAttempts(?User $user = null): int
     {
-        return (int) AppConfig::getValue(GHANA_CARD_MAX_ATTEMPTS, config('GHANA_CARD_MAX_ATTEMPTS', 5));
+        $baseAttempts = (int) AppConfig::getValue(GHANA_CARD_MAX_ATTEMPTS, config('GHANA_CARD_MAX_ATTEMPTS', 5));
+        if (! $user) {
+            return $baseAttempts;
+        }
+
+        $extraAttempts = $this->extraAttempts($user);
+        return $baseAttempts + $extraAttempts;
     }
 
     public function blockUser(User $user, string $reason, string $message): void
@@ -386,7 +395,7 @@ class GhanaCardService
         $this->blockUser(
             $user,
             self::BLOCK_REASON_ATTEMPTS_EXCEEDED,
-            "You have reached the maximum number of failed verification attempts ({$maxAttempts}). Please contact support."
+            "You have exhausted all verification attempts ({$maxAttempts}/{$maxAttempts}). Please contact support or an administrator for additional attempts."
         );
     }
 
@@ -420,7 +429,84 @@ class GhanaCardService
             return (string) $user->verification_block_message;
         }
 
+        if ($user->verification_block_reason === self::BLOCK_REASON_ATTEMPTS_EXCEEDED) {
+            return 'Verification is blocked because you have exhausted all allowed attempts. Please contact support or an administrator.';
+        }
+
         return 'Your verification is currently blocked. Please contact support or an administrator.';
+    }
+
+    public function addExtraAttempts(User $user, int $count): void
+    {
+        $count = max(0, $count);
+        if ($count === 0) {
+            return;
+        }
+
+        $data = is_array($user->data) ? $user->data : [];
+        $data['verification_extra_attempts'] = $this->extraAttempts($user) + $count;
+
+        $updates = ['data' => $data];
+        if (
+            $user->is_verification_blocked
+            && $user->verification_block_reason === self::BLOCK_REASON_ATTEMPTS_EXCEEDED
+        ) {
+            $updates['is_verification_blocked'] = false;
+            $updates['verification_block_reason'] = null;
+            $updates['verification_block_message'] = null;
+        }
+
+        $user->update($updates);
+    }
+
+    private function extraAttempts(User $user): int
+    {
+        return max(0, (int) data_get($user->data ?? [], 'verification_extra_attempts', 0));
+    }
+
+    private function syncAttemptLimitBlockState(User $user, int $usedAttempts, int $maxAttempts): void
+    {
+        $attemptsExceeded = $usedAttempts >= $maxAttempts;
+        $isAttemptsBlock =
+            $user->is_verification_blocked
+            && $user->verification_block_reason === self::BLOCK_REASON_ATTEMPTS_EXCEEDED;
+
+        // Condition lifted: automatically clear stale attempts-exceeded block.
+        if ($isAttemptsBlock && ! $attemptsExceeded) {
+            $user->update([
+                'is_verification_blocked' => false,
+                'verification_block_reason' => null,
+                'verification_block_message' => null,
+            ]);
+            return;
+        }
+
+        if (! $attemptsExceeded) {
+            return;
+        }
+
+        if (
+            $user->is_verification_blocked
+            && $user->verification_block_reason !== self::BLOCK_REASON_ATTEMPTS_EXCEEDED
+        ) {
+            return;
+        }
+
+        if (! $user->is_verification_blocked || $user->verification_block_reason === self::BLOCK_REASON_ATTEMPTS_EXCEEDED) {
+            $this->blockForAttemptsExceeded($user, $maxAttempts);
+        }
+    }
+
+    private function resolveBlockReasonLabel(?string $reason): ?string
+    {
+        return match ($reason) {
+            self::BLOCK_REASON_ATTEMPTS_EXCEEDED => 'Exhausted all attempts',
+            self::BLOCK_REASON_WATCHLIST => 'NIA watchlist restriction',
+            self::BLOCK_REASON_NAME_MISMATCH => 'Name mismatch',
+            self::BLOCK_REASON_IDENTITY_MISMATCH => 'Identity mismatch',
+            self::BLOCK_REASON_NON_GHANAIAN => 'Non-Ghanaian nationality',
+            default => null,
+        };
     }
 
     private function evaluateEligibility(User $user, array $person): array

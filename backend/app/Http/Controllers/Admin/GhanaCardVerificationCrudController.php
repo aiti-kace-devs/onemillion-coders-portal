@@ -98,4 +98,22 @@ class GhanaCardVerificationCrudController extends CrudController
             'message' => 'User verification block has been reset and attempts were soft-reset (history preserved).',
         ]);
     }
+
+    /**
+     * Add extra verification attempts for the associated user.
+     */
+    public function addAttempts($user_id, \Illuminate\Http\Request $request)
+    {
+        $validated = $request->validate([
+            'attempts' => 'required|integer|min:1|max:20',
+        ]);
+
+        $user = \App\Models\User::findOrFail($user_id);
+        app(GhanaCardService::class)->addExtraAttempts($user, (int) $validated['attempts']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Additional verification attempts added successfully.',
+        ]);
+    }
 }

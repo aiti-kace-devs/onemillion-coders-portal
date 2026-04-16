@@ -141,6 +141,13 @@
 
     $currentAdmin = backpack_user();
     $isSuperAdmin = $currentAdmin && method_exists($currentAdmin, 'isSuper') && $currentAdmin->isSuper();
+    $verificationStatus = $verificationStatus ?? [
+        'blocked' => (bool) ($entry->is_verification_blocked ?? false),
+        'block' => ['reason_label' => null, 'message' => null],
+        'attempts' => ['used' => 0, 'max' => 5, 'remaining' => 5],
+    ];
+    $verificationAttempts = $verificationStatus['attempts'] ?? ['used' => 0, 'max' => 5, 'remaining' => 5];
+    $verificationBlock = $verificationStatus['block'] ?? ['reason_label' => null, 'message' => null];
 @endphp
 
 @section('content')
@@ -218,6 +225,28 @@
                             <td>{{ $entry->created_at ? $entry->created_at->format('Y-m-d') : 'N/A' }}</td>
                         </tr>
                         <tr>
+                            <td class="text-muted">Verification Blocked</td>
+                            <td>
+                                @if ($verificationStatus['blocked'] ?? false)
+                                    <span class="badge bg-danger">Yes</span>
+                                @else
+                                    <span class="badge bg-success">No</span>
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Block Reason</td>
+                            <td>{{ $verificationBlock['reason_label'] ?? 'N/A' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Attempts (Used / Allowed)</td>
+                            <td>{{ (int) ($verificationAttempts['used'] ?? 0) }} / {{ (int) ($verificationAttempts['max'] ?? 0) }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Attempts Remaining</td>
+                            <td>{{ (int) ($verificationAttempts['remaining'] ?? 0) }}</td>
+                        </tr>
+                        <tr>
                             <td class="text-muted">Shortlisted</td>
                             <td>
                                 @if ($entry->shortlist)
@@ -232,6 +261,23 @@
                                     <td>{{ $entry->last_login ? \Carbon\Carbon::parse($entry->last_login)->format('Y-m-d H:i:s') : 'Never' }}</td>
                         </tr>
                     </table>
+                    <hr>
+                    <div>
+                        <div class="text-muted small mb-2">Ghana Card Verification Controls</div>
+                        @if (!empty($verificationBlock['message']))
+                            <div class="alert alert-warning py-2 px-3 small mb-2">{{ $verificationBlock['message'] }}</div>
+                        @endif
+                        <form id="verificationAttemptsForm" class="d-flex align-items-end gap-2">
+                            <div class="flex-grow-1">
+                                <label for="verification_attempts_to_add" class="form-label mb-1">Add Attempts</label>
+                                <input id="verification_attempts_to_add" type="number" min="1" max="20" value="1" class="form-control form-control-sm" />
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Add</button>
+                        </form>
+                        <div class="small text-muted mt-2">
+                            Adds extra attempts for this user without deleting previous verification history.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -799,6 +845,7 @@
                 const CURRENT_SESSION_ID = {{ (int) ($currentSessionId ?? 0) }};
                 const CHANGE_ADMISSION_URL = @json(route('manage-student.change-admission', ['user' => $userId]));
                 const CHOOSE_SESSION_URL = @json(route('manage-student.choose-session', ['user' => $userId]));
+                const ADD_VERIFICATION_ATTEMPTS_URL = @json(route('manage-student.add-verification-attempts', ['user' => $userId]));
                 const DELETE_ADMISSION_URL = @json(route('manage-student.delete-admission', ['user_id' => $userId]));
 
                 function getCsrfToken() {
@@ -1426,6 +1473,86 @@
                             }).then((ok) => {
                                 if (ok) doUpdate();
                             });
+                        });
+                    }
+
+                    const verificationAttemptsForm = document.getElementById('verificationAttemptsForm');
+                    if (verificationAttemptsForm) {
+                        verificationAttemptsForm.addEventListener('submit', function(e) {
+                            e.preventDefault();
+
+                            const input = document.getElementById('verification_attempts_to_add');
+                            const attemptsToAdd = parseInt(input ? input.value : '0', 10);
+                            if (!Number.isInteger(attemptsToAdd) || attemptsToAdd < 1) {
+                                if (window.Noty) new Noty({
+                                    type: "error",
+                                    text: "Enter a valid number of attempts."
+                                }).show();
+                                return;
+                            }
+
+                            const jq = window.jQuery;
+                            const csrf = getCsrfToken();
+                            const payload = {
+                                attempts: attemptsToAdd
+                            };
+
+                            const onSuccess = function(resp) {
+                                const message = resp && resp.message ? resp.message :
+                                    'Additional verification attempts added successfully.';
+                                if (window.Noty) new Noty({
+                                    type: "success",
+                                    text: message
+                                }).show();
+                                window.location.reload();
+                            };
+
+                            const onError = function(message) {
+                                if (window.Noty) new Noty({
+                                    type: "error",
+                                    text: message || 'Failed to add verification attempts.'
+                                }).show();
+                            };
+
+                            if (jq && typeof jq.ajax === 'function') {
+                                jq.ajax({
+                                    url: ADD_VERIFICATION_ATTEMPTS_URL,
+                                    type: 'POST',
+                                    data: payload,
+                                    headers: Object.assign({
+                                        'Accept': 'application/json'
+                                    }, csrf ? {
+                                        'X-CSRF-TOKEN': csrf
+                                    } : {}),
+                                    success: onSuccess,
+                                    error: function(xhr) {
+                                        const message = (xhr && xhr.responseJSON && xhr.responseJSON.message) ?
+                                            xhr.responseJSON.message : 'Failed to add verification attempts.';
+                                        onError(message);
+                                    }
+                                });
+                                return;
+                            }
+
+                            if (window.fetch) {
+                                fetch(ADD_VERIFICATION_ATTEMPTS_URL, {
+                                    method: 'POST',
+                                    headers: Object.assign({
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json'
+                                    }, csrf ? {
+                                        'X-CSRF-TOKEN': csrf
+                                    } : {}),
+                                    body: JSON.stringify(payload),
+                                }).then((r) => r.json())
+                                .then((resp) => {
+                                    if (resp && resp.success) {
+                                        onSuccess(resp);
+                                        return;
+                                    }
+                                    onError(resp && resp.message ? resp.message : 'Failed to add verification attempts.');
+                                }).catch(() => onError('Failed to add verification attempts.'));
+                            }
                         });
                     }
 

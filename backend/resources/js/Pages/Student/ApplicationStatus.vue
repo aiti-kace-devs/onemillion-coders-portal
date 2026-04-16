@@ -13,7 +13,7 @@ const props = defineProps({
     verification_status: Object,
 });
 
-const collapse = ref([true, false, false, false, false]);
+const collapse = ref([true, false, false, false]);
 const showRevokeModal = ref(false);
 
 function toggleCollapse(idx) {
@@ -25,20 +25,20 @@ function toggleCollapse(idx) {
 function isStepReached(idx) {
     if (idx === 0) return true; // Step 1: Always reached
     if (idx === 1) return true; // Step 2: Assessment (Follows app submission)
-    if (idx === 2) return props.user_assessment?.completed; // Step 3: Verification
-    if (idx === 3) return verificationCompleted.value; // Step 4: Choose Course
-    if (idx === 4) return verificationCompleted.value && courseSelectionCompleted.value; // Step 5: Session booking
+    if (idx === 2) return props.user_assessment?.completed; // Step 3: Identity Verification
+    if (idx === 3) return verificationCompleted.value; // Step 4: Course Selection (includes booking)
     return false;
 }
 function closeRevokeModal() {
     showRevokeModal.value = false;
 }
 
-const courseSelectionCompleted = computed(() => !!props.user?.registered_course);
+const courseSelectionCompleted = computed(
+    () => !!props.user_admission?.confirmed || !!props.user?.registered_course,
+);
 const assessmentCompleted = computed(() => !!props.user_assessment?.completed);
 const verificationCompleted = computed(() => !!props.verification_status?.verified);
 const verificationBlocked = computed(() => !!props.verification_status?.blocked);
-const sessionBookingCompleted = computed(() => !!props.user_admission?.confirmed);
 </script>
 
 <template>
@@ -76,7 +76,7 @@ const sessionBookingCompleted = computed(() => !!props.user_admission?.confirmed
                     <p class="font-medium text-lg text-gray-900 mb-3">
                         Expected Flow
                     </p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
                         <div
                             class="rounded-lg border p-3"
                             :class="{
@@ -96,7 +96,7 @@ const sessionBookingCompleted = computed(() => !!props.user_admission?.confirmed
                             }"
                         >
                             <p class="text-xs uppercase text-gray-500">2</p>
-                            <p class="font-semibold text-sm">Verification</p>
+                            <p class="font-semibold text-sm">Identity Verification</p>
                         </div>
                         <div
                             class="rounded-lg border p-3"
@@ -107,18 +107,7 @@ const sessionBookingCompleted = computed(() => !!props.user_admission?.confirmed
                             }"
                         >
                             <p class="text-xs uppercase text-gray-500">3</p>
-                            <p class="font-semibold text-sm">Course Selection / Change</p>
-                        </div>
-                        <div
-                            class="rounded-lg border p-3"
-                            :class="{
-                                'border-green-200 bg-green-50': sessionBookingCompleted,
-                                'border-amber-200 bg-amber-50': !sessionBookingCompleted && (!verificationCompleted || !courseSelectionCompleted),
-                                'border-gray-200 bg-gray-50': !sessionBookingCompleted && verificationCompleted && courseSelectionCompleted
-                            }"
-                        >
-                            <p class="text-xs uppercase text-gray-500">4</p>
-                            <p class="font-semibold text-sm">Session Booking</p>
+                            <p class="font-semibold text-sm">Course Selection</p>
                         </div>
                     </div>
 
@@ -264,7 +253,7 @@ const sessionBookingCompleted = computed(() => !!props.user_admission?.confirmed
                                 </div>
                             </li>
 
-                            <!-- Step 3: Verification -->
+                            <!-- Step 3: Identity Verification -->
                             <li class="mb-10 ml-6">
                                 <span
                                     :class="[
@@ -296,7 +285,7 @@ const sessionBookingCompleted = computed(() => !!props.user_admission?.confirmed
                                                   : 'text-gray-400',
                                         ]"
                                     >
-                                        Verification
+                                        Identity Verification
                                     </h3>
                                     <svg
                                         v-if="isStepReached(2)"
@@ -341,7 +330,7 @@ const sessionBookingCompleted = computed(() => !!props.user_admission?.confirmed
                                 </div>
                             </li>
 
-                            <!-- Step 4: Course Selection -->
+                            <!-- Step 4: Course Selection (includes booking) -->
                             <li class="mb-10 ml-6">
                                 <span
                                     :class="[
@@ -395,86 +384,8 @@ const sessionBookingCompleted = computed(() => !!props.user_admission?.confirmed
                                     v-if="collapse[3] && isStepReached(3)"
                                     class="mt-2 text-sm text-gray-700 pl-2"
                                 >
-                                    <template v-if="courseSelectionCompleted">
-                                        You have successfully selected a course.
-                                    </template>
-                                    <template v-else>
-                                        Now that your verification is complete,
-                                        please select the course that best
-                                        aligns with your interests and career goals.
-                                        <div class="mt-5">
-                                            <LinkButton :href="route('student.change-course')">
-                                                Choose a course
-                                            </LinkButton>
-                                        </div>
-                                    </template>
-                                </div>
-                            </li>
-
-                            <!-- Step 5: Session Booking -->
-                            <li class="ml-6">
-                                <span
-                                    :class="[
-                                        'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
-                                        props.user_admission?.confirmed
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-gray-200 text-gray-400',
-                                    ]"
-                                    >5</span
-                                >
-                                <div
-                                    class="flex items-center"
-                                    :class="
-                                        isStepReached(4)
-                                            ? 'cursor-pointer'
-                                            : 'cursor-not-allowed opacity-50'
-                                    "
-                                    @click="toggleCollapse(4)"
-                                >
-                                    <h3
-                                        :class="[
-                                            'font-bold text-lg',
-                                            props.user_admission?.confirmed
-                                                ? 'text-gray-800'
-                                                : isStepReached(4)
-                                                  ? 'text-gray-700'
-                                                  : 'text-gray-400',
-                                        ]"
-                                    >
-                                        Session Booking
-                                    </h3>
-                                    <svg
-                                        v-if="isStepReached(4)"
-                                        :class="[
-                                            'ml-2 w-4 h-4 text-gray-800 transition-transform',
-                                            collapse[4] ? 'rotate-90' : '',
-                                        ]"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                </div>
-                                <div
-                                    v-if="collapse[4] && isStepReached(4)"
-                                    class="mt-2 text-sm text-gray-700 pl-2"
-                                >
-                                    <div
-                                        v-if="
-                                            props.user_admission &&
-                                            props.user_admission.confirmed
-                                        "
-                                    >
-                                        <div>
-                                            You have successfully completed session booking.
-                                        </div>
-
+                                    <template v-if="props.user_admission?.confirmed">
+                                        You have successfully selected your course and completed booking.
                                         <div class="mt-5">
                                             <RevokeOrDeclineAdmissionModal
                                                 v-if="
@@ -485,31 +396,28 @@ const sessionBookingCompleted = computed(() => !!props.user_admission?.confirmed
                                                 :session="props.user_admission"
                                             />
                                         </div>
-                                    </div>
-                                    <div v-else-if="verificationCompleted && courseSelectionCompleted">
-                                        <p>
-                                            You're verified. Select a session to complete your booking.
-                                        </p>
-
+                                    </template>
+                                    <template v-else-if="props.user?.registered_course">
+                                        You selected a course. Complete session selection to finish your booking.
                                         <div class="mt-5">
-                                            <LinkButton
-                                                :href="
-                                                    route(
-                                                        'student.session.index',
-                                                    )
-                                                "
-                                            >
+                                            <LinkButton :href="route('student.session.index')">
                                                 Choose a session
                                             </LinkButton>
                                         </div>
-                                    </div>
-                                    <div v-else>
-                                        <p>
-                                            Session booking is locked until verification and course selection are complete.
-                                        </p>
-                                    </div>
+                                    </template>
+                                    <template v-else>
+                                        Now that your identity verification is complete,
+                                        please select the course that best
+                                        aligns with your interests and career goals. Session booking is part of this step.
+                                        <div class="mt-5">
+                                            <LinkButton :href="route('student.change-course')">
+                                                Choose a course
+                                            </LinkButton>
+                                        </div>
+                                    </template>
                                 </div>
                             </li>
+
                         </ol>
                     </div>
                 </div>

@@ -168,13 +168,13 @@ const tieredTestTaken = computed(() => {
                                         </span>
                                         <div class="flex-1 text-left">
                                             <h3 class="text-lg font-bold text-gray-800">
-                                                Verification
+                                                Identity Verification
                                             </h3>
                                         </div>
                                     </div>
                                     <div class="mt-2 space-y-1 text-left">
                                         <p class="text-sm">
-                                            Complete Ghana Card verification to unlock session booking.
+                                            Complete Ghana Card identity verification to continue course selection.
                                         </p>
                                     </div>
                                 </div>

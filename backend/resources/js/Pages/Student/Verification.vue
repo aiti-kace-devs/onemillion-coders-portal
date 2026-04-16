@@ -64,6 +64,9 @@ const blockMessage = computed(
         status.value?.block?.message ||
         "Your verification is blocked. Please contact support or an administrator.",
 );
+const blockReasonLabel = computed(
+    () => status.value?.block?.reason_label || "Verification access restricted",
+);
 const embedOrigin = computed(() => {
     if (!props.verification_embed_url) return null;
     try {
@@ -338,7 +341,12 @@ onUnmounted(() => {
                     v-if="isBlocked"
                     class="rounded-md border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm"
                 >
-                    {{ blockMessage }}
+                    <div class="font-semibold">Blocked: Yes</div>
+                    <div class="mt-1">Reason: {{ blockReasonLabel }}</div>
+                    <div class="mt-1">{{ blockMessage }}</div>
+                    <div class="mt-2 text-xs text-red-600">
+                        Verification interface is unavailable while your account is blocked.
+                    </div>
                 </div>
 
                 <div
