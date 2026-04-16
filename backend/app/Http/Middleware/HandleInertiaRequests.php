@@ -78,6 +78,8 @@ class HandleInertiaRequests extends Middleware
                             'hasAdmission' => $user?->hasAdmission(),
                             'hasAttendance' => $user?->hasAttendance(),
                             'assessment_completed' => $user?->userAssessment?->completed ?? false,
+                            'verification_completed' => $user?->isVerifiedByGhanaCard() ?? false,
+                            'verification_blocked' => (bool) ($user?->is_verification_blocked ?? false),
                             'student_level' => config(SHOW_STUDENT_LEVEL, false) ? $user?->student_level : null,
                         ]
                     )

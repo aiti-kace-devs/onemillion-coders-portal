@@ -274,13 +274,23 @@ export const getSiblingCentres = async (courseId, centreId, token, limit = 3) =>
 /**
  * Fetch sibling courses (recommended + available) for a user
  * @param {string} userId
+ * @param {number|null} courseId
  * @param {string} token
  * @param {number} limit
  * @returns {Promise<Object>} - { success, matches, available_courses }
  */
-export const getSiblingCourses = async (userId, token, limit = 3) => {
+export const getSiblingCourses = async (userId, courseId, token, limit = 3) => {
   try {
-    const response = await apiRequest(`availability/sibling-courses?userId=${userId}&limit=${limit}`, {
+    const params = new URLSearchParams({
+      userId,
+      limit: String(limit),
+    });
+
+    if (courseId !== null && courseId !== undefined) {
+      params.set('course_id', String(courseId));
+    }
+
+    const response = await apiRequest(`availability/sibling-courses?${params.toString()}`, {
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response;

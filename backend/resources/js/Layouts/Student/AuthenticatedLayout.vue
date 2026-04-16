@@ -19,8 +19,12 @@ const toggleSidebar = () => {
     isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
 
-// Get the current route name for active link highlighting
-const { auth, config, component } = usePage().props;
+const collapseSidebarOnContentInteraction = () => {
+    // For desktop and mobile, collapse sidebar when users interact with page body.
+    isSidebarCollapsed.value = true;
+};
+
+const page = usePage();
 
 const props = defineProps({
     fullHeight: {
@@ -33,7 +37,10 @@ const props = defineProps({
     },
 });
 
-const user = auth?.user || {};
+const auth = computed(() => page.props.auth ?? {});
+const config = computed(() => page.props.config ?? {});
+const user = computed(() => auth.value.user ?? {});
+
 </script>
 
 <template>
@@ -175,12 +182,21 @@ const user = auth?.user || {};
                     </SidebarNavLink>
 
                     <SidebarNavLink
+<<<<<<< HEAD
                         :href="route('student.course-history')"
                         :active="route().current('student.course-history')"
                         :label="'Course History'"
                     >
                         <span class="material-symbols-outlined">
                             history
+=======
+                        :href="route('student.verification.index')"
+                        :active="route().current('student.verification.*')"
+                        :label="'Verification'"
+                    >
+                        <span class="material-symbols-outlined">
+                            verified_user
+>>>>>>> development
                         </span>
                     </SidebarNavLink>
 
@@ -220,6 +236,7 @@ const user = auth?.user || {};
         <!-- Main Content -->
         <div
             class="flex-1 flex flex-col md:ml-[70px] bg-[#f8f9fa] relative overflow-hidden"
+            @click="collapseSidebarOnContentInteraction"
         >
             <!-- Background Accents -->
             <div

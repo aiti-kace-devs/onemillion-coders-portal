@@ -23,11 +23,46 @@ class AddSecurityHeaders
         }
         // $response->headers->set('X-Content-Type-Options', 'nosniff');
         // $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
-        $response->headers->set('Permissions-Policy', 'camera=(self), fullscreen=(self)');
+        $trustedCameraOrigins = ['self'];
+
+        $configOrigin = $this->extractOrigin((string) config('app.quiz_frontend_url', ''));
+        if ($configOrigin) {
+            $trustedCameraOrigins[] = '"' . $configOrigin . '"';
+        }
+
+        $requestOrigin = $this->extractOrigin((string) $request->headers->get('Origin', ''));
+        if ($requestOrigin) {
+            $trustedCameraOrigins[] = '"' . $requestOrigin . '"';
+        }
+
+        $refererOrigin = $this->extractOrigin((string) $request->headers->get('Referer', ''));
+        if ($refererOrigin) {
+            $trustedCameraOrigins[] = '"' . $refererOrigin . '"';
+        }
+
+        $cameraDirective = 'camera=(' . implode(' ', array_unique($trustedCameraOrigins)) . ')';
+        $response->headers->set('Permissions-Policy', $cameraDirective . ', fullscreen=(self)');
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('X-Powered-By', 'A Dedicated Development Team :)');
 
         return $response;
+    }
+
+    private function extractOrigin(string $url): ?string
+    {
+        if ($url === '') {
+            return null;
+        }
+
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        $host = parse_url($url, PHP_URL_HOST);
+        $port = parse_url($url, PHP_URL_PORT);
+
+        if (!is_string($scheme) || !in_array($scheme, ['http', 'https'], true) || !is_string($host) || $host === '') {
+            return null;
+        }
+
+        return rtrim($scheme . '://' . $host . ($port ? ':' . $port : ''), '/');
     }
 }

@@ -167,10 +167,8 @@ export default function PartnersSection({ data }) {
                       alt={partner.name}
                       width={partner.width}
                       height={partner.height}
-                      className={`object-contain max-w-full max-h-full transition-all duration-300 ease-out drop-shadow-sm ${
-                        isMobile 
-                          ? 'brightness-105 contrast-110 saturate-105' // Subtle enhancement on mobile
-                          : 'brightness-0 invert group-hover:brightness-105 group-hover:contrast-110 group-hover:saturate-105 group-hover:invert-0 group-hover:drop-shadow-lg' // Enhanced on desktop hover
+                      className={`object-contain max-w-full max-h-full transition-all duration-300 ease-out drop-shadow-sm brightness-105 contrast-110 saturate-105 ${
+                        !isMobile ? "group-hover:drop-shadow-lg" : ""
                       }`}
                       sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                     />

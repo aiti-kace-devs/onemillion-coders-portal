@@ -28,6 +28,30 @@ const LANDMARK_FOREHEAD = 10;
 const LEFT_EYE_EAR = [33, 160, 158, 133, 153, 144];
 const RIGHT_EYE_EAR = [362, 385, 387, 263, 373, 380];
 
+function estimateFaceSize(landmarks) {
+  const chin = landmarks[152];
+  const forehead = landmarks[10];
+  const leftCheek = landmarks[234];
+  const rightCheek = landmarks[454];
+  const height = Math.abs(chin.y - forehead.y);
+  const width = Math.abs(rightCheek.x - leftCheek.x);
+  return { width, height };
+}
+
+function sampleBrightness(video) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 80;
+  canvas.height = 60;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, 80, 60);
+  const { data } = ctx.getImageData(0, 0, 80, 60);
+  let sum = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+  }
+  return sum / (data.length / 4);
+}
+
 function computeEAR(landmarks, indices) {
   const p1 = landmarks[indices[0]];
   const p2 = landmarks[indices[1]];
@@ -64,9 +88,13 @@ export default function LivenessDetection({ onComplete, onCancel }) {
   const baselineEARRef = useRef(null);
   const challengeStartRef = useRef(0);
   const captureStartRef = useRef(null);
+  const brightnessFilterRef = useRef("brightness(1)");
+  const [videoFilter, setVideoFilter] = useState("brightness(1)");
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [cameraPermission, setCameraPermission] = useState("prompt");
+  const [hasStartedCamera, setHasStartedCamera] = useState(false);
   const [currentChallenge, setCurrentChallenge] = useState("center_face");
   const [challengeProgress, setChallengeProgress] = useState(0);
   const [completedChallenges, setCompletedChallenges] = useState([]);
@@ -92,6 +120,7 @@ export default function LivenessDetection({ onComplete, onCancel }) {
     const captureCanvas = document.createElement("canvas");
     captureCanvas.width = video.videoWidth;
     captureCanvas.height = video.videoHeight;
+
     const ctx = captureCanvas.getContext("2d");
     if (!ctx) return;
 
@@ -119,60 +148,54 @@ export default function LivenessDetection({ onComplete, onCancel }) {
     }
   }, [currentChallenge, challenges, capturePhoto]);
 
-  // Initialize camera & face landmarker
-  useEffect(() => {
-    let cancelled = false;
+  const startLivenessDetection = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
 
-    async function init() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: 640, height: 480 },
-        });
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: 640, height: 480 },
+      });
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
+      setCameraPermission("granted");
+      setHasStartedCamera(true);
+      streamRef.current = stream;
 
-        const filesetResolver = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-        );
-        if (cancelled) return;
-
-        const faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
-          baseOptions: {
-            modelAssetPath:
-              "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
-            delegate: "GPU",
-          },
-          runningMode: "VIDEO",
-          numFaces: 1,
-          outputFacialTransformationMatrixes: false,
-          outputFaceBlendshapes: false,
-        });
-        if (cancelled) return;
-
-        faceLandmarkerRef.current = faceLandmarker;
-        challengeStartRef.current = Date.now();
-        setIsLoading(false);
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Failed to initialize liveness detection:", err);
-          setError("Could not access camera. Please allow camera access and try again.");
-          setIsLoading(false);
-        }
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
+
+      const filesetResolver = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+      );
+
+      const faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
+          delegate: "GPU",
+        },
+        runningMode: "VIDEO",
+        numFaces: 1,
+        outputFacialTransformationMatrixes: false,
+        outputFaceBlendshapes: false,
+      });
+
+      faceLandmarkerRef.current = faceLandmarker;
+      challengeStartRef.current = Date.now();
+    } catch (err) {
+      console.error("Failed to initialize liveness detection:", err);
+      setCameraPermission("denied");
+      setError("Camera access is required to continue verification. Please allow camera permission and try again.");
+      setHasStartedCamera(false);
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
 
-    init();
-
+  useEffect(() => {
     return () => {
-      cancelled = true;
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
       if (faceLandmarkerRef.current) faceLandmarkerRef.current.close();
@@ -262,9 +285,14 @@ export default function LivenessDetection({ onComplete, onCancel }) {
           const straight = Math.abs(yaw) < CAPTURE_YAW_TOLERANCE;
           const fullFaceVisible = eyesVisible && noseVisible && mouthVisible && isInFrame(chin) && isInFrame(forehead);
 
-          setLandmarkQuality({ eyesVisible, noseVisible, mouthVisible, centered, straight });
+          const { width: faceWidth, height: faceHeight } = estimateFaceSize(landmarks);
+          const isFaceLargeEnough = faceWidth > 0.30 && faceHeight > 0.35;
 
-          const allGood = fullFaceVisible && centered && straight;
+          setLandmarkQuality({ eyesVisible, noseVisible, mouthVisible, centered, straight, isFaceLargeEnough });
+
+          const allGood = fullFaceVisible && centered && straight && isFaceLargeEnough;
+
+          // const allGood = fullFaceVisible && centered && straight;
 
           if (allGood) {
             if (!captureStartRef.current) captureStartRef.current = Date.now();
@@ -288,7 +316,7 @@ export default function LivenessDetection({ onComplete, onCancel }) {
 
   // Detection loop
   useEffect(() => {
-    if (isLoading || error) return;
+    if (isLoading || error || !hasStartedCamera) return;
 
     let lastTime = -1;
 
@@ -311,6 +339,19 @@ export default function LivenessDetection({ onComplete, onCancel }) {
 
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+
+      if (Math.round(now / 100) % 6 === 0) {
+        const brightness = sampleBrightness(video);
+        const boost = brightness < 110
+          ? Math.min(2.2, 110 / Math.max(brightness, 20))
+          : 1;
+        const newFilter = `brightness(${boost.toFixed(2)})`;
+        if (newFilter !== brightnessFilterRef.current) {
+          brightnessFilterRef.current = newFilter;
+          setVideoFilter(newFilter);
+        }
+      }
+
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         animationFrameRef.current = requestAnimationFrame(detect);
@@ -352,7 +393,37 @@ export default function LivenessDetection({ onComplete, onCancel }) {
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [isLoading, error, processChallenge]);
+  }, [isLoading, error, processChallenge, hasStartedCamera]);
+
+  if (!hasStartedCamera && !isLoading) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center space-y-3">
+        <h4 className="text-base font-semibold text-gray-900">Camera Permission Required</h4>
+        <p className="text-sm text-gray-600">
+          Liveness verification requires camera access. Click below to allow camera use.
+        </p>
+        {cameraPermission === "denied" && (
+          <p className="text-sm text-red-600">
+            Camera permission was denied. You cannot proceed without approval.
+          </p>
+        )}
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <button
+            onClick={startLivenessDetection}
+            className="px-4 py-2 rounded-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-sm font-semibold"
+          >
+            Allow Camera and Continue
+          </button>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -482,8 +553,8 @@ export default function LivenessDetection({ onComplete, onCancel }) {
               <span className={landmarkQuality.centered ? "text-green-600" : "text-red-500"}>
                 {landmarkQuality.centered ? "\u2713" : "\u2717"} Centered
               </span>
-              <span className={landmarkQuality.straight ? "text-green-600" : "text-red-500"}>
-                {landmarkQuality.straight ? "\u2713" : "\u2717"} Facing forward
+              <span className={landmarkQuality.isFaceLargeEnough ? "text-green-600" : "text-red-500"}>
+                {landmarkQuality.isFaceLargeEnough ? "✓" : "✗"} Move closer
               </span>
             </div>
             {captureCountdown !== null && captureCountdown > 0 && (
@@ -508,7 +579,7 @@ export default function LivenessDetection({ onComplete, onCancel }) {
           </div>
         )}
 
-        <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted style={{ transform: "scaleX(-1)" }} />
+        <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted style={{ transform: "scaleX(-1)", filter: videoFilter }} />
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover" />
 
         {/* Oval guide */}
@@ -517,11 +588,11 @@ export default function LivenessDetection({ onComplete, onCancel }) {
             <defs>
               <mask id="oval-mask">
                 <rect width="640" height="480" fill="white" />
-                <ellipse cx="320" cy="230" rx="140" ry="180" fill="black" />
+                <ellipse cx="320" cy="220" rx="175" ry="180" fill="black" />
               </mask>
             </defs>
             <rect width="640" height="480" fill="rgba(0,0,0,0.5)" mask="url(#oval-mask)" />
-            <ellipse cx="320" cy="230" rx="140" ry="180" fill="none" stroke={faceDetected ? "#F9A825" : "rgba(255,255,255,0.5)"} strokeWidth="3" strokeDasharray={faceDetected ? "none" : "8 4"} />
+            <ellipse cx="320" cy="220" rx="175" ry="180" fill="none" stroke={faceDetected ? "#F9A825" : "rgba(255,255,255,0.5)"} strokeWidth="3" strokeDasharray={faceDetected ? "none" : "8 4"} />
           </svg>
         </div>
 

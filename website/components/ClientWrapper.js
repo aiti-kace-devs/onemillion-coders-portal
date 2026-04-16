@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import SplashScreen from "./SplashScreen";
 import ConsoleBranding from "./ConsoleBranding";
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 
 export default function ClientWrapper({ children }) {
+  const pathname = usePathname();
   const [showSplash, setShowSplash] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const isVerificationRoute = pathname?.startsWith("/verify-user");
 
   useEffect(() => {
     // localStorage.clear()
@@ -15,10 +18,10 @@ export default function ClientWrapper({ children }) {
 
     // Check if user has opted out of seeing the splash screen
     const hasOptedOut = localStorage.getItem("splashScreenOptOut");
-    if (hasOptedOut !== "true") {
+    if (!isVerificationRoute && hasOptedOut !== "true") {
       setShowSplash(true);
     }
-  }, []);
+  }, [isVerificationRoute]);
 
   const handleSplashDismiss = () => {
     setShowSplash(false);
@@ -56,8 +59,8 @@ export default function ClientWrapper({ children }) {
       appendTo: 'head',
       nonce: undefined,
     }}>
-      <ConsoleBranding />
-      {showSplash && <SplashScreen onDismiss={handleSplashDismiss} />}
+      {!isVerificationRoute && <ConsoleBranding />}
+      {!isVerificationRoute && showSplash && <SplashScreen onDismiss={handleSplashDismiss} />}
       {children}
     </GoogleReCaptchaProvider>
   );
