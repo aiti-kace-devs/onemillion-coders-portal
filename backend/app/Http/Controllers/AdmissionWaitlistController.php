@@ -48,7 +48,7 @@ class AdmissionWaitlistController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'You have been added to the waitlist.',
-                'data' => $waitlist->load(['course.programme', 'course.centre']),
+                // 'data' => $waitlist->load(['course.programme', 'course.centre']),
             ], 201);
         } catch (\Exception $e) {
             return response()->json([

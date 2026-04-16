@@ -1299,7 +1299,6 @@ class AdminController extends Controller
                     'course_id' => $user->registered_course,
                     'session' => null,
                     'confirmed' => null,
-                    'location' => null,
                     'email_sent' => null
                 ]
             );
