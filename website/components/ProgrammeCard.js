@@ -65,7 +65,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
     try {
       const [centresData, coursesData] = await Promise.all([
         getSiblingCentres(courseId, cId, token).catch(() => ({ alternatives: [] })),
-        getSiblingCourses(userId, token).catch(() => ({ matches: [], available_courses: [] })),
+        getSiblingCourses(userId, courseId, token).catch(() => ({ matches: [], available_courses: [] })),
       ]);
       setSiblingCentres(centresData?.alternatives || []);
       setSiblingCourses({ matches: coursesData?.matches || [], available_courses: coursesData?.available_courses || [] });
