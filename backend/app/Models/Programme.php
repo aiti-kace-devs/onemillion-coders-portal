@@ -75,6 +75,12 @@ class Programme extends Model
         return $this->hasMany(ProgrammeQuota::class, 'programme_id');
     }
 
+    public function programmeBatches()
+    {
+        return $this->hasMany(ProgrammeBatch::class, 'programme_id');
+    }
+
+
     public function courseModules()
     {
         return $this->hasMany(CourseModule::class, 'programme_id');

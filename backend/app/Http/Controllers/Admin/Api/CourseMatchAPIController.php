@@ -190,6 +190,9 @@ class CourseMatchAPIController extends Controller
 
         $recommendedCourses = Course::with('programme')
             ->whereIn('id', $recommendedCourseIds)
+            ->whereHas('programme', function ($query) {
+                $query->where('time_allocation', 2);
+            })
             ->get()
             ->keyBy('id');
 
@@ -256,6 +259,11 @@ class CourseMatchAPIController extends Controller
         if ($availableCourseIds->isNotEmpty()) {
             $availableCourses = Course::with('programme')
                 ->whereIn('id', $availableCourseIds)
+                ->whereHas('programme', function ($query) {
+                    $query->whereRaw('LOWER(TRIM(mode_of_delivery)) = ?', ['online'])
+                        ->where('time_allocation', 2)
+                        ->has('programmeBatches');
+                })
                 ->get()
                 ->sortBy(fn ($course) => strtolower(trim((string) $course->programme?->title)))
                 ->values();
@@ -277,10 +285,10 @@ class CourseMatchAPIController extends Controller
                     return null;
                 }
 
-                $slotLeft = $payload['slot_left'];
-                if (! is_int($slotLeft) || $slotLeft < 1) {
-                    return null;
-                }
+                // $slotLeft = $payload['slot_left'];
+                // if (! is_int($slotLeft) || $slotLeft < 1) {
+                //     return null;
+                // }
 
                 $nextRank++;
 
@@ -321,7 +329,8 @@ class CourseMatchAPIController extends Controller
                     'mode_of_delivery' => $match['mode_of_delivery'],
                     'provider' => $match['provider'],
                     'course_id' => $match['course_id'],
-                    'slot_left' => $match['slot_left'],
+                    'slot_left' => 0,
+                    // 'slot_left' => $match['slot_left'],
                     'centre_id' => $match['centre_id'] ?? null,
                 ];
             })
@@ -1275,7 +1284,7 @@ class CourseMatchAPIController extends Controller
             'provider' => $programme->provider,
             'match_percentage' => $matchPercentage !== null ? ((int) $matchPercentage).'% Match' : null,
             'course_id' => $courseId,
-            'slot_left' => $slotLeft,
+            // 'slot_left' => $slotLeft,
             'centre_id' => $centreId ?? $course?->centre_id,
         ];
     }
