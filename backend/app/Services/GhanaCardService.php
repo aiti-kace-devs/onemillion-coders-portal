@@ -137,9 +137,9 @@ class GhanaCardService
         // Crop/Resize to 640x480
         // fit() resizes and crops to reach exactly the desired dimensions
         // only resize if the image is larger than 640x480
-        // if ($img->width() > 640 || $img->height() > 480) {
-        //     $img->fit(640, 480);
-        // }
+        if ($img->width() > 640 || $img->height() > 480) {
+            $img->fit(640, 480);
+        }
         // // reduce image size to 1MB or less
         // $img->resize(function ($constraint) {
         //     $constraint->aspectRatio();
