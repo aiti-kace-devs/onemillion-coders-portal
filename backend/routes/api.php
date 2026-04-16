@@ -68,11 +68,6 @@ Route::prefix('ghana-card')->middleware('user.token')->group(function () {
     Route::get('/status', [\App\Http\Controllers\Api\GhanaCardController::class, 'status']);
 });
 
-Route::prefix('student')->middleware(['auth:sanctum', 'throttle:api', 'student.verification.flow'])->group(function () {
-    Route::get('session-options', [StudentSessionController::class, 'sessionOptions']);
-    Route::post('session-confirm', [StudentSessionController::class, 'sessionConfirm']);
-});
-
 
 // Route::middleware('apikey.check')->group(function () {
 //     Route::post('/student/register', [AdminController::class, 'add_new_students']);
