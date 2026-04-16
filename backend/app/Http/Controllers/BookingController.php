@@ -86,7 +86,8 @@ class BookingController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $booking->load('programmeBatch', 'courseSession', 'course'),
+            'message' => 'Booking successful.',
+            // 'data' => $booking->load('programmeBatch', 'courseSession', 'course'),
         ], 201);
     }
 

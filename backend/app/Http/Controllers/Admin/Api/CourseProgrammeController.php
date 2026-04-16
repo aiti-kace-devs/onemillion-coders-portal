@@ -15,6 +15,7 @@ use App\Models\CourseBatch;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 use App\Models\UserAdmission;
 
 class CourseProgrammeController extends Controller
@@ -56,6 +57,7 @@ class CourseProgrammeController extends Controller
     {
         $validated = $request->validate([
             'centre_id' => 'nullable|integer|exists:centres,id',
+            'mode' => 'nullable|string',
         ]);
 
         $filter = $request->query('filter');
@@ -63,7 +65,14 @@ class CourseProgrammeController extends Controller
         $order = strtolower((string) $request->query('order', 'asc'));
         $limit = $request->query('limit');
         $centreId = isset($validated['centre_id']) ? (int) $validated['centre_id'] : null;
+        $deliveryMode = $this->normalizeProgrammeDeliveryMode($validated['mode'] ?? null);
         $resolvedFilter = $filter ?: ($centreId !== null ? 'ongoing' : null);
+
+        if (($validated['mode'] ?? null) !== null && $deliveryMode === null) {
+            throw ValidationException::withMessages([
+                'mode' => ['The selected mode is invalid. Use Online or In Person.'],
+            ]);
+        }
 
         if (is_string($sort) && str_starts_with($sort, '-')) {
             $sort = ltrim($sort, '-');
@@ -79,11 +88,12 @@ class CourseProgrammeController extends Controller
             . ':sort:' . ($sort ? (string) $sort : 'none')
             . ':order:' . ($order === 'desc' ? 'desc' : 'asc')
             . ':limit:' . ($limit !== null ? (string) $limit : 'none')
-            . ':centre:' . ($centreId !== null ? (string) $centreId : 'all');
+            . ':centre:' . ($centreId !== null ? (string) $centreId : 'all')
+            . ':mode:' . ($deliveryMode ?? 'all');
         $courseMatchApiController = app(CourseMatchAPIController::class);
 
-        $programmes = Cache::remember($cacheKey, 600, function () use ($request, $resolvedFilter, $sort, $order, $limit, $centreId, $courseMatchApiController) {
-            $courses = $this->getProgrammeWithBatchCourses($resolvedFilter, $centreId);
+        $programmes = Cache::remember($cacheKey, 600, function () use ($request, $resolvedFilter, $sort, $order, $limit, $centreId, $deliveryMode, $courseMatchApiController) {
+            $courses = $this->getProgrammeWithBatchCourses($resolvedFilter, $centreId, $deliveryMode);
 
             $items = $courses->unique('programme_id')
                 ->map(function ($course) use ($request, $courseMatchApiController) {
@@ -127,7 +137,7 @@ class CourseProgrammeController extends Controller
         ]);
     }
 
-    protected function getProgrammeWithBatchCourses(?string $filter = null, ?int $centreId = null)
+    protected function getProgrammeWithBatchCourses(?string $filter = null, ?int $centreId = null, ?string $deliveryMode = null)
     {
         $batchIds = $this->getProgrammeWithBatchBatchIds($filter);
 
@@ -140,7 +150,47 @@ class CourseProgrammeController extends Controller
             $query->where('centre_id', $centreId);
         }
 
+        if ($deliveryMode !== null) {
+            $deliveryModeValues = $this->getProgrammeDeliveryModeValues($deliveryMode);
+
+            $query->whereHas('programme', function ($programmeQuery) use ($deliveryModeValues) {
+                $programmeQuery->where(function ($modeQuery) use ($deliveryModeValues) {
+                    foreach ($deliveryModeValues as $index => $mode) {
+                        $method = $index === 0 ? 'whereRaw' : 'orWhereRaw';
+                        $modeQuery->{$method}('LOWER(mode_of_delivery) = ?', [$mode]);
+                    }
+                });
+            });
+        }
+
         return $query->get();
+    }
+
+    protected function normalizeProgrammeDeliveryMode(?string $mode): ?string
+    {
+        if ($mode === null) {
+            return null;
+        }
+
+        $normalized = preg_replace('/[^a-z]/', '', strtolower(trim($mode)));
+
+        return match ($normalized) {
+            'online', 'onilne' => 'online',
+            'inperson' => 'in-person',
+            default => null,
+        };
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function getProgrammeDeliveryModeValues(string $deliveryMode): array
+    {
+        return match ($deliveryMode) {
+            'online' => ['online', 'onilne'],
+            'in-person' => ['in person'],
+            default => [],
+        };
     }
 
     protected function getProgrammeWithBatchBatchIds(?string $filter = null)
@@ -716,7 +766,9 @@ class CourseProgrammeController extends Controller
 
     public function getTotalCentresCount()
     {
-        $totalCentres = Centre::where('status', 1)->count();
+        $totalCentres = Centre::where('status', 1)
+        ->where('is_ready', 1)
+        ->count();
 
         return response()->json([
             'success' => true,

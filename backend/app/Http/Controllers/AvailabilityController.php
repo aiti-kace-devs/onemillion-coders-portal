@@ -121,7 +121,7 @@ class AvailabilityController extends Controller
 
             return [
                 'id' => $batch->id,
-                'batch' => 'Batch '.($index + 1),
+                'batch' => 'Cohort '.($index + 1),
                 'start_date' => $batch->start_date->format('Y-m-d'),
                 'end_date' => $batch->end_date->format('Y-m-d'),
                 'sessions' => $sessionData,

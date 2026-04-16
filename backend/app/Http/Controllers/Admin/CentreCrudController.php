@@ -15,6 +15,7 @@ use App\Models\Branch;
 use App\Models\Centre;
 use App\Models\Constituency;
 use App\Models\District;
+use App\Services\CentreDeletionService;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Backpack\CRUD\app\Library\Widget;
@@ -511,6 +512,18 @@ class CentreCrudController extends CrudController
         CentreSessionHelper::syncAfterCrud($this->crud->getCurrentEntry(), $centreSessionRows);
 
         return $response;
+    }
+
+    public function destroy($id)
+    {
+        $this->crud->hasAccessOrFail('delete');
+
+        $id = $this->crud->getCurrentEntryId() ?: $id;
+        $centre = Centre::findOrFail($id);
+
+        app(CentreDeletionService::class)->delete($centre);
+
+        return '1';
     }
 
     protected function prepareGpsFields(): void

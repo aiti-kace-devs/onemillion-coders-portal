@@ -148,7 +148,6 @@ trait BulkStudentActionsTrait
                             'course_id' => $user->registered_course,
                             'session' => null,
                             'confirmed' => null,
-                            'location' => null,
                             'email_sent' => null
                         ]
                     );
@@ -204,7 +203,6 @@ trait BulkStudentActionsTrait
                         'course_id' => $user->registered_course,
                         'session' => null,
                         'confirmed' => null,
-                        'location' => null,
                         'email_sent' => null
                     ]
                 );
@@ -212,9 +210,9 @@ trait BulkStudentActionsTrait
         });
 
 
-        activity('user_admission')
+        activity('shortlist')
             ->event('Targeted Shortlist')
-            ->log("Shortlisted $updatedCount user(s) successfully using targeted action.");
+            ->log("Shortlisted $updatedCount user(s) successfully.");
 
         return response()->json([
             'message' => "$updatedCount user(s) successfully shortlisted.",

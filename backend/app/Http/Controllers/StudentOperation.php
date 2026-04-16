@@ -21,7 +21,7 @@ use App\Models\user_exam;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Services\Scheduling\ConfirmStudentSessionService;
+use App\Jobs\AdmitStudentJob;
 use App\Jobs\CreateStudentAdmissionJob;
 use App\Jobs\TestSubmittedJob;
 use App\Models\AdmissionRejection;
@@ -32,8 +32,6 @@ use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
 use App\Http\Controllers\NotificationController;
 use App\Models\Notification;
-use App\Services\GhanaCardService;
-use App\Services\JwtService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
@@ -100,43 +98,10 @@ class StudentOperation extends Controller
             $userFields[] = 'student_level';
         }
 
-        $verificationStatus = app(GhanaCardService::class)->buildStatus($user);
-
         return Inertia::render('Student/ApplicationStatus', [
             'user' => $user->only($userFields),
             'user_admission' => $user_admission,
             'user_assessment' => $user_assessment ? $user_assessment->only(['id', 'completed']) : null,
-            'verification_status' => $verificationStatus,
-        ]);
-    }
-
-    public function verification()
-    {
-        $user = Auth::guard('web')->user();
-        $verificationStatus = app(GhanaCardService::class)->buildStatus($user);
-        $token = app(JwtService::class)->generate($user->id);
-
-        $verifyBaseUrl = rtrim((string) config('app.quiz_frontend_url', ''), '/');
-        $parentOrigin = rtrim((string) config('app.url', ''), '/');
-        $embedUrl = $verifyBaseUrl !== ''
-            ? $verifyBaseUrl . '/verify-user?token=' . urlencode($token) . '&embed=1&parent_origin=' . urlencode($parentOrigin)
-            : null;
-
-        return Inertia::render('Student/Verification', [
-            'verification_status' => $verificationStatus,
-            'verification_embed_url' => $embedUrl,
-            'verification_embed_available' => ! empty($embedUrl),
-        ]);
-    }
-
-    public function verification_status()
-    {
-        $user = Auth::guard('web')->user();
-        $status = app(GhanaCardService::class)->buildStatus($user);
-
-        return response()->json([
-            'success' => true,
-            'data' => $status,
         ]);
     }
 
@@ -513,35 +478,64 @@ class StudentOperation extends Controller
         );
 
         try {
-            /** @var ConfirmStudentSessionService $confirm */
-            $confirm = app(ConfirmStudentSessionService::class);
-            $result = $confirm->attempt($user, (int) $data['session_id'], null);
+            $admission = UserAdmission::where('user_id', $user->userId)->firstOrFail();
+            $changingSession = $admission->confirmed && $admission->session;
 
-            if (($result['ok'] ?? false) !== true) {
-                $code = $result['error']['code'] ?? 'unknown';
-                $messages = [
-                    'session_change_disabled' => 'Unable to change session at this time. Contact administrator',
-                    'session_full' => 'Unable to confirm session. No slots available',
-                    'programme_quota_full' => 'This programme has reached its enrolment limit for your selection.',
-                    'verification_required' => 'Please complete Ghana Card verification before confirming your session.',
-                    'invalid_session' => 'Unable to confirm session. Try again later',
-                    'block_required' => 'You must complete a centre time-slot booking before confirming this session.',
-                    'no_admission' => 'No admission found for your account.',
-                    'no_course' => 'Unable to confirm session. Try again later',
-                    'no_programme' => 'Unable to confirm session. Try again later',
-                    'server_error' => 'Unable to confirm session. Refresh page and try again later',
-                ];
+            if ($changingSession && !config(ALLOW_SESSION_CHANGE, false)) {
 
                 return redirect()->back()->with([
-                    'flash' => $messages[$code] ?? 'Unable to confirm session. Try again later',
+                    'flash' => 'Unable to change session at this time. Contact administrator',
+                    'key' => 'error',
+                ]);
+            }
+            $courseDetails = Course::find($admission->course_id);
+            $session = CourseSession::where('course_id', $courseDetails->id)->where('id', $data['session_id'])->first();
+
+            if (!$session) {
+                return redirect()->back()->with([
+                    'flash' => 'Unable to confirm session. Try again later',
                     'key' => 'error',
                 ]);
             }
 
-            $changed = (bool) ($result['data']['changed_session'] ?? false);
+            $slotLeft = $session->slotLeft();
+
+            if ($slotLeft < 1) {
+                return redirect()->back()->with([
+                    'flash' => 'Unable to confirm session. No slots available',
+                    'key' => 'error',
+                ]);
+            }
+
+            $admission->confirmed = now();
+            $admission->session = $session->id;
+            $admission->save();
+
+            if (!$changingSession) {
+                AdmitStudentJob::dispatch($admission);
+                activity('user_admission')
+                    ->causedBy($user)
+                    ->performedOn($admission)
+                    ->withProperties([
+                        'session' => $session->name,
+                        'course' => $courseDetails->course_name,
+                    ])
+                    ->event('Session Confirmed')
+                    ->log("$user->name confirmed their session: {$session->name}");
+            } else {
+                activity('user_admission')
+                    ->causedBy($user)
+                    ->performedOn($admission)
+                    ->withProperties([
+                        'session' => $session->name,
+                        'course' => $courseDetails->course_name,
+                    ])
+                    ->event('Session Changed')
+                    ->log("$user->name changed their session to: {$session->name}");
+            }
 
             return redirect()->back()->with([
-                'flash' => $changed ? 'Session changed successfully' : 'Confirmation successful',
+                'flash' => $changingSession ? 'Session changed successfully' : 'Confirmation successful',
                 'key' => 'success',
             ]);
         } catch (\Exception $e) {
@@ -555,35 +549,35 @@ class StudentOperation extends Controller
 
     //Display change course form
 
-public function change_course()
-{
-    $user = Auth::guard('web')->user();
+    public function change_course()
+    {
+        $user = Auth::guard('web')->user();
 
-    if ($user->shortlist) {
-        return redirect()
-            ->route('student.application-status')
-            ->with([
-                'flash' => 'Your course selection is now locked because you have been shortlisted. If you need assistance, please contact support.',
-                'key' => 'info',
-            ]);
+        if ($user->shortlist) {
+            return redirect()
+                ->route('student.application-status')
+                ->with([
+                    'flash' => 'Your course selection is now locked because you have been shortlisted. If you need assistance, please contact support.',
+                    'key' => 'info',
+                ]);
+        }
+
+        if (!$user->userAssessment?->completed) {
+            return redirect()
+                ->route('student.application-status')
+                ->with([
+                    'flash' => 'Please complete the Level Determination Assessment first.',
+                    'key' => 'info',
+                ]);
+        }
+
+        $currentCourse = Course::find($user->registered_course);
+
+        return Inertia::render('Student/ChangeCourse', [
+            'user' => $user,
+            'currentCourse' => $currentCourse
+        ]);
     }
-
-    if (!$user->userAssessment?->completed) {
-        return redirect()
-            ->route('student.application-status')
-            ->with([
-                'flash' => 'Please complete the Level Determination Assessment first.',
-                'key' => 'info',
-            ]);
-    }
-
-    $currentCourse = Course::find($user->registered_course);
-
-    return Inertia::render('Student/ChangeCourse', [
-        'user' => $user,
-        'currentCourse' => $currentCourse
-    ]);
-}
     // Select training center
     public function select_center($branch_id)
     {
@@ -803,14 +797,19 @@ public function change_course()
             'gender' => 'sometimes|in:male,female',
             'mobile_no' => 'sometimes|string|phone',
             'network_type' => 'sometimes|in:mtn,telecel,airteltigo',
-            'card_type' => 'sometimes|in:ghcard,voters_id,drivers_license,passport',
         ];
 
-        if ($request->input('card_type') === 'ghcard') {
+        // Default card_type to ghcard if not provided, or keep existing
+        $cardType = $request->input('card_type', $user->card_type ?: 'ghcard');
+
+        if ($cardType === 'ghcard') {
             $rules['ghcard'] = ['sometimes', 'string', 'regex:/^GHA-[0-9]{9}-[0-9]{1}$/', 'max:16', Rule::unique('users', 'ghcard')->ignore($user->id)];
-            $request->merge([
-                'ghcard' => 'GHA-' . $request->ghcard,
-            ]);
+            
+            // Only prepend 'GHA-' if it's missing to avoid 'GHA-GHA-...'
+            $ghValue = $request->input('ghcard');
+            if (!empty($ghValue) && !str_starts_with($ghValue, 'GHA-')) {
+                $request->merge(['ghcard' => 'GHA-' . $ghValue]);
+            }
         } else {
             $rules['ghcard'] = ['sometimes', 'string', 'max:20', Rule::unique('users', 'ghcard')->ignore($user->id)];
         }

@@ -23,7 +23,6 @@ trait ShortlistRowActionsTrait
             'confirmed' => now(),
         ];
         if ($course) {
-            $payload['location'] = $course->centre?->title ?? $course->location;
             $payload['batch_id'] = $course->batch_id;
         }
 

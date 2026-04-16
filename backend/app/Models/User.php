@@ -87,6 +87,22 @@ class User extends Authenticatable
         'verification_attempts_reset_at' => 'datetime',
     ];
 
+    /**
+     * Backwards-compatible alias for code paths that still use "shortlisted".
+     */
+    public function setShortlistedAttribute($value): void
+    {
+        $this->attributes['shortlist'] = $value;
+    }
+
+    /**
+     * Backwards-compatible alias for code paths that still read "shortlisted".
+     */
+    public function getShortlistedAttribute()
+    {
+        return $this->attributes['shortlist'] ?? null;
+    }
+
 
 
     protected static function booted()
@@ -99,7 +115,6 @@ class User extends Authenticatable
                         'course_id' => $user->registered_course,
                         'session' => null,
                         'confirmed' => null,
-                        'location' => null,
                         'email_sent' => null
                     ]
                 );
@@ -339,6 +354,7 @@ class User extends Authenticatable
     {
         return LogOptions::defaults()
             ->logFillable()
+            ->logExcept(['password'])
             ->logOnlyDirty()
             ->useLogName('student')
             ->setDescriptionForEvent(fn(string $event) => "Student {$event}")
