@@ -392,7 +392,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
             }
           }}
         >
-          {userId ? "Enroll Now" : "Learn More"}
+          {userId ? "Enroll Now" : "Read More"}
         </Button>
       </div>
 
