@@ -21,7 +21,7 @@ use App\Models\user_exam;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Jobs\AdmitStudentJob;
+use App\Services\Scheduling\ConfirmStudentSessionService;
 use App\Jobs\CreateStudentAdmissionJob;
 use App\Jobs\TestSubmittedJob;
 use App\Models\AdmissionRejection;
@@ -32,6 +32,8 @@ use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
 use App\Http\Controllers\NotificationController;
 use App\Models\Notification;
+use App\Services\GhanaCardService;
+use App\Services\JwtService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
@@ -98,10 +100,43 @@ class StudentOperation extends Controller
             $userFields[] = 'student_level';
         }
 
+        $verificationStatus = app(GhanaCardService::class)->buildStatus($user);
+
         return Inertia::render('Student/ApplicationStatus', [
             'user' => $user->only($userFields),
             'user_admission' => $user_admission,
             'user_assessment' => $user_assessment ? $user_assessment->only(['id', 'completed']) : null,
+            'verification_status' => $verificationStatus,
+        ]);
+    }
+
+    public function verification()
+    {
+        $user = Auth::guard('web')->user();
+        $verificationStatus = app(GhanaCardService::class)->buildStatus($user);
+        $token = app(JwtService::class)->generate($user->id);
+
+        $verifyBaseUrl = rtrim((string) config('app.quiz_frontend_url', ''), '/');
+        $parentOrigin = rtrim((string) config('app.url', ''), '/');
+        $embedUrl = $verifyBaseUrl !== ''
+            ? $verifyBaseUrl . '/verify-user?token=' . urlencode($token) . '&embed=1&parent_origin=' . urlencode($parentOrigin)
+            : null;
+
+        return Inertia::render('Student/Verification', [
+            'verification_status' => $verificationStatus,
+            'verification_embed_url' => $embedUrl,
+            'verification_embed_available' => ! empty($embedUrl),
+        ]);
+    }
+
+    public function verification_status()
+    {
+        $user = Auth::guard('web')->user();
+        $status = app(GhanaCardService::class)->buildStatus($user);
+
+        return response()->json([
+            'success' => true,
+            'data' => $status,
         ]);
     }
 
