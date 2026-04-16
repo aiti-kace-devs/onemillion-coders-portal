@@ -83,6 +83,22 @@ class User extends Authenticatable
         'is_verification_blocked' => 'boolean',
     ];
 
+    /**
+     * Backwards-compatible alias for code paths that still use "shortlisted".
+     */
+    public function setShortlistedAttribute($value): void
+    {
+        $this->attributes['shortlist'] = $value;
+    }
+
+    /**
+     * Backwards-compatible alias for code paths that still read "shortlisted".
+     */
+    public function getShortlistedAttribute()
+    {
+        return $this->attributes['shortlist'] ?? null;
+    }
+
 
 
     protected static function booted()
@@ -95,7 +111,6 @@ class User extends Authenticatable
                         'course_id' => $user->registered_course,
                         'session' => null,
                         'confirmed' => null,
-                        'location' => null,
                         'email_sent' => null
                     ]
                 );

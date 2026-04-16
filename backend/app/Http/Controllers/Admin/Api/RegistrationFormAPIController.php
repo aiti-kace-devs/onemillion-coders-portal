@@ -233,12 +233,11 @@ class RegistrationFormAPIController extends Controller
 
         $course = Course::with('programme')
             ->where('id', $data['course_id'])
-            ->where('centre_id', $data['centre_id'])
             ->first();
         if (! $course) {
             return response()->json([
                 'success' => false,
-                'message' => 'Course not found for the selected centre.',
+                'message' => 'Course not found.',
             ], 404);
         }
         if ($selfPaced) {

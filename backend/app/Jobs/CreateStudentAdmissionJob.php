@@ -105,7 +105,6 @@ class CreateStudentAdmissionJob implements ShouldQueue
         if ($this->session) {
 
             $admissionData['session'] = $this->session->id;
-            $admissionData['location'] = $this->course->centre->title;
             $admissionData['confirmed'] = now();
         }
 
