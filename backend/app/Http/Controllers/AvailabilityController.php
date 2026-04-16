@@ -99,6 +99,7 @@ class AvailabilityController extends Controller
         $sessions = MasterSession::where('course_type', $courseType)
             ->where('status', true)
             ->get();
+        $sessions = $this->sortMasterSessions($sessions);
 
         // Batch fetch all remaining seats at once
         $remainingSeats = $bookingService->getRemainingSeatsBatch(
@@ -226,6 +227,7 @@ class AvailabilityController extends Controller
         $sessions = MasterSession::where('course_type', $courseType)
             ->where('status', true)
             ->get();
+        $sessions = $this->sortMasterSessions($sessions);
 
         if ($sessions->isEmpty()) {
             return response()->json([
@@ -409,5 +411,48 @@ class AvailabilityController extends Controller
 
             return strtolower((string) $value);
         }, SORT_NATURAL)->when($order === 'desc', fn ($collection) => $collection->reverse())->values();
+    }
+
+    protected function sortMasterSessions($sessions): \Illuminate\Support\Collection
+    {
+        return collect($sessions)
+            ->sortBy(function ($session) {
+                return [
+                    $this->sessionTypePriority($session->session_type ?? null),
+                    $this->sessionStartMinutes($session->time ?? null),
+                    strtolower(trim((string) ($session->time ?? ''))),
+                    (int) ($session->id ?? 0),
+                ];
+            }, SORT_REGULAR)
+            ->values();
+    }
+
+    protected function sessionTypePriority(?string $sessionType): int
+    {
+        return match (strtolower(trim((string) $sessionType))) {
+            'morning' => 0,
+            'afternoon' => 1,
+            'evening' => 2,
+            'fullday' => 3,
+            'online' => 4,
+            default => 99,
+        };
+    }
+
+    protected function sessionStartMinutes(?string $time): int
+    {
+        $startTime = trim(explode('-', (string) $time, 2)[0] ?? '');
+
+        if ($startTime === '') {
+            return PHP_INT_MAX;
+        }
+
+        $timestamp = strtotime($startTime);
+
+        if ($timestamp === false) {
+            return PHP_INT_MAX;
+        }
+
+        return ((int) date('G', $timestamp) * 60) + (int) date('i', $timestamp);
     }
 }
