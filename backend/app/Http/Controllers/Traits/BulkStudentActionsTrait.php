@@ -210,9 +210,9 @@ trait BulkStudentActionsTrait
         });
 
 
-        activity('user_admission')
+        activity('shortlist')
             ->event('Targeted Shortlist')
-            ->log("Shortlisted $updatedCount user(s) successfully using targeted action.");
+            ->log("Shortlisted $updatedCount user(s) successfully.");
 
         return response()->json([
             'message' => "$updatedCount user(s) successfully shortlisted.",

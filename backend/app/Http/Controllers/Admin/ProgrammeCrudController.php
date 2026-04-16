@@ -63,8 +63,8 @@ class ProgrammeCrudController extends CrudController
         CRUD::column('provider')->type('text');
         FilterHelper::addGenericRelationshipColumn('category', 'Course Category', 'course-category', 'title');
         CRUD::column('duration');
-        CRUD::column('start_date');
-        CRUD::column('end_date');
+        CRUD::column('duration_in_days');
+        CRUD::column('time_allocation');
         CRUD::addColumn([
             'name' => 'status',
             'label' => 'Status',

@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.34",
     "axios": "^1.10.0",
     "framer-motion": "^12.19.1",
     "libphonenumber-js": "^1.12.10",

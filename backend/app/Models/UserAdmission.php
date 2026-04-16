@@ -24,7 +24,16 @@ class UserAdmission extends Model
 
     protected $table = 'user_admission';
 
-    protected $fillable = ['user_id', 'course_batch_id', 'batch_id', 'course_id', 'email_sent', 'session', 'confirmed'];
+    protected $fillable = [
+        'user_id',
+        'course_batch_id',
+        'programme_batch_id',
+        'batch_id',
+        'course_id',
+        'email_sent',
+        'session',
+        'confirmed'
+    ];
 
     protected $casts = [
         'confirmed' => 'datetime',
@@ -64,5 +73,10 @@ class UserAdmission extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'userId');
+    }
+
+    public function programmeBatch()
+    {
+        return $this->belongsTo(ProgrammeBatch::class, 'programme_batch_id');
     }
 }

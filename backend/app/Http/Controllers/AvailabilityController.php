@@ -1,0 +1,369 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Batch;
+use App\Models\Centre;
+use App\Models\Course;
+use App\Models\MasterSession;
+use App\Models\Programme;
+use App\Models\ProgrammeBatch;
+use App\Services\AvailabilityService;
+use App\Services\BookingService;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class AvailabilityController extends Controller
+{
+    public function index(Request $request, AvailabilityService $availabilityService): JsonResponse
+    {
+        $request->validate([
+            'centre_id' => 'required|integer|exists:centres,id',
+            'course_id' => 'required|integer|exists:courses,id',
+            'from' => 'required|date',
+            'to' => 'required|date|after_or_equal:from',
+        ]);
+
+        $centreId = (int) $request->query('centre_id');
+        $courseId = (int) $request->query('course_id');
+        $from = Carbon::parse($request->query('from'));
+        $to = Carbon::parse($request->query('to'));
+
+        $result = $availabilityService->getAvailableSlots($centreId, $courseId, $from, $to);
+
+        return response()->json($result);
+    }
+
+    /**
+     * List active ProgrammeBatches for a course + centre, each enriched
+     * with per-session remaining seats from the occupancy engine.
+     *
+     * GET /api/availability/batches?course_id=X&centre_id=Y
+     * POST /api/availability/batches { "course_id": X, "centre_id": Y }
+     */
+    public function batches(Request $request, BookingService $bookingService): JsonResponse
+    {
+        $request->validate([
+            'course_id' => 'required|integer|exists:courses,id',
+        ]);
+
+        $courseId = (int) $request->input('course_id');
+
+        $course = Course::with(['programme', 'centre'])->find($courseId);
+
+        if (! $course || ! $course->programme || ! $course->centre) {
+            return response()->json(['success' => false, 'message' => 'Course or centre not found.'], 404);
+        }
+
+        $centre = $course->centre;
+        $programme = $course->programme;
+        $courseType = $programme->courseType();
+
+        // Find the current active admission batch
+        $today = Carbon::today();
+        $admissionBatch = Batch::where('start_date', '<=', $today)
+            ->where('end_date', '>=', $today)
+            ->where('status', true)
+            ->where('completed', false)
+            ->first();
+
+        if (! $admissionBatch) {
+            return response()->json([
+                'success' => true,
+                'centre' => ['id' => $centre->id, 'title' => $centre->title],
+                'course_type' => $courseType,
+                'capacity' => $centre->slotCapacityFor($courseType),
+                'batches' => [],
+            ]);
+        }
+
+        // Find active programme batches with eager loading
+        $batches = ProgrammeBatch::where('admission_batch_id', $admissionBatch->id)
+            ->where('programme_id', $programme->id)
+            ->where('status', true)
+            ->orderBy('start_date')
+            ->get();
+
+        if ($batches->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'centre' => ['id' => $centre->id, 'title' => $centre->title],
+                'course_type' => $courseType,
+                'capacity' => $centre->slotCapacityFor($courseType),
+                'batches' => [],
+            ]);
+        }
+
+        // Get active master sessions for this course type
+        $sessions = MasterSession::where('course_type', $courseType)
+            ->where('status', true)
+            ->get();
+
+        // Batch fetch all remaining seats at once
+        $remainingSeats = $bookingService->getRemainingSeatsBatch(
+            $centre->id,
+            $batches->pluck('id')->toArray(),
+            $sessions->pluck('id')->toArray()
+        );
+
+        $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats) {
+            $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats) {
+                $key = "{$batch->id}:{$session->id}";
+
+                return [
+                    'session_id' => $session->id,
+                    'session_name' => "{$session->session_type} Session",
+                    'time' => $session->time,
+                    'remaining' => $remainingSeats[$key] ?? 0,
+                ];
+            })->values()->toArray();
+
+            return [
+                'id' => $batch->id,
+                'batch' => 'Batch '.($index + 1),
+                'start_date' => $batch->start_date->format('Y-m-d'),
+                'end_date' => $batch->end_date->format('Y-m-d'),
+                'sessions' => $sessionData,
+            ];
+        })->values()->toArray();
+
+        return response()->json([
+            'success' => true,
+            'centre' => ['id' => $centre->id, 'title' => $centre->title],
+            'course_type' => $courseType,
+            'capacity' => $centre->slotCapacityFor($courseType),
+            'batches' => $batchData,
+        ]);
+    }
+
+    /**
+     * Find other centres in the same branch that offer the same programme,
+     * with their available slots — part of the recommendation system.
+     *
+     * GET /api/availability/sibling-centres?course_id=X&centre_id=Y
+     */
+    public function siblingCentres(Request $request, BookingService $bookingService): JsonResponse
+    {
+        $request->validate([
+            'course_id' => 'required|integer|exists:courses,id',
+            'centre_id' => 'required|integer|exists:centres,id',
+        ]);
+
+        $courseId = (int) $request->query('course_id');
+        $centreId = (int) $request->query('centre_id');
+
+        $filter = $request->query('filter');
+        $sort = $request->query('sort');
+        $order = strtolower((string) $request->query('order', 'asc'));
+        $limit = $request->query('limit');
+
+        if (is_string($sort) && str_starts_with($sort, '-')) {
+            $sort = ltrim($sort, '-');
+            $order = 'desc';
+        }
+
+        $limit = is_numeric($limit) ? (int) $limit : null;
+        if ($limit !== null && $limit <= 0) {
+            $limit = null;
+        }
+
+        $course = Course::with('programme')->find($courseId);
+        $centre = Centre::find($centreId);
+
+        if (! $course || ! $course->programme || ! $centre || ! $centre->branch_id) {
+            return response()->json(['success' => false, 'message' => 'Course or centre not found.'], 404);
+        }
+
+        $programme = $course->programme;
+        $courseType = $programme->courseType();
+
+        // Find the current active admission batch
+        $today = Carbon::today();
+        $admissionBatch = Batch::where('start_date', '<=', $today)
+            ->where('end_date', '>=', $today)
+            ->where('status', true)
+            ->where('completed', false)
+            ->first();
+
+        if (! $admissionBatch) {
+            return response()->json([
+                'success' => true,
+                'origin_centre' => ['id' => $centre->id, 'title' => $centre->title],
+                'programme' => ['id' => $programme->id, 'title' => $programme->title],
+                'alternatives' => [],
+            ]);
+        }
+
+        // Find sibling centres: same branch, different centre, active
+        $siblingCentres = Centre::where('branch_id', $centre->branch_id)
+            ->where('id', '!=', $centreId)
+            ->where('status', true)
+            ->get();
+
+        if ($siblingCentres->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'origin_centre' => ['id' => $centre->id, 'title' => $centre->title],
+                'programme' => ['id' => $programme->id, 'title' => $programme->title],
+                'alternatives' => [],
+            ]);
+        }
+
+        // Get active master sessions for this course type
+        $sessions = MasterSession::where('course_type', $courseType)
+            ->where('status', true)
+            ->get();
+
+        if ($sessions->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'origin_centre' => ['id' => $centre->id, 'title' => $centre->title],
+                'programme' => ['id' => $programme->id, 'title' => $programme->title],
+                'alternatives' => [],
+            ]);
+        }
+
+        $alternatives = [];
+
+        foreach ($siblingCentres as $siblingCentre) {
+            // Find a course for the same programme at this sibling centre in the current batch
+            $siblingCourse = Course::where('centre_id', $siblingCentre->id)
+                ->where('programme_id', $programme->id)
+                ->where('batch_id', $admissionBatch->id)
+                ->where('status', true)
+                ->first();
+
+            if (! $siblingCourse) {
+                continue;
+            }
+
+            // Find programme batches for this sibling
+            $batches = ProgrammeBatch::where('admission_batch_id', $admissionBatch->id)
+                ->where('programme_id', $programme->id)
+                ->where('status', true)
+                ->orderBy('start_date')
+                ->get();
+
+            if ($batches->isEmpty()) {
+                continue;
+            }
+
+            // Batch fetch all remaining seats for this centre
+            $remainingSeats = $bookingService->getRemainingSeatsBatch(
+                $siblingCentre->id,
+                $batches->pluck('id')->toArray(),
+                $sessions->pluck('id')->toArray()
+            );
+
+            $totalAvailable = 0;
+
+            $batchData = $batches->map(function ($batch) use ($sessions, $remainingSeats, &$totalAvailable) {
+                $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, &$totalAvailable) {
+                    $key = "{$batch->id}:{$session->id}";
+                    $remaining = $remainingSeats[$key] ?? 0;
+                    $totalAvailable += $remaining;
+
+                    return [
+                        'session_id' => $session->id,
+                        'session_name' => "{$session->session_type} Session",
+                        'time' => $session->time,
+                        'remaining' => $remaining,
+                    ];
+                })->values()->toArray();
+
+                return [
+                    'id' => $batch->id,
+                    'start_date' => $batch->start_date->format('Y-m-d'),
+                    'end_date' => $batch->end_date->format('Y-m-d'),
+                    'sessions' => $sessionData,
+                ];
+            })->values()->toArray();
+
+            // Only include centres that actually have availability
+            if ($totalAvailable > 0) {
+                $alternatives[] = [
+                    'centre_id' => $siblingCentre->id,
+                    'centre_name' => $siblingCentre->title,
+                    'course_id' => $siblingCourse->id,
+                    'gps_location' => $siblingCentre->gps_location ?? [],
+                    'available' => $totalAvailable,
+                    'batches' => $batchData,
+                ];
+            }
+        }
+
+        // Convert to collection for filtering, sorting, and limiting
+        $alternatives = collect($alternatives);
+
+        // Apply filter to alternatives
+        if (is_string($filter) && $filter !== '') {
+            $filterLower = strtolower($filter);
+            $alternatives = $alternatives->filter(function ($alternative) use ($filterLower) {
+                return $this->centreMatchesFilter($alternative, $filterLower);
+            })->values();
+        }
+
+        // Apply sort to alternatives
+        if (is_string($sort) && $sort !== '') {
+            $alternatives = $this->sortCentres($alternatives, $sort, $order);
+        }
+
+        // Apply limit to alternatives
+        if ($limit !== null) {
+            $alternatives = $alternatives->take($limit)->values();
+        }
+
+        return response()->json([
+            'success' => true,
+            'origin_centre' => ['id' => $centre->id, 'title' => $centre->title],
+            'programme' => ['id' => $programme->id, 'title' => $programme->title],
+            'alternatives' => $alternatives->values()->all(),
+        ]);
+    }
+
+    /**
+     * Check if a centre alternative matches the given filter string.
+     * Searches in centre_name.
+     */
+    protected function centreMatchesFilter(array $alternative, string $filterLower): bool
+    {
+        $searchableFields = [
+            'centre_name',
+        ];
+
+        foreach ($searchableFields as $field) {
+            $value = $alternative[$field] ?? null;
+            if ($value !== null && str_contains(strtolower((string) $value), $filterLower)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Sort a collection of centre alternatives by the specified field and order.
+     */
+    protected function sortCentres($centres, string $sortField, string $order): \Illuminate\Support\Collection
+    {
+        $sortableFields = [
+            'centre_name',
+            'available',
+            'centre_id',
+        ];
+
+        if (! in_array($sortField, $sortableFields, true)) {
+            return $centres;
+        }
+
+        return $centres->sortBy(function ($centre) use ($sortField) {
+            $value = $centre[$sortField] ?? null;
+            if ($sortField === 'available') {
+                return is_int($value) ? $value : PHP_INT_MAX;
+            }
+
+            return strtolower((string) $value);
+        }, SORT_NATURAL)->when($order === 'desc', fn ($collection) => $collection->reverse())->values();
+    }
+}

@@ -9,7 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-
+use App\Models\UserAdmission;
 class RegistrationFormAPIController extends Controller
 {
     public function index(Request $request)
@@ -114,6 +114,7 @@ class RegistrationFormAPIController extends Controller
                     'registered_course' => null,
                     'student_level' => $user->student_level,
                     'userId' => $user->userId,
+                    'support' => $user->support,
                 ],
             ]);
         }
@@ -185,7 +186,8 @@ class RegistrationFormAPIController extends Controller
         }
 
         $user->registered_course = $course->id;
-        $user->support = $supportRequested;
+        $user->shortlist = true;
+        $user->support = filter_var($data['support'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
         $user->save();
 
         return response()->json([
@@ -194,6 +196,135 @@ class RegistrationFormAPIController extends Controller
                 // 'user' => $user->fresh(),
                 // 'course' => $course,
                 // 'already_registered' => (int) $user->registered_course === (int) $course->id,
+                'message' => 'Course registration confirmed successfully.',
+            ],
+        ]);
+    }
+
+    public function switchToSelfPacedOrWithSupport(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'userId' => 'required|exists:users,userId',
+            'course_id' => 'required|integer|exists:courses,id',
+            'centre_id' => 'required|integer|exists:centres,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
+        $user = User::where('userId', $data['userId'])->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ]);
+        }
+
+        $selfPaced = filter_var($request->query('self-paced', 'false'), FILTER_VALIDATE_BOOLEAN);
+        $withSupport = filter_var($request->query('with-support', 'false'), FILTER_VALIDATE_BOOLEAN);
+
+        $course = Course::with('programme')
+            ->where('id', $data['course_id'])
+            ->where('centre_id', $data['centre_id'])
+            ->first();
+        if (! $course) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Course not found for the selected centre.',
+            ], 404);
+        }
+        if ($selfPaced) {
+            $user->support = false;
+            $user->registered_course = $course->id;
+            $user->save();
+
+            UserAdmission::updateOrCreate(
+                ['user_id' => $user->userId],
+                [
+                    'course_id' => $course->id,
+                    'email_sent' => now(),
+                    'confirmed' => now(),
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => 'You have successfully switched to self-paced learning. Resource support has been removed from your registration.',
+                ],
+            ]);
+        }
+
+        if ($withSupport) {
+            $user->support = true;
+            $user->save();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'message' => 'You have successfully enabled resource support for your registration.',
+                ],
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid request. Please provide either ?self-paced=true or ?with-support=true.',
+        ], 422);
+    }
+
+    public function enrollSelfPacedStudent(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'userId' => 'required|exists:users,userId',
+            'course_id' => 'required|integer|exists:courses,id',
+            'centre_id' => 'required|integer|exists:centres,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
+        $user = User::where('userId', $data['userId'])->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ]);
+        }
+
+        $course = Course::with('programme')
+            ->where('id', $data['course_id'])
+            ->where('centre_id', $data['centre_id'])
+            ->first();
+        if (! $course) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Course not found for the selected centre.',
+            ], 404);
+        }
+
+        $user->registered_course = $course->id;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
                 'message' => 'Course registration confirmed successfully.',
             ],
         ]);

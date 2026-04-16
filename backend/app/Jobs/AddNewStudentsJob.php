@@ -95,7 +95,7 @@ class AddNewStudentsJob implements ShouldQueue
                 $std->password = $plainPassword;
                 // $std->registered_course = !empty($student['registered_course']) ? $student['registered_course'] : null;
                 $std->data = $student['data'] ?? null;
-                $std->age  = $student['age'];
+                $std->age = $student['age'];
                 $std->gender = $student['gender'];
                 $std->pwd = (bool) ($student['pwd'] ?? false);
                 $std->status = 1;
