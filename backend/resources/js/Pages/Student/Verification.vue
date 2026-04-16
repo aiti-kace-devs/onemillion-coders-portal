@@ -19,7 +19,6 @@ const props = defineProps({
 });
 
 const status = ref(props.verification_status);
-console.log(status.value.image?.url);
 const iframeUnavailable = ref(!props.verification_embed_available);
 const refreshCount = ref(0);
 const isRefreshing = ref(false);
