@@ -10,6 +10,7 @@ use App\Models\Batch;
 use App\Models\Programme;
 use App\Services\ProgrammeBatchGenerator;
 use Illuminate\Http\Request;
+use Prologue\Alerts\Facades\Alert;
 
 /**
  * Class ProgrammeBatchCrudController
@@ -165,8 +166,13 @@ class ProgrammeBatchCrudController extends CrudController
 
         $generator = app(ProgrammeBatchGenerator::class);
         $generated = $generator->generate($batch);
+        $message = "Processed programme batches for '{$batch->title}'. {$generated->count()} batches are now active.";
 
-        return redirect()->back()
-            ->with('success', "Regenerated {$generated->count()} programme batches for '{$batch->title}'.");
+        Alert::success($message)->flash();
+
+        return redirect()->back()->with([
+            'flash' => $message,
+            'key' => 'success'
+        ]);
     }
 }
