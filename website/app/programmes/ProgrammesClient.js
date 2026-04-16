@@ -1,15 +1,52 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiSearch, FiFilter, FiClock, FiX, FiGlobe, FiArrowUp, FiChevronDown, FiSliders, FiArrowLeft, FiMonitor, FiUsers, FiMapPin } from "react-icons/fi";
 import { getProgrammesData, getCategoriesData } from "../../services";
 import ProgrammeCard from "../../components/ProgrammeCard";
 import ProgrammeSkeleton from "../../components/ProgrammeSkeleton";
 
+const DELIVERY_MODES = ["All", "Online", "In Person"];
+
+function normalizeProgrammeMode(mode) {
+  if (!mode) {
+    return "All";
+  }
+
+  const normalized = String(mode).trim().toLowerCase().replace(/[^a-z]/g, "");
+
+  if (normalized === "online" || normalized === "onilne") {
+    return "Online";
+  }
+
+  if (normalized === "inperson") {
+    return "In Person";
+  }
+
+  return "All";
+}
+
+function buildProgrammesUrl(centreId, mode) {
+  const params = new URLSearchParams();
+
+  if (centreId) {
+    params.set("centre_id", centreId);
+  }
+
+  if (mode && mode !== "All") {
+    params.set("mode", mode);
+  }
+
+  const query = params.toString();
+
+  return query ? `/programmes?${query}` : "/programmes";
+}
+
 export default function ProgrammesClient({ initialCategory }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const userId = searchParams.get("user_id");
   const centreId = searchParams.get("centre_id");
@@ -17,28 +54,51 @@ export default function ProgrammesClient({ initialCategory }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedDuration, setSelectedDuration] = useState("All");
-  const [selectedMode, setSelectedMode] = useState("All");
+  const [selectedMode, setSelectedMode] = useState(() => normalizeProgrammeMode(searchParams.get("mode")));
   const [sortBy, setSortBy] = useState("default");
   const [showFilters, setShowFilters] = useState(false);
   const [programmes, setProgrammes] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [deliveryModes, setDeliveryModes] = useState(["All"]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const normalizedMode = normalizeProgrammeMode(searchParams.get("mode"));
+
+    setSelectedMode((currentMode) =>
+      currentMode === normalizedMode ? currentMode : normalizedMode
+    );
+  }, [searchParams]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (selectedMode === "All") {
+      params.delete("mode");
+    } else {
+      params.set("mode", selectedMode);
+    }
+
+    const nextQuery = params.toString();
+    const currentQuery = searchParams.toString();
+
+    if (nextQuery !== currentQuery) {
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  }, [pathname, router, searchParams, selectedMode]);
 
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         const [programmesData, categoriesData] = await Promise.all([
-          getProgrammesData(centreId ? `/programmes?centre_id=${centreId}` : "/programmes"),
+          getProgrammesData(buildProgrammesUrl(centreId, selectedMode)),
           getCategoriesData()
         ]);
         setProgrammes(programmesData || []);
         setCategories(["All", ...(categoriesData || []).map(cat => cat.title)]);
-        const modes = [...new Set((programmesData || []).map(p => p.mode_of_delivery).filter(Boolean))];
-        setDeliveryModes(["All", ...modes]);
       } catch (err) {
         console.error("Error fetching data:", err);
         setError("Failed to load programmes. Please try again later.");
@@ -48,7 +108,7 @@ export default function ProgrammesClient({ initialCategory }) {
     };
 
     fetchData();
-  }, []);
+  }, [centreId, selectedMode]);
 
   // Handle URL parameters and initial category
   useEffect(() => {
@@ -229,7 +289,7 @@ export default function ProgrammesClient({ initialCategory }) {
                 },
                 {
                   value: selectedMode, setter: setSelectedMode, icon: selectedMode === "Online" ? FiMonitor : selectedMode === "In Person" ? FiMapPin : FiGlobe, active: selectedMode !== "All",
-                  options: deliveryModes.map(m => ({ value: m, label: m === "All" ? "All Modes" : m }))
+                  options: DELIVERY_MODES.map(m => ({ value: m, label: m === "All" ? "All Modes" : m }))
                 },
                 {
                   value: selectedDuration, setter: setSelectedDuration, icon: FiClock, active: selectedDuration !== "All",
@@ -408,7 +468,7 @@ export default function ProgrammesClient({ initialCategory }) {
                     },
                     {
                       label: "Delivery Mode", icon: selectedMode === "Online" ? FiMonitor : selectedMode === "In Person" ? FiUsers : FiGlobe, value: selectedMode, setter: setSelectedMode,
-                      options: deliveryModes.map(m => ({ value: m, label: m === "All" ? "All Modes" : m }))
+                      options: DELIVERY_MODES.map(m => ({ value: m, label: m === "All" ? "All Modes" : m }))
                     },
                     {
                       label: "Duration", icon: FiClock, value: selectedDuration, setter: setSelectedDuration,

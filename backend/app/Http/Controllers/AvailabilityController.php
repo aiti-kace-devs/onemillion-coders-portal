@@ -169,7 +169,10 @@ class AvailabilityController extends Controller
         }
 
         $course = Course::with('programme')->find($courseId);
-        $centre = Centre::find($centreId);
+        $centre = Centre::with([
+            'branch:id,title',
+            'districts:id,title',
+        ])->find($centreId);
 
         if (! $course || ! $course->programme || ! $centre || ! $centre->branch_id) {
             return response()->json(['success' => false, 'message' => 'Course or centre not found.'], 404);
@@ -189,14 +192,20 @@ class AvailabilityController extends Controller
         if (! $admissionBatch) {
             return response()->json([
                 'success' => true,
-                'origin_centre' => ['id' => $centre->id, 'title' => $centre->title],
+                'origin_centre' => array_merge(
+                    ['id' => $centre->id, 'title' => $centre->title],
+                    $this->centreLocationPayload($centre)
+                ),
                 'programme' => ['id' => $programme->id, 'title' => $programme->title],
                 'alternatives' => [],
             ]);
         }
 
         // Find sibling centres: same branch, different centre, active
-        $siblingCentres = Centre::where('branch_id', $centre->branch_id)
+        $siblingCentres = Centre::with([
+            'branch:id,title',
+            'districts:id,title',
+        ])->where('branch_id', $centre->branch_id)
             ->where('id', '!=', $centreId)
             ->where('status', true)
             ->get();
@@ -204,7 +213,10 @@ class AvailabilityController extends Controller
         if ($siblingCentres->isEmpty()) {
             return response()->json([
                 'success' => true,
-                'origin_centre' => ['id' => $centre->id, 'title' => $centre->title],
+                'origin_centre' => array_merge(
+                    ['id' => $centre->id, 'title' => $centre->title],
+                    $this->centreLocationPayload($centre)
+                ),
                 'programme' => ['id' => $programme->id, 'title' => $programme->title],
                 'alternatives' => [],
             ]);
@@ -218,7 +230,10 @@ class AvailabilityController extends Controller
         if ($sessions->isEmpty()) {
             return response()->json([
                 'success' => true,
-                'origin_centre' => ['id' => $centre->id, 'title' => $centre->title],
+                'origin_centre' => array_merge(
+                    ['id' => $centre->id, 'title' => $centre->title],
+                    $this->centreLocationPayload($centre)
+                ),
                 'programme' => ['id' => $programme->id, 'title' => $programme->title],
                 'alternatives' => [],
             ]);
@@ -257,8 +272,8 @@ class AvailabilityController extends Controller
             );
 
             $totalAvailable = 0;
-
-            $batchData = $batches->map(function ($batch) use ($sessions, $remainingSeats, &$totalAvailable) {
+            
+            $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats, &$totalAvailable) {
                 $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, &$totalAvailable) {
                     $key = "{$batch->id}:{$session->id}";
                     $remaining = $remainingSeats[$key] ?? 0;
@@ -274,6 +289,7 @@ class AvailabilityController extends Controller
 
                 return [
                     'id' => $batch->id,
+                    'batch' => 'Cohort '.($index + 1),
                     'start_date' => $batch->start_date->format('Y-m-d'),
                     'end_date' => $batch->end_date->format('Y-m-d'),
                     'sessions' => $sessionData,
@@ -282,14 +298,20 @@ class AvailabilityController extends Controller
 
             // Only include centres that actually have availability
             if ($totalAvailable > 0) {
-                $alternatives[] = [
+                $alternatives[] = array_merge([
                     'centre_id' => $siblingCentre->id,
                     'centre_name' => $siblingCentre->title,
+                    'is_centre_ready' => $siblingCentre->is_ready,
+                    'is_pwd_friendly' => $siblingCentre->is_pwd_friendly,
+                    'wheelchair_accessible' => $siblingCentre->wheelchair_accessible,
+                    'has_access_ramp' => $siblingCentre->has_access_ramp,
+                    'has_accessible_toilet' => $siblingCentre->has_accessible_toilet,
+                    'has_elevator' => $siblingCentre->has_elevator,
                     'course_id' => $siblingCourse->id,
-                    'gps_location' => $siblingCentre->gps_location ?? [],
+                    // 'gps_location' => $siblingCentre->gps_location ?? [],
                     'available' => $totalAvailable,
                     'batches' => $batchData,
-                ];
+                ], $this->centreLocationPayload($siblingCentre));
             }
         }
 
@@ -316,10 +338,32 @@ class AvailabilityController extends Controller
 
         return response()->json([
             'success' => true,
-            'origin_centre' => ['id' => $centre->id, 'title' => $centre->title],
+            'origin_centre' => array_merge(
+                ['id' => $centre->id, 'title' => $centre->title],
+                $this->centreLocationPayload($centre)
+            ),
             'programme' => ['id' => $programme->id, 'title' => $programme->title],
             'alternatives' => $alternatives->values()->all(),
         ]);
+    }
+
+    protected function centreLocationPayload(Centre $centre): array
+    {
+        $districts = $centre->districts
+            ->map(function ($district) {
+                return [
+                    'title' => $district->title,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $primaryDistrict = $centre->districts->first();
+
+        return [
+            'branch_name' => $centre->branch?->title,
+            'district_name' => $primaryDistrict?->title,
+        ];
     }
 
     /**
