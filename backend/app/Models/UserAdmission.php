@@ -32,7 +32,6 @@ class UserAdmission extends Model
         'course_id',
         'email_sent',
         'session',
-        'location',
         'confirmed'
     ];
 
@@ -40,6 +39,15 @@ class UserAdmission extends Model
         'confirmed' => 'datetime',
         'email_sent' => 'datetime',
     ];
+
+    /**
+     * Keep backwards compatibility with old code paths that still assign
+     * "location" after the column was removed from user_admission.
+     */
+    public function setLocationAttribute($value): void
+    {
+        // Intentionally ignored.
+    }
 
     public function course()
     {

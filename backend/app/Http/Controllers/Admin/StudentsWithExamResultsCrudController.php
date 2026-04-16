@@ -128,9 +128,12 @@ class StudentsWithExamResultsCrudController extends UserCrudController
             },
         ]);
 
-        // Add row actions only for this view
-        CRUD::addButton('line', 'view_results', 'view', 'crud::buttons.view_results');
-        CRUD::addButton('line', 'reset_result', 'view', 'crud::buttons.reset_result');
+        // Add row actions using the custom dropdown
+        \App\Helpers\CrudListHelper::editInDropdown([
+            'crud::buttons.shortlist_row_actions_dropdown',
+            'crud::buttons.view_results',
+            'crud::buttons.reset_result'
+        ]);
 
         // Enable bulk operations
         CRUD::enableBulkActions();

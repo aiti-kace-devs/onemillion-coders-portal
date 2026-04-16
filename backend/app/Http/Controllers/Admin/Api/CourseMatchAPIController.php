@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class CourseMatchAPIController extends Controller
 {
@@ -122,14 +123,6 @@ class CourseMatchAPIController extends Controller
                 'message' => 'User not found.',
             ]);
         }
-        $registeredCourseId = $user->registered_course ? (int) $user->registered_course : null;
-        if (! $registeredCourseId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User has no registered course.',
-            ]);
-        }
-
         $filter = $request->query('filter');
         $sort = $request->query('sort');
         $order = strtolower((string) $request->query('order', 'asc'));
@@ -147,13 +140,16 @@ class CourseMatchAPIController extends Controller
 
         $currentCourseId = $user->registered_course ? (int) $user->registered_course : null;
         $currentCourse = $user->course;
+        $currentCentreId = $currentCourse?->centre_id ? (int) $currentCourse->centre_id : null;
 
-        if (! $currentCourseId || ! $currentCourse?->centre_id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User has no registered course.',
+        if ($currentCourseId && ! $currentCourse) {
+            Log::warning('siblingCourses: registered course could not be loaded.', [
+                'userId' => $userId,
+                'registered_course' => $currentCourseId,
             ]);
         }
+        // New users may not have a registered course yet. In that case we can
+        // still return stored recommendations, but we skip same-centre siblings.
 
         $recommendations = DB::table('user_course_recommendations')
             ->where('user_id', $userId)
@@ -219,18 +215,26 @@ class CourseMatchAPIController extends Controller
             ->values()
             ->all();
 
-        $availableCourseIds = $this->getCentreCourses((int) $currentCourse->centre_id)
-            ->pluck('id')
-            ->map(fn ($courseId) => (int) $courseId)
-            ->reject(fn ($courseId) => $courseId === $currentCourseId || in_array($courseId, $existingCourseIds, true))
-            ->unique()
-            ->values();
+        $availableCourseIds = collect();
 
-        $availableCourses = Course::with('programme')
-            ->whereIn('id', $availableCourseIds)
-            ->get()
-            ->sortBy(fn ($course) => strtolower(trim((string) $course->programme?->title)))
-            ->values();
+        if ($currentCentreId !== null) {
+            $availableCourseIds = $this->getCentreCourses($currentCentreId)
+                ->pluck('id')
+                ->map(fn ($courseId) => (int) $courseId)
+                ->reject(fn ($courseId) => $courseId === $currentCourseId || in_array($courseId, $existingCourseIds, true))
+                ->unique()
+                ->values();
+        }
+
+        $availableCourses = collect();
+
+        if ($availableCourseIds->isNotEmpty()) {
+            $availableCourses = Course::with('programme')
+                ->whereIn('id', $availableCourseIds)
+                ->get()
+                ->sortBy(fn ($course) => strtolower(trim((string) $course->programme?->title)))
+                ->values();
+        }
 
         $nextRank = $this->nextRecommendationRank($matches);
 
