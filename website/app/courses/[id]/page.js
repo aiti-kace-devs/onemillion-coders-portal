@@ -536,6 +536,63 @@ export default function CoursesPage({ params }) {
     fetchAllRegions();
   };
 
+  const getPreferredProgrammeMode = () => {
+    const selectedOptionIds = new Set(
+      Object.values(answers)
+        .flat()
+        .map((optionId) => Number(optionId))
+        .filter(Boolean),
+    );
+
+    if (selectedOptionIds.size === 0) {
+      return null;
+    }
+
+    for (const question of questions) {
+      for (const option of question.course_match_options || []) {
+        if (!selectedOptionIds.has(Number(option.id))) {
+          continue;
+        }
+
+        const rawValue = String(option.value || option.answer || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z]/g, "");
+
+        if (rawValue === "online" || rawValue === "onilne") {
+          return "Online";
+        }
+
+        if (rawValue === "inperson") {
+          return "In Person";
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const handleViewAllCourses = () => {
+    const params = new URLSearchParams({
+      user_id: id,
+    });
+
+    if (selectedCentre?.id) {
+      params.set("centre_id", String(selectedCentre.id));
+    }
+
+    const preferredMode = getPreferredProgrammeMode();
+    if (preferredMode) {
+      params.set("mode", preferredMode);
+    }
+
+    if (token) {
+      params.set("token", token);
+    }
+
+    router.push(`/programmes?${params.toString()}`);
+  };
+
   // Click "Enroll Now" → ask support question first
   // Fetch batches from API for a course
   const fetchBatchesForCourse = async (courseId) => {
@@ -558,7 +615,7 @@ export default function CoursesPage({ params }) {
     try {
       const [centresData, coursesData] = await Promise.all([
         getSiblingCentres(courseId, centreId, token).catch(() => ({ alternatives: [] })),
-        getSiblingCourses(id, token).catch(() => ({ matches: [], available_courses: [] })),
+        getSiblingCourses(id, courseId, token).catch(() => ({ matches: [], available_courses: [] })),
       ]);
       setSiblingCentres(centresData?.alternatives || []);
       setSiblingCourses({ matches: coursesData?.matches || [], available_courses: coursesData?.available_courses || [] });
@@ -2715,11 +2772,7 @@ export default function CoursesPage({ params }) {
               {/* Actions */}
               <div className="mt-8 sm:mt-10 flex justify-center">
                 <Button
-                  onClick={() =>
-                    router.push(
-                      `/programmes?user_id=${id}${selectedCentre ? `&centre_id=${selectedCentre.id}` : ""}${token ? `&token=${token}` : ""}`,
-                    )
-                  }
+                  onClick={handleViewAllCourses}
                   className="min-h-[44px]"
                 >
                   View All Courses
