@@ -75,7 +75,7 @@ class BookingService
                 );
 
                 $user->registered_course = $course->id;
-                $user->shortlisted = true;
+                $user->shortlist = true;
                 $user->save();
 
                 $admission = UserAdmission::updateOrCreate(

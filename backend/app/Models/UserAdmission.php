@@ -40,6 +40,15 @@ class UserAdmission extends Model
         'email_sent' => 'datetime',
     ];
 
+    /**
+     * Keep backwards compatibility with old code paths that still assign
+     * "location" after the column was removed from user_admission.
+     */
+    public function setLocationAttribute($value): void
+    {
+        // Intentionally ignored.
+    }
+
     public function course()
     {
         return $this->belongsTo(Course::class, 'course_id');
