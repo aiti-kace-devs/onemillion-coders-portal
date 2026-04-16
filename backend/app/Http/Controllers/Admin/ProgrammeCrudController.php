@@ -14,6 +14,7 @@ use App\Models\CourseModule;
 use App\Models\CourseCertification;
 use App\Helpers\CrudListHelper;
 use App\Models\Programme;
+use App\Events\OnlineProgrammeSaved;
 
 /**
  * Class ProgrammeCrudController
@@ -31,7 +32,9 @@ class ProgrammeCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation {
         update as traitUpdate;
     }
-    use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation {
+        destroy as traitDestroy;
+    }
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
     /**
@@ -172,6 +175,12 @@ class ProgrammeCrudController extends CrudController
         $response = $this->traitStore();
         $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
         $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
+
+        // Check if mode_of_delivery is online
+        if ($this->crud->entry->mode_of_delivery === 'Online') {
+            event(new OnlineProgrammeSaved($this->crud->entry));
+        }
+
         return $response;
     }
 
@@ -192,7 +201,40 @@ class ProgrammeCrudController extends CrudController
         $response = $this->traitUpdate();
         $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
         $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
+
+        // Check if mode_of_delivery is online
+        if ($this->crud->entry->mode_of_delivery === 'Online') {
+            event(new OnlineProgrammeSaved($this->crud->entry));
+        }
+
+        // Check if mode_of_delivery is not online
+        if ($this->crud->entry->mode_of_delivery === 'In Person') {
+            // If there are existing courses, delete them
+            if ($programme->courses()->count() > 0) {
+                $programme->courses()->delete();
+            }
+        }
+
         return $response;
+    }
+
+    public function destroy($id)
+    {
+        $this->crud->hasAccessOrFail('delete');
+
+        $programme = Programme::findOrFail($id);
+
+        // Detach tags
+        $programme->tags()->detach();
+
+        // Delete related course modules and certifications
+        CourseModule::where('programme_id', $programme->id)->delete();
+        CourseCertification::where('programme_id', $programme->id)->delete();
+
+        // Delete related courses
+        $programme->courses()->delete();
+
+        return $this->traitDestroy($id);
     }
 
 
