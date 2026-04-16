@@ -22,7 +22,7 @@ class Attendance extends Model
             ->setDescriptionForEvent(fn(string $event) => "Attendance {$event}");
     }
 
-    protected $fillable = ['user_id', 'course_id', 'location', 'date', 'status'];
+    protected $fillable = ['user_id', 'course_id', 'date', 'status'];
 
 
     public function userAdmission()

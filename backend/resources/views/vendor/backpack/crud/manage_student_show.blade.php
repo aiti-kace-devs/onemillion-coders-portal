@@ -269,7 +269,7 @@
                             </tr>
                             <tr>
                                 <td class="text-muted">Location</td>
-                                <td>{{ $currentAdmission->location ?? 'N/A' }}</td>
+                                <td>{{ $currentAdmission?->course?->centre?->title ?? 'N/A' }}</td>
                             </tr>
                             <tr>
                                 <td class="text-muted">Batch</td>

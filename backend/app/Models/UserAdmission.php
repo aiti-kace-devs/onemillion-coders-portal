@@ -32,7 +32,6 @@ class UserAdmission extends Model
         'course_id',
         'email_sent',
         'session',
-        'location',
         'confirmed'
     ];
 

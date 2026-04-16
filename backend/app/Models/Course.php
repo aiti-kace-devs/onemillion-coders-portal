@@ -38,6 +38,13 @@ class Course extends Model
         'status' => 'boolean',
     ];
 
+    protected $with = ['centre.branch', 'programme'];
+
+    public function getLocationAttribute()
+    {
+        return $this->centre?->branch?->title ?? 'N/A';
+    }
+
     public function centre()
     {
         return $this->belongsTo(Centre::class);
