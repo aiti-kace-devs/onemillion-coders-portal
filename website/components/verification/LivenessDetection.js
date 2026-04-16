@@ -28,6 +28,30 @@ const LANDMARK_FOREHEAD = 10;
 const LEFT_EYE_EAR = [33, 160, 158, 133, 153, 144];
 const RIGHT_EYE_EAR = [362, 385, 387, 263, 373, 380];
 
+function estimateFaceSize(landmarks) {
+  const chin = landmarks[152];
+  const forehead = landmarks[10];
+  const leftCheek = landmarks[234];
+  const rightCheek = landmarks[454];
+  const height = Math.abs(chin.y - forehead.y);
+  const width = Math.abs(rightCheek.x - leftCheek.x);
+  return { width, height };
+}
+
+function sampleBrightness(video) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 80;
+  canvas.height = 60;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, 80, 60);
+  const { data } = ctx.getImageData(0, 0, 80, 60);
+  let sum = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+  }
+  return sum / (data.length / 4);
+}
+
 function computeEAR(landmarks, indices) {
   const p1 = landmarks[indices[0]];
   const p2 = landmarks[indices[1]];
@@ -64,6 +88,8 @@ export default function LivenessDetection({ onComplete, onCancel }) {
   const baselineEARRef = useRef(null);
   const challengeStartRef = useRef(0);
   const captureStartRef = useRef(null);
+  const brightnessFilterRef = useRef("brightness(1)");
+  const [videoFilter, setVideoFilter] = useState("brightness(1)");
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -94,6 +120,7 @@ export default function LivenessDetection({ onComplete, onCancel }) {
     const captureCanvas = document.createElement("canvas");
     captureCanvas.width = video.videoWidth;
     captureCanvas.height = video.videoHeight;
+
     const ctx = captureCanvas.getContext("2d");
     if (!ctx) return;
 
@@ -258,9 +285,14 @@ export default function LivenessDetection({ onComplete, onCancel }) {
           const straight = Math.abs(yaw) < CAPTURE_YAW_TOLERANCE;
           const fullFaceVisible = eyesVisible && noseVisible && mouthVisible && isInFrame(chin) && isInFrame(forehead);
 
-          setLandmarkQuality({ eyesVisible, noseVisible, mouthVisible, centered, straight });
+          const { width: faceWidth, height: faceHeight } = estimateFaceSize(landmarks);
+          const isFaceLargeEnough = faceWidth > 0.30 && faceHeight > 0.35;
 
-          const allGood = fullFaceVisible && centered && straight;
+          setLandmarkQuality({ eyesVisible, noseVisible, mouthVisible, centered, straight, isFaceLargeEnough });
+
+          const allGood = fullFaceVisible && centered && straight && isFaceLargeEnough;
+
+          // const allGood = fullFaceVisible && centered && straight;
 
           if (allGood) {
             if (!captureStartRef.current) captureStartRef.current = Date.now();
@@ -307,6 +339,19 @@ export default function LivenessDetection({ onComplete, onCancel }) {
 
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+
+      if (Math.round(now / 100) % 6 === 0) {
+        const brightness = sampleBrightness(video);
+        const boost = brightness < 110
+          ? Math.min(2.2, 110 / Math.max(brightness, 20))
+          : 1;
+        const newFilter = `brightness(${boost.toFixed(2)})`;
+        if (newFilter !== brightnessFilterRef.current) {
+          brightnessFilterRef.current = newFilter;
+          setVideoFilter(newFilter);
+        }
+      }
+
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         animationFrameRef.current = requestAnimationFrame(detect);
@@ -508,8 +553,8 @@ export default function LivenessDetection({ onComplete, onCancel }) {
               <span className={landmarkQuality.centered ? "text-green-600" : "text-red-500"}>
                 {landmarkQuality.centered ? "\u2713" : "\u2717"} Centered
               </span>
-              <span className={landmarkQuality.straight ? "text-green-600" : "text-red-500"}>
-                {landmarkQuality.straight ? "\u2713" : "\u2717"} Facing forward
+              <span className={landmarkQuality.isFaceLargeEnough ? "text-green-600" : "text-red-500"}>
+                {landmarkQuality.isFaceLargeEnough ? "✓" : "✗"} Move closer
               </span>
             </div>
             {captureCountdown !== null && captureCountdown > 0 && (
@@ -534,7 +579,7 @@ export default function LivenessDetection({ onComplete, onCancel }) {
           </div>
         )}
 
-        <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted style={{ transform: "scaleX(-1)" }} />
+        <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted style={{ transform: "scaleX(-1)", filter: videoFilter }} />
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover" />
 
         {/* Oval guide */}
@@ -543,11 +588,11 @@ export default function LivenessDetection({ onComplete, onCancel }) {
             <defs>
               <mask id="oval-mask">
                 <rect width="640" height="480" fill="white" />
-                <ellipse cx="320" cy="230" rx="140" ry="180" fill="black" />
+                <ellipse cx="320" cy="220" rx="175" ry="180" fill="black" />
               </mask>
             </defs>
             <rect width="640" height="480" fill="rgba(0,0,0,0.5)" mask="url(#oval-mask)" />
-            <ellipse cx="320" cy="230" rx="140" ry="180" fill="none" stroke={faceDetected ? "#F9A825" : "rgba(255,255,255,0.5)"} strokeWidth="3" strokeDasharray={faceDetected ? "none" : "8 4"} />
+            <ellipse cx="320" cy="220" rx="175" ry="180" fill="none" stroke={faceDetected ? "#F9A825" : "rgba(255,255,255,0.5)"} strokeWidth="3" strokeDasharray={faceDetected ? "none" : "8 4"} />
           </svg>
         </div>
 

@@ -1,15 +1,11 @@
 <?php
 
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\StudentOperation;
-use App\Http\Controllers\FormResponseController;
 use App\Http\Controllers\StatamicEntryApiController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
 use App\Http\Controllers\Admin\BatchCrudController;
-use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
-use App\Http\Controllers\Api\V1\Student\StudentSessionController;
+use App\Http\Controllers\Api\Student\StudentSessionController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -74,7 +70,7 @@ Route::prefix('ghana-card')->middleware('user.token')->group(function () {
     Route::get('/status', [\App\Http\Controllers\Api\GhanaCardController::class, 'status']);
 });
 
-Route::prefix('v1/student')->middleware(['auth:sanctum', 'throttle:api', 'student.verification.flow'])->group(function () {
+Route::prefix('student')->middleware(['auth:sanctum', 'throttle:api', 'student.verification.flow'])->group(function () {
     Route::get('session-options', [StudentSessionController::class, 'sessionOptions']);
     Route::post('session-confirm', [StudentSessionController::class, 'sessionConfirm']);
 });

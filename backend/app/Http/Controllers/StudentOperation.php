@@ -119,13 +119,14 @@ class StudentOperation extends Controller
         $verifyBaseUrl = rtrim((string) config('app.quiz_frontend_url', ''), '/');
         $parentOrigin = rtrim((string) config('app.url', ''), '/');
         $embedUrl = $verifyBaseUrl !== ''
-            ? $verifyBaseUrl . '/verify-user?token=' . urlencode($token) . '&embed=1&parent_origin=' . urlencode($parentOrigin)
+            ? "$verifyBaseUrl/verify-user?ghcard_number=" . urlencode($user->ghcard) . "&token=" . urlencode($token) . "&embed=1&parent_origin=" . urlencode($parentOrigin)
             : null;
+
 
         return Inertia::render('Student/Verification', [
             'verification_status' => $verificationStatus,
             'verification_embed_url' => $embedUrl,
-            'verification_embed_available' => ! empty($embedUrl),
+            'verification_embed_available' => !empty($embedUrl),
         ]);
     }
 
@@ -839,7 +840,7 @@ class StudentOperation extends Controller
 
         if ($cardType === 'ghcard') {
             $rules['ghcard'] = ['sometimes', 'string', 'regex:/^GHA-[0-9]{9}-[0-9]{1}$/', 'max:16', Rule::unique('users', 'ghcard')->ignore($user->id)];
-            
+
             // Only prepend 'GHA-' if it's missing to avoid 'GHA-GHA-...'
             $ghValue = $request->input('ghcard');
             if (!empty($ghValue) && !str_starts_with($ghValue, 'GHA-')) {
@@ -1237,11 +1238,16 @@ class StudentOperation extends Controller
             ->inRandomOrder()
             ->first();
 
+
+
         if (!$question) {
+            //complete assessment 
+            $this->completeAssessment($user, $assessment, false);
             return response()->json([
-                'status' => 'error',
-                'message' => "No more $level questions available."
-            ], 404);
+                'status' => 'completed',
+                'message' => 'Assessment already completed.',
+                'user_level' => $user->student_level
+            ]);
         }
         return response()->json([
             'status' => 'success',

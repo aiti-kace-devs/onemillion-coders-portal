@@ -19,6 +19,7 @@ const props = defineProps({
 });
 
 const status = ref(props.verification_status);
+console.log(status.value.image?.url);
 const iframeUnavailable = ref(!props.verification_embed_available);
 const refreshCount = ref(0);
 const isRefreshing = ref(false);
@@ -103,43 +104,6 @@ async function refreshStatus() {
     } finally {
         isRefreshing.value = false;
     }
-}
-
-function drawVerifiedImageOnCanvas() {
-    const imageUrl = imageInfo.value?.url;
-    const canvas = canvasRef.value;
-    if (!imageUrl || !canvas) return;
-
-    const context = canvas.getContext("2d");
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => {
-        const width = canvas.width;
-        const height = canvas.height;
-        context.clearRect(0, 0, width, height);
-        context.fillStyle = "#f8fafc";
-        context.fillRect(0, 0, width, height);
-
-        const imageRatio = image.width / image.height;
-        const canvasRatio = width / height;
-        let drawWidth = width;
-        let drawHeight = height;
-        let offsetX = 0;
-        let offsetY = 0;
-
-        if (imageRatio > canvasRatio) {
-            drawHeight = height;
-            drawWidth = image.width * (height / image.height);
-            offsetX = (width - drawWidth) / 2;
-        } else {
-            drawWidth = width;
-            drawHeight = image.height * (width / image.width);
-            offsetY = (height - drawHeight) / 2;
-        }
-
-        context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
-    };
-    image.src = imageUrl;
 }
 
 function handleIframeLoad() {
@@ -240,6 +204,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+
     <Head title="Verification" />
     <AuthenticatedLayout>
         <template #header>
@@ -257,11 +222,9 @@ onUnmounted(() => {
                             <span class="ml-2 text-gray-500">(remaining: {{ attempts.remaining }})</span>
                         </p>
                     </div>
-                    <button
+                    <button v-if="!isVerified"
                         class="inline-flex items-center justify-center px-4 py-2 rounded-md bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 disabled:opacity-60"
-                        :disabled="isRefreshing"
-                        @click="refreshStatus"
-                    >
+                        :disabled="isRefreshing" @click="refreshStatus">
                         {{ isRefreshing ? "Refreshing..." : "Refresh Status" }}
                     </button>
                 </div>
@@ -294,8 +257,10 @@ onUnmounted(() => {
                         <div class="mt-3 space-y-2 text-sm text-gray-700">
                             <p><span class="font-semibold">Blocked:</span> {{ isBlocked ? "Yes" : "No" }}</p>
                             <p><span class="font-semibold">Name:</span> {{ profile.name || "N/A" }}</p>
-                            <p><span class="font-semibold">Previous Name:</span> {{ profile.previous_name || "N/A" }}</p>
-                            <p><span class="font-semibold">Date of Birth:</span> {{ profile.date_of_birth || "N/A" }}</p>
+                            <p><span class="font-semibold">Previous Name:</span> {{ profile.previous_name || "N/A" }}
+                            </p>
+                            <p><span class="font-semibold">Date of Birth:</span> {{ profile.date_of_birth || "N/A" }}
+                            </p>
                         </div>
                     </details>
                 </div>
@@ -308,13 +273,9 @@ onUnmounted(() => {
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
-                        <canvas
-                            ref="canvasRef"
-                            width="480"
-                            height="320"
-                            class="w-full rounded-lg border border-gray-200 bg-gray-50"
-                        />
+                    <div class="w-full h-30">
+                        <img :src="status.image.url" alt="verified_image" style="height:320px;"
+                            class="h-full rounded-lg border border-gray-200 bg-gray-50" />
                     </div>
                     <div class="space-y-3">
                         <p class="text-sm text-gray-700">
@@ -337,10 +298,7 @@ onUnmounted(() => {
             </div>
 
             <div v-else class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-                <div
-                    v-if="isBlocked"
-                    class="rounded-md border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm"
-                >
+                <div v-if="isBlocked" class="rounded-md border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
                     <div class="font-semibold">Blocked: Yes</div>
                     <div class="mt-1">Reason: {{ blockReasonLabel }}</div>
                     <div class="mt-1">{{ blockMessage }}</div>
@@ -349,10 +307,8 @@ onUnmounted(() => {
                     </div>
                 </div>
 
-                <div
-                    v-if="fallbackMessage"
-                    class="rounded-md border border-gray-200 bg-gray-50 text-gray-700 px-4 py-3 text-sm"
-                >
+                <div v-if="fallbackMessage"
+                    class="rounded-md border border-gray-200 bg-gray-50 text-gray-700 px-4 py-3 text-sm">
                     {{ fallbackMessage }}
                 </div>
 
@@ -360,17 +316,10 @@ onUnmounted(() => {
                     <p class="text-sm text-gray-600">
                         Use the verification interface below. On success, this page will auto-refresh.
                     </p>
-                    <iframe
-                        ref="verificationIframeRef"
-                        :src="verification_embed_url"
-                        class="w-full rounded-lg border border-gray-200"
-                        :style="{ height: `${iframeHeight}px` }"
-                        loading="lazy"
-                        allow="camera; microphone"
-                        referrerpolicy="strict-origin-when-cross-origin"
-                        @load="handleIframeLoad"
-                        @error="handleIframeError"
-                    />
+                    <iframe ref="verificationIframeRef" :src="verification_embed_url"
+                        class="w-full rounded-lg border border-gray-200" :style="{ height: `${iframeHeight}px` }"
+                        loading="lazy" allow="camera; microphone" referrerpolicy="strict-origin-when-cross-origin"
+                        @load="handleIframeLoad" @error="handleIframeError" />
                 </div>
 
                 <div v-else-if="!isBlocked" class="space-y-2">
@@ -379,8 +328,7 @@ onUnmounted(() => {
                     </p>
                     <button
                         class="inline-flex items-center justify-center px-4 py-2 rounded-md bg-gray-800 text-white text-sm font-semibold hover:bg-black"
-                        @click="refreshStatus"
-                    >
+                        @click="refreshStatus">
                         Try Again Later
                     </button>
                 </div>
