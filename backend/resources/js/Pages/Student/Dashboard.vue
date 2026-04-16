@@ -8,12 +8,81 @@ const props = defineProps({
     exams: Object,
     questionnaires: Object,
     registeredCourse: Object,
+    cohort: Object,
+    centre: Object,
 });
 
 const { config } = usePage().props;
 const user = computed(() => usePage().props.auth?.user || {});
 
 const hasRegisteredCourse = computed(() => !!props.registeredCourse);
+
+const cohortLabel = computed(() => {
+    if (!props.cohort) return "";
+    if (props.cohort.title) return props.cohort.title;
+    if (props.cohort.batch_number)
+        return `Cohort ${props.cohort.batch_number}${props.cohort.year ? " - " + props.cohort.year : ""}`;
+    return "Cohort";
+});
+
+const cohortDetailRow = computed(() => {
+    if (!props.cohort) return [];
+    const items = [];
+    if (props.cohort.batch_number && props.cohort.title) {
+        items.push(`Cohort ${props.cohort.batch_number}`);
+    }
+    if (props.cohort.year) items.push(String(props.cohort.year));
+    if (props.cohort.start_date || props.cohort.end_date) {
+        const start = formatDate(props.cohort.start_date);
+        const end = formatDate(props.cohort.end_date);
+        if (start && end) items.push(`${start} — ${end}`);
+        else if (start) items.push(start);
+        else if (end) items.push(end);
+    }
+    return items;
+});
+
+const centreLocation = computed(() => {
+    if (!props.centre) return "";
+    const district = props.centre.gps_location?.[0]?.District;
+    const region = props.centre.region;
+    return [district, region].filter(Boolean).join(", ");
+});
+
+const centreDetailRow = computed(() => {
+    if (!props.centre) return [];
+    const items = [];
+    if (centreLocation.value) items.push(centreLocation.value);
+    if (props.centre.gps_address) items.push(props.centre.gps_address);
+    return items;
+});
+
+const directionsUrl = computed(() => {
+    if (!props.centre) return null;
+    const gps = props.centre.gps_location?.[0];
+    if (gps?.Latitude && gps?.Longitude) {
+        return `https://www.google.com/maps/search/?api=1&query=${gps.Latitude},${gps.Longitude}`;
+    }
+    const district = gps?.District ?? "";
+    const region = props.centre.region ?? "";
+    const query = [props.centre.title, district, region, "Ghana"]
+        .filter(Boolean)
+        .join(", ");
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+});
+
+const formatDate = (date) => {
+    if (!date) return "";
+    try {
+        return new Date(date).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
+    } catch {
+        return date;
+    }
+};
 
 const examList = computed(() => props.exams || []);
 const totalExams = computed(() => examList.value.length);
@@ -86,6 +155,109 @@ const tieredTestTaken = computed(() => {
                     </div>
                 </div>
 
+                <!-- Placement Section: Cohort + Centre -->
+                <div
+                    v-if="cohort || centre"
+                    class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6"
+                >
+                    <!-- Cohort Details -->
+                    <div
+                        v-if="cohort"
+                        class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                    >
+                        <!-- Hover Accent Line -->
+                        <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                        <!-- Icon and Title -->
+                        <div class="flex items-center gap-3 mb-2">
+                            <span
+                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                            >
+                                <span class="material-symbols-outlined"
+                                    >groups</span
+                                >
+                            </span>
+                            <div class="flex-1 text-left">
+                                <p
+                                    class="text-gray-500 text-xs font-medium uppercase tracking-wider"
+                                >
+                                    Cohort Details
+                                </p>
+                                <h3
+                                    class="text-lg font-bold text-gray-800"
+                                >
+                                    {{ cohortLabel }}
+                                </h3>
+                            </div>
+                        </div>
+                        <div
+                            v-if="cohortDetailRow.length"
+                            class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left"
+                        >
+                            <template
+                                v-for="(item, idx) in cohortDetailRow"
+                                :key="idx"
+                            >
+                                <span
+                                    v-if="idx > 0"
+                                    class="w-1 h-1 rounded-full bg-gray-300"
+                                ></span>
+                                <span>{{ item }}</span>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Centre Details -->
+                    <div
+                        v-if="centre"
+                        class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                    >
+                        <!-- Hover Accent Line -->
+                        <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                        <span
+                            v-if="centre.is_pwd_friendly"
+                            class="absolute top-4 right-4 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700"
+                            >PWD Friendly</span
+                        >
+                        <!-- Icon and Title -->
+                        <div class="flex items-center gap-3 mb-2">
+                            <span
+                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                            >
+                                <span class="material-symbols-outlined"
+                                    >location_on</span
+                                >
+                            </span>
+                            <div class="flex-1 text-left">
+                                <p
+                                    class="text-gray-500 text-xs font-medium uppercase tracking-wider"
+                                >
+                                    Centre Details
+                                </p>
+                                <h3
+                                    class="text-lg font-bold text-gray-800"
+                                >
+                                    {{ centre.title }}
+                                </h3>
+                            </div>
+                        </div>
+                        <div
+                            v-if="centreDetailRow.length"
+                            class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left"
+                        >
+                            <template
+                                v-for="(item, idx) in centreDetailRow"
+                                :key="idx"
+                            >
+                                <span
+                                    v-if="idx > 0"
+                                    class="w-1 h-1 rounded-full bg-gray-300"
+                                ></span>
+                                <span>{{ item }}</span>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mt-6 space-y-10">
                     <div>
                         <p
@@ -94,7 +266,7 @@ const tieredTestTaken = computed(() => {
                             Quick Access
                         </p>
                         <div
-                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                         >
                             <Link
                                 :href="route('student.application-status')"
@@ -298,6 +470,45 @@ const tieredTestTaken = computed(() => {
                                     </div>
                                 </div>
                             </Link>
+
+                            <a
+                                v-if="directionsUrl"
+                                :href="directionsUrl"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="block h-full"
+                            >
+                                <div
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                                >
+                                    <!-- Hover Accent Line -->
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <!-- Icon and Title -->
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                        >
+                                            <span
+                                                class="material-symbols-outlined"
+                                                >near_me</span
+                                            >
+                                        </span>
+                                        <div class="flex-1 text-left">
+                                            <h3
+                                                class="text-lg font-bold text-gray-800"
+                                            >
+                                                Get directions
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <!-- Exam Details -->
+                                    <div class="mt-2 space-y-1 text-left">
+                                        <p class="text-sm">
+                                            Open location in maps
+                                        </p>
+                                    </div>
+                                </div>
+                            </a>
                         </div>
                     </div>
                     <div v-if="!tieredTestTaken">

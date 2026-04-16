@@ -57,14 +57,48 @@ class StudentOperation extends Controller
             });
 
         $registeredCourse = null;
+        $cohort = null;
+        $centre = null;
+
         if ($user->registered_course) {
-            $registeredCourse = Course::where('id', $user->registered_course)
-                ->first(['id', 'course_name']);
+            $fullCourse = Course::with(['centre.branch', 'batch'])
+                ->find($user->registered_course);
+
+            if ($fullCourse) {
+                $registeredCourse = [
+                    'id' => $fullCourse->id,
+                    'course_name' => $fullCourse->course_name,
+                ];
+
+                if ($fullCourse->batch) {
+                    $cohort = [
+                        'id' => $fullCourse->batch->id,
+                        'title' => $fullCourse->batch->title,
+                        'batch_number' => $fullCourse->batch->batch_number,
+                        'year' => $fullCourse->batch->year,
+                        'start_date' => $fullCourse->batch->start_date,
+                        'end_date' => $fullCourse->batch->end_date,
+                    ];
+                }
+
+                if ($fullCourse->centre) {
+                    $centre = [
+                        'id' => $fullCourse->centre->id,
+                        'title' => $fullCourse->centre->title,
+                        'gps_address' => $fullCourse->centre->gps_address,
+                        'gps_location' => $fullCourse->centre->gps_location,
+                        'is_pwd_friendly' => $fullCourse->centre->is_pwd_friendly,
+                        'region' => $fullCourse->centre->branch?->title,
+                    ];
+                }
+            }
         }
 
         return Inertia::render('Student/Dashboard', [
             'questionnaires' => $questionnaires,
-            'registeredCourse' => $registeredCourse
+            'registeredCourse' => $registeredCourse,
+            'cohort' => $cohort,
+            'centre' => $centre,
         ]);
     }
 
