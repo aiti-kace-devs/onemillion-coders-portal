@@ -171,11 +171,6 @@ class Admin extends Authenticatable
         return $this->assignedCourses();
     }
 
-    public function centres()
-    {
-        return $this->assignedCentres();
-    }
-
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new ResetPasswordNotification($token));
