@@ -28,15 +28,55 @@ const fallbackMessage = ref(
         : "Verification UI is currently unavailable. Please try again later.",
 );
 const canvasRef = ref(null);
+const iframeHeight = ref(760);
 const autoRefreshTimer = ref(null);
+const submitSyncTimer = ref(null);
 const MAX_AUTO_REFRESH = 3;
+const IFRAME_HEIGHT_DESKTOP = 760;
+const IFRAME_HEIGHT_MOBILE = 680;
 
 const attempts = computed(() => status.value?.attempts ?? { used: 0, max: 5, remaining: 5 });
 const profile = computed(() => status.value?.profile ?? {});
 const imageInfo = computed(() => status.value?.image ?? { available: false, url: "" });
 const latestAttempt = computed(() => status.value?.latest_attempt ?? null);
+const latestAttemptMessage = computed(() => {
+    if (!latestAttempt.value) return "";
+    if (latestAttempt.value.user_message) return latestAttempt.value.user_message;
+    return "Verification could not be completed right now. Please try again shortly.";
+});
+const latestAttemptStatusLabel = computed(() => {
+    if (!latestAttempt.value) return "No attempt yet";
+    if (latestAttempt.value.verified) return "Verified";
+    if (latestAttempt.value.success) return "Processed";
+    return "Failed";
+});
+const formattedLatestAttemptTime = computed(() => {
+    const ts = latestAttempt.value?.response_timestamp;
+    if (!ts) return "Not available";
+    const parsed = new Date(ts);
+    if (Number.isNaN(parsed.getTime())) return "Not available";
+    return parsed.toLocaleString();
+});
 const isVerified = computed(() => !!status.value?.verified);
 const isBlocked = computed(() => !!status.value?.blocked);
+const blockMessage = computed(
+    () =>
+        status.value?.block?.message ||
+        "Your verification is blocked. Please contact support or an administrator.",
+);
+const embedOrigin = computed(() => {
+    if (!props.verification_embed_url) return null;
+    try {
+        return new URL(props.verification_embed_url).origin;
+    } catch (error) {
+        return null;
+    }
+});
+
+function updateUniformIframeHeight() {
+    if (typeof window === "undefined") return;
+    iframeHeight.value = window.innerWidth < 768 ? IFRAME_HEIGHT_MOBILE : IFRAME_HEIGHT_DESKTOP;
+}
 
 async function refreshStatus() {
     isRefreshing.value = true;
@@ -108,6 +148,47 @@ function handleIframeError() {
     fallbackMessage.value = "Verification UI is currently unavailable. Please try again later.";
 }
 
+async function handleIframePostMessage(event) {
+    if (embedOrigin.value && event.origin !== embedOrigin.value) {
+        return;
+    }
+
+    const payload = event.data;
+    if (!payload || payload.source !== "omcp-verification") {
+        return;
+    }
+
+    if (payload.type === "verification_submitted") {
+        fallbackMessage.value = "Verification submitted. Refreshing your status...";
+        await refreshStatus();
+        startSubmitSync();
+        return;
+    }
+
+    if (payload.type === "verification_failed") {
+        fallbackMessage.value = "Verification failed. Please correct the issue and try again.";
+        await refreshStatus();
+    }
+}
+
+function startSubmitSync() {
+    if (submitSyncTimer.value) {
+        clearInterval(submitSyncTimer.value);
+    }
+
+    let attempts = 0;
+    const MAX_SYNC_ATTEMPTS = 5;
+    submitSyncTimer.value = setInterval(async () => {
+        attempts += 1;
+        await refreshStatus();
+
+        if (isVerified.value || attempts >= MAX_SYNC_ATTEMPTS) {
+            clearInterval(submitSyncTimer.value);
+            submitSyncTimer.value = null;
+        }
+    }, 3000);
+}
+
 function startAutoRefresh() {
     if (autoRefreshTimer.value) {
         clearInterval(autoRefreshTimer.value);
@@ -125,7 +206,11 @@ function startAutoRefresh() {
 }
 
 onMounted(() => {
+    updateUniformIframeHeight();
+    window.addEventListener("resize", updateUniformIframeHeight);
     drawVerifiedImageOnCanvas();
+    window.addEventListener("message", handleIframePostMessage);
+    refreshStatus();
     if (!isVerified.value) {
         startAutoRefresh();
     }
@@ -140,8 +225,13 @@ watch(
 );
 
 onUnmounted(() => {
+    window.removeEventListener("resize", updateUniformIframeHeight);
+    window.removeEventListener("message", handleIframePostMessage);
     if (autoRefreshTimer.value) {
         clearInterval(autoRefreshTimer.value);
+    }
+    if (submitSyncTimer.value) {
+        clearInterval(submitSyncTimer.value);
     }
 });
 </script>
@@ -171,6 +261,40 @@ onUnmounted(() => {
                     >
                         {{ isRefreshing ? "Refreshing..." : "Refresh Status" }}
                     </button>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <details class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                        <summary class="cursor-pointer font-semibold text-gray-800">
+                            Last Attempt Details
+                        </summary>
+                        <div class="mt-3 space-y-2 text-sm text-gray-700">
+                            <p>
+                                <span class="font-semibold">Status:</span>
+                                {{ latestAttemptStatusLabel }}
+                            </p>
+                            <p>
+                                <span class="font-semibold">When:</span>
+                                {{ formattedLatestAttemptTime }}
+                            </p>
+                            <p>
+                                <span class="font-semibold">Message:</span>
+                                {{ latestAttemptMessage || "No attempt yet." }}
+                            </p>
+                        </div>
+                    </details>
+
+                    <details class="rounded-lg border border-gray-200 bg-gray-50 p-4" open>
+                        <summary class="cursor-pointer font-semibold text-gray-800">
+                            Basic Info
+                        </summary>
+                        <div class="mt-3 space-y-2 text-sm text-gray-700">
+                            <p><span class="font-semibold">Blocked:</span> {{ isBlocked ? "Yes" : "No" }}</p>
+                            <p><span class="font-semibold">Name:</span> {{ profile.name || "N/A" }}</p>
+                            <p><span class="font-semibold">Previous Name:</span> {{ profile.previous_name || "N/A" }}</p>
+                            <p><span class="font-semibold">Date of Birth:</span> {{ profile.date_of_birth || "N/A" }}</p>
+                        </div>
+                    </details>
                 </div>
             </div>
 
@@ -214,14 +338,7 @@ onUnmounted(() => {
                     v-if="isBlocked"
                     class="rounded-md border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm"
                 >
-                    Your verification is blocked. Please contact support or an administrator.
-                </div>
-
-                <div
-                    v-if="latestAttempt?.status_message"
-                    class="rounded-md border border-amber-200 bg-amber-50 text-amber-700 px-4 py-3 text-sm"
-                >
-                    Latest update: {{ latestAttempt.status_message }}
+                    {{ blockMessage }}
                 </div>
 
                 <div
@@ -231,20 +348,24 @@ onUnmounted(() => {
                     {{ fallbackMessage }}
                 </div>
 
-                <div v-if="!iframeUnavailable && verification_embed_url" class="space-y-2">
+                <div v-if="!isBlocked && !iframeUnavailable && verification_embed_url" class="space-y-2">
                     <p class="text-sm text-gray-600">
                         Use the verification interface below. On success, this page will auto-refresh.
                     </p>
                     <iframe
+                        ref="verificationIframeRef"
                         :src="verification_embed_url"
-                        class="w-full min-h-[480px] rounded-lg border border-gray-200"
+                        class="w-full rounded-lg border border-gray-200"
+                        :style="{ height: `${iframeHeight}px` }"
                         loading="lazy"
+                        allow="camera; microphone"
+                        referrerpolicy="strict-origin-when-cross-origin"
                         @load="handleIframeLoad"
                         @error="handleIframeError"
                     />
                 </div>
 
-                <div v-else class="space-y-2">
+                <div v-else-if="!isBlocked" class="space-y-2">
                     <p class="text-sm text-gray-600">
                         Verification UI is not available yet on this branch. Please retry later.
                     </p>

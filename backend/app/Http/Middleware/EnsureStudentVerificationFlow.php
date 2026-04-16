@@ -28,7 +28,7 @@ class EnsureStudentVerificationFlow
 
         $status = $this->ghanaCardService->buildStatus($user);
         $message = $status['blocked']
-            ? 'Your verification is currently blocked. Please contact support or an administrator.'
+            ? (string) data_get($status, 'block.message', 'Your verification is currently blocked. Please contact support or an administrator.')
             : 'Please complete Ghana Card verification before proceeding to this step.';
 
         if ($request->expectsJson() || $request->is('api/*')) {
@@ -41,6 +41,7 @@ class EnsureStudentVerificationFlow
                 'meta' => [
                     'attempts' => $status['attempts'],
                     'blocked' => $status['blocked'],
+                    'block' => $status['block'] ?? null,
                 ],
             ], 403);
         }
@@ -66,6 +67,9 @@ class EnsureStudentVerificationFlow
 
         $restrictedPatterns = [
             'student.session.*',
+            'student.course.*',
+            'student.change-course',
+            'student.update-course',
             'student.select-session',
             'student.delete-student-admission',
             'api.bookings.*',

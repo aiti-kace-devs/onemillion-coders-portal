@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="apple-touch-icon" sizes="76x76" href="{{ asset('assets') }}/images/logo-short.png">
     <link rel="icon" type="image/png" href="{{ asset('assets') }}/images/logo-short.png">
-    @cspMetaTag(\App\Helpers\BasePolicy::class)
     <meta property="csp-nonce" content="{{ csp_nonce() }}">
     <script nonce="{{ csp_nonce() }}">
         // Prevent clickjacking and double-sidebars automatically: 

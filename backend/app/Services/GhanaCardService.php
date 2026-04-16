@@ -6,12 +6,23 @@ use App\Models\AppConfig;
 use App\Models\GhanaCardVerification;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
-use Intervention\Image\Facades\Image;
+use Intervention\Image\ImageManager;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class GhanaCardService
 {
+    public const BLOCK_REASON_WATCHLIST = 'watchlist';
+    public const BLOCK_REASON_ATTEMPTS_EXCEEDED = 'attempts_exceeded';
+    public const BLOCK_REASON_NAME_MISMATCH = 'name_mismatch';
+    public const BLOCK_REASON_IDENTITY_MISMATCH = 'identity_mismatch';
+    public const BLOCK_REASON_NON_GHANAIAN = 'non_ghanaian';
+
+    private const CODE_NAME_MISMATCH = '10';
+    private const CODE_IDENTITY_MISMATCH = '11';
+    private const CODE_NON_GHANAIAN = '12';
+
     protected string $baseUrl;
     protected string $merchantKey;
     private const DEFAULT_IMAGE_DISK = 'private_cloud';
@@ -19,8 +30,8 @@ class GhanaCardService
 
     public function __construct()
     {
-        $this->baseUrl = (string) config('services.ghana_card.base_url', '');
-        $this->merchantKey = (string) config('services.ghana_card.merchant_key', '');
+        $this->baseUrl = trim((string) config('services.ghana_card.base_url', ''));
+        $this->merchantKey = trim((string) config('services.ghana_card.merchant_key', ''));
     }
 
     /**
@@ -28,6 +39,18 @@ class GhanaCardService
      */
     public function verify(User $user, $imageFile): GhanaCardVerification
     {
+        if ($this->baseUrl === '') {
+            throw new \RuntimeException('Ghana Card API URL is not configured. Set GHANA_CARD_API_BASE_URL in backend/.env.');
+        }
+
+        if (! filter_var($this->baseUrl, FILTER_VALIDATE_URL)) {
+            throw new \RuntimeException('Ghana Card API URL is invalid. Please check GHANA_CARD_API_BASE_URL in backend/.env.');
+        }
+
+        if ($this->merchantKey === '') {
+            throw new \RuntimeException('Ghana Card merchant key is not configured. Set GHANA_CARD_MERCHANT_KEY in backend/.env.');
+        }
+
         // 1. Process image
         $processedImage = $this->processImage($imageFile);
         $base64Image = base64_encode($processedImage);
@@ -65,7 +88,9 @@ class GhanaCardService
                 'verified' => ($data['data']['verified'] ?? 'FALSE') === 'TRUE',
                 'code' => $data['code'] ?? '99', // Default to 99 if missing
                 'person_data' => $data['data']['person'] ?? null,
-                'status_message' => ($data['success'] ?? false) ? 'Success' : 'API Error: ' . ($data['msg'] ?? 'Unknown Error'),
+                'status_message' => $this->normalizeStatusMessage(
+                    ($data['success'] ?? false) ? 'Success' : 'API Error: ' . ($data['msg'] ?? 'Unknown Error')
+                ),
                 'pin_number' => $data['data']['person']['cardId'] ?? $data['data']['person']['nationalId'] ?? $verification->pin_number,
             ]);
 
@@ -75,12 +100,25 @@ class GhanaCardService
             Log::error('Ghana Card Verification Failed', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
+                'exception' => get_class($e),
             ]);
 
-            $verification->update([
-                'status_message' => 'Exception: ' . $e->getMessage(),
-                'code' => '04', // Map to Internal Error
-            ]);
+            try {
+                $verification->update([
+                    'status_message' => $this->normalizeStatusMessage(
+                        'Exception: ' . get_class($e) . ': ' . $e->getMessage()
+                    ),
+                    'code' => '04', // Map to Internal Error
+                ]);
+            } catch (\Throwable $writeException) {
+                // If persisting error details fails, we still don't want to crash the request/job.
+                Log::error('Failed to persist Ghana Card verification error details', [
+                    'user_id' => $user->id,
+                    'verification_id' => $verification->id,
+                    'error' => $writeException->getMessage(),
+                    'exception' => get_class($writeException),
+                ]);
+            }
         }
 
         return $verification;
@@ -91,8 +129,10 @@ class GhanaCardService
      */
     protected function processImage($imageFile): string
     {
-        // For file uploads, Intervention can take the file object or path
-        $img = Image::make($imageFile);
+        // Use a dedicated manager so we control driver selection per runtime.
+        $driver = extension_loaded('imagick') ? 'imagick' : 'gd';
+        $manager = new ImageManager(['driver' => $driver]);
+        $img = $manager->make($imageFile);
 
         // Crop/Resize to 640x480
         // fit() resizes and crops to reach exactly the desired dimensions
@@ -110,15 +150,30 @@ class GhanaCardService
         $code = $verification->code;
 
         if ($code === '03') {
-            // NIA Watchlist - Block user
-            $user->update(['is_verification_blocked' => true]);
+            $this->blockUser(
+                $user,
+                self::BLOCK_REASON_WATCHLIST,
+                'Your verification is currently blocked. Please contact support or the NIA office for assistance.'
+            );
             return;
         }
 
         if ($code === '00' && $verification->verified) {
-            $person = $verification->person_data;
+            $person = is_array($verification->person_data) ? $verification->person_data : [];
+            $eligibility = $this->evaluateEligibility($user, $person);
 
-            if ($person) {
+            if (! $eligibility['allow']) {
+                $this->blockUser($user, $eligibility['reason'], $eligibility['message']);
+                $verification->update([
+                    'success' => false,
+                    'verified' => false,
+                    'code' => $eligibility['code'],
+                    'status_message' => $eligibility['message'],
+                ]);
+                return;
+            }
+
+            if (! empty($person)) {
                 // 1. Sync Personal Data
                 $this->syncUserData($user, $person);
 
@@ -127,7 +182,25 @@ class GhanaCardService
                     $this->saveNiaFaceImage($user, $person['biometricFeed']['face']['data']);
                 }
             }
+
+            // Successful and eligible verification should clear non-attempt blocks.
+            $this->clearVerificationBlockState($user, false);
         }
+    }
+
+    private function normalizeStatusMessage(?string $message): ?string
+    {
+        if ($message === null) {
+            return null;
+        }
+
+        $message = trim($message);
+        if ($message === '') {
+            return null;
+        }
+
+        // Guardrail: never let an unexpectedly huge upstream string break persistence.
+        return Str::limit($message, 2000, '…');
     }
 
     /**
@@ -201,6 +274,10 @@ class GhanaCardService
 
     public function isVerified(User $user): bool
     {
+        if ($user->is_verification_blocked) {
+            return false;
+        }
+
         return GhanaCardVerification::query()
             ->where('user_id', $user->id)
             ->where('code', '00')
@@ -222,6 +299,10 @@ class GhanaCardService
         return [
             'verified' => $this->isVerified($user),
             'blocked' => (bool) $user->is_verification_blocked,
+            'block' => [
+                'reason' => $user->verification_block_reason,
+                'message' => $this->resolveBlockMessage($user),
+            ],
             'attempts' => [
                 'used' => $usedAttempts,
                 'max' => $maxAttempts,
@@ -232,6 +313,7 @@ class GhanaCardService
                 'success' => (bool) $latest->success,
                 'verified' => (bool) $latest->verified,
                 'status_message' => $latest->status_message,
+                'user_message' => $this->buildUserSafeStatusMessage($latest->code, (string) $latest->status_message),
                 'response_timestamp' => optional($latest->response_timestamp)?->toIso8601String(),
             ] : null,
             'profile' => [
@@ -246,17 +328,276 @@ class GhanaCardService
         ];
     }
 
+    private function buildUserSafeStatusMessage(?string $code, string $rawStatusMessage): string
+    {
+        if ($code === '00') {
+            return 'Verification successful.';
+        }
+
+        if ($code === self::CODE_NAME_MISMATCH) {
+            return 'The name on the submitted Ghana Card does not match your profile details. Please contact support for review.';
+        }
+
+        if ($code === self::CODE_IDENTITY_MISMATCH) {
+            return 'Your verification details do not match your profile identity. Please contact support for redress.';
+        }
+
+        if ($code === self::CODE_NON_GHANAIAN) {
+            return 'This programme is currently available to Ghanaian nationals only.';
+        }
+
+        if ($code === '03') {
+            return 'Your verification is currently blocked. Please contact support or the NIA office for assistance.';
+        }
+
+        if (str_contains(strtolower($rawStatusMessage), 'maximum number of failed verification attempts')) {
+            return 'You have reached the maximum number of verification attempts. Please contact support.';
+        }
+
+        return 'Verification could not be completed right now. Please try again shortly or contact support if this continues.';
+    }
+
     public function failedAttempts(User $user): int
     {
-        return GhanaCardVerification::query()
-            ->where('user_id', $user->id)
-            ->where('code', '!=', '00')
+        return $this->attemptBaseQuery($user)
+            ->where(function ($query) {
+                $query->where('code', '!=', '00')
+                    ->orWhere('verified', false);
+            })
             ->count();
     }
 
     public function maxAttempts(): int
     {
         return (int) AppConfig::getValue(GHANA_CARD_MAX_ATTEMPTS, config('GHANA_CARD_MAX_ATTEMPTS', 5));
+    }
+
+    public function blockUser(User $user, string $reason, string $message): void
+    {
+        $user->update([
+            'is_verification_blocked' => true,
+            'verification_block_reason' => $reason,
+            'verification_block_message' => $message,
+        ]);
+    }
+
+    public function blockForAttemptsExceeded(User $user, int $maxAttempts): void
+    {
+        $this->blockUser(
+            $user,
+            self::BLOCK_REASON_ATTEMPTS_EXCEEDED,
+            "You have reached the maximum number of failed verification attempts ({$maxAttempts}). Please contact support."
+        );
+    }
+
+    public function resetVerificationBlock(User $user, bool $resetAttempts = true): void
+    {
+        $this->clearVerificationBlockState($user, $resetAttempts);
+    }
+
+    private function clearVerificationBlockState(User $user, bool $resetAttempts): void
+    {
+        $attributes = [
+            'is_verification_blocked' => false,
+            'verification_block_reason' => null,
+            'verification_block_message' => null,
+        ];
+
+        if ($resetAttempts) {
+            $attributes['verification_attempts_reset_at'] = now();
+        }
+
+        $user->update($attributes);
+    }
+
+    private function resolveBlockMessage(User $user): ?string
+    {
+        if (! $user->is_verification_blocked) {
+            return null;
+        }
+
+        if (! empty($user->verification_block_message)) {
+            return (string) $user->verification_block_message;
+        }
+
+        return 'Your verification is currently blocked. Please contact support or an administrator.';
+    }
+
+    private function evaluateEligibility(User $user, array $person): array
+    {
+        $nameCheck = $this->isNameMatchAllowed((string) $user->name, $person);
+        $incomingGender = $this->normalizeGender((string) ($person['gender'] ?? ''));
+        $currentGender = $this->normalizeGender((string) ($user->gender ?? ''));
+        $genderMismatch = $incomingGender !== null && $currentGender !== null && $incomingGender !== $currentGender;
+
+        if (! $nameCheck && $genderMismatch) {
+            return [
+                'allow' => false,
+                'reason' => self::BLOCK_REASON_IDENTITY_MISMATCH,
+                'code' => self::CODE_IDENTITY_MISMATCH,
+                'message' => 'Your submitted verification details do not match your profile identity. Please contact support for redress.',
+            ];
+        }
+
+        if (! $nameCheck) {
+            return [
+                'allow' => false,
+                'reason' => self::BLOCK_REASON_NAME_MISMATCH,
+                'code' => self::CODE_NAME_MISMATCH,
+                'message' => 'The name on the submitted Ghana Card does not match your profile details. Please contact support for review.',
+            ];
+        }
+
+        $nationality = $this->extractNationality($person);
+        if ($nationality !== null && $nationality !== 'ghanaian') {
+            return [
+                'allow' => false,
+                'reason' => self::BLOCK_REASON_NON_GHANAIAN,
+                'code' => self::CODE_NON_GHANAIAN,
+                'message' => 'This programme is currently available to Ghanaian nationals only.',
+            ];
+        }
+
+        return [
+            'allow' => true,
+            'reason' => null,
+            'code' => null,
+            'message' => null,
+        ];
+    }
+
+    private function isNameMatchAllowed(string $currentName, array $person): bool
+    {
+        $incomingName = trim((string) ($person['fullName'] ?? ''));
+        if ($incomingName === '') {
+            $incomingName = trim(implode(' ', array_filter([
+                $person['firstName'] ?? null,
+                $person['middleName'] ?? null,
+                $person['surname'] ?? $person['lastName'] ?? null,
+                $person['forenames'] ?? null,
+            ])));
+        }
+
+        $sourceTokens = $this->normalizeNameTokens($currentName);
+        $incomingTokens = $this->normalizeNameTokens($incomingName);
+
+        if ($sourceTokens === [] || $incomingTokens === []) {
+            return false;
+        }
+
+        $sortedSource = $sourceTokens;
+        $sortedIncoming = $incomingTokens;
+        sort($sortedSource);
+        sort($sortedIncoming);
+        if ($sortedSource === $sortedIncoming) {
+            return true;
+        }
+
+        if (abs(count($sourceTokens) - count($incomingTokens)) > 1) {
+            return false;
+        }
+
+        $usedIncoming = [];
+        $unmatchedSource = 0;
+        foreach ($sourceTokens as $sourceToken) {
+            $bestIndex = null;
+            foreach ($incomingTokens as $index => $incomingToken) {
+                if (isset($usedIncoming[$index])) {
+                    continue;
+                }
+                if ($this->isMinorTokenVariation($sourceToken, $incomingToken)) {
+                    $bestIndex = $index;
+                    break;
+                }
+            }
+
+            if ($bestIndex === null) {
+                $unmatchedSource++;
+                continue;
+            }
+
+            $usedIncoming[$bestIndex] = true;
+        }
+
+        $unmatchedIncoming = count($incomingTokens) - count($usedIncoming);
+        return $unmatchedSource <= 1 && $unmatchedIncoming <= 1;
+    }
+
+    private function isMinorTokenVariation(string $a, string $b): bool
+    {
+        if ($a === $b) {
+            return true;
+        }
+
+        $maxLength = max(strlen($a), strlen($b));
+        $threshold = $maxLength <= 5 ? 1 : 2;
+        if (levenshtein($a, $b) <= $threshold) {
+            return true;
+        }
+
+        if ($maxLength >= 4 && metaphone($a) !== '' && metaphone($a) === metaphone($b)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function normalizeNameTokens(string $name): array
+    {
+        $normalized = Str::of($name)
+            ->ascii()
+            ->lower()
+            ->replaceMatches('/[^a-z\s]/', ' ')
+            ->squish()
+            ->value();
+
+        if ($normalized === '') {
+            return [];
+        }
+
+        return array_values(array_filter(explode(' ', $normalized)));
+    }
+
+    private function normalizeGender(string $gender): ?string
+    {
+        $gender = strtolower(trim($gender));
+        if ($gender === '') {
+            return null;
+        }
+
+        if (in_array($gender, ['male', 'm'], true)) {
+            return 'male';
+        }
+
+        if (in_array($gender, ['female', 'f'], true)) {
+            return 'female';
+        }
+
+        return null;
+    }
+
+    private function extractNationality(array $person): ?string
+    {
+        $rawNationality = $person['nationality']
+            ?? $person['citizenship']
+            ?? data_get($person, 'country.nationality')
+            ?? null;
+
+        if (! is_string($rawNationality) || trim($rawNationality) === '') {
+            return null;
+        }
+
+        return strtolower(trim($rawNationality));
+    }
+
+    private function attemptBaseQuery(User $user)
+    {
+        $query = GhanaCardVerification::query()->where('user_id', $user->id);
+        if ($user->verification_attempts_reset_at) {
+            $query->where('created_at', '>=', $user->verification_attempts_reset_at);
+        }
+
+        return $query;
     }
 
     private function extractNameParts(array $person, User $user): array

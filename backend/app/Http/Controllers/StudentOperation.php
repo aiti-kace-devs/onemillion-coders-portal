@@ -117,8 +117,9 @@ class StudentOperation extends Controller
         $token = app(JwtService::class)->generate($user->id);
 
         $verifyBaseUrl = rtrim((string) config('app.quiz_frontend_url', ''), '/');
+        $parentOrigin = rtrim((string) config('app.url', ''), '/');
         $embedUrl = $verifyBaseUrl !== ''
-            ? $verifyBaseUrl . '/verify/user?token=' . urlencode($token)
+            ? $verifyBaseUrl . '/verify-user?token=' . urlencode($token) . '&embed=1&parent_origin=' . urlencode($parentOrigin)
             : null;
 
         return Inertia::render('Student/Verification', [

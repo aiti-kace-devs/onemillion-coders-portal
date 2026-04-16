@@ -65,8 +65,10 @@ export default function LivenessDetection({ onComplete, onCancel }) {
   const challengeStartRef = useRef(0);
   const captureStartRef = useRef(null);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [cameraPermission, setCameraPermission] = useState("prompt");
+  const [hasStartedCamera, setHasStartedCamera] = useState(false);
   const [currentChallenge, setCurrentChallenge] = useState("center_face");
   const [challengeProgress, setChallengeProgress] = useState(0);
   const [completedChallenges, setCompletedChallenges] = useState([]);
@@ -119,60 +121,54 @@ export default function LivenessDetection({ onComplete, onCancel }) {
     }
   }, [currentChallenge, challenges, capturePhoto]);
 
-  // Initialize camera & face landmarker
-  useEffect(() => {
-    let cancelled = false;
+  const startLivenessDetection = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
 
-    async function init() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: 640, height: 480 },
-        });
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: 640, height: 480 },
+      });
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
+      setCameraPermission("granted");
+      setHasStartedCamera(true);
+      streamRef.current = stream;
 
-        const filesetResolver = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-        );
-        if (cancelled) return;
-
-        const faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
-          baseOptions: {
-            modelAssetPath:
-              "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
-            delegate: "GPU",
-          },
-          runningMode: "VIDEO",
-          numFaces: 1,
-          outputFacialTransformationMatrixes: false,
-          outputFaceBlendshapes: false,
-        });
-        if (cancelled) return;
-
-        faceLandmarkerRef.current = faceLandmarker;
-        challengeStartRef.current = Date.now();
-        setIsLoading(false);
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Failed to initialize liveness detection:", err);
-          setError("Could not access camera. Please allow camera access and try again.");
-          setIsLoading(false);
-        }
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
+
+      const filesetResolver = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+      );
+
+      const faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
+          delegate: "GPU",
+        },
+        runningMode: "VIDEO",
+        numFaces: 1,
+        outputFacialTransformationMatrixes: false,
+        outputFaceBlendshapes: false,
+      });
+
+      faceLandmarkerRef.current = faceLandmarker;
+      challengeStartRef.current = Date.now();
+    } catch (err) {
+      console.error("Failed to initialize liveness detection:", err);
+      setCameraPermission("denied");
+      setError("Camera access is required to continue verification. Please allow camera permission and try again.");
+      setHasStartedCamera(false);
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
 
-    init();
-
+  useEffect(() => {
     return () => {
-      cancelled = true;
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
       if (faceLandmarkerRef.current) faceLandmarkerRef.current.close();
@@ -288,7 +284,7 @@ export default function LivenessDetection({ onComplete, onCancel }) {
 
   // Detection loop
   useEffect(() => {
-    if (isLoading || error) return;
+    if (isLoading || error || !hasStartedCamera) return;
 
     let lastTime = -1;
 
@@ -352,7 +348,37 @@ export default function LivenessDetection({ onComplete, onCancel }) {
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [isLoading, error, processChallenge]);
+  }, [isLoading, error, processChallenge, hasStartedCamera]);
+
+  if (!hasStartedCamera && !isLoading) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center space-y-3">
+        <h4 className="text-base font-semibold text-gray-900">Camera Permission Required</h4>
+        <p className="text-sm text-gray-600">
+          Liveness verification requires camera access. Click below to allow camera use.
+        </p>
+        {cameraPermission === "denied" && (
+          <p className="text-sm text-red-600">
+            Camera permission was denied. You cannot proceed without approval.
+          </p>
+        )}
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <button
+            onClick={startLivenessDetection}
+            className="px-4 py-2 rounded-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-sm font-semibold"
+          >
+            Allow Camera and Continue
+          </button>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (

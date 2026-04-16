@@ -53,6 +53,9 @@ class User extends Authenticatable
         'support',
         'student_id',
         'is_verification_blocked',
+        'verification_block_reason',
+        'verification_block_message',
+        'verification_attempts_reset_at',
         'is_nia_syncing',
         'middle_name'
     ];
@@ -81,6 +84,7 @@ class User extends Authenticatable
         'data' => 'array',
         'support' => 'boolean',
         'is_verification_blocked' => 'boolean',
+        'verification_attempts_reset_at' => 'datetime',
     ];
 
 
@@ -390,6 +394,13 @@ class User extends Authenticatable
 
     public function isVerifiedByGhanaCard(): bool
     {
-        return $this->ghanaCardVerifications()->where('code', '00')->exists();
+        if ($this->is_verification_blocked) {
+            return false;
+        }
+
+        return $this->ghanaCardVerifications()
+            ->where('code', '00')
+            ->where('verified', true)
+            ->exists();
     }
 }

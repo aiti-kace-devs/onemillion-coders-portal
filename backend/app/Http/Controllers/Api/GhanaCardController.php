@@ -38,6 +38,7 @@ class GhanaCardController extends Controller
         $failedAttemptsCount = $this->ghanaCardService->failedAttempts($user);
 
         if ($failedAttemptsCount >= $maxAttempts) {
+            $this->ghanaCardService->blockForAttemptsExceeded($user, $maxAttempts);
             return response()->json([
                 'success' => false,
                 'message' => "You have reached the maximum number of failed verification attempts ({$maxAttempts}). Please contact support.",

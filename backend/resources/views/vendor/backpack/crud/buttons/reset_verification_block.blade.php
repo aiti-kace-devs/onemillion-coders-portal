@@ -19,7 +19,7 @@
                             // Show a success notification
                             new Noty({
                                 type: "success",
-                                text: "User has been unblocked."
+                                text: "User has been unblocked and attempts reset (history preserved)."
                             }).show();
                             
                             // Reload the page or the datatable

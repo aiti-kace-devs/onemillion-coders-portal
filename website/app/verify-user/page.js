@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import {
@@ -24,12 +24,43 @@ const STEPS = [
   { key: "review", label: "Review & Submit" },
 ];
 
+const VERIFICATION_MESSAGE_SOURCE = "omcp-verification";
+
+function formatGhanaCardPinInput(rawValue) {
+  const digits = (rawValue || "").replace(/\D/g, "").slice(0, 10);
+  const firstNine = digits.slice(0, 9);
+  const lastDigit = digits.slice(9, 10);
+
+  if (!firstNine) return "GHA-";
+  if (!lastDigit) return `GHA-${firstNine}`;
+  return `GHA-${firstNine}-${lastDigit}`;
+}
+
 function VerifyUserContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const isEmbedMode = searchParams.get("embed") === "1";
+  const parentOrigin = searchParams.get("parent_origin");
 
   // Auth state
   const [authError, setAuthError] = useState(null);
+
+  const sendParentMessage = useCallback((type, message, data = null) => {
+    if (typeof window === "undefined" || window.parent === window) return;
+
+    const targetOrigin =
+      parentOrigin && /^https?:\/\//.test(parentOrigin) ? parentOrigin : "*";
+
+    window.parent.postMessage(
+      {
+        source: VERIFICATION_MESSAGE_SOURCE,
+        type,
+        message,
+        data,
+      },
+      targetOrigin,
+    );
+  }, [parentOrigin]);
 
   // Flow state
   const [step, setStep] = useState("pin");
@@ -43,12 +74,47 @@ function VerifyUserContent() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || window.parent === window) return;
+
+    const emitHeight = () => {
+      const doc = document.documentElement;
+      const body = document.body;
+      const measuredHeight = Math.max(
+        doc?.scrollHeight || 0,
+        doc?.offsetHeight || 0,
+        body?.scrollHeight || 0,
+        body?.offsetHeight || 0,
+      );
+      sendParentMessage("iframe_resize", null, { height: measuredHeight });
+    };
+
+    emitHeight();
+    const timeoutId = window.setTimeout(emitHeight, 250);
+
+    window.addEventListener("resize", emitHeight);
+
+    let resizeObserver;
+    if (typeof ResizeObserver !== "undefined" && document.body) {
+      resizeObserver = new ResizeObserver(() => emitHeight());
+      resizeObserver.observe(document.body);
+    }
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.removeEventListener("resize", emitHeight);
+      if (resizeObserver) resizeObserver.disconnect();
+    };
+  }, [sendParentMessage, step, isSubmitting, isSubmitted, submitError, authError]);
+
   // Validate token on mount
   useEffect(() => {
     if (!token) {
-      setAuthError("No authentication token provided. Please access this page from the student portal.");
+      const message = "No authentication token provided. Please access this page from the student portal.";
+      setAuthError(message);
+      sendParentMessage("verification_failed", message);
     }
-  }, [token]);
+  }, [token, sendParentMessage]);
 
   const currentStepIndex = STEPS.findIndex((s) => s.key === step);
 
@@ -88,12 +154,16 @@ function VerifyUserContent() {
 
       if (response.success) {
         setIsSubmitted(true);
+        sendParentMessage("verification_submitted", response.message, response);
       } else {
-        setSubmitError(response.message || "Verification submission failed. Please try again.");
+        const message = response.message || "Verification submission failed. Please try again.";
+        setSubmitError(message);
+        sendParentMessage("verification_failed", message, response);
       }
     } catch (error) {
       const message = error.response?.data?.message || error.response?.data?.errors?.image?.[0] || "Failed to submit verification. Please try again.";
       setSubmitError(message);
+      sendParentMessage("verification_failed", message, error.response?.data ?? null);
     } finally {
       setIsSubmitting(false);
     }
@@ -112,7 +182,7 @@ function VerifyUserContent() {
   // No token — show error
   if (authError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className={`${isEmbedMode ? "h-full bg-white p-3 sm:p-4" : "min-h-screen bg-gray-50 p-4"} flex items-center justify-center`}>
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FiAlertCircle className="w-8 h-8 text-red-500" />
@@ -127,7 +197,7 @@ function VerifyUserContent() {
   // Success state
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className={`${isEmbedMode ? "h-full bg-white p-3 sm:p-4" : "min-h-screen bg-gray-50 p-4"} flex items-center justify-center`}>
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
           <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
             <FiCheckCircle className="w-10 h-10 text-green-500" />
@@ -142,8 +212,8 @@ function VerifyUserContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-lg w-full max-w-2xl overflow-hidden">
+    <div className={`${isEmbedMode ? "h-full bg-white p-2 sm:p-4" : "min-h-screen bg-gray-50 p-4"} flex items-center justify-center`}>
+      <div className={`bg-white w-full max-w-2xl overflow-hidden ${isEmbedMode ? "rounded-xl border border-gray-200 shadow-sm" : "rounded-2xl shadow-lg"}`}>
         {/* Header */}
         <div className="bg-white border-b border-gray-100 px-6 py-4">
           <div className="flex items-center space-x-3 mb-4">
@@ -213,7 +283,7 @@ function VerifyUserContent() {
                     type="text"
                     value={pin}
                     onChange={(e) => {
-                      setPin(e.target.value.toUpperCase());
+                      setPin(formatGhanaCardPinInput(e.target.value));
                       if (pinError) setPinError(null);
                     }}
                     placeholder="GHA-123456789-0"
@@ -222,6 +292,7 @@ function VerifyUserContent() {
                     }`}
                     maxLength={15}
                     autoComplete="off"
+                    inputMode="numeric"
                   />
                   {pinError && <p className="text-xs text-red-600 mt-2 text-center">{pinError}</p>}
 

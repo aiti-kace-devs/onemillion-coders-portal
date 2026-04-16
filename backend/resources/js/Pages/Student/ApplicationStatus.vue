@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
 import { Head, useForm, Link, usePage } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import RevokeOrDeclineAdmissionModal from "@/Components/RevokeOrDeclineAdmissionModal.vue";
 import LinkButton from "@/Components/LinkButton.vue";
 
@@ -25,20 +25,20 @@ function toggleCollapse(idx) {
 function isStepReached(idx) {
     if (idx === 0) return true; // Step 1: Always reached
     if (idx === 1) return true; // Step 2: Assessment (Follows app submission)
-    if (idx === 2) return props.user_assessment?.completed; // Step 3: Choose Course
-    if (idx === 3) return props.user.registered_course; // Step 4: Shortlist
-    if (idx === 4) return props.user.shortlist; // Step 5: Admission
+    if (idx === 2) return props.user_assessment?.completed; // Step 3: Verification
+    if (idx === 3) return verificationCompleted.value; // Step 4: Choose Course
+    if (idx === 4) return verificationCompleted.value && courseSelectionCompleted.value; // Step 5: Session booking
     return false;
 }
 function closeRevokeModal() {
     showRevokeModal.value = false;
 }
 
-function flowState(completed, partial = false) {
-    if (completed) return "completed";
-    if (partial) return "partial";
-    return "pending";
-}
+const courseSelectionCompleted = computed(() => !!props.user?.registered_course);
+const assessmentCompleted = computed(() => !!props.user_assessment?.completed);
+const verificationCompleted = computed(() => !!props.verification_status?.verified);
+const verificationBlocked = computed(() => !!props.verification_status?.blocked);
+const sessionBookingCompleted = computed(() => !!props.user_admission?.confirmed);
 </script>
 
 <template>
@@ -80,40 +80,41 @@ function flowState(completed, partial = false) {
                         <div
                             class="rounded-lg border p-3"
                             :class="{
-                                'border-green-200 bg-green-50': flowState(!!props.user.registered_course) === 'completed',
-                                'border-amber-200 bg-amber-50': flowState(false, !props.user.registered_course) === 'partial',
-                                'border-gray-200 bg-gray-50': flowState(false) === 'pending'
+                                'border-green-200 bg-green-50': assessmentCompleted,
+                                'border-gray-200 bg-gray-50': !assessmentCompleted
                             }"
                         >
                             <p class="text-xs uppercase text-gray-500">1</p>
-                            <p class="font-semibold text-sm">Course Selection / Change</p>
-                        </div>
-                        <div
-                            class="rounded-lg border p-3"
-                            :class="{
-                                'border-green-200 bg-green-50': flowState(!!props.user_assessment?.completed) === 'completed',
-                                'border-gray-200 bg-gray-50': flowState(!!props.user_assessment?.completed) !== 'completed'
-                            }"
-                        >
-                            <p class="text-xs uppercase text-gray-500">2</p>
                             <p class="font-semibold text-sm">Assessment</p>
                         </div>
                         <div
                             class="rounded-lg border p-3"
                             :class="{
-                                'border-green-200 bg-green-50': flowState(!!props.verification_status?.verified) === 'completed',
-                                'border-red-200 bg-red-50': flowState(false, !!props.verification_status?.blocked) === 'partial',
-                                'border-gray-200 bg-gray-50': !props.verification_status?.verified && !props.verification_status?.blocked
+                                'border-green-200 bg-green-50': verificationCompleted,
+                                'border-red-200 bg-red-50': !verificationCompleted && verificationBlocked,
+                                'border-gray-200 bg-gray-50': !verificationCompleted && !verificationBlocked
                             }"
                         >
-                            <p class="text-xs uppercase text-gray-500">3</p>
+                            <p class="text-xs uppercase text-gray-500">2</p>
                             <p class="font-semibold text-sm">Verification</p>
                         </div>
                         <div
                             class="rounded-lg border p-3"
                             :class="{
-                                'border-green-200 bg-green-50': flowState(!!props.user_admission?.confirmed) === 'completed',
-                                'border-gray-200 bg-gray-50': !props.user_admission?.confirmed
+                                'border-green-200 bg-green-50': courseSelectionCompleted,
+                                'border-amber-200 bg-amber-50': !courseSelectionCompleted && verificationCompleted,
+                                'border-gray-200 bg-gray-50': !courseSelectionCompleted && !verificationCompleted
+                            }"
+                        >
+                            <p class="text-xs uppercase text-gray-500">3</p>
+                            <p class="font-semibold text-sm">Course Selection / Change</p>
+                        </div>
+                        <div
+                            class="rounded-lg border p-3"
+                            :class="{
+                                'border-green-200 bg-green-50': sessionBookingCompleted,
+                                'border-amber-200 bg-amber-50': !sessionBookingCompleted && (!verificationCompleted || !courseSelectionCompleted),
+                                'border-gray-200 bg-gray-50': !sessionBookingCompleted && verificationCompleted && courseSelectionCompleted
                             }"
                         >
                             <p class="text-xs uppercase text-gray-500">4</p>
@@ -263,13 +264,15 @@ function flowState(completed, partial = false) {
                                 </div>
                             </li>
 
-                            <!-- Step 3: Choose Course -->
+                            <!-- Step 3: Verification -->
                             <li class="mb-10 ml-6">
                                 <span
                                     :class="[
                                         'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
-                                        props.user.registered_course
+                                        verificationCompleted
                                             ? 'bg-green-500 text-white'
+                                            : verificationBlocked
+                                              ? 'bg-red-500 text-white'
                                             : 'bg-gray-200 text-gray-400',
                                     ]"
                                     >3</span
@@ -286,14 +289,14 @@ function flowState(completed, partial = false) {
                                     <h3
                                         :class="[
                                             'font-bold text-lg',
-                                            props.user.registered_course
+                                            verificationCompleted
                                                 ? 'text-gray-800'
                                                 : isStepReached(2)
                                                   ? 'text-gray-700'
                                                   : 'text-gray-400',
                                         ]"
                                     >
-                                        Course Selection
+                                        Verification
                                     </h3>
                                     <svg
                                         v-if="isStepReached(2)"
@@ -317,38 +320,33 @@ function flowState(completed, partial = false) {
                                     v-if="collapse[2] && isStepReached(2)"
                                     class="mt-2 text-sm text-gray-700 pl-2"
                                 >
-                                    <template
-                                        v-if="props.user.registered_course"
-                                    >
-                                        You have successfully selected a course.
+                                    <template v-if="verificationCompleted">
+                                        Your Ghana Card verification is complete.
+                                        You can proceed to course selection.
+                                    </template>
+                                    <template v-else-if="verificationBlocked">
+                                        Verification attempts are blocked. Please
+                                        contact support for assistance.
                                     </template>
                                     <template v-else>
-                                        Now that your level is determined,
-                                        please select the course that best
-                                        aligns with your interests and career
-                                        goals.
+                                        Complete your Ghana Card verification
+                                        before selecting a course.
 
                                         <div class="mt-5">
-                                            <LinkButton
-                                                :href="
-                                                    route(
-                                                        'student.change-course',
-                                                    )
-                                                "
-                                            >
-                                                Choose a course
+                                            <LinkButton :href="route('student.verification.index')">
+                                                Verify now
                                             </LinkButton>
                                         </div>
                                     </template>
                                 </div>
                             </li>
 
-                            <!-- Step 4: Shortlisted -->
+                            <!-- Step 4: Course Selection -->
                             <li class="mb-10 ml-6">
                                 <span
                                     :class="[
                                         'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
-                                        props.user.shortlist
+                                        courseSelectionCompleted
                                             ? 'bg-green-500 text-white'
                                             : 'bg-gray-200 text-gray-400',
                                     ]"
@@ -366,14 +364,14 @@ function flowState(completed, partial = false) {
                                     <h3
                                         :class="[
                                             'font-bold text-lg',
-                                            props.user.shortlist
+                                            courseSelectionCompleted
                                                 ? 'text-gray-800'
                                                 : isStepReached(3)
                                                   ? 'text-gray-700'
                                                   : 'text-gray-400',
                                         ]"
                                     >
-                                        Shortlisted
+                                        Course Selection
                                     </h3>
                                     <svg
                                         v-if="isStepReached(3)"
@@ -397,19 +395,23 @@ function flowState(completed, partial = false) {
                                     v-if="collapse[3] && isStepReached(3)"
                                     class="mt-2 text-sm text-gray-700 pl-2"
                                 >
-                                    <template v-if="props.user.shortlist">
-                                        Congratulations! You have been
-                                        shortlisted for the next phase.
+                                    <template v-if="courseSelectionCompleted">
+                                        You have successfully selected a course.
                                     </template>
                                     <template v-else>
-                                        Our admission team is reviewing your
-                                        profile. If shortlisted, you will see it
-                                        here.
+                                        Now that your verification is complete,
+                                        please select the course that best
+                                        aligns with your interests and career goals.
+                                        <div class="mt-5">
+                                            <LinkButton :href="route('student.change-course')">
+                                                Choose a course
+                                            </LinkButton>
+                                        </div>
                                     </template>
                                 </div>
                             </li>
 
-                            <!-- Step 5: Admission Confirmed -->
+                            <!-- Step 5: Session Booking -->
                             <li class="ml-6">
                                 <span
                                     :class="[
@@ -439,7 +441,7 @@ function flowState(completed, partial = false) {
                                                   : 'text-gray-400',
                                         ]"
                                     >
-                                        Admission Confirmed
+                                        Session Booking
                                     </h3>
                                     <svg
                                         v-if="isStepReached(4)"
@@ -470,8 +472,7 @@ function flowState(completed, partial = false) {
                                         "
                                     >
                                         <div>
-                                            You have successfully confirmed your
-                                            admission.
+                                            You have successfully completed session booking.
                                         </div>
 
                                         <div class="mt-5">
@@ -485,11 +486,9 @@ function flowState(completed, partial = false) {
                                             />
                                         </div>
                                     </div>
-                                    <div v-else-if="props.user.shortlist">
+                                    <div v-else-if="verificationCompleted && courseSelectionCompleted">
                                         <p>
-                                            You have been shortlisted! Please
-                                            select a session to officially
-                                            confirm your admission.
+                                            You're verified. Select a session to complete your booking.
                                         </p>
 
                                         <div class="mt-5">
@@ -506,9 +505,7 @@ function flowState(completed, partial = false) {
                                     </div>
                                     <div v-else>
                                         <p>
-                                            Admission will be granted once you
-                                            are shortlisted and have confirmed
-                                            your session.
+                                            Session booking is locked until verification and course selection are complete.
                                         </p>
                                     </div>
                                 </div>
