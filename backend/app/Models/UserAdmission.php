@@ -54,9 +54,12 @@ class UserAdmission extends Model
         return $this->belongsTo(Course::class, 'course_id');
     }
 
-    public function batch()
+    /**
+     * Venue label for admin UI (column `location` was removed from `user_admission`).
+     */
+    public function getLocationAttribute(): ?string
     {
-        return $this->belongsTo(Batch::class, 'batch_id');
+        return $this->course?->centre?->title;
     }
 
     public function courseSession()

@@ -141,6 +141,11 @@ class AppConfigSeeder extends Seeder
 
                 // Ghana Card Verification
                 ['key' => GHANA_CARD_MAX_ATTEMPTS, 'value' => 5, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => VERIFICATION_PROFILE_IMAGE_UPLOAD_URL, 'value' => '', 'type' => 'string', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => VERIFICATION_PROFILE_IMAGE_STORAGE_DISK, 'value' => 'private_cloud', 'type' => 'string', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => VERIFICATION_PROFILE_IMAGE_STORAGE_DIR, 'value' => 'omcp/users-profile', 'type' => 'string', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => VERIFICATION_PROFILE_IMAGE_TIMEOUT_SECONDS, 'value' => 15, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => VERIFICATION_PROFILE_IMAGE_ENABLED, 'value' => 1, 'type' => 'boolean', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
                 // Booking System parameters
                 ['key' => SHORT_SLOTS_PERCENTAGE, 'value' => 60, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
                 ['key' => LONG_SLOTS_PERCENTAGE, 'value' => 40, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],

@@ -52,6 +52,11 @@ class CourseSession extends Model
         return $this->belongsTo(Course::class, 'course_id', 'id');
     }
 
+    public function centre()
+    {
+        return $this->belongsTo(Centre::class, 'centre_id');
+    }
+
     public function masterSession()
     {
         return $this->belongsTo(MasterSession::class, 'master_session_id');

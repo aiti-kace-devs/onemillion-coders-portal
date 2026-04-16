@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Requests\GhanaCardVerificationRequest;
+use App\Services\GhanaCardService;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
@@ -59,6 +60,9 @@ class GhanaCardVerificationCrudController extends CrudController
             '02' => '02 - Invalid Data',
             '03' => '03 - NIA Watchlist',
             '04' => '04 - Server Error',
+            '10' => '10 - Name Mismatch',
+            '11' => '11 - Identity Mismatch',
+            '12' => '12 - Non-Ghanaian',
             '99' => '99 - Unknown Error'
         ], function ($value) {
             $this->crud->addClause('where', 'code', $value);
@@ -87,11 +91,29 @@ class GhanaCardVerificationCrudController extends CrudController
     public function resetBlock($user_id)
     {
         $user = \App\Models\User::findOrFail($user_id);
-        $user->update(['is_verification_blocked' => false]);
+        app(GhanaCardService::class)->resetVerificationBlock($user, true);
 
         return response()->json([
             'success' => true,
-            'message' => 'User verification block has been reset.',
+            'message' => 'User verification block has been reset and attempts were soft-reset (history preserved).',
+        ]);
+    }
+
+    /**
+     * Add extra verification attempts for the associated user.
+     */
+    public function addAttempts($user_id, \Illuminate\Http\Request $request)
+    {
+        $validated = $request->validate([
+            'attempts' => 'required|integer|min:1|max:20',
+        ]);
+
+        $user = \App\Models\User::findOrFail($user_id);
+        app(GhanaCardService::class)->addExtraAttempts($user, (int) $validated['attempts']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Additional verification attempts added successfully.',
         ]);
     }
 }
