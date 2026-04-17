@@ -158,6 +158,8 @@ services:
       - "traefik.http.routers.backend.rule=Host(`app.${APP_DOMAIN:-omcp.localhost}`)"
       - "traefik.http.routers.backend.entrypoints=web"
       - "traefik.http.services.backend.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.limit.buffering.maxResponseBodyBytes=0"
+      - "traefik.http.middlewares.limit.buffering.memResponseBodyBytes=0"
       # Apply multiple middlewares: CORS and security headers
       - "traefik.http.routers.backend.middlewares=cors,security-headers"
       # CORS middleware
