@@ -14,6 +14,7 @@ const props = defineProps({
 
 const { config } = usePage().props;
 const user = computed(() => usePage().props.auth?.user || {});
+const isOnWaitlist = computed(() => !!user.value?.on_waitlist);
 
 const hasRegisteredCourse = computed(() => !!props.registeredCourse);
 
@@ -127,15 +128,14 @@ const tieredTestTaken = computed(() => {
                     <p class="text-gray-500 mt-1 font-medium text-lg">It's great to see you again. Here's what's happening today.</p>
                 </div>
 
-                <!-- Summary Section: Course + Cohort + Centre -->
+                <!-- Summary Section: Course -->
                 <div
-                    v-if="hasRegisteredCourse || cohort || centre"
-                    class="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+                    v-if="hasRegisteredCourse"
+                    class="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
                 >
-                    <!-- Course Details -->
                     <div
-                        v-if="hasRegisteredCourse"
                         class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                        :class="isOnWaitlist ? 'md:col-span-2 xl:col-span-3' : ''"
                     >
                         <div class="absolute top-0 left-0 h-full w-1 bg-[#f9a825]"></div>
                         <div class="flex items-center gap-3 mb-2">
@@ -159,7 +159,13 @@ const tieredTestTaken = computed(() => {
                         </div>
                     </div>
 
-                    <!-- Cohort Details -->
+                </div>
+
+                <!-- Summary Section: Cohort + Centre -->
+                <div
+                    v-if="!isOnWaitlist && (cohort || centre)"
+                    class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6"
+                >
                     <div
                         v-if="cohort"
                         class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
@@ -203,7 +209,6 @@ const tieredTestTaken = computed(() => {
                         </div>
                     </div>
 
-                    <!-- Centre Details -->
                     <div
                         v-if="centre"
                         class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"

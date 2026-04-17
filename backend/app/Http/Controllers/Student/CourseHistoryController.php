@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
-use App\Models\StudentCourseHistory;
+use App\Models\OldAdmission;
 use App\Models\UserAdmission;
 
 use Illuminate\Support\Facades\Auth;
@@ -19,22 +19,22 @@ class CourseHistoryController extends Controller
 
         $this->syncMissingHistory($userId);
 
-        $history = StudentCourseHistory::where('user_id', $userId)
+        $history = OldAdmission::where('user_id', $userId)
             ->with([
                 'course:id,course_name,centre_id,programme_id,duration,start_date,end_date',
                 'course.centre:id,title',
                 'course.programme:id,title',
-                'session:id,session,course_time',
+                'sessionRecord:id,session,course_time',
             ])
             ->orderByDesc('created_at')
             ->paginate(15);
 
-        $stats = StudentCourseHistory::where('user_id', $userId)
+        $stats = OldAdmission::where('user_id', $userId)
             ->selectRaw("
                 COUNT(*) as total,
-                SUM(status = 'admitted') as admitted,
-                SUM(status = 'confirmed') as confirmed,
-                SUM(status = 'revoked') as revoked
+                SUM(status = 'admitted') as admitted_count,
+                SUM(status = 'confirmed') as confirmed_count,
+                SUM(status = 'revoked') as revoked_count
             ")
             ->first();
 
@@ -44,8 +44,8 @@ class CourseHistoryController extends Controller
             'programme'    => $h->course?->programme?->title,
             'duration'     => $h->course?->duration,
             'centre'       => $h->course?->centre?->title ?? '—',
-            'session'      => $h->session?->session ?? 'Self-paced',
-            'session_time' => $h->session?->course_time,
+            'session'      => $h->sessionRecord?->session ?? 'Self-paced',
+            'session_time' => $h->sessionRecord?->course_time,
             'support'      => $h->support_status ? 'With support' : 'Self-paced',
             'status'       => $h->status,
             'started_at'   => $h->started_at?->format('Y-m-d'),
@@ -53,12 +53,12 @@ class CourseHistoryController extends Controller
         ]);
 
         // Related courses: other courses at the student's centre, excluding already-enrolled
-        $enrolledCourseIds = StudentCourseHistory::where('user_id', $userId)
+        $enrolledCourseIds = OldAdmission::where('user_id', $userId)
             ->whereNotNull('course_id')
             ->pluck('course_id')
             ->toArray();
 
-        $centreIds = StudentCourseHistory::where('user_id', $userId)
+        $centreIds = OldAdmission::where('user_id', $userId)
             ->whereIn('status', ['admitted', 'confirmed'])
             ->whereNotNull('centre_id')
             ->pluck('centre_id')
@@ -84,7 +84,7 @@ class CourseHistoryController extends Controller
         }
 
         // Student can only enroll if they have no active (admitted/confirmed) course
-        $hasActiveCourse = StudentCourseHistory::where('user_id', $userId)
+        $hasActiveCourse = OldAdmission::where('user_id', $userId)
             ->whereIn('status', ['admitted', 'confirmed'])
             ->exists();
 
@@ -102,26 +102,40 @@ class CourseHistoryController extends Controller
      */
     private function syncMissingHistory(string $userId): void
     {
-        $admissions = UserAdmission::where('user_id', $userId)
-            ->whereNotExists(function ($q) {
-                $q->select(\DB::raw(1))
-                    ->from('student_course_histories')
-                    ->whereColumn('student_course_histories.user_id', 'user_admission.user_id')
-                    ->whereColumn('student_course_histories.course_id', 'user_admission.course_id');
-            })
-            ->get();
+        $admissions = UserAdmission::where('user_id', $userId)->get();
 
         foreach ($admissions as $admission) {
             $course = $admission->course_id ? Course::find($admission->course_id) : null;
+            $status = $admission->confirmed ? 'confirmed' : 'admitted';
+            $startedAt = $admission->confirmed ?: $admission->created_at;
 
-            StudentCourseHistory::create([
+            $historyRow = OldAdmission::where('user_id', $admission->user_id)
+                ->where('course_id', $admission->course_id)
+                ->whereIn('status', ['admitted', 'confirmed'])
+                ->orderByDesc('id')
+                ->first();
+
+            if ($historyRow) {
+                $historyRow->update([
+                    'centre_id'      => $course?->centre_id,
+                    'session'        => $admission->session,
+                    'status'         => $status,
+                    'support_status' => $admission->user?->support,
+                    'started_at'     => $startedAt,
+                    'ended_at'       => null,
+                ]);
+
+                continue;
+            }
+
+            OldAdmission::create([
                 'user_id'        => $admission->user_id,
                 'course_id'      => $admission->course_id,
                 'centre_id'      => $course?->centre_id,
-                'session_id'     => $admission->session,
-                'status'         => $admission->confirmed ? 'confirmed' : 'admitted',
+                'session'        => $admission->session,
+                'status'         => $status,
                 'support_status' => $admission->user?->support,
-                'started_at'     => $admission->confirmed ?? $admission->created_at,
+                'started_at'     => $startedAt,
             ]);
         }
     }

@@ -45,9 +45,9 @@ function pct(n) { return (!total.value || !n) ? 0 : Math.round((n / total.value)
 
 const statCards = computed(() => [
     { label: "Total Enrolled", count: total.value,               icon: "school",        sub: "All cohorts"           },
-    { label: "Admitted",       count: props.stats?.admitted ?? 0, icon: "pending",       sub: "Awaiting confirmation" },
-    { label: "Active Courses", count: props.stats?.confirmed ?? 0,icon: "check_circle",  sub: "Currently enrolled"    },
-    { label: "Revoked",        count: props.stats?.revoked ?? 0,  icon: "block",         sub: "Access removed"        },
+    { label: "Admitted",       count: props.stats?.admitted_count ?? 0, icon: "pending",       sub: "Awaiting confirmation" },
+    { label: "Active Courses", count: props.stats?.confirmed_count ?? 0,icon: "check_circle",  sub: "Currently enrolled"    },
+    { label: "Revoked",        count: props.stats?.revoked_count ?? 0,  icon: "block",         sub: "Access removed"        },
 ]);
 
 // ── Dates ────────────────────────────────────────────────────────────────────

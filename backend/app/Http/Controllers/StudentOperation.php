@@ -46,6 +46,9 @@ class StudentOperation extends Controller
     public function dashboard()
     {
         $user = Auth::user();
+        $isOnWaitlist = \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+            ->whereIn('status', ['pending', 'notified'])
+            ->exists();
 
         $questionnaires = Questionnaire::where('active', true)
             ->latest()
@@ -62,17 +65,32 @@ class StudentOperation extends Controller
         $cohort = null;
         $centre = null;
 
-        if ($user->registered_course) {
-            $fullCourse = Course::with(['centre.branch', 'batch'])
-                ->find($user->registered_course);
+        // Determine the course to display: registered course, or waitlisted course
+        $courseId = $user->registered_course;
+
+        if (! $courseId && $isOnWaitlist) {
+            $courseId = \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->value('course_id');
+        }
+
+        if ($courseId) {
+            $fullCourse = Course::with(['centre.branch', 'batch', 'programme'])
+                ->find($courseId);
 
             if ($fullCourse) {
+                // For waitlisted students, show only the programme name (strip centre)
+                $courseName = $fullCourse->course_name;
+                if ($isOnWaitlist && $fullCourse->programme) {
+                    $courseName = $fullCourse->programme->title;
+                }
+
                 $registeredCourse = [
                     'id' => $fullCourse->id,
-                    'course_name' => $fullCourse->course_name,
+                    'course_name' => $courseName,
                 ];
 
-                if ($fullCourse->batch) {
+                if (! $isOnWaitlist && $fullCourse->batch) {
                     $cohort = [
                         'id' => $fullCourse->batch->id,
                         'title' => $fullCourse->batch->title,
@@ -83,7 +101,7 @@ class StudentOperation extends Controller
                     ];
                 }
 
-                if ($fullCourse->centre) {
+                if (! $isOnWaitlist && $fullCourse->centre) {
                     $centre = [
                         'id' => $fullCourse->centre->id,
                         'title' => $fullCourse->centre->title,

@@ -3,7 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Course;
-use App\Models\StudentCourseHistory;
+use App\Models\OldAdmission;
 use App\Models\User;
 use App\Models\UserAdmission;
 
@@ -13,11 +13,11 @@ class UserAdmissionObserver
     {
         $course = $admission->course_id ? Course::find($admission->course_id) : null;
 
-        StudentCourseHistory::create([
+        OldAdmission::create([
             'user_id' => $admission->user_id,
             'course_id' => $admission->course_id,
             'centre_id' => $course?->centre_id,
-            'session_id' => $admission->session,
+            'session' => $admission->session,
             'status' => 'admitted',
             'support_status' => User::where('userId', $admission->user_id)->value('support'),
             'started_at' => now(),
@@ -32,11 +32,11 @@ class UserAdmissionObserver
 
             $course = $admission->course_id ? Course::find($admission->course_id) : null;
 
-            StudentCourseHistory::create([
+            OldAdmission::create([
                 'user_id' => $admission->user_id,
                 'course_id' => $admission->course_id,
                 'centre_id' => $course?->centre_id,
-                'session_id' => $admission->session,
+                'session' => $admission->session,
                 'status' => 'admitted',
                 'support_status' => User::where('userId', $admission->user_id)->value('support'),
                 'started_at' => now(),
@@ -55,7 +55,7 @@ class UserAdmissionObserver
 
         if ($admission->wasChanged('session')) {
             $row = $this->findOpenRow($admission->user_id, $admission->course_id);
-            $row?->update(['session_id' => $admission->session]);
+            $row?->update(['session' => $admission->session]);
         }
     }
 
@@ -64,9 +64,9 @@ class UserAdmissionObserver
         $this->closeOpenRow($admission->user_id, $admission->course_id);
     }
 
-    private function findOpenRow(string $userId, $courseId): ?StudentCourseHistory
+    private function findOpenRow(string $userId, $courseId): ?OldAdmission
     {
-        return StudentCourseHistory::where('user_id', $userId)
+        return OldAdmission::where('user_id', $userId)
             ->where('course_id', $courseId)
             ->whereIn('status', ['admitted', 'confirmed'])
             ->orderByDesc('id')
