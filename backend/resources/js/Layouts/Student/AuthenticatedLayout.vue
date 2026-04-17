@@ -182,21 +182,12 @@ const user = computed(() => auth.value.user ?? {});
                     </SidebarNavLink>
 
                     <SidebarNavLink
-<<<<<<< HEAD
-                        :href="route('student.course-history')"
-                        :active="route().current('student.course-history')"
-                        :label="'Course History'"
-                    >
-                        <span class="material-symbols-outlined">
-                            history
-=======
                         :href="route('student.verification.index')"
                         :active="route().current('student.verification.*')"
                         :label="'Verification'"
                     >
                         <span class="material-symbols-outlined">
                             verified_user
->>>>>>> development
                         </span>
                     </SidebarNavLink>
 

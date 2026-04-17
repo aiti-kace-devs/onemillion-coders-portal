@@ -127,50 +127,47 @@ const tieredTestTaken = computed(() => {
                     <p class="text-gray-500 mt-1 font-medium text-lg">It's great to see you again. Here's what's happening today.</p>
                 </div>
 
-                <!-- Chosen Course Section -->
-                <div v-if="hasRegisteredCourse" class="mt-6">
+                <!-- Summary Section: Course + Cohort + Centre -->
+                <div
+                    v-if="hasRegisteredCourse || cohort || centre"
+                    class="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+                >
+                    <!-- Course Details -->
                     <div
-                        class="bg-white rounded-2xl shadow-sm border border-orange-100/50 p-6 transition-all duration-300 relative overflow-hidden group shadow-orange-500/5"
+                        v-if="hasRegisteredCourse"
+                        class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                     >
-                        <div class="absolute top-0 left-0 w-1.5 h-full bg-[#f9a825]"></div>
-                        <div class="flex items-center gap-4">
-                            <div
-                                class="p-3 bg-[#f9a825]/10 rounded-lg text-[#f9a825]"
+                        <div class="absolute top-0 left-0 h-full w-1 bg-[#f9a825]"></div>
+                        <div class="flex items-center gap-3 mb-2">
+                            <span
+                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]"
                             >
-                                <span class="material-symbols-outlined text-3xl"
+                                <span class="material-symbols-outlined"
                                     >school</span
                                 >
-                            </div>
-                            <div>
+                            </span>
+                            <div class="flex-1 text-left">
                                 <p
                                     class="text-gray-500 text-xs font-medium uppercase tracking-wider"
                                 >
                                     Your Chosen Course
                                 </p>
-                                <h3 class="text-xl font-bold text-gray-800">
+                                <h3 class="text-lg font-bold text-gray-800">
                                     {{ registeredCourse.course_name }}
                                 </h3>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Placement Section: Cohort + Centre -->
-                <div
-                    v-if="cohort || centre"
-                    class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6"
-                >
                     <!-- Cohort Details -->
                     <div
                         v-if="cohort"
-                        class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                        class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                     >
-                        <!-- Hover Accent Line -->
-                        <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-                        <!-- Icon and Title -->
+                        <div class="absolute top-0 left-0 h-full w-1 bg-[#f9a825]"></div>
                         <div class="flex items-center gap-3 mb-2">
                             <span
-                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]"
                             >
                                 <span class="material-symbols-outlined"
                                     >groups</span
@@ -209,19 +206,17 @@ const tieredTestTaken = computed(() => {
                     <!-- Centre Details -->
                     <div
                         v-if="centre"
-                        class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                        class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                     >
-                        <!-- Hover Accent Line -->
-                        <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                        <div class="absolute top-0 left-0 h-full w-1 bg-[#f9a825]"></div>
                         <span
                             v-if="centre.is_pwd_friendly"
                             class="absolute top-4 right-4 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700"
                             >PWD Friendly</span
                         >
-                        <!-- Icon and Title -->
                         <div class="flex items-center gap-3 mb-2">
                             <span
-                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]"
                             >
                                 <span class="material-symbols-outlined"
                                     >location_on</span
@@ -266,7 +261,7 @@ const tieredTestTaken = computed(() => {
                             Quick Access
                         </p>
                         <div
-                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                            class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
                         >
                             <Link
                                 :href="route('student.application-status')"
