@@ -55,6 +55,11 @@ class AppConfigServiceProvider extends ServiceProvider
         defined('LONG_SLOTS_PERCENTAGE') or define('LONG_SLOTS_PERCENTAGE', 'LONG_SLOTS_PERCENTAGE');
         defined('WAITLIST_NOTIFY_LIMIT') or define('WAITLIST_NOTIFY_LIMIT', 'WAITLIST_NOTIFY_LIMIT');
         defined('AVAILABILITY_CACHE_TTL') or define('AVAILABILITY_CACHE_TTL', 'AVAILABILITY_CACHE_TTL');
+
+        // Session Reminder settings
+        defined('ONE_WEEK_REMINDER') or define('ONE_WEEK_REMINDER', 'ONE_WEEK_REMINDER');
+        defined('THREE_DAYS_REMINDER') or define('THREE_DAYS_REMINDER', 'THREE_DAYS_REMINDER');
+        defined('ONE_DAY_REMINDER') or define('ONE_DAY_REMINDER', 'ONE_DAY_REMINDER');
     }
 
     /**

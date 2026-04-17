@@ -24,8 +24,10 @@ class EmailTemplateRequest extends FormRequest
      */
     public function rules()
     {
+        $id = $this->route('id') ?? $this->route('email_template');
+
         return [
-            'name' => 'required|string|max:255|unique:email_templates,name',
+            'name' => 'required|string|max:255|unique:email_templates,name,' . $id,
             'content' => 'required|string',
         ];
     }
