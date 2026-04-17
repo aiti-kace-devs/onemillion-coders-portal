@@ -151,11 +151,6 @@ class AppConfigSeeder extends Seeder
                 ['key' => LONG_SLOTS_PERCENTAGE, 'value' => 40, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
                 ['key' => WAITLIST_NOTIFY_LIMIT, 'value' => 5, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
                 ['key' => AVAILABILITY_CACHE_TTL, 'value' => 300, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
-
-                // Session Reminder settings
-                ['key' => ONE_WEEK_REMINDER, 'value' => 1, 'type' => 'boolean', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
-                ['key' => THREE_DAYS_REMINDER, 'value' => 1, 'type' => 'boolean', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
-                ['key' => ONE_DAY_REMINDER, 'value' => 1, 'type' => 'boolean', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
             ]);
         } catch (\Exception $e) {
             echo $e->getMessage();

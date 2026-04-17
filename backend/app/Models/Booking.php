@@ -113,9 +113,4 @@ class Booking extends Model
         return $query->where('status', true);
     }
 
-    public function reminders()
-    {
-        return $this->hasMany(BookingReminder::class, 'booking_id');
-    }
-
 }
