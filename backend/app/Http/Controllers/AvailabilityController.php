@@ -182,6 +182,15 @@ class AvailabilityController extends Controller
         $programme = $course->programme;
         $courseType = $programme->courseType();
 
+        $programmePayload = [
+            'id' => $programme->id,
+            'title' => $programme->title,
+            'duration' => $programme->duration,
+            'duration_in_days' => $programme->duration_in_days,
+            'prerequisites' => $programme->prerequisites,
+            'certificate' => optional($programme->courseCertification->first())->title,
+        ];
+
         // Find the current active admission batch
         $today = Carbon::today();
         $admissionBatch = Batch::where('start_date', '<=', $today)
@@ -197,7 +206,7 @@ class AvailabilityController extends Controller
                     ['id' => $centre->id, 'title' => $centre->title],
                     $this->centreLocationPayload($centre)
                 ),
-                'programme' => ['id' => $programme->id, 'title' => $programme->title],
+                'programme' => $programmePayload,
                 'alternatives' => [],
             ]);
         }
@@ -218,7 +227,7 @@ class AvailabilityController extends Controller
                     ['id' => $centre->id, 'title' => $centre->title],
                     $this->centreLocationPayload($centre)
                 ),
-                'programme' => ['id' => $programme->id, 'title' => $programme->title],
+                'programme' => $programmePayload,
                 'alternatives' => [],
             ]);
         }
@@ -236,7 +245,7 @@ class AvailabilityController extends Controller
                     ['id' => $centre->id, 'title' => $centre->title],
                     $this->centreLocationPayload($centre)
                 ),
-                'programme' => ['id' => $programme->id, 'title' => $programme->title],
+                'programme' => $programmePayload,
                 'alternatives' => [],
             ]);
         }
@@ -344,7 +353,7 @@ class AvailabilityController extends Controller
                 ['id' => $centre->id, 'title' => $centre->title],
                 $this->centreLocationPayload($centre)
             ),
-            'programme' => ['id' => $programme->id, 'title' => $programme->title],
+            'programme' => $programmePayload,
             'alternatives' => $alternatives->values()->all(),
         ]);
     }
