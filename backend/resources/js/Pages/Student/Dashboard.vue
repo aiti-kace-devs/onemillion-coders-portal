@@ -150,7 +150,7 @@ const tieredTestTaken = computed(() => {
                                 <p
                                     class="text-gray-500 text-xs font-medium uppercase tracking-wider"
                                 >
-                                    Your Chosen Course
+                                    Registered Course
                                 </p>
                                 <h3 class="text-lg font-bold text-gray-800">
                                     {{ registeredCourse.course_name }}
