@@ -39,6 +39,7 @@ use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
 
 use App\Models\UserAssessment;
+use App\Events\AdmissionDeleted;
 
 class StudentOperation extends Controller
 {
@@ -821,16 +822,23 @@ class StudentOperation extends Controller
         $delete_user_admission = UserAdmission::where('user_id', $user->userId)->first();
 
         if ($delete_user_admission) {
+            $courseId = (int) $delete_user_admission->course_id;
+
             activity()->withoutLogs(function () use ($delete_user_admission, $user) {
                 $delete_user_admission->delete();
-                $user->update(['shortlist' => 0]);
+                $user->update([
+                    'shortlist' => 0,
+                    'registered_course' => null,
+                ]);
             });
 
             AdmissionRejection::create([
                 'user_id' => $user->userId,
-                'course_id' => $delete_user_admission->course_id,
+                'course_id' => $courseId,
                 'rejected_at' => now(),
             ]);
+
+            event(new AdmissionDeleted($courseId));
 
             activity('user_admission')
                 ->causedBy($user)
@@ -1293,7 +1301,7 @@ class StudentOperation extends Controller
 
 
         if (!$question) {
-            //complete assessment 
+            //complete assessment
             $this->completeAssessment($user, $assessment, false);
             return response()->json([
                 'status' => 'completed',
