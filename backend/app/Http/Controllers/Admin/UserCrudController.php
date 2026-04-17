@@ -215,12 +215,9 @@ class UserCrudController extends CrudController
             $admissions = UserAdmission::whereIn('user_id', $chunk)->get();
 
             foreach ($admissions as $admission) {
-                // Get the course directly and use its batch_id
                 $course = \App\Models\Course::find($admission->course_id);
 
-                if ($course && $course->batch_id) {
-                    $admission->batch_id = $course->batch_id;
-                    $admission->save();
+                if ($course && (int) $course->batch_id === (int) $request->batch_id) {
                     $updated++;
                 } else {
                     $notFound[] = $admission->user_id;

@@ -1,14 +1,11 @@
 <?php
 
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\StudentOperation;
-use App\Http\Controllers\FormResponseController;
 use App\Http\Controllers\StatamicEntryApiController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
 use App\Http\Controllers\Admin\BatchCrudController;
-use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
+use App\Http\Controllers\Api\Student\StudentSessionController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -36,7 +33,7 @@ Route::prefix('availability')->name('api.availability.')->middleware('user.token
 
 
 // Booking endpoints — student reserves/cancels a programme_batch slot
-Route::prefix('bookings')->name('api.bookings.')->middleware('user.token')->group(function () {
+Route::prefix('bookings')->name('api.bookings.')->middleware(['user.token', 'student.verification.flow'])->group(function () {
     Route::get('/mine', [\App\Http\Controllers\BookingController::class, 'mine'])->name('mine');
     Route::post('/', [\App\Http\Controllers\BookingController::class, 'store'])->name('store');
     Route::delete('/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('destroy');
@@ -66,7 +63,10 @@ Route::get('/courses/{courseId}/slot-left', [CourseMatchAPIController::class, 'c
 //         return $request->user();
 //     });
 // });
-Route::post('/ghana-card/verify', [\App\Http\Controllers\Api\GhanaCardController::class, 'verify']);
+Route::prefix('ghana-card')->middleware('user.token')->group(function () {
+    Route::post('/verify', [\App\Http\Controllers\Api\GhanaCardController::class, 'verify']);
+    Route::get('/status', [\App\Http\Controllers\Api\GhanaCardController::class, 'status']);
+});
 
 
 // Route::middleware('apikey.check')->group(function () {

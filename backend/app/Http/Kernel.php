@@ -40,10 +40,10 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \Spatie\Csp\AddCspHeaders::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             // \App\Http\Middleware\PageBuilderMiddleware::class,
-            // \Spatie\Csp\AddCspHeaders::class,
         ],
 
         'api' => [
@@ -86,5 +86,6 @@ class Kernel extends HttpKernel
         'is_admitted' => \App\Http\Middleware\CheckIfStudentIsAdmitted::class,
         'is_not_admitted' => \App\Http\Middleware\CheckIfStudentNotIsAdmitted::class,
         'user.token' => \App\Http\Middleware\ResolveUserFromToken::class,
+        'student.verification.flow' => \App\Http\Middleware\EnsureStudentVerificationFlow::class,
     ];
 }
