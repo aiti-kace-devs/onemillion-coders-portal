@@ -1,0 +1,125 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Models\Batch;
+use App\Models\Centre;
+use App\Models\Course;
+use App\Models\ProgrammeBatch;
+use Illuminate\Console\Command;
+
+class CreateOnlineCoursesForBatches extends Command
+{
+    protected $signature = 'courses:create-online-for-batches';
+
+    protected $description = 'Create missing courses for active online programmes across active centres in currently running admission batches';
+
+    public function handle(): int
+    {
+        $currentYear = (int) now()->year;
+
+        $runningBatches = Batch::query()
+            ->where('year', $currentYear)
+            ->where('status', true)
+            ->where('completed', false)
+            ->get(['id', 'title', 'start_date', 'end_date'])
+            ->keyBy('id');
+
+        if ($runningBatches->isEmpty()) {
+            $this->warn('No running admission batch was found.');
+
+            return self::SUCCESS;
+        }
+
+        $activeCentres = Centre::query()
+            ->where('status', true)
+            ->get(['id', 'title']);
+
+        if ($activeCentres->isEmpty()) {
+            $this->warn('No active centres were found.');
+
+            return self::SUCCESS;
+        }
+
+        $programmeBatches = ProgrammeBatch::query()
+            ->with(['programme:id,title,duration,start_date,end_date,mode_of_delivery,status'])
+            ->whereIn('admission_batch_id', $runningBatches->keys())
+            ->where('status', true)
+            ->whereHas('programme', function ($query) {
+                $query->where('status', true)
+                    ->whereRaw('LOWER(TRIM(mode_of_delivery)) = ?', ['online']);
+            })
+            ->get();
+
+        if ($programmeBatches->isEmpty()) {
+            $this->warn('No active online programme batches were found for the running admission batches.');
+
+            return self::SUCCESS;
+        }
+
+        $programmeBatchesByAdmissionBatch = $programmeBatches
+            ->groupBy('admission_batch_id')
+            ->map(fn ($items) => $items->unique('programme_id')->values());
+
+        $createdCount = 0;
+        $skippedCount = 0;
+        $createdPerBatch = [];
+
+        foreach ($programmeBatchesByAdmissionBatch as $admissionBatchId => $batchProgrammeBatches) {
+            $batch = $runningBatches->get((int) $admissionBatchId);
+
+            if (! $batch) {
+                continue;
+            }
+
+            foreach ($batchProgrammeBatches as $programmeBatch) {
+                $programme = $programmeBatch->programme;
+
+                if (! $programme) {
+                    continue;
+                }
+
+                foreach ($activeCentres as $centre) {
+                    $course = Course::firstOrCreate(
+                        [
+                            'centre_id' => $centre->id,
+                            'programme_id' => $programme->id,
+                            'batch_id' => $batch->id,
+                        ],
+                        [
+                            // Generated automatically in Course::saving() using programme + centre titles.
+                            'course_name' => null,
+                            'duration' => $programme->duration,
+                            'start_date' => $programme->start_date ?: $batch->start_date,
+                            'end_date' => $programme->end_date ?: $batch->end_date,
+                            'status' => true,
+                        ]
+                    );
+
+                    if ($course->wasRecentlyCreated) {
+                        $createdCount++;
+                        $createdPerBatch[$batch->id] = ($createdPerBatch[$batch->id] ?? 0) + 1;
+                    } else {
+                        $skippedCount++;
+                    }
+                }
+            }
+        }
+
+        $this->info("Created {$createdCount} course(s).");
+        $this->line("Skipped {$skippedCount} existing course(s).");
+
+        if (! empty($createdPerBatch)) {
+            $this->newLine();
+            $this->line('Created by admission batch:');
+
+            foreach ($createdPerBatch as $batchId => $count) {
+                $batch = $runningBatches->get($batchId);
+                $batchLabel = $batch ? "{$batch->title} (#{$batch->id})" : "#{$batchId}";
+                $this->line("- {$batchLabel}: {$count}");
+            }
+        }
+
+        return self::SUCCESS;
+    }
+}
