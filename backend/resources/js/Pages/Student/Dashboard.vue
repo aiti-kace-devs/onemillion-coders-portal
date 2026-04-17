@@ -135,7 +135,7 @@ const tieredTestTaken = computed(() => {
                 >
                     <div
                         class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                        :class="isOnWaitlist ? 'md:col-span-2 xl:col-span-3' : ''"
+                        :class="'md:col-span-2 xl:col-span-3'"
                     >
                         <div class="absolute top-0 left-0 h-full w-1 bg-[#f9a825]"></div>
                         <div class="flex items-center gap-3 mb-2">
