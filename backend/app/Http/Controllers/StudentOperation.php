@@ -66,6 +66,10 @@ class StudentOperation extends Controller
         $cohort = null;
         $centre = null;
 
+        // If user has registered_course, they are enrolled — waitlist is stale
+        $isEnrolled = (bool) $user->registered_course;
+        $showPlacementDetails = $isEnrolled && ! $isOnWaitlist;
+
         // Determine the course to display: registered course, or waitlisted course
         $courseId = $user->registered_course;
 
@@ -80,9 +84,9 @@ class StudentOperation extends Controller
                 ->find($courseId);
 
             if ($fullCourse) {
-                // For waitlisted students, show only the programme name (strip centre)
+                // For waitlisted students (not enrolled), show only the programme name
                 $courseName = $fullCourse->course_name;
-                if ($isOnWaitlist && $fullCourse->programme) {
+                if (! $isEnrolled && $isOnWaitlist && $fullCourse->programme) {
                     $courseName = $fullCourse->programme->title;
                 }
 
@@ -91,7 +95,7 @@ class StudentOperation extends Controller
                     'course_name' => $courseName,
                 ];
 
-                if (! $isOnWaitlist && $fullCourse->batch) {
+                if ($showPlacementDetails && $fullCourse->batch) {
                     $cohort = [
                         'id' => $fullCourse->batch->id,
                         'title' => $fullCourse->batch->title,
@@ -102,7 +106,7 @@ class StudentOperation extends Controller
                     ];
                 }
 
-                if (! $isOnWaitlist && $fullCourse->centre) {
+                if ($showPlacementDetails && $fullCourse->centre) {
                     $centre = [
                         'id' => $fullCourse->centre->id,
                         'title' => $fullCourse->centre->title,
@@ -831,6 +835,11 @@ class StudentOperation extends Controller
                     'registered_course' => null,
                 ]);
             });
+
+            // Clean up any stale waitlist entries for this user
+            \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->update(['status' => 'removed']);
 
             AdmissionRejection::create([
                 'user_id' => $user->userId,

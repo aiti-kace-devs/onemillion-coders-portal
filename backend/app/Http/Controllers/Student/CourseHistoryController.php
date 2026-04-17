@@ -99,10 +99,28 @@ class CourseHistoryController extends Controller
     /**
      * Auto-create history rows for admissions that were missed by the observer
      * (e.g. queue worker running old code, raw DB inserts, etc.)
+     *
+     * Also closes stale active rows that no longer have a matching UserAdmission,
+     * and enforces one active course per user.
      */
     private function syncMissingHistory(string $userId): void
     {
         $admissions = UserAdmission::where('user_id', $userId)->get();
+        $activeCourseIds = $admissions->pluck('course_id')->filter()->toArray();
+
+        // Close old_admissions rows that are still active but have no matching UserAdmission
+        OldAdmission::where('user_id', $userId)
+            ->whereIn('status', ['admitted', 'confirmed'])
+            ->when(! empty($activeCourseIds), function ($q) use ($activeCourseIds) {
+                $q->whereNotIn('course_id', $activeCourseIds);
+            }, function ($q) {
+                // No active admissions at all — close everything
+                $q;
+            })
+            ->update([
+                'status' => 'revoked',
+                'ended_at' => now(),
+            ]);
 
         foreach ($admissions as $admission) {
             $course = $admission->course_id ? Course::find($admission->course_id) : null;
