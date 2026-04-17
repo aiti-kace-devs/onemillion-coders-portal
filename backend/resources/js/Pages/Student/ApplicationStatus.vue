@@ -13,7 +13,7 @@ const props = defineProps({
     verification_status: Object,
 });
 
-const collapse = ref([true, false, false, false]);
+const collapse = ref([true, false, false, false, false]);
 const showRevokeModal = ref(false);
 
 function toggleCollapse(idx) {
@@ -27,6 +27,7 @@ function isStepReached(idx) {
     if (idx === 1) return true; // Step 2: Assessment (Follows app submission)
     if (idx === 2) return props.user_assessment?.completed; // Step 3: Identity Verification
     if (idx === 3) return verificationCompleted.value; // Step 4: Course Selection (includes booking)
+    if (idx === 4) return courseSelectionCompleted.value; // Step 5: Admission Confirmation
     return false;
 }
 function closeRevokeModal() {
@@ -36,6 +37,7 @@ function closeRevokeModal() {
 const courseSelectionCompleted = computed(
     () => !!props.user_admission?.confirmed || !!props.user?.registered_course,
 );
+const admissionConfirmed = computed(() => !!props.user_admission?.confirmed);
 const assessmentCompleted = computed(() => !!props.user_assessment?.completed);
 const verificationCompleted = computed(() => !!props.verification_status?.verified);
 const verificationBlocked = computed(() => !!props.verification_status?.blocked);
@@ -76,7 +78,7 @@ const verificationBlocked = computed(() => !!props.verification_status?.blocked)
                     <p class="font-medium text-lg text-gray-900 mb-3">
                         Expected Flow
                     </p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
                         <div
                             class="rounded-lg border p-3"
                             :class="{
@@ -109,13 +111,24 @@ const verificationBlocked = computed(() => !!props.verification_status?.blocked)
                             <p class="text-xs uppercase text-gray-500">3</p>
                             <p class="font-semibold text-sm">Course Selection</p>
                         </div>
+                        <div
+                            class="rounded-lg border p-3"
+                            :class="{
+                                'border-green-200 bg-green-50': admissionConfirmed,
+                                'border-amber-200 bg-amber-50': !admissionConfirmed && courseSelectionCompleted,
+                                'border-gray-200 bg-gray-50': !admissionConfirmed && !courseSelectionCompleted
+                            }"
+                        >
+                            <p class="text-xs uppercase text-gray-500">4</p>
+                            <p class="font-semibold text-sm">Admission Confirmation</p>
+                        </div>
                     </div>
 
                     <p class="font-medium text-lg text-gray-900">
                         Application Status
                     </p>
 
-                    <div class="mt-5 px-5 max-w-2xl">
+                    <div class="mt-5 px-2 sm:px-5 max-w-2xl">
                         <ol class="relative border-l border-green-500/30">
                             <!-- Step 1: Application Submitted -->
                             <li class="mb-10 ml-6">
@@ -414,6 +427,69 @@ const verificationBlocked = computed(() => !!props.verification_status?.blocked)
                                                 Choose a course
                                             </LinkButton>
                                         </div>
+                                    </template>
+                                </div>
+                            </li>
+
+                            <!-- Step 5: Admission Confirmation -->
+                            <li class="mb-10 ml-6">
+                                <span
+                                    :class="[
+                                        'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
+                                        admissionConfirmed
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-gray-200 text-gray-400',
+                                    ]"
+                                    >5</span
+                                >
+                                <div
+                                    class="flex items-center"
+                                    :class="
+                                        isStepReached(4)
+                                            ? 'cursor-pointer'
+                                            : 'cursor-not-allowed opacity-50'
+                                    "
+                                    @click="toggleCollapse(4)"
+                                >
+                                    <h3
+                                        :class="[
+                                            'font-bold text-lg',
+                                            admissionConfirmed
+                                                ? 'text-gray-800'
+                                                : isStepReached(4)
+                                                  ? 'text-gray-700'
+                                                  : 'text-gray-400',
+                                        ]"
+                                    >
+                                        Admission Confirmation
+                                    </h3>
+                                    <svg
+                                        v-if="isStepReached(4)"
+                                        :class="[
+                                            'ml-2 w-4 h-4 text-gray-800 transition-transform',
+                                            collapse[4] ? 'rotate-90' : '',
+                                        ]"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M9 5l7 7-7 7"
+                                        />
+                                    </svg>
+                                </div>
+                                <div
+                                    v-if="collapse[4] && isStepReached(4)"
+                                    class="mt-2 text-sm text-gray-700 pl-2"
+                                >
+                                    <template v-if="admissionConfirmed">
+                                        Your admission has been confirmed. You are fully onboarded into your programme.
+                                    </template>
+                                    <template v-else>
+                                        Admission confirmation will appear here after your course and session booking are fully processed.
                                     </template>
                                 </div>
                             </li>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import DropdownLink from "@/Components/DropdownLink.vue";
@@ -9,6 +9,7 @@ import SidebarSectionHeader from "@/Components/SidebarSectionHeader.vue";
 
 const showingNavigationDropdown = ref(false);
 const isSidebarCollapsed = ref(true);
+const isMobileViewport = ref(false);
 const sidebarNavIcon = computed(() =>
     isSidebarCollapsed.value
         ? "block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 bg-gray-100 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out"
@@ -19,10 +20,34 @@ const toggleSidebar = () => {
     isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
 
-const collapseSidebarOnContentInteraction = () => {
-    // For desktop and mobile, collapse sidebar when users interact with page body.
-    isSidebarCollapsed.value = true;
+const updateViewportState = () => {
+    if (typeof window === "undefined") {
+        return;
+    }
+    isMobileViewport.value = window.innerWidth < 1024;
+    isSidebarCollapsed.value = isMobileViewport.value;
 };
+
+const handleSidebarMouseEnter = () => {
+    if (!isMobileViewport.value) {
+        isSidebarCollapsed.value = false;
+    }
+};
+
+const handleSidebarMouseLeave = () => {
+    if (!isMobileViewport.value) {
+        isSidebarCollapsed.value = true;
+    }
+};
+
+onMounted(() => {
+    updateViewportState();
+    window.addEventListener("resize", updateViewportState);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener("resize", updateViewportState);
+});
 
 const page = usePage();
 
@@ -45,25 +70,32 @@ const user = computed(() => auth.value.user ?? {});
 
 <template>
     <div
-        class="group/container min-h-screen flex gap-4"
+        class="group/container min-h-screen flex"
         :class="
             isSidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-not-collapsed'
         "
     >
+        <!-- Mobile backdrop -->
+        <div
+            v-if="!isSidebarCollapsed && isMobileViewport"
+            class="fixed inset-0 z-[1001] bg-black/40 lg:hidden"
+            @click="isSidebarCollapsed = true"
+        ></div>
+
         <!-- Sidebar -->
         <div
-            class="fixed z-[1002] h-full w-2/3 lg:w-64 border-gray-200 bg-white duration-300 transition-transform ease-in-out lg:translate-x-0 group-[.sidebar-collapsed]/container:w-[70px] border-r shadow-md"
+            class="fixed z-[1002] h-full w-[85%] max-w-xs lg:w-64 border-gray-200 bg-white duration-300 transition-transform ease-in-out lg:translate-x-0 group-[.sidebar-collapsed]/container:w-[70px] border-r shadow-md"
             :class="
                 isSidebarCollapsed
                     ? '-translate-x-full max-lg:block'
                     : 'translate-x-0 max-lg:block'
             "
-            @mouseenter="isSidebarCollapsed = false"
-            @mouseleave="isSidebarCollapsed = true"
+            @mouseenter="handleSidebarMouseEnter"
+            @mouseleave="handleSidebarMouseLeave"
             @click.away="isSidebarCollapsed = true"
         >
             <div
-                class="h-[calc(100vh-100px)] overflow-hidden group-[.sidebar-collapsed]/container:overflow-visible"
+                class="h-screen overflow-y-auto overflow-x-hidden group-[.sidebar-collapsed]/container:overflow-visible"
             >
                 <div
                     class="p-2 lg:py-2 lg:px-0 flex items-start justify-between lg:flex-none w-full"
@@ -226,8 +258,7 @@ const user = computed(() => auth.value.user ?? {});
 
         <!-- Main Content -->
         <div
-            class="flex-1 flex flex-col md:ml-[70px] bg-[#f8f9fa] relative overflow-hidden"
-            @click="collapseSidebarOnContentInteraction"
+            class="flex-1 flex flex-col lg:ml-[70px] bg-[#f8f9fa] relative overflow-hidden"
         >
             <!-- Background Accents -->
             <div
@@ -245,7 +276,7 @@ const user = computed(() => auth.value.user ?? {});
                 <div class="flex items-center gap-x-3">
                     <button
                         class="block lg:hidden cursor-pointer rounded-md p-1.5 text-gray-500 hover:bg-gray-100 focus:outline-none"
-                        @click="isSidebarCollapsed = false"
+                        @click.stop="isSidebarCollapsed = false"
                         aria-label="Open Sidebar"
                         :aria-expanded="!isSidebarCollapsed"
                     >
@@ -300,7 +331,7 @@ const user = computed(() => auth.value.user ?? {});
             ></div>
 
             <!-- Page content -->
-            <main :class="props.fullHeight ? '' : 'py-6 px-4 lg:px-8'">
+            <main :class="props.fullHeight ? '' : 'py-4 px-3 sm:px-4 lg:py-6 lg:px-8'">
                 <slot />
             </main>
         </div>
