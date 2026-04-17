@@ -31,9 +31,47 @@ const form = useForm({
 const confirmationModal = ref(false);
 
 const detailsUpdated = computed(() => !!props.user.details_updated_at);
+const cardVerified = computed(() => !!props.user.ghcard_verified);
+const latestAttempt = computed(() => props.user.ghcard_latest_attempt ?? null);
+const cardStatus = computed(() => {
+  if (cardVerified.value || latestAttempt.value?.verified) {
+    return "verified";
+  }
 
-// Card verification status (mocked for now)
-const cardVerified = computed(() => !!props.user.verification_date);
+  if (!latestAttempt.value) {
+    return "pending";
+  }
+
+  if (latestAttempt.value.success) {
+    return "processed";
+  }
+
+  return "failed";
+});
+const cardStatusLabel = computed(() => {
+  switch (cardStatus.value) {
+    case "verified":
+      return "Card verified successfully";
+    case "processed":
+      return "Card processed";
+    case "failed":
+      return "Card verification failed";
+    default:
+      return "Card pending";
+  }
+});
+const cardStatusClass = computed(() => {
+  switch (cardStatus.value) {
+    case "verified":
+      return "text-green-600";
+    case "failed":
+      return "text-red-600";
+    case "processed":
+      return "text-amber-600";
+    default:
+      return "text-gray-700";
+  }
+});
 
 const showConfirmationModal = () => {
   confirmationModal.value = true;
@@ -229,13 +267,9 @@ const submit = () => {
           <div
             v-if="!form.errors.ghcard"
             class="mt-1 text-xs inline-flex items-center"
-            :class="cardVerified ? 'text-green-600' : 'text-gray-700'"
+            :class="cardStatusClass"
           >
-            {{
-              cardVerified
-                ? "Card verified successfully"
-                : "Card not verified (This will be done manually by an administrator)"
-            }}
+            {{ cardStatusLabel }}
           </div>
         </div>
 
