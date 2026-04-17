@@ -1,8 +1,20 @@
-@push('crud_fields_styles')
+@push('crud_fields_scripts')
+    <script>
+        // Pass Laravel routes to JavaScript
+        window.SYNC_PERMISSION_URLS = {
+            permissions: "{{ url('admin/roles/permissions') }}",
+            testRoles: "{{ url('admin/test-roles') }}"
+        };
+    </script>
+
     @bassetBlock('custom/sync-permission.js')
         <script>
             function initRolePermissionSync() {
                 console.log("Initializing role-permission sync...");
+
+                // Use the global URL object
+                const fetchPermissionsUrl = window.SYNC_PERMISSION_URLS.permissions;
+                const testRolesUrl = window.SYNC_PERMISSION_URLS.testRoles;
 
                 // Debug: Log all form fields
                 console.log("All form fields:", document.querySelectorAll('input, select, textarea'));
@@ -92,7 +104,7 @@
 
                     // Build URL
                     const queryParams = selectedRoleIds.map(id => "role_ids[]=" + encodeURIComponent(id)).join("&");
-                    const url = "{{ url('admin/roles/permissions') }}" + "?" + queryParams;
+                    const url = fetchPermissionsUrl + "?" + queryParams;
 
                     console.log("Fetching permissions from:", url);
 
@@ -132,7 +144,7 @@
 
                 // Test the connection by logging available roles and permissions
                 console.log("Testing role-permission connection...");
-                fetch("{{ url('admin/test-roles') }}")
+                fetch(testRolesUrl)
                     .then(response => response.json())
                     .then(data => {
                         console.log("Available roles and permissions:", data);
@@ -155,3 +167,4 @@
         </script>
     @endBassetBlock
 @endpush
+
