@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Batch;
 use App\Models\Centre;
 use App\Models\Course;
-use App\Models\ProgrammeBatch;
+use App\Models\Programme;
 use Illuminate\Console\Command;
 
 class CreateOnlineCoursesForBatches extends Command
@@ -41,44 +41,23 @@ class CreateOnlineCoursesForBatches extends Command
             return self::SUCCESS;
         }
 
-        $programmeBatches = ProgrammeBatch::query()
-            ->with(['programme:id,title,duration,start_date,end_date,mode_of_delivery,status'])
-            ->whereIn('admission_batch_id', $runningBatches->keys())
+        $programmes = Programme::query()
             ->where('status', true)
-            ->whereHas('programme', function ($query) {
-                $query->where('status', true)
-                    ->whereRaw('LOWER(TRIM(mode_of_delivery)) = ?', ['online']);
-            })
+            ->whereRaw('LOWER(TRIM(mode_of_delivery)) = ?', ['online'])
             ->get();
 
-        if ($programmeBatches->isEmpty()) {
-            $this->warn('No active online programme batches were found for the running admission batches.');
+        if ($programmes->isEmpty()) {
+            $this->warn('No active online programmes were found in the programmes table.');
 
             return self::SUCCESS;
         }
-
-        $programmeBatchesByAdmissionBatch = $programmeBatches
-            ->groupBy('admission_batch_id')
-            ->map(fn ($items) => $items->unique('programme_id')->values());
 
         $createdCount = 0;
         $skippedCount = 0;
         $createdPerBatch = [];
 
-        foreach ($programmeBatchesByAdmissionBatch as $admissionBatchId => $batchProgrammeBatches) {
-            $batch = $runningBatches->get((int) $admissionBatchId);
-
-            if (! $batch) {
-                continue;
-            }
-
-            foreach ($batchProgrammeBatches as $programmeBatch) {
-                $programme = $programmeBatch->programme;
-
-                if (! $programme) {
-                    continue;
-                }
-
+        foreach ($runningBatches as $batch) {
+            foreach ($programmes as $programme) {
                 foreach ($activeCentres as $centre) {
                     $course = Course::firstOrCreate(
                         [

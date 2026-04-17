@@ -14,7 +14,6 @@ use App\Models\CourseModule;
 use App\Models\CourseCertification;
 use App\Helpers\CrudListHelper;
 use App\Models\Programme;
-use App\Events\OnlineProgrammeSaved;
 
 /**
  * Class ProgrammeCrudController
@@ -176,11 +175,6 @@ class ProgrammeCrudController extends CrudController
         $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
         $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
 
-        // Check if mode_of_delivery is online
-        // if ($this->crud->entry->mode_of_delivery === 'Online') {
-        //     event(new OnlineProgrammeSaved($this->crud->entry));
-        // }
-
         return $response;
     }
 
@@ -202,10 +196,6 @@ class ProgrammeCrudController extends CrudController
         $this->handleCourseModules($this->crud->entry, request()->input('course_modules', []));
         $this->handleCourseCertification($this->crud->entry, request()->input('course_certification', []));
 
-        // Check if mode_of_delivery is online
-        // if ($this->crud->entry->mode_of_delivery === 'Online') {
-        //     event(new OnlineProgrammeSaved($this->crud->entry));
-        // }
 
         // Check if mode_of_delivery is not online
         if ($this->crud->entry->mode_of_delivery === 'In Person') {

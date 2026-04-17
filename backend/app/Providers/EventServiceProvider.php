@@ -7,13 +7,11 @@ use App\Events\UserRegistered;
 use App\Events\CourseChanged;
 use App\Events\AdmissionSlotFreed;
 use App\Events\ProgrammeBatchCreated;
-use App\Events\OnlineProgrammeSaved;
 use App\Listeners\EmailSentListener;
 use App\Listeners\FormSubmitedListener;
 use App\Listeners\SendExamLoginCredentials;
 use App\Listeners\CourseChangedListener;
 use App\Listeners\NotifyWaitlistedUsers;
-use App\Listeners\CreateOnlineCoursesForAllCentres;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -47,9 +45,6 @@ class EventServiceProvider extends ServiceProvider
         ],
         ProgrammeBatchCreated::class => [
             NotifyWaitlistedUsers::class . '@onBatchCreated',
-        ],
-        OnlineProgrammeSaved::class => [
-            CreateOnlineCoursesForAllCentres::class,
         ],
     ];
 
