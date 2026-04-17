@@ -39,8 +39,8 @@ class SessionReminderNotification extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $programmeName = $this->booking->courseSession?->name ?? $this->booking->programmeBatch?->programme?->title ?? 'your chosen programme';
-        $sessionName = $this->booking->courseSession?->session ?? $this->booking->masterSession?->session ?? 'your chosen session';
+        $programmeName = $this->booking->session?->name ?? $this->booking->programmeBatch?->programme?->title ?? 'your chosen programme';
+        $sessionName = $this->booking->session?->session ?? 'your chosen session';
         $startDate = $this->booking->programmeBatch?->start_date ? $this->booking->programmeBatch->start_date->format('l, jS F Y') : 'soon';
 
         return (new MailMessage)

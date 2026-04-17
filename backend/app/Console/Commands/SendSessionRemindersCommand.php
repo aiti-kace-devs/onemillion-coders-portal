@@ -33,62 +33,100 @@ class SendSessionRemindersCommand extends Command
     {
         $this->info('Starting session reminders job...');
 
-        $reminders = [
-            '1_week' => Carbon::today()->addWeeks(1)->toDateString(),
-            '3_days' => Carbon::today()->addDays(3)->toDateString(),
-            '1_day' => Carbon::today()->addDays(1)->toDateString(),
-        ];
+        $reminders = [];
+
+        if (config(ONE_WEEK_REMINDER, false)) {
+            $reminders['1_week'] = Carbon::today()->addWeeks(1)->toDateString();
+        }
+
+        if (config(THREE_DAYS_REMINDER, false)) {
+            $reminders['3_days'] = Carbon::today()->addDays(3)->toDateString();
+        }
+
+        if (config(ONE_DAY_REMINDER, false)) {
+            $reminders['1_day'] = Carbon::today()->addDays(1)->toDateString();
+        }
+
+        if (empty($reminders)) {
+            $this->info('No reminders configured.');
+            return;
+        }
 
         $totalSent = 0;
 
         foreach ($reminders as $type => $targetDate) {
             $this->info("Processing {$type} reminders for date {$targetDate}");
 
-            $bookings = Booking::with(['user', 'programmeBatch.programme', 'courseSession', 'masterSession', 'reminders'])
+            Booking::with(['user', 'programmeBatch.programme', 'session', 'reminders'])
                 ->where('status', true)
                 ->whereHas('programmeBatch', function ($query) use ($targetDate) {
                     $query->whereDate('start_date', $targetDate);
                 })
-                ->get();
+                ->chunkById(300, function ($bookings) use ($type, &$totalSent) {
+                    /** @var \App\Models\Booking $booking */
+                    foreach ($bookings as $booking) {
+                        if ($booking->reminders->contains('type', $type)) {
+                            continue;
+                        }
 
-            /** @var \App\Models\Booking $booking */
-            foreach ($bookings as $booking) {
-                if ($booking->reminders->contains('type', $type)) {
-                    continue;
-                }
+                        $user = $booking->user;
 
-                $user = $booking->user;
+                        if (!$user) {
+                            continue;
+                        }
 
-                if (!$user) {
-                    continue;
-                }
+                        $daysText = str_replace('_', ' ', $type);
+                        $daysText = str_replace('days', 'days', $daysText);
 
-                $daysText = str_replace('_', ' ', $type);
-                $daysText = str_replace('days', 'days', $daysText);
+                        $programmeName = $booking->session?->name ?? $booking->programmeBatch?->programme?->title ?? 'your chosen programme';
+                        $sessionName = $booking->session?->session ?? 'your chosen session';
+                        $startDate = $booking->programmeBatch?->start_date ? $booking->programmeBatch->start_date->format('l, jS F Y') : 'soon';
+                        $centreName = $booking->centre?->title ?? 'your centre';
 
-                if ($user->email) {
-                    $user->notify(new SessionReminderNotification($booking, $daysText));
-                }
+                        $variables = [
+                            'first_name' => $user->first_name,
+                            'name' => $user->name,
+                            'programme' => $programmeName,
+                            'session' => $sessionName,
+                            'days' => $daysText,
+                            'date' => $startDate,
+                            'centre' => $centreName,
+                        ];
 
-                $phone = $user->mobile_no;
-                if ($phone) {
-                    $programmeName = $booking->courseSession?->name ?? $booking->programmeBatch?->programme?->title ?? 'your chosen programme';
-                    $sessionName = $booking->courseSession?->session ?? $booking->masterSession?->session ?? 'your chosen session';
-                    $startDate = $booking->programmeBatch?->start_date ? $booking->programmeBatch->start_date->format('l, jS F Y') : 'soon';
+                        if ($user->email) {
+                            $subject = "Friendly Reminder: Your session starts in {$daysText}";
+                            $emailSent = \App\Helpers\MailerHelper::sendTemplateEmail(
+                                SESSION_REMINDER_EMAIL,
+                                $user->email,
+                                $variables,
+                                $subject
+                            );
 
-                    $smsMessage = "Hi {$user->first_name}, friendly reminder that your {$programmeName} ({$sessionName}) session starts in {$daysText} on {$startDate}. See you soon!";
+                            if (!$emailSent) {
+                                $user->notify(new SessionReminderNotification($booking, $daysText));
+                            }
+                        }
 
-                    SendSmsJob::dispatch($phone, $smsMessage);
-                }
+                        $phone = $user->mobile_no;
+                        if ($phone) {
+                            // Concise fallback < 160 chars
+                            $defaultSms = "Hi {first_name}, your {programme} class at {centre} starts in {days} on {date}. See you!";
 
-                // 3. Mark as sent
-                BookingReminder::create([
-                    'booking_id' => $booking->id,
-                    'type' => $type
-                ]);
+                            $smsMessage = \App\Helpers\SmsHelper::getTemplate(SESSION_REMINDER_SMS, $variables)
+                                ?? \App\Helpers\SmsHelper::replaceVariables($defaultSms, $variables);
 
-                $totalSent++;
-            }
+                            SendSmsJob::dispatch($phone, $smsMessage);
+                        }
+
+                        // Mark as sent
+                        BookingReminder::create([
+                            'booking_id' => $booking->id,
+                            'type' => $type
+                        ]);
+
+                        $totalSent++;
+                    }
+                });
         }
 
         $this->info("Session reminders job completed. Sent {$totalSent} reminders.");
