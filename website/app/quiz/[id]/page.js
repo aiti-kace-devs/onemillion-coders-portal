@@ -779,7 +779,7 @@ export default function QuizPage({ params }) {
             onClick={() => window.location.href = process.env.NEXT_PUBLIC_PORTAL_URL || '/'}
             className="mt-5 text-sm text-white/40 hover:text-white/80 transition-colors"
           >
-            <FiHome className="inline mr-1 -mt-0.5" size={14} /> Back to Home
+            {/* <FiHome className="inline mr-1 -mt-0.5" size={14} /> Back to Home */}
           </button>
         </motion.div>
       </div>
