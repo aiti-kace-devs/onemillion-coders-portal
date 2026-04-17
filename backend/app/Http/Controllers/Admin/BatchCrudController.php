@@ -12,6 +12,7 @@ use App\Models\Batch;
 use App\Helpers\CourseFieldHelpers;
 use App\Helpers\BatchFieldHelpers;
 use Illuminate\Http\Request;
+use Prologue\Alerts\Facades\Alert;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\CrudListHelper;
@@ -202,33 +203,8 @@ class BatchCrudController extends CrudController
         // Regenerate programme batches button
         CRUD::addField([
             'name' => 'regenerate_batches',
-            'type' => 'custom_html',
-            'value' => '<div class="mb-3">
-                <button type="button"
-                   id="btn-regenerate-batches"
-                   class="btn btn-warning">
-                    <i class="la la-refresh"></i> Regenerate Programme Batches
-                </button>
-                <form id="regenerate-batches-form-' . $batch->id . '" action="' . url('admin/batch/' . $batch->id . '/regenerate-batches') . '" method="POST" style="display: none;">
-                    ' . csrf_field() . '
-                </form>
-            </div>
-            <script>
-                document.addEventListener("DOMContentLoaded", function() {
-                    var btn = document.getElementById("btn-regenerate-batches");
-                    if (btn) {
-                        btn.addEventListener("click", function(e) {
-                            e.preventDefault();
-                            if(confirm("Regenerate programme batches for this admission? This may overwrite existing batches.")) {
-                                var form = document.getElementById("regenerate-batches-form-' . $batch->id . '");
-                                if (form) {
-                                    form.submit();
-                                }
-                            }
-                        });
-                    }
-                });
-            </script>',
+            'type' => 'view',
+            'view' => 'admin.fields.regenerate_programme_batches',
             'tab' => 'Assign Courses',
         ]);
 
@@ -308,11 +284,13 @@ class BatchCrudController extends CrudController
         if ($coursesCount > 0) {
             $count = $coursesCount;
             return response()->json([
-                'error' => [sprintf(
-                    "%d %s already assigned to this batch, so you can't delete it.",
-                    $count,
-                    \Illuminate\Support\Str::plural('course', $count)
-                )],
+                'error' => [
+                    sprintf(
+                        "%d %s already assigned to this batch, so you can't delete it.",
+                        $count,
+                        \Illuminate\Support\Str::plural('course', $count)
+                    )
+                ],
             ]);
         }
 
@@ -354,31 +332,37 @@ class BatchCrudController extends CrudController
                             // Special-case courses: we always block if courses exist.
                             if ($fkDetails['table'] === 'courses' && $fkDetails['column'] === 'batch_id') {
                                 return response()->json([
-                                    'error' => [sprintf(
-                                        "%d %s already assigned to this batch, so you can't delete it.",
-                                        $count,
-                                        \Illuminate\Support\Str::plural('course', $count)
-                                    )],
+                                    'error' => [
+                                        sprintf(
+                                            "%d %s already assigned to this batch, so you can't delete it.",
+                                            $count,
+                                            \Illuminate\Support\Str::plural('course', $count)
+                                        )
+                                    ],
                                 ]);
                             }
 
                             return response()->json([
-                                'error' => [sprintf(
-                                    "Cannot delete this batch: %d record(s) in %s still reference it (%s).",
-                                    $count,
-                                    $fkDetails['table'],
-                                    $fkDetails['column']
-                                )],
+                                'error' => [
+                                    sprintf(
+                                        "Cannot delete this batch: %d record(s) in %s still reference it (%s).",
+                                        $count,
+                                        $fkDetails['table'],
+                                        $fkDetails['column']
+                                    )
+                                ],
                             ]);
                         }
 
                         return response()->json([
-                            'error' => [sprintf(
-                                "Cannot delete this batch due to a foreign key constraint (%s on %s.%s).",
-                                $fkDetails['constraint'] ?: 'unknown',
-                                $fkDetails['table'],
-                                $fkDetails['column']
-                            )],
+                            'error' => [
+                                sprintf(
+                                    "Cannot delete this batch due to a foreign key constraint (%s on %s.%s).",
+                                    $fkDetails['constraint'] ?: 'unknown',
+                                    $fkDetails['table'],
+                                    $fkDetails['column']
+                                )
+                            ],
                         ]);
                     } catch (\Throwable $ignored) {
                         // If counting fails, fall back to a generic message.
@@ -504,12 +488,22 @@ class BatchCrudController extends CrudController
 
             $generator = app(ProgrammeBatchGenerator::class);
             $generated = $generator->generate($batch);
+            $message = "Processed programme batches for '{$batch->title}'. {$generated->count()} batches are now active.";
 
-            return redirect()->back()
-                ->with('success', "Regenerated {$generated->count()} programme batches for '{$batch->title}'.");
+            Alert::success($message)->flash();
+
+            return redirect()->back()->with([
+                'flash' => $message,
+                'key' => 'success'
+            ]);
         } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'Failed to regenerate programme batches: ' . $e->getMessage());
+            $error = 'Failed to regenerate programme batches: ' . $e->getMessage();
+            Alert::error($error)->flash();
+
+            return redirect()->back()->with([
+                'flash' => $error,
+                'key' => 'error'
+            ]);
         }
     }
 }
