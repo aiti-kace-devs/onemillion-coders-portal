@@ -136,7 +136,15 @@ class GhanaCardService
 
         // Crop/Resize to 640x480
         // fit() resizes and crops to reach exactly the desired dimensions
-        $img->fit(640, 480);
+        // only resize if the image is larger than 640x480
+        if ($img->width() > 640 || $img->height() > 480) {
+            $img->fit(640, 480);
+        }
+        // // reduce image size to 1MB or less
+        // $img->resize(function ($constraint) {
+        //     $constraint->aspectRatio();
+        //     $constraint->upsize();
+        // });
 
         // Encode as PNG
         return (string) $img->encode('png');
@@ -798,7 +806,16 @@ class GhanaCardService
         $path = (string) data_get($data, 'verified_profile_image_path', '');
         $url = (string) data_get($data, 'verified_profile_image_url', '');
 
-        if ($path === '') {
+        // this is usually a private disk therefore generate a signed url
+        if ($path !== '' && method_exists(Storage::disk($disk), 'temporaryUrl')) {
+            try {
+                $url = (string) Storage::disk($disk)->temporaryUrl($path, now()->addMinutes(5));
+            } catch (\Throwable) {
+                $url = '';
+            }
+        }
+
+        if ($path === '' && $url === '') {
             $studentId = $user->student_id ?? $user->userId;
             $legacyPath = 'verified-student-images/' . $studentId . '.png';
             if (Storage::disk(self::DEFAULT_IMAGE_DISK)->exists($legacyPath)) {

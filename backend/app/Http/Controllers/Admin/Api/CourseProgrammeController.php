@@ -3,26 +3,22 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Programme;
-use App\Models\CourseCategory;
+use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Centre;
-use App\Models\District;
-use App\Models\Course;
-use App\Models\Batch;
 use App\Models\Constituency;
-use App\Models\CourseBatch;
-use Illuminate\Http\Request;
+use App\Models\Course;
+use App\Models\CourseCategory;
+use App\Models\District;
+use App\Models\Programme;
+use App\Models\UserAdmission;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
-use App\Models\UserAdmission;
 
 class CourseProgrammeController extends Controller
 {
-
-
-
     public function index(Request $request)
     {
         $query = Programme::with(['category', 'courseCertification', 'courseModules'])
@@ -46,12 +42,9 @@ class CourseProgrammeController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $programmes
+            'data' => $programmes,
         ]);
     }
-
-
-
 
     public function programmeWithBatch(Request $request)
     {
@@ -84,12 +77,12 @@ class CourseProgrammeController extends Controller
             $limit = null;
         }
 
-        $cacheKey = 'programme_with_batch:' . ($resolvedFilter ? (string) $resolvedFilter : 'all')
-            . ':sort:' . ($sort ? (string) $sort : 'none')
-            . ':order:' . ($order === 'desc' ? 'desc' : 'asc')
-            . ':limit:' . ($limit !== null ? (string) $limit : 'none')
-            . ':centre:' . ($centreId !== null ? (string) $centreId : 'all')
-            . ':mode:' . ($deliveryMode ?? 'all');
+        $cacheKey = 'programme_with_batch:'.($resolvedFilter ? (string) $resolvedFilter : 'all')
+            .':sort:'.($sort ? (string) $sort : 'none')
+            .':order:'.($order === 'desc' ? 'desc' : 'asc')
+            .':limit:'.($limit !== null ? (string) $limit : 'none')
+            .':centre:'.($centreId !== null ? (string) $centreId : 'all')
+            .':mode:'.($deliveryMode ?? 'all');
         $courseMatchApiController = app(CourseMatchAPIController::class);
 
         $programmes = Cache::remember($cacheKey, 600, function () use ($request, $resolvedFilter, $sort, $order, $limit, $centreId, $deliveryMode, $courseMatchApiController) {
@@ -133,7 +126,7 @@ class CourseProgrammeController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $programmes
+            'data' => $programmes,
         ]);
     }
 
@@ -223,7 +216,7 @@ class CourseProgrammeController extends Controller
     {
         $programme = $course->programme;
 
-        if (!$programme) {
+        if (! $programme) {
             return null;
         }
 
@@ -247,25 +240,20 @@ class CourseProgrammeController extends Controller
                 : null,
             'course_certification' => $programme->courseCertification
                 ? $programme->courseCertification
-                ->map(fn($cert) => [
-                    'title' => $cert->title,
-                    'description' => $cert->description,
-                    'type' => $cert->type,
-                    'status' => $cert->status,
-                ])
-                ->values()
+                    ->map(fn ($cert) => [
+                        'title' => $cert->title,
+                        'description' => $cert->description,
+                        'type' => $cert->type,
+                        'status' => $cert->status,
+                    ])
+                    ->values()
                 : [],
             'course_id' => $course->id,
-            'slot_left' => $slotLeft,
+            'slot_left' => 0, // Default to 0 if slot left is not available
+            // 'slot_left' => $slotLeft,
             'centre_id' => $course->centre_id,
         ];
     }
-
-
-
-
-
-
 
     // public function programmeWithBatch(Request $request)
     // {
@@ -312,10 +300,6 @@ class CourseProgrammeController extends Controller
     //     ]);
     // }
 
-
-
-
-
     public function allBatches(Request $request)
     {
         $query = Batch::query();
@@ -351,12 +335,9 @@ class CourseProgrammeController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => $batches
+            'data' => $batches,
         ]);
     }
-
-
-
 
     public function programmesByBatch($batchId, Request $request)
     {
@@ -364,7 +345,7 @@ class CourseProgrammeController extends Controller
             'courses.programme' => function ($q) {
                 $q->with(['category', 'courseCertification', 'courseModules'])
                     ->withCount('courseModules');
-            }
+            },
         ])
             ->whereHas('courses.programme');
 
@@ -386,12 +367,12 @@ class CourseProgrammeController extends Controller
         $batch = $query->findOrFail($batchId);
 
         $data = [
-            'id'          => $batch->id,
-            'title'       => $batch->title,
+            'id' => $batch->id,
+            'title' => $batch->title,
             'description' => $batch->description,
-            'start_date'  => $batch->start_date,
-            'end_date'    => $batch->end_date,
-            'programmes'  => $batch->courses
+            'start_date' => $batch->start_date,
+            'end_date' => $batch->end_date,
+            'programmes' => $batch->courses
                 ->pluck('programme')
                 ->unique('id')
                 ->values(),
@@ -399,12 +380,9 @@ class CourseProgrammeController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => $data
+            'data' => $data,
         ]);
     }
-
-
-
 
     public function show($id)
     {
@@ -412,19 +390,18 @@ class CourseProgrammeController extends Controller
             ->withCount('courseModules')
             ->find($id);
 
-        if (!$programme) {
+        if (! $programme) {
             return response()->json([
                 'success' => false,
-                'message' => 'Programme not found'
+                'message' => 'Programme not found',
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'data' => $programme
+            'data' => $programme,
         ]);
     }
-
 
     public function programmesByCategory($categoryId)
     {
@@ -435,13 +412,9 @@ class CourseProgrammeController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $programmes
+            'data' => $programmes,
         ]);
     }
-
-
-
-
 
     public function getCourseCategory()
     {
@@ -453,21 +426,17 @@ class CourseProgrammeController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $courseCategory
+            'data' => $courseCategory,
         ]);
     }
-
 
     public function getBranch(Request $request)
     {
         $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
-        $cacheKey = 'branches:' . ($addCentreCount ? 'with_centres' : 'basic');
+        $cacheKey = 'branches:'.($addCentreCount ? 'with_centres' : 'basic');
 
         $branch = Cache::remember($cacheKey, 600, function () use ($addCentreCount) {
             $branchQuery = Branch::where('status', 1)->orderBy('title');
-            if ($addCentreCount) {
-                $branchQuery->withCount('centre');
-            }
 
             return $branchQuery->get(['id', 'title', 'status'])
                 ->map(function ($branch) use ($addCentreCount) {
@@ -478,7 +447,10 @@ class CourseProgrammeController extends Controller
                     ];
 
                     if ($addCentreCount) {
-                        $payload['total_centres'] = (int) $branch->centre_count;
+                        $payload['total_centres'] = (int) Centre::where('branch_id', $branch->id)
+                            ->where('status', 1)
+                            ->where('is_ready', 1)
+                            ->count();
                     }
 
                     return $payload;
@@ -488,20 +460,20 @@ class CourseProgrammeController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $branch
+            'data' => $branch,
         ]);
     }
-
-
-
 
     public function getBranchSummary()
     {
         $today = Carbon::today()->toDateString();
-        $branches = Branch::withCount('centre')
-            ->with(['centre'])
+        $branches = Branch::where('status', 1)
             ->get()
             ->map(function ($branch) use ($today) {
+                $centres = Centre::where('branch_id', $branch->id)
+                    ->where('status', 1)
+                    ->where('is_ready', 1)
+                    ->get();
 
                 $courses = Course::join('centres', 'courses.centre_id', '=', 'centres.id')
                     ->join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
@@ -524,11 +496,11 @@ class CourseProgrammeController extends Controller
                 return [
                     'branch_id' => $branch->id,
                     'branch_title' => $branch->title,
-                    'total_centres' => $branch->centre_count,
+                    'total_centres' => $centres->count(),
                     'total_courses' => $courses->count(),
                     'total_trained_coders' => $admittedUsersCount,
-                    'centres' => $branch->centre
-                        ->map(fn($centre) => [
+                    'centres' => $centres
+                        ->map(fn ($centre) => [
                             'id' => $centre->id,
                             'title' => $centre->title,
                             'gps_location' => $centre->gps_location ?? [],
@@ -540,12 +512,9 @@ class CourseProgrammeController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $branches
+            'data' => $branches,
         ]);
     }
-
-
-
 
     public function programmeLocations(Programme $programme)
     {
@@ -560,6 +529,7 @@ class CourseProgrammeController extends Controller
                 $centreData = $centre->toArray();
                 unset($centreData['branch']);
                 $centreData['gps_location'] = $centre->gps_location ?? [];
+
                 return $centreData;
             })->values();
 
@@ -579,14 +549,11 @@ class CourseProgrammeController extends Controller
         ]);
     }
 
-
-
-
     public function programmesByCentre(Centre $centre)
     {
         $programmes = $this->getProgrammeWithBatchCourses('ongoing', $centre->id)
             ->unique('programme_id')
-            ->map(fn($course) => $this->formatProgrammeWithBatchItem($course))
+            ->map(fn ($course) => $this->formatProgrammeWithBatchItem($course))
             ->filter()
             ->values();
 
@@ -609,7 +576,6 @@ class CourseProgrammeController extends Controller
         ]);
     }
 
-
     public function centresByBranch(Branch $branch)
     {
         $centres = $branch->centre()
@@ -618,6 +584,7 @@ class CourseProgrammeController extends Controller
             ->map(function ($centre) {
                 $centreData = $centre->toArray();
                 $centreData['gps_location'] = $centre->gps_location ?? [];
+
                 return $centreData;
             })
             ->values();
@@ -637,7 +604,7 @@ class CourseProgrammeController extends Controller
         $branch = Branch::query()->findOrFail($data['branch_id']);
 
         $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
-        $cacheKey = 'districts_by_branch:' . $branch->id . ':' . ($addCentreCount ? 'with_centres' : 'basic') . ':has_centres';
+        $cacheKey = 'districts_by_branch:'.$branch->id.':'.($addCentreCount ? 'with_centres' : 'basic').':has_centres';
 
         $districts = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($branch, $addCentreCount) {
             $districtQuery = District::query()
@@ -674,8 +641,6 @@ class CourseProgrammeController extends Controller
         ]);
     }
 
-
-
     public function constituencyByRegion(Request $request)
     {
         $data = $request->validate([
@@ -685,7 +650,7 @@ class CourseProgrammeController extends Controller
         $branch = Branch::query()->findOrFail($data['branch_id']);
 
         $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
-        $cacheKey = 'constituencies_by_branch:' . $branch->id . ':' . ($addCentreCount ? 'with_centres' : 'basic');
+        $cacheKey = 'constituencies_by_branch:'.$branch->id.':'.($addCentreCount ? 'with_centres' : 'basic');
 
         $constituencies = Cache::remember($cacheKey, 600, function () use ($branch, $addCentreCount) {
             $constituencyQuery = Constituency::query()
@@ -729,7 +694,7 @@ class CourseProgrammeController extends Controller
         $district = District::query()
             ->with(['centres' => function ($query) {
                 $query->where('status', 1)
-                        ->orderBy('title');
+                    ->orderBy('title');
             }])
             ->findOrFail($data['district_id']);
 
@@ -767,8 +732,8 @@ class CourseProgrammeController extends Controller
     public function getTotalCentresCount()
     {
         $totalCentres = Centre::where('status', 1)
-        ->where('is_ready', 1)
-        ->count();
+            ->where('is_ready', 1)
+            ->count();
 
         return response()->json([
             'success' => true,

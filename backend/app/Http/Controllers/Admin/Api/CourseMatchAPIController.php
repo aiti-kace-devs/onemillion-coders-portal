@@ -112,6 +112,7 @@ class CourseMatchAPIController extends Controller
     {
         $data = $request->validate([
             'userId' => 'required|exists:users,userId',
+            'course_id' => 'nullable|integer|exists:courses,id',
         ]);
 
         $userId = $data['userId'];
@@ -123,6 +124,7 @@ class CourseMatchAPIController extends Controller
                 'message' => 'User not found.',
             ]);
         }
+
         $filter = $request->query('filter');
         $sort = $request->query('sort');
         $order = strtolower((string) $request->query('order', 'asc'));
@@ -140,7 +142,6 @@ class CourseMatchAPIController extends Controller
 
         $currentCourseId = $user->registered_course ? (int) $user->registered_course : null;
         $currentCourse = $user->course;
-        $currentCentreId = $currentCourse?->centre_id ? (int) $currentCourse->centre_id : null;
 
         if ($currentCourseId && ! $currentCourse) {
             Log::warning('siblingCourses: registered course could not be loaded.', [
@@ -148,8 +149,31 @@ class CourseMatchAPIController extends Controller
                 'registered_course' => $currentCourseId,
             ]);
         }
-        // New users may not have a registered course yet. In that case we can
-        // still return stored recommendations, but we skip same-centre siblings.
+
+        $selectedCourseId = isset($data['course_id']) ? (int) $data['course_id'] : $currentCourseId;
+        $selectedCourse = null;
+
+        if ($selectedCourseId !== null) {
+            $selectedCourse = $currentCourseId === $selectedCourseId
+                ? $currentCourse
+                : Course::find($selectedCourseId);
+        }
+
+        if (! $selectedCourse) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Course not found.',
+            ]);
+        }
+
+        $selectedCourseId = (int) $selectedCourse->id;
+        $selectedCentreId = $selectedCourse->centre_id ? (int) $selectedCourse->centre_id : null;
+        $excludedCourseIds = collect([$currentCourseId, $selectedCourseId])
+            ->filter()
+            ->map(fn ($courseId) => (int) $courseId)
+            ->unique()
+            ->values()
+            ->all();
 
         $recommendations = DB::table('user_course_recommendations')
             ->where('user_id', $userId)
@@ -159,7 +183,8 @@ class CourseMatchAPIController extends Controller
         $recommendedCourseIds = $recommendations
             ->pluck('course_id')
             ->filter()
-            ->reject(fn ($courseId) => (int) $courseId === $currentCourseId)
+            ->map(fn ($courseId) => (int) $courseId)
+            ->reject(fn ($courseId) => in_array($courseId, $excludedCourseIds, true))
             ->unique()
             ->values();
 
@@ -169,10 +194,10 @@ class CourseMatchAPIController extends Controller
             ->keyBy('id');
 
         $matches = $recommendations
-            ->map(function ($recommendation, $index) use ($request, $recommendedCourses, $currentCourseId) {
+            ->map(function ($recommendation, $index) use ($request, $recommendedCourses, $excludedCourseIds) {
                 $courseId = $recommendation->course_id ? (int) $recommendation->course_id : null;
 
-                if (! $courseId || $courseId === $currentCourseId) {
+                if (! $courseId || in_array($courseId, $excludedCourseIds, true)) {
                     return null;
                 }
 
@@ -217,11 +242,11 @@ class CourseMatchAPIController extends Controller
 
         $availableCourseIds = collect();
 
-        if ($currentCentreId !== null) {
-            $availableCourseIds = $this->getCentreCourses($currentCentreId)
+        if ($selectedCentreId !== null) {
+            $availableCourseIds = $this->getCentreCourses($selectedCentreId)
                 ->pluck('id')
                 ->map(fn ($courseId) => (int) $courseId)
-                ->reject(fn ($courseId) => $courseId === $currentCourseId || in_array($courseId, $existingCourseIds, true))
+                ->reject(fn ($courseId) => in_array($courseId, $excludedCourseIds, true) || in_array($courseId, $existingCourseIds, true))
                 ->unique()
                 ->values();
         }

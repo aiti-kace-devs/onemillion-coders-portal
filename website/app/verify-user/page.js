@@ -77,6 +77,12 @@ function VerifyUserContent() {
   useEffect(() => {
     if (typeof window === "undefined" || window.parent === window) return;
 
+    //get ghcard number from query param and fill the input
+    const ghCardNumber = searchParams.get("ghcard_number");
+    if (ghCardNumber) {
+      setPin(formatGhanaCardPinInput(ghCardNumber));
+    }
+
     const emitHeight = () => {
       const doc = document.documentElement;
       const body = document.body;
@@ -231,11 +237,10 @@ function VerifyUserContent() {
             {STEPS.map((s, i) => (
               <React.Fragment key={s.key}>
                 <div className="flex items-center space-x-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                    i < currentStepIndex ? "bg-green-500 text-white"
-                    : i === currentStepIndex ? "bg-yellow-400 text-gray-900"
-                    : "bg-gray-100 text-gray-400 "
-                  }`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${i < currentStepIndex ? "bg-green-500 text-white"
+                      : i === currentStepIndex ? "bg-yellow-400 text-gray-900"
+                        : "bg-gray-100 text-gray-400 "
+                    }`}>
                     {i < currentStepIndex ? (
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -244,11 +249,10 @@ function VerifyUserContent() {
                       i + 1
                     )}
                   </div>
-                  <span className={`text-xs font-medium hidden sm:block ${
-                    i === currentStepIndex ? "text-gray-900"
-                    : i < currentStepIndex ? "text-green-600"
-                    : "text-gray-400"
-                  }`}>
+                  <span className={`text-xs font-medium hidden sm:block ${i === currentStepIndex ? "text-gray-900"
+                      : i < currentStepIndex ? "text-green-600"
+                        : "text-gray-400"
+                    }`}>
                     {s.label}
                   </span>
                 </div>
@@ -287,9 +291,8 @@ function VerifyUserContent() {
                       if (pinError) setPinError(null);
                     }}
                     placeholder="GHA-123456789-0"
-                    className={`w-full px-4 py-3 border-2 rounded-xl text-center text-lg font-mono tracking-wider focus:outline-none focus:ring-0 transition-colors ${
-                      pinError ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-yellow-400"
-                    }`}
+                    className={`w-full px-4 py-3 border-2 rounded-xl text-center text-lg font-mono tracking-wider focus:outline-none focus:ring-0 transition-colors ${pinError ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-yellow-400"
+                      }`}
                     maxLength={15}
                     autoComplete="off"
                     inputMode="numeric"

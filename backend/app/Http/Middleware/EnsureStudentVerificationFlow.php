@@ -56,7 +56,7 @@ class EnsureStudentVerificationFlow
 
     private function isRestrictedRoute(Request $request): bool
     {
-        if ($request->is('api/v1/student/session-options') || $request->is('api/v1/student/session-confirm')) {
+        if ($request->is('api/student/session-options') || $request->is('api/student/session-confirm')) {
             return true;
         }
 
