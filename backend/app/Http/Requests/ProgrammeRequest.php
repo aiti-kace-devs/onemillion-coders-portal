@@ -39,6 +39,8 @@ class ProgrammeRequest extends FormRequest
             'cover_image_id' => 'nullable|string',
             'course_category_id' => 'nullable|string',
             'status' => 'nullable|boolean',
+            'mode_of_delivery' => 'nullable|string',
+            'duration' => 'nullable|numeric|min:0',
         ];
     }
 
