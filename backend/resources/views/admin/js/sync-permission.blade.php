@@ -3,7 +3,6 @@
         // Pass Laravel routes to JavaScript
         window.SYNC_PERMISSION_URLS = {
             permissions: "{{ url('admin/roles/permissions') }}",
-            testRoles: "{{ url('admin/test-roles') }}"
         };
     </script>
 
@@ -14,12 +13,11 @@
 
                 // Use the global URL object
                 const fetchPermissionsUrl = window.SYNC_PERMISSION_URLS.permissions;
-                const testRolesUrl = window.SYNC_PERMISSION_URLS.testRoles;
 
                 // Debug: Log all form fields
                 console.log("All form fields:", document.querySelectorAll('input, select, textarea'));
                 console.log("All select elements:", document.querySelectorAll('select'));
-                
+
                 // Log all field names
                 document.querySelectorAll('input, select, textarea').forEach(field => {
                     if (field.name) {
@@ -123,7 +121,7 @@
                             $(permissionField).val(data).trigger("change");
 
                             console.log("Permissions updated successfully");
-                            
+
                             // Additional debugging to verify the field was updated
                             setTimeout(() => {
                                 const currentValue = $(permissionField).val();
@@ -141,17 +139,6 @@
                 $(roleField).on("select2:select select2:unselect", handleRoleChange);
 
                 console.log("Event listeners attached");
-
-                // Test the connection by logging available roles and permissions
-                console.log("Testing role-permission connection...");
-                fetch(testRolesUrl)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log("Available roles and permissions:", data);
-                    })
-                    .catch(error => {
-                        console.error("Error testing connection:", error);
-                    });
             }
 
             // Try to initialize immediately
