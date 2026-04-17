@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\User;
+use App\Services\GhanaCardService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,7 @@ class ProfileController extends Controller
     public function edit(Request $request): Response
     {
         $user = $request->user()->load(['admission.course', 'admission.courseSession']);
+        $verificationStatus = app(GhanaCardService::class)->buildStatus($user);
 
         $userData = array_merge($user->toArray(), [
             'isAdmitted' => $user->isAdmitted(),
@@ -28,6 +30,9 @@ class ProfileController extends Controller
             'course_name' => $user->course_name,
             'selected_session' => $user->selected_session,
             'verification_date' => $user->verification_date,
+            'ghcard_verified' => (bool) data_get($verificationStatus, 'verified', false),
+            'ghcard_verification_status' => data_get($verificationStatus, 'verified', false) ? 'verified' : 'pending',
+            'ghcard_latest_attempt' => data_get($verificationStatus, 'latest_attempt'),
         ]);
 
         $userData = collect($userData)->only([
@@ -51,6 +56,9 @@ class ProfileController extends Controller
             'course_name',
             'selected_session',
             'verification_date',
+            'ghcard_verified',
+            'ghcard_verification_status',
+            'ghcard_latest_attempt',
             'isAdmitted'
         ])->toArray();
 
