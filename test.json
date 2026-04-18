@@ -1,172 +1,330 @@
 {
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "title": "Quarter 1",
-      "description": null,
-      "start_date": "2025-07-01",
-      "end_date": "2025-09-30",
-      "programmes": [
-          {
-              "id": 1,
-              "title": "Certified Data Protection Officer  (CDPO)",
-              "duration": "1 Week",
-              "start_date": "2025-04-14",
-              "end_date": "2025-04-18",
-              "status": true,
-              "created_at": "2025-03-31T12:41:20.000000Z",
-              "updated_at": "2025-04-12T19:06:16.000000Z",
-              "course_category_id": 2,
-              "cover_image_id": null,
-              "description": null,
-              "sub_title": null,
-              "level": null,
-              "job_responsible": null,
-              "image": null,
-              "overview": null,
-              "prerequisites": null,
-              "course_modules_count": 0,
-              "category": {
-                "id": 2,
-                "title": "DATA Protection",
-                "description": null,
-                "icon": null,
-                "status": false,
-                "created_at": "2025-07-14T15:36:03.000000Z",
-                "updated_at": "2025-07-14T15:36:03.000000Z"
-              },
-              "course_certification": [],
-              "course_modules": []
-        },
-
-        {
-            "id": 2,
-            "title": "Certified Cybersecurity Professional",
-            "duration": "5 Weeks",
-            "start_date": "2025-04-14",
-            "end_date": "2025-05-16",
-            "status": true,
-            "created_at": "2025-03-31T12:41:28.000000Z",
-            "updated_at": "2025-04-12T19:05:12.000000Z",
-            "course_category_id": 2,
-            "cover_image_id": null,
-            "description": null,
-            "sub_title": null,
-            "level": null,
-            "job_responsible": null,
-            "image": null,
-            "overview": null,
-            "prerequisites": null,
-            "course_modules_count": 0,
-            "category": {
-              "id": 2,
-              "title": "DATA Protection",
-              "description": null,
-              "icon": null,
-              "status": false,
-              "created_at": "2025-07-14T15:36:03.000000Z",
-              "updated_at": "2025-07-14T15:36:03.000000Z"
-            },
-            "course_certification": [],
-            "course_modules": []
-        }
-      ]
-    },
-
-
-    {
-      "id": 2,
-      "title": "Quarter 2",
-      "description": null,
-      "start_date": "2025-07-01",
-      "end_date": "2025-09-30",
-      "programmes": [
-          {
-            "id": 3,
-            "title": "Data Analyst Associate",
-            "duration": "5 Weeks",
-            "start_date": "2025-04-14",
-            "end_date": "2025-05-16",
-            "status": true,
-            "created_at": "2025-03-31T19:33:14.000000Z",
-            "updated_at": "2025-04-12T19:03:59.000000Z",
-            "course_category_id": 3,
-            "cover_image_id": null,
-            "description": null,
-            "sub_title": null,
-            "level": null,
-            "job_responsible": null,
-            "image": null,
-            "overview": null,
-            "prerequisites": null,
-            "course_modules_count": 6,
-            "category": {
-              "id": 3,
-              "title": "Artificial Intelligence Training",
-              "description": null,
-              "icon": null,
-              "status": true,
-              "created_at": "2025-07-14T15:36:17.000000Z",
-              "updated_at": "2025-07-14T15:36:17.000000Z"
-            },
-            "course_certification": [],
-            "course_modules": [
-              {
-                "id": 5,
-                "title": "Power BI Basics - Interface, data import, simple visuals",
-                "programme_id": 3,
-                "description": null,
-                "status": true,
-                "created_at": "2025-07-15T20:24:05.000000Z",
-                "updated_at": "2025-07-15T20:24:05.000000Z"
-              },
-              {
-                "id": 6,
-                "title": "Data Cleaning (Power Query) - Transformations, merging, error handling",
-                "programme_id": 3,
-                "description": null,
-                "status": true,
-                "created_at": "2025-07-15T20:24:16.000000Z",
-                "updated_at": "2025-07-15T20:24:16.000000Z"
-              }
+    "success": true,
+    "data": {
+        "id": 10,
+        "title": "CyberSecurity",
+        "duration": "166 hours",
+        "duration_in_days": 50,
+        "time_allocation": 4,
+        "start_date": null,
+        "end_date": null,
+        "status": true,
+        "created_at": "2025-07-20T21:41:24.000000Z",
+        "updated_at": "2026-04-15T12:44:41.000000Z",
+        "course_category_id": 1,
+        "description": null,
+        "sub_title": "Cybersecurity Analyst",
+        "level": "Intermediate",
+        "mode_of_delivery": "Online",
+        "provider": "Google",
+        "job_responsible": "Monitor & protect networks; identify risks, threats, and vulnerabilities; use SIEM tools and Python for security.",
+        "image": "https:\/\/storage.googleapis.com\/developers-bucket\/omcp\/Programmes\/Untitled-8.jpg",
+        "overview": {
+            "what_you_will_learn": [
+                "Understand the importance of cybersecurity practices and their impact for organizations.",
+                "Identify common risks, threats, and vulnerabilities, as well as techniques to mitigate them.",
+                "Protect networks, devices, people, and data from unauthorized access and cyberattacks using Security Information and Event Management (SIEM) tools.",
+                "Gain hands-on experience with Python, Linux, and SQL."
             ],
-            "courses": [
-              {
-                "id": 27,
-                "course_name": "Data Analyst Associate - (Ashanti Region)",
-                "course": null,
-                "batch_id": null,
-                "location": "Ashanti Region",
-                "duration": "5 Weeks",
-                "no_of_days": null,
-                "start_date": null,
-                "end_date": null,
-                "status": true,
-                "created_at": "2025-04-09T08:28:15.000000Z",
-                "updated_at": "2025-07-21T11:23:03.000000Z",
-                "centre_id": 4,
-                "programme_id": 3
-              },
-              {
-                "id": 28,
-                "course_name": "Data Analyst Associate - (Upper East Region)",
-                "course": null,
-                "batch_id": null,
-                "location": "Upper East Region",
-                "duration": "5 Weeks",
-                "no_of_days": null,
-                "start_date": null,
-                "end_date": null,
-                "status": true,
-                "created_at": "2025-04-09T08:28:26.000000Z",
-                "updated_at": "2025-07-21T11:22:58.000000Z",
-                "centre_id": 2,
-                "programme_id": 3
-              }
+            "why_choose_this_course": [
+                "Computer Security Incident Management",
+                "Cyber Threat Intelligence",
+                "Cyber Attacks",
+                "Debugging",
+                "Hardening",
+                "Intrusion Detection and Prevention",
+                "Network Protocols",
+                "Network Security",
+                "Security Management",
+                "Threat Detection",
+                "Threat Management",
+                "Threat Modeling",
+                "Vulnerability Management"
             ]
-        }
-      ]
+        },
+        "prerequisites": "Basic IT knowledge",
+        "course_modules_count": 9,
+        "category": {
+            "id": 1,
+            "title": "Cybersecurity",
+            "description": "Protecting systems, networks, and data from digital threats",
+            "status": true,
+            "icon": null,
+            "created_at": "2025-07-14T15:34:25.000000Z",
+            "updated_at": "2026-03-12T18:41:10.000000Z"
+        },
+        "course_certification": [
+            {
+                "id": 278,
+                "title": "Google Cybersecurity Professional Certificate",
+                "programme_id": 10,
+                "description": "Monitor & protect networks; identify risks, threats, and vulnerabilities; use SIEM tools and Python for security.",
+                "type": "International Certification",
+                "status": true,
+                "created_at": "2026-04-15T12:44:41.000000Z",
+                "updated_at": "2026-04-15T12:44:41.000000Z"
+            }
+        ],
+        "course_modules": [
+            {
+                "id": 1981,
+                "title": "Foundations of Cybersecurity",
+                "programme_id": 10,
+                "description": "Identify how security attacks impact business operations",
+                "status": true,
+                "created_at": "2026-04-15T12:44:41.000000Z",
+                "updated_at": "2026-04-15T12:44:41.000000Z"
+            },
+            {
+                "id": 1982,
+                "title": "Play It Safe: Manage Security Risks",
+                "programme_id": 10,
+                "description": "Identify the primary threats, risks, and vulnerabilities to business operations",
+                "status": true,
+                "created_at": "2026-04-15T12:44:41.000000Z",
+                "updated_at": "2026-04-15T12:44:41.000000Z"
+            },
+            {
+                "id": 1983,
+                "title": "Connect and Protect: Networks and Network Security",
+                "programme_id": 10,
+                "description": "Illustrate how data is sent and received over a network",
+                "status": true,
+                "created_at": "2026-04-15T12:44:41.000000Z",
+                "updated_at": "2026-04-15T12:44:41.000000Z"
+            },
+            {
+                "id": 1984,
+                "title": "Tools of the Trade: Linux and SQL",
+                "programme_id": 10,
+                "description": "Explain the relationship between operating systems, applications, and hardware",
+                "status": true,
+                "created_at": "2026-04-15T12:44:41.000000Z",
+                "updated_at": "2026-04-15T12:44:41.000000Z"
+            },
+            {
+                "id": 1985,
+                "title": "Assets, Threats, and Vulnerabilities",
+                "programme_id": 10,
+                "description": "Identify threats, such as social engineering, malware and web-based exploits",
+                "status": true,
+                "created_at": "2026-04-15T12:44:41.000000Z",
+                "updated_at": "2026-04-15T12:44:41.000000Z"
+            },
+            {
+                "id": 1986,
+                "title": "Sound the Alarm: Detection and Response",
+                "programme_id": 10,
+                "description": "Analyze packets to interpret network communications",
+                "status": true,
+                "created_at": "2026-04-15T12:44:41.000000Z",
+                "updated_at": "2026-04-15T12:44:41.000000Z"
+            },
+            {
+                "id": 1987,
+                "title": "Automate Cybersecurity Tasks with Python",
+                "programme_id": 10,
+                "description": "Explain how the Python programming language is used in cybersecurity",
+                "status": true,
+                "created_at": "2026-04-15T12:44:41.000000Z",
+                "updated_at": "2026-04-15T12:44:41.000000Z"
+            },
+            {
+                "id": 1988,
+                "title": "Put It to Work: Prepare for Cybersecurity Jobs",
+                "programme_id": 10,
+                "description": "Determine when and how to escalate a security incident",
+                "status": true,
+                "created_at": "2026-04-15T12:44:41.000000Z",
+                "updated_at": "2026-04-15T12:44:41.000000Z"
+            },
+            {
+                "id": 1989,
+                "title": "Accelerate Your Job Search with AI",
+                "programme_id": 10,
+                "description": "Keep your applications organized with Google Sheets",
+                "status": true,
+                "created_at": "2026-04-15T12:44:41.000000Z",
+                "updated_at": "2026-04-15T12:44:41.000000Z"
+            }
+        ],
+        "courses": [
+            {
+                "id": 52,
+                "course_name": "CyberSecurity - (GI-KACE Training Centre \u2013 Accra)",
+                "duration": "166 hours",
+                "start_date": "2026-01-01",
+                "end_date": "2026-04-30",
+                "status": true,
+                "created_at": "2026-03-13T14:17:02.000000Z",
+                "updated_at": "2026-04-08T20:07:56.000000Z",
+                "centre_id": 1,
+                "programme_id": 10,
+                "batch_id": 1,
+                "centre": {
+                    "id": 1,
+                    "title": "GI-KACE Training Centre \u2013 Accra",
+                    "branch_id": 1,
+                    "seat_count": 1,
+                    "short_slots_per_day": 1,
+                    "long_slots_per_day": 0,
+                    "constituency_id": 150,
+                    "status": true,
+                    "is_ready": true,
+                    "created_at": "2025-03-31T12:36:40.000000Z",
+                    "updated_at": "2026-04-16T16:03:25.000000Z",
+                    "gps_address": "GA-079-3146",
+                    "gps_location": [
+                        {
+                            "Area": null,
+                            "District": "Korle Klottey",
+                            "AddressV1": "GR0793146",
+                            "GPSName": "GR0793146",
+                            "PostCode": "GR079",
+                            "Street": "Haile Selassie Road",
+                            "Latitude": "5.5593173297023",
+                            "Longitude": "-0.19170048162681"
+                        }
+                    ],
+                    "is_pwd_friendly": true,
+                    "wheelchair_accessible": true,
+                    "has_access_ramp": false,
+                    "has_accessible_toilet": true,
+                    "has_elevator": false,
+                    "supports_hearing_impaired": false,
+                    "supports_visually_impaired": false,
+                    "staff_trained_for_pwd": true,
+                    "accessibility_rating": null,
+                    "pwd_notes": null,
+                    "images": [
+                        "https:\/\/storage.googleapis.com\/omcp-assets\/gi-kace.webp",
+                        "https:\/\/storage.googleapis.com\/omcp-assets\/media\/centre-images\/Ghana-India-Kofi-Annan-Centre-of-Excellence-in-ICT-GI-KACE.jpg",
+                        "https:\/\/storage.googleapis.com\/omcp-assets\/media\/centre-images\/GI-KACE Training Centre.jpg"
+                    ],
+                    "video": "https:\/\/storage.googleapis.com\/omcp-assets\/centre-videos\/AQMEhUY8H6GUpLN7bKVrn4s_R09e_z1Og8CaU7mKk6yXyTIweJsD5WdUfuc8fWO9ms5Pffymt7ipkYCBlgVhb92OLc5sBBhAu7v8eDPmHxYkFQ.mp4",
+                    "branch": {
+                        "id": 1,
+                        "title": "Greater Accra Region",
+                        "status": true,
+                        "created_at": "2025-03-31T12:33:21.000000Z",
+                        "updated_at": "2025-04-03T10:28:37.000000Z"
+                    },
+                    "districts": [
+                        {
+                            "id": 24,
+                            "title": "Korle Klottey Municipal",
+                            "description": null,
+                            "branch_id": 1,
+                            "status": true,
+                            "created_at": null,
+                            "updated_at": null,
+                            "pivot": {
+                                "centre_id": 1,
+                                "district_id": 24,
+                                "created_at": "2026-03-20T15:58:41.000000Z",
+                                "updated_at": "2026-03-20T15:58:41.000000Z"
+                            }
+                        }
+                    ]
+                },
+                "programme": {
+                    "id": 10,
+                    "title": "CyberSecurity",
+                    "duration": "166 hours",
+                    "duration_in_days": 50,
+                    "time_allocation": 4,
+                    "start_date": null,
+                    "end_date": null,
+                    "status": true,
+                    "created_at": "2025-07-20T21:41:24.000000Z",
+                    "updated_at": "2026-04-15T12:44:41.000000Z",
+                    "course_category_id": 1,
+                    "description": null,
+                    "sub_title": "Cybersecurity Analyst",
+                    "level": "Intermediate",
+                    "mode_of_delivery": "Online",
+                    "provider": "Google",
+                    "job_responsible": "Monitor & protect networks; identify risks, threats, and vulnerabilities; use SIEM tools and Python for security.",
+                    "image": "https:\/\/storage.googleapis.com\/developers-bucket\/omcp\/Programmes\/Untitled-8.jpg",
+                    "overview": {
+                        "what_you_will_learn": [
+                            "Understand the importance of cybersecurity practices and their impact for organizations.",
+                            "Identify common risks, threats, and vulnerabilities, as well as techniques to mitigate them.",
+                            "Protect networks, devices, people, and data from unauthorized access and cyberattacks using Security Information and Event Management (SIEM) tools.",
+                            "Gain hands-on experience with Python, Linux, and SQL."
+                        ],
+                        "why_choose_this_course": [
+                            "Computer Security Incident Management",
+                            "Cyber Threat Intelligence",
+                            "Cyber Attacks",
+                            "Debugging",
+                            "Hardening",
+                            "Intrusion Detection and Prevention",
+                            "Network Protocols",
+                            "Network Security",
+                            "Security Management",
+                            "Threat Detection",
+                            "Threat Management",
+                            "Threat Modeling",
+                            "Vulnerability Management"
+                        ]
+                    },
+                    "prerequisites": "Basic IT knowledge"
+                }
+            }
+        ],
+         "centres_info": [
+            {
+                "branch_name": "Ahafo Region",
+                "district_name": "Asunafo South",
+                "centre_name": "KUKUOM CIC",
+                "capacity": 20,
+                "batches": [
+                    {
+                        "batch": "Cohort 1",
+                        "start_date": "2026-04-01",
+                        "end_date": "2026-06-09",
+                        "sessions": [
+                            {
+                                "session_name": "Morning Session",
+                                "time": "8AM - 11:45AM",
+                                "remaining": 20
+                            },
+                            {
+                                "session_name": "Afternoon Session",
+                                "time": "1PM - 4:45PM",
+                                "remaining": 20
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "branch_name": "Ahafo Region",
+                "district_name": "Asunafo North Municipal",
+                "centre_name": "GOASO",
+                "capacity": 20,
+                "batches": [
+                    {
+                        "batch": "Cohort 1",
+                        "start_date": "2026-04-01",
+                        "end_date": "2026-06-09",
+                        "sessions": [
+                            {
+                                "session_name": "Morning Session",
+                                "time": "8AM - 11:45AM",
+                                "remaining": 20
+                            },
+                            {
+                                "session_name": "Afternoon Session",
+                                "time": "1PM - 4:45PM",
+                                "remaining": 20
+                            }
+                        ]
+                    }
+                ]
+            }
+          ]
+        
     }
-  ]
 }

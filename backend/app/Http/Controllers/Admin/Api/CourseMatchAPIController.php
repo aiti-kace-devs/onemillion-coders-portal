@@ -78,7 +78,7 @@ class CourseMatchAPIController extends Controller
             ->unique()
             ->values();
 
-        $courses = Course::with('programme')
+        $courses = Course::with('programme', 'centre.branch', 'centre.districts')
             ->whereIn('id', $courseIds)
             ->get()
             ->keyBy('id');
@@ -100,12 +100,41 @@ class CourseMatchAPIController extends Controller
             ->filter()
             ->values();
 
-        return response()->json([
-            'success' => true,
-            'title' => 'These are Your Recommended Courses',
-            'description' => 'Based on your preferences, here are the recommended courses that best align with your goals',
-            'matches' => $matches,
-        ]);
+            $centre = $courses->first()?->centre;
+
+            $centreTitle = $centre?->title ?? null;
+            $region = $centre?->branch?->title ?? null;
+            $districts = $centre?->districts?->pluck('title')->filter()->values() ?? collect();
+
+            // Build a readable location string
+            $locationParts = collect([
+                $centreTitle,
+                $districts->implode(', '),
+                $region,
+            ])->filter()->implode(', ');
+
+            $description = 'Based on your preferences, here are the recommended courses at';
+
+            if ($locationParts) {
+                $description .= "\n({$locationParts})";
+            }
+
+            $description .= ' that best align with your goals';
+
+
+
+
+            return response()->json([
+                'success' => true,
+                'title' => 'These are Your Recommended Courses',
+                'description' => $description,
+                'location' => [
+                    'centre' => $centreTitle,
+                    'region' => $region,
+                    'districts' => $districts,
+                ],
+                'matches' => $matches,
+            ]);
     }
 
     public function siblingCourses(Request $request)

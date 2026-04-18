@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\AdmissionSlotFreed;
 use App\Helpers\SchoolDayCalculator;
+use App\Models\AdmissionWaitlist;
 use App\Models\AppConfig;
 use App\Models\Batch;
 use App\Models\Booking;
@@ -87,6 +88,9 @@ class BookingService
                         'confirmed' => now(),
                     ]
                 );
+
+                 // Remove from waitlist if exists
+                AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
                 // Clear the cached seat count so the next read reflects this booking
                 Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$session->id}");

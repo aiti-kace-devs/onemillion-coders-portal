@@ -10,8 +10,11 @@ use App\Models\Constituency;
 use App\Models\Course;
 use App\Models\CourseCategory;
 use App\Models\District;
+use App\Models\MasterSession;
 use App\Models\Programme;
+use App\Models\ProgrammeBatch;
 use App\Models\UserAdmission;
+use App\Services\BookingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -384,23 +387,138 @@ class CourseProgrammeController extends Controller
         ]);
     }
 
-    public function show($id)
+    public function show($id, Request $request, BookingService $bookingService)
     {
-        $programme = Programme::with(['category', 'courseCertification', 'courseModules'])
-            ->withCount('courseModules')
-            ->find($id);
+        $filter = $request->query('filter');
+        $sort = $request->query('sort');
+        $order = strtolower((string) $request->query('order', 'asc'));
+        $limit = $request->query('limit');
+        $centreId = $request->query('centre_id');
+        $deliveryMode = $this->normalizeProgrammeDeliveryMode($request->query('mode'));
+        $resolvedFilter = $filter ?: ($centreId !== null ? 'ongoing' : null);
 
-        if (! $programme) {
+        if (is_string($sort) && str_starts_with($sort, '-')) {
+            $sort = ltrim($sort, '-');
+            $order = 'desc';
+        }
+
+        $limit = is_numeric($limit) ? (int) $limit : null;
+        if ($limit !== null && $limit <= 0) {
+            $limit = null;
+        }
+
+        $cacheKey = 'programme_show:'.($id ?? 'none')
+            .':filter:'.($resolvedFilter ? (string) $resolvedFilter : 'all')
+            .':sort:'.($sort ? (string) $sort : 'none')
+            .':order:'.($order === 'desc' ? 'desc' : 'asc')
+            .':limit:'.($limit !== null ? (string) $limit : 'none')
+            .':centre:'.($centreId !== null ? (string) $centreId : 'all')
+            .':mode:'.($deliveryMode ?? 'all');
+
+        $response = Cache::remember($cacheKey, 600, function () use ($id, $bookingService) {
+            $programme = Programme::with(['category', 'courseCertification', 'courseModules', 'courses.centre.branch', 'courses.centre.districts'])
+                ->withCount('courseModules')
+                ->find($id);
+
+            if (! $programme) {
+                return null;
+            }
+
+            $courseType = $programme->courseType();
+
+            $today = Carbon::today();
+            $admissionBatch = Batch::where('start_date', '<=', $today)
+                ->where('end_date', '>=', $today)
+                ->where('status', true)
+                ->where('completed', false)
+                ->first();
+
+            $centresInfo = [];
+
+            if ($admissionBatch) {
+                $batches = ProgrammeBatch::where('admission_batch_id', $admissionBatch->id)
+                    ->where('programme_id', $programme->id)
+                    ->where('status', true)
+                    ->orderBy('start_date')
+                    ->get();
+
+                if ($batches->isNotEmpty()) {
+                    $sessions = MasterSession::where('course_type', $courseType)
+                        ->where('status', true)
+                        ->get();
+                    $sessions = $this->sortMasterSessions($sessions);
+
+                    $centres = $programme->courses->pluck('centre')->unique('id')->filter();
+
+                    foreach ($centres as $centre) {
+                        $remainingSeats = $bookingService->getRemainingSeatsBatch(
+                            $centre->id,
+                            $batches->pluck('id')->toArray(),
+                            $sessions->pluck('id')->toArray()
+                        );
+
+                        $totalAvailable = 0;
+
+                        $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats, &$totalAvailable) {
+                            $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, &$totalAvailable) {
+                                $key = "{$batch->id}:{$session->id}";
+                                $remaining = $remainingSeats[$key] ?? 0;
+                                $totalAvailable += $remaining;
+
+                                return [
+                                    'session_name' => "{$session->session_type} Session",
+                                    'time' => $session->time,
+                                    'remaining' => $remaining,
+                                ];
+                            })->values()->toArray();
+
+                            return [
+                                'batch' => 'Cohort ' . ($index + 1),
+                                'start_date' => $batch->start_date->format('Y-m-d'),
+                                'end_date' => $batch->end_date->format('Y-m-d'),
+                                'sessions' => $sessionData,
+                            ];
+                        })->values()->toArray();
+
+                        if ($totalAvailable > 0) {
+                            $primaryDistrict = $centre->districts->first();
+
+                            $centresInfo[] = [
+                                'branch_name' => $centre->branch?->title,
+                                'district_name' => $primaryDistrict?->title,
+                                'centre_name' => $centre->title,
+                                'capacity' => $centre->slotCapacityFor($courseType),
+                                'batches' => $batchData,
+                            ];
+                        }
+                    }
+
+                    $centresInfo = collect($centresInfo)
+                        ->groupBy('branch_name')
+                        ->flatMap(fn ($group) => $group->take(1))
+                        ->values()
+                        ->all();
+                }
+            }
+
+            $data = $programme->toArray();
+            unset($data['courses']);
+            $data['centres_info'] = $centresInfo;
+
+            return [
+                'success' => true,
+                'data' => $data,
+            ];
+        });
+
+        if ($response === null) {
             return response()->json([
                 'success' => false,
                 'message' => 'Programme not found',
             ], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $programme,
-        ]);
+        return response()->json($response);
     }
 
     public function programmesByCategory($categoryId)
@@ -739,5 +857,48 @@ class CourseProgrammeController extends Controller
             'success' => true,
             'total_centres' => $totalCentres,
         ]);
+    }
+
+    protected function sortMasterSessions($sessions)
+    {
+        return collect($sessions)
+            ->sortBy(function ($session) {
+                return [
+                    $this->sessionTypePriority($session->session_type ?? null),
+                    $this->sessionStartMinutes($session->time ?? null),
+                    strtolower(trim((string) ($session->time ?? ''))),
+                    (int) ($session->id ?? 0),
+                ];
+            }, SORT_REGULAR)
+            ->values();
+    }
+
+    protected function sessionTypePriority(?string $sessionType): int
+    {
+        return match (strtolower(trim((string) $sessionType))) {
+            'morning' => 0,
+            'afternoon' => 1,
+            'evening' => 2,
+            'fullday' => 3,
+            'online' => 4,
+            default => 99,
+        };
+    }
+
+    protected function sessionStartMinutes(?string $time): int
+    {
+        $startTime = trim(explode('-', (string) $time, 2)[0] ?? '');
+
+        if ($startTime === '') {
+            return PHP_INT_MAX;
+        }
+
+        $timestamp = strtotime($startTime);
+
+        if ($timestamp === false) {
+            return PHP_INT_MAX;
+        }
+
+        return ((int) date('G', $timestamp) * 60) + (int) date('i', $timestamp);
     }
 }
