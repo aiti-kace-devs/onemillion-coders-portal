@@ -2,7 +2,12 @@
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
-import { FaceLandmarker, FilesetResolver, DrawingUtils } from "@mediapipe/tasks-vision";
+import { FaceLandmarker, DrawingUtils } from "@mediapipe/tasks-vision";
+import {
+  FACE_LANDMARKER_MODEL_URL,
+  getFilesetResolverPromise,
+  prefetchFaceLandmarkerModel,
+} from "../../lib/livenessPreload";
 
 const CHALLENGE_LABELS = {
   center_face: "Position your face in the oval",
@@ -152,6 +157,22 @@ export default function LivenessDetection({ onComplete, onCancel }) {
     setIsLoading(true);
     setError(null);
 
+    // Kick off model prep in parallel with camera permission prompt.
+    // Both calls are idempotent and cached — safe to call even if preload ran earlier.
+    prefetchFaceLandmarkerModel();
+    const landmarkerPromise = getFilesetResolverPromise().then((filesetResolver) =>
+      FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath: FACE_LANDMARKER_MODEL_URL,
+          delegate: "GPU",
+        },
+        runningMode: "VIDEO",
+        numFaces: 1,
+        outputFacialTransformationMatrixes: false,
+        outputFaceBlendshapes: false,
+      }),
+    );
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: 640, height: 480 },
@@ -166,26 +187,24 @@ export default function LivenessDetection({ onComplete, onCancel }) {
         await videoRef.current.play();
       }
 
-      const filesetResolver = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-      );
+      const faceLandmarker = await landmarkerPromise;
 
-      const faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
-        baseOptions: {
-          modelAssetPath:
-            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
-          delegate: "GPU",
-        },
-        runningMode: "VIDEO",
-        numFaces: 1,
-        outputFacialTransformationMatrixes: false,
-        outputFaceBlendshapes: false,
-      });
+      // First detectForVideo call pays shader-compile cost. Warm it against the
+      // live video so the first real frame runs at full speed.
+      try {
+        if (videoRef.current && videoRef.current.readyState >= 2) {
+          faceLandmarker.detectForVideo(videoRef.current, performance.now());
+        }
+      } catch {
+        // Warmup is best-effort.
+      }
 
       faceLandmarkerRef.current = faceLandmarker;
       challengeStartRef.current = Date.now();
     } catch (err) {
       console.error("Failed to initialize liveness detection:", err);
+      // Swallow rejection on the unused landmarker to avoid an unhandled rejection.
+      landmarkerPromise.catch(() => {});
       setCameraPermission("denied");
       setError("Camera access is required to continue verification. Please allow camera permission and try again.");
       setHasStartedCamera(false);
