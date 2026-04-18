@@ -163,11 +163,16 @@ export default function CoursesPage({ params }) {
   // Sync step and selections to query params
   useEffect(() => {
     if (!userStatus || step <= 1) return;
+    const hasAnswers = Object.keys(answers).length > 0;
+    const hasQuizState = hasAnswers || currentQuestion > 0 || showResults;
     updateQueryParams({
       step,
       region: selectedRegion?.id || null,
       district: selectedDistrict?.id || null,
       centre: selectedCentre?.id || null,
+      q: step === 4 && hasQuizState ? currentQuestion : null,
+      a: step === 4 && hasAnswers ? JSON.stringify(answers) : null,
+      results: step === 4 && showResults ? "1" : null,
     });
   }, [
     step,
@@ -175,6 +180,9 @@ export default function CoursesPage({ params }) {
     selectedDistrict,
     selectedCentre,
     userStatus,
+    currentQuestion,
+    answers,
+    showResults,
     updateQueryParams,
   ]);
 
@@ -184,6 +192,9 @@ export default function CoursesPage({ params }) {
     const regionId = searchParams.get("region");
     const districtId = searchParams.get("district");
     const centreId = searchParams.get("centre");
+    const savedQuestion = parseInt(searchParams.get("q"));
+    const savedAnswersRaw = searchParams.get("a");
+    const savedResults = searchParams.get("results") === "1";
 
     if (!savedStep || savedStep <= 1 || !regionId) return;
 
@@ -224,6 +235,41 @@ export default function CoursesPage({ params }) {
 
             const data = await getCourseMatchQuestions("Choice", token);
             setQuestions(data || []);
+
+            // Restore quiz progress
+            let parsedAnswers = {};
+            if (savedAnswersRaw) {
+              try {
+                parsedAnswers = JSON.parse(savedAnswersRaw);
+                setAnswers(parsedAnswers);
+              } catch {
+                parsedAnswers = {};
+              }
+            }
+            if (!Number.isNaN(savedQuestion)) {
+              setCurrentQuestion(Math.max(0, savedQuestion));
+            }
+
+            // Restore results view — regenerate recommendations from stored answers
+            if (savedResults && Object.keys(parsedAnswers).length > 0) {
+              try {
+                setSubmitting(true);
+                const optionIds = Object.values(parsedAnswers).flat();
+                const recs = await getCourseRecommendations({
+                  optionIds,
+                  userId: id,
+                  regionId: region.id,
+                  centreId: centre.id,
+                  token,
+                });
+                setRecommendations(recs || []);
+                setShowResults(true);
+              } catch {
+                // If regenerate fails, fall back to quiz view
+              } finally {
+                setSubmitting(false);
+              }
+            }
           }
         }
       }
@@ -267,29 +313,29 @@ export default function CoursesPage({ params }) {
         }
         setUserStatus(data);
 
-        // Check for previous recommended courses
+        // URL state takes priority — an active session beats previously-saved recommendations
+        const hasProgress = searchParams.get("step");
+        if (hasProgress) {
+          setCheckingRecommendations(true);
+          try {
+            await restoreFromParams();
+          } finally {
+            setCheckingRecommendations(false);
+          }
+          return;
+        }
+
+        // No active session — check for previous recommended courses
         try {
           setCheckingRecommendations(true);
           const recData = await checkUserRecommendedCourses(id, token);
           if (recData?.success && recData?.matches?.length > 0) {
             setPreviousRecommendations(recData);
           } else {
-            // No previous recommendations — check for saved progress in query params
-            const hasProgress = searchParams.get("step");
-            if (hasProgress) {
-              await restoreFromParams();
-            } else {
-              fetchAllRegions();
-            }
-          }
-        } catch {
-          // If check fails, just start the normal flow
-          const hasProgress = searchParams.get("step");
-          if (hasProgress) {
-            await restoreFromParams();
-          } else {
             fetchAllRegions();
           }
+        } catch {
+          fetchAllRegions();
         } finally {
           setCheckingRecommendations(false);
         }
