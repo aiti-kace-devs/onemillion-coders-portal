@@ -1277,7 +1277,7 @@ export default function CoursesPage({ params }) {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors">Study at a Centre</div>
-                                      <div className="text-[11px] sm:text-xs text-gray-500 mt-0.5 leading-snug">Laptop and internet provided at our support centre, with staff on hand</div>
+                                      <div className="text-[11px] sm:text-xs text-gray-500 mt-0.5 leading-snug">Laptop and internet access provided at our support centre, with staff on hand</div>
                                     </div>
                                     <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
                                   </div>
@@ -1290,7 +1290,7 @@ export default function CoursesPage({ params }) {
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors">Study from Home</div>
-                                    <div className="text-[11px] sm:text-xs text-gray-500 mt-0.5 leading-snug">Complete your course online using your own device, at your own pace</div>
+                                    <div className="text-[11px] sm:text-xs text-gray-500 mt-0.5 leading-snug">Complete your course entirely online using your own device, at your own pace</div>
                                   </div>
                                   <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
                                 </div>
