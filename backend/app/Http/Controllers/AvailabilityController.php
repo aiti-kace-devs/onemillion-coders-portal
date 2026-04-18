@@ -453,19 +453,10 @@ class AvailabilityController extends Controller
     {
         return collect($sessions)
             ->sortBy(function ($session) {
-                // MasterSession: session_type = "Morning", "Afternoon", "Evening"
-                // CourseSession: session_type = "course" or "centre", use session column directly
-                $sessionType = $session->session_type ?? '';
-
-                // For CourseSession, use the session column which stores the period name
-                if (strtolower(trim((string) $sessionType)) === 'course' || strtolower(trim((string) $sessionType)) === 'centre') {
-                    $sessionType = $session->session ?? '';
-                }
-
                 $time = $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? '';
 
+                // Chronological by wall-clock start of range (not session label); stable tie-breaker.
                 return [
-                    $this->sessionTypePriority($sessionType),
                     $this->sessionStartMinutes($time),
                     strtolower(trim((string) $time)),
                     (int) ($session->id ?? 0),
@@ -474,32 +465,47 @@ class AvailabilityController extends Controller
             ->values();
     }
 
-    protected function sessionTypePriority(?string $sessionType): int
-    {
-        return match (strtolower(trim((string) $sessionType))) {
-            'morning' => 0,
-            'afternoon' => 1,
-            'evening' => 2,
-            'fullday' => 3,
-            'online' => 4,
-            default => 99,
-        };
-    }
-
     protected function sessionStartMinutes(?string $time): int
     {
-        $startTime = trim(explode('-', (string) $time, 2)[0] ?? '');
+        $raw = trim((string) $time);
+
+        if ($raw === '') {
+            return PHP_INT_MAX;
+        }
+
+        $parts = preg_split('/\s*[–—\-]\s*/u', $raw, 2);
+        $startTime = trim($parts[0] ?? '');
 
         if ($startTime === '') {
             return PHP_INT_MAX;
         }
 
-        $timestamp = strtotime($startTime);
+        // 12h with optional minutes: 8:00AM, 8:00 AM, 1:00PM, 8AM
+        if (preg_match('/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i', $startTime, $m)) {
+            $h = (int) $m[1];
+            $min = isset($m[2]) ? (int) $m[2] : 0;
+            $ap = strtolower($m[3]);
+            if ($ap === 'pm' && $h !== 12) {
+                $h += 12;
+            }
+            if ($ap === 'am' && $h === 12) {
+                $h = 0;
+            }
 
-        if ($timestamp === false) {
-            return PHP_INT_MAX;
+            return ($h * 60) + $min;
         }
 
-        return ((int) date('G', $timestamp) * 60) + (int) date('i', $timestamp);
+        // 24h HH:mm
+        if (preg_match('/^(\d{1,2}):(\d{2})$/', $startTime, $m)) {
+            return ((int) $m[1] * 60) + (int) $m[2];
+        }
+
+        $timestamp = strtotime($startTime);
+
+        if ($timestamp !== false) {
+            return ((int) date('G', $timestamp) * 60) + (int) date('i', $timestamp);
+        }
+
+        return PHP_INT_MAX;
     }
 }

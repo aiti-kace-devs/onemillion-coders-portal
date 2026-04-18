@@ -26,7 +26,11 @@ import {
   deriveAvailabilityIssueFromBatches,
 } from "../lib/enrollmentAvailability";
 // Normalizes API batch list (cohort + session order) for display; see website/lib/inPersonEnrollmentUi.js.
-import { normalizeInPersonBatches, redirectToStudentDashboard } from "../lib/inPersonEnrollmentUi";
+import {
+  normalizeInPersonBatches,
+  redirectToStudentDashboard,
+  sortSessionsChronologically,
+} from "../lib/inPersonEnrollmentUi";
 import { getAvailableBatches, getInPersonAvailableBatches, getSiblingCentres, getSiblingCourses, createBooking, submitInPersonEnrollment, setLearningMode, joinWaitlist } from "../services/api";
 
 const IN_PERSON_DELIVERY_KEYS = new Set([
@@ -108,8 +112,18 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
         return batches;
       }
       const data = await getAvailableBatches(courseId, token);
-      setAvailableBatches(data?.batches || []);
-      return data?.batches || [];
+      const batches = (data?.batches || []).map((b) => ({
+        ...b,
+        sessions: sortSessionsChronologically(b.sessions || []),
+      }));
+      setAvailableBatches(batches);
+      setInPersonMeta((prev) => ({
+        region_name: data?.region_name ?? prev?.region_name,
+        district_name: data?.district_name ?? prev?.district_name,
+        certificate_title: data?.certificate_title ?? prev?.certificate_title,
+        centre_title: data?.centre?.title ?? prev?.centre_title,
+      }));
+      return batches;
     } catch {
       setAvailableBatches([]);
       return [];
@@ -312,6 +326,11 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
     setInPersonEnrollmentFlow(false);
     setInPersonMeta(null);
     setCourseFullIssue(null);
+  };
+
+  const handleEnrollmentSuccessClose = () => {
+    redirectToStudentDashboard();
+    closeEnrollmentModal();
   };
 
   const centreTitle = enrollingCentreTitle || "your centre";
@@ -581,7 +600,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                     </p>
                   )}
                   <button
-                    onClick={closeEnrollmentModal}
+                    onClick={handleEnrollmentSuccessClose}
                     className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
                   >
                     Close
@@ -769,7 +788,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                       </span>
                     </div>
                     <div className="space-y-2">
-                      {(selectedBatch?.sessions || []).map((session) => {
+                      {sortSessionsChronologically(selectedBatch?.sessions || []).map((session) => {
                         const isSelected = selectedSession?.session_id === session.session_id;
                         const isFull = session.remaining === 0;
                         return (
@@ -824,8 +843,13 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                       Confirm enrollment
                     </h2>
                     {(() => {
-                      const regionDistrict = [inPersonMeta?.region_name, inPersonMeta?.district_name].filter(Boolean).join(" → ");
-                      const centreName = inPersonMeta?.centre_title?.trim() || "";
+                      const regionDistrict = [inPersonMeta?.region_name, inPersonMeta?.district_name]
+                        .filter(Boolean)
+                        .join(" → ");
+                      const centreName =
+                        (inPersonMeta?.centre_title && String(inPersonMeta.centre_title).trim()) ||
+                        (enrollingCentreTitle && String(enrollingCentreTitle).trim()) ||
+                        "";
                       const awardTitle =
                         (inPersonMeta?.certificate_title && String(inPersonMeta.certificate_title).trim()) ||
                         programme?.course_certification?.[0]?.title ||

@@ -3,35 +3,48 @@
  * Cohort/session order should match the in-person batches API (InPersonAvailabilityController::batches).
  */
 
-/** Minutes from midnight for sorting session blocks (supports 24h and simple AM/PM strings). */
+/**
+ * Minutes from midnight for sorting session blocks.
+ * Handles ranges like "8:00AM - 10:00AM", "1:00PM - 3:00PM", "8AM - 9:45AM", and 24h "14:30 - 16:00".
+ * Always uses the start of the range for ordering.
+ */
 export function sessionTimeSortKey(session) {
   const raw = String(session?.time ?? session?.course_time ?? "").trim();
   if (!raw) {
     return Number.MAX_SAFE_INTEGER;
   }
-  let m = raw.match(/(\d{1,2}):(\d{2})/);
+
+  const startPart = raw.split(/\s*[–—-]\s*/)[0].trim();
+  if (!startPart) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  // 12h with optional minutes, optional space before AM/PM: 8:00AM, 8:00 AM, 1:00PM, 8AM
+  let m = startPart.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
+  if (m) {
+    let h = parseInt(m[1], 10);
+    const min = m[2] ? parseInt(m[2], 10) : 0;
+    const ap = m[3].toLowerCase();
+    if (ap === "pm" && h !== 12) {
+      h += 12;
+    }
+    if (ap === "am" && h === 12) {
+      h = 0;
+    }
+
+    return h * 60 + min;
+  }
+
+  // 24h HH:mm (whole start segment only)
+  m = startPart.match(/^(\d{1,2}):(\d{2})$/);
   if (m) {
     return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
   }
-  m = raw.match(/(\d{1,2})\s*(?::(\d{2}))?\s*am\b/i);
-  if (m) {
-    let h = parseInt(m[1], 10);
-    if (h === 12) {
-      h = 0;
-    }
-    const min = m[2] ? parseInt(m[2], 10) : 0;
 
-    return h * 60 + min;
-  }
-  m = raw.match(/(\d{1,2})\s*(?::(\d{2}))?\s*pm\b/i);
+  // Fallback: first clock-like token in the start segment
+  m = startPart.match(/(\d{1,2})(?::(\d{2}))?/);
   if (m) {
-    let h = parseInt(m[1], 10);
-    if (h !== 12) {
-      h += 12;
-    }
-    const min = m[2] ? parseInt(m[2], 10) : 0;
-
-    return h * 60 + min;
+    return parseInt(m[1], 10) * 60 + (m[2] ? parseInt(m[2], 10) : 0);
   }
 
   return Number.MAX_SAFE_INTEGER;
@@ -104,6 +117,7 @@ export function redirectToStudentDashboard(url) {
     }
     try {
       window.parent.postMessage({ type: "omcp-in-person-enrolled", redirectUrl: target }, "*");
+      window.parent.postMessage({ type: "omcp-student-enrolled", redirectUrl: target }, "*");
     } catch {
       // ignore
     }

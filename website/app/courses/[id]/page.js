@@ -52,7 +52,11 @@ import {
   deriveAvailabilityIssueFromBatches,
 } from "../../../lib/enrollmentAvailability";
 // In-person batches: same ordering/summary fields as ProgrammeCard (lib/inPersonEnrollmentUi.js).
-import { normalizeInPersonBatches, redirectToStudentDashboard } from "../../../lib/inPersonEnrollmentUi";
+import {
+  normalizeInPersonBatches,
+  redirectToStudentDashboard,
+  sortSessionsChronologically,
+} from "../../../lib/inPersonEnrollmentUi";
 
 const IN_PERSON_DELIVERY_KEYS = new Set([
   "inperson",
@@ -649,8 +653,18 @@ export default function CoursesPage({ params }) {
         return batches;
       }
       const data = await getAvailableBatches(courseId, token);
-      setAvailableBatches(data?.batches || []);
-      return data?.batches || [];
+      const batches = (data?.batches || []).map((b) => ({
+        ...b,
+        sessions: sortSessionsChronologically(b.sessions || []),
+      }));
+      setAvailableBatches(batches);
+      setInPersonMeta((prev) => ({
+        region_name: data?.region_name ?? prev?.region_name,
+        district_name: data?.district_name ?? prev?.district_name,
+        certificate_title: data?.certificate_title ?? prev?.certificate_title,
+        centre_title: data?.centre?.title ?? prev?.centre_title,
+      }));
+      return batches;
     } catch (err) {
       console.error("Failed to fetch batches:", err);
       setAvailableBatches([]);
@@ -874,6 +888,11 @@ export default function CoursesPage({ params }) {
     setEnrollingCourseRecord(null);
   };
 
+  const handleEnrollmentSuccessClose = () => {
+    redirectToStudentDashboard();
+    closeEnrollmentModal();
+  };
+
   const goToStep = (targetStep) => {
     // Allow going forward to step 4 if quiz progress exists
     const canGoForward =
@@ -1019,7 +1038,7 @@ export default function CoursesPage({ params }) {
                             </p>
                           )}
                           <button
-                            onClick={closeEnrollmentModal}
+                            onClick={handleEnrollmentSuccessClose}
                             className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
                           >
                             Close
@@ -1201,7 +1220,7 @@ export default function CoursesPage({ params }) {
                             </div>
 
                             <div className="space-y-2">
-                              {(selectedBatch?.sessions || []).map((session) => {
+                              {sortSessionsChronologically(selectedBatch?.sessions || []).map((session) => {
                                 const isSelected = selectedSession?.session_id === session.session_id;
                                 const isFull = session.remaining === 0;
                                 return (
@@ -1339,7 +1358,12 @@ export default function CoursesPage({ params }) {
                             </h2>
 
                             {(() => {
-                              const regionDistrict = [inPersonMeta?.region_name, inPersonMeta?.district_name].filter(Boolean).join(" → ");
+                              const regionDistrict = [
+                                inPersonMeta?.region_name || selectedRegion?.title,
+                                inPersonMeta?.district_name || selectedDistrict?.title,
+                              ]
+                                .filter(Boolean)
+                                .join(" → ");
                               const centreName =
                                 (inPersonMeta?.centre_title && String(inPersonMeta.centre_title).trim()) ||
                                 selectedCentre?.title ||
