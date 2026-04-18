@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Events\AdmissionSlotFreed;
 use App\Helpers\SchoolDayCalculator;
+use App\Models\AdmissionWaitlist;
 use App\Models\AppConfig;
 use App\Models\Batch;
 use App\Models\Booking;
 use App\Models\Centre;
 use App\Models\Course;
+use App\Models\CourseSession;
 use App\Models\MasterSession;
 use App\Models\Programme;
 use App\Models\ProgrammeBatch;
@@ -24,13 +26,41 @@ class BookingService
     /**
      * Book a user into a programme batch for a specific course session.
      *
-     * Enforces per-session capacity via the daily_session_occupancy summary table
+     * For "In Person" courses: saves user & admission data without creating a Booking record.
+     * For other courses: enforces per-session capacity via daily_session_occupancy summary table
      * and respects the Intelligent Quota System (IQS).
      *
      * @throws Exception when capacity is exhausted or the session is incompatible.
      */
-    public function book(User $user, Course $course, ProgrammeBatch $batch, MasterSession $session): Booking
+    public function book(User $user, Course $course, ProgrammeBatch $batch, $session): ?Booking
     {
+        $programme = $course->programme;
+        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
+
+        // Handle In Person courses
+        if ($isInPerson) {
+            $user->registered_course = $course->id;
+            $user->shortlist = true;
+            $user->save();
+
+            $admission = UserAdmission::updateOrCreate(
+                ['user_id' => $user->userId],
+                [
+                    'course_id' => $course->id,
+                    'programme_batch_id' => $batch->id,
+                    'email_sent' => now(),
+                    'confirmed' => now(),
+                    'session' => $session->id,
+                ]
+            );
+
+            // Remove from waitlist if exists
+            AdmissionWaitlist::where('user_id', $user->userId)->delete();
+
+            return null;
+        }
+
+        // Handle regular (Master Session) courses
         $centreId = $course->centre_id;
         $lockKey = "booking_lock:{$centreId}:{$session->id}";
 
@@ -85,6 +115,9 @@ class BookingService
                         'confirmed' => now(),
                     ]
                 );
+
+                 // Remove from waitlist if exists
+                AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
                 // Clear the cached seat count so the next read reflects this booking
                 Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$session->id}");
