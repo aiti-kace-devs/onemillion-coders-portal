@@ -7,10 +7,11 @@ use App\Models\AdmissionWaitlist;
 use App\Models\Course;
 use App\Models\Form;
 use App\Models\User;
+use App\Models\UserAdmission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use App\Models\UserAdmission;
+
 class RegistrationFormAPIController extends Controller
 {
     public function index(Request $request)
@@ -256,11 +257,12 @@ class RegistrationFormAPIController extends Controller
                 ]
             );
 
-             // Remove from waitlist if exists
+            // Remove from waitlist if exists
             AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
             return response()->json([
                 'success' => true,
+                'redirect_url' => url('/student/dashboard'),
                 'data' => [
                     'message' => 'You have successfully switched to self-paced learning. Resource support has been removed from your registration.',
                 ],
@@ -273,6 +275,7 @@ class RegistrationFormAPIController extends Controller
 
             return response()->json([
                 'success' => true,
+                'redirect_url' => url('/student/dashboard'),
                 'data' => [
                     'message' => 'You have successfully enabled resource support for your registration.',
                 ],
@@ -328,6 +331,7 @@ class RegistrationFormAPIController extends Controller
 
         return response()->json([
             'success' => true,
+            'redirect_url' => url('/student/dashboard'),
             'data' => [
                 'message' => 'Course registration confirmed successfully.',
             ],

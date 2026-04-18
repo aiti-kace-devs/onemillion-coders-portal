@@ -2,7 +2,6 @@
 import { computed } from "vue";
 import { Head, usePage, Link } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
-import ExamCard from "../../Components/ExamCard.vue";
 
 const props = defineProps({
     exams: Object,
@@ -108,6 +107,19 @@ const overallProgress = computed(() =>
 
 const tieredTestTaken = computed(() => {
     return !!user.value?.assessment_completed;
+});
+
+/** When assessment is still pending, surface it before identity verification in Quick Access. */
+const showAssessmentQuickAccess = computed(() => !tieredTestTaken.value);
+
+const hasMoreShortcuts = computed(() => {
+    const u = user.value;
+    const showCourseAssessment = !!config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS;
+    return (
+        (u.isAdmitted && showCourseAssessment) ||
+        u.isAdmitted ||
+        (tieredTestTaken.value && !u.isAdmitted && !u.shortlist)
+    );
 });
 </script>
 
@@ -236,93 +248,141 @@ const tieredTestTaken = computed(() => {
                         >
                             Quick Access
                         </p>
-                        <div
-                            class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
-                        >
-                            <Link
-                                :href="route('student.application-status')"
-                                class="block h-full"
-                            >
-                                <div
-                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                                >
-                                    <!-- Hover Accent Line -->
-                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-                                    <!-- Icon and Title -->
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
-                                        >
-                                            <span
-                                                class="material-symbols-outlined"
-                                                >contract</span
-                                            >
-                                        </span>
-                                        <div class="flex-1 text-left">
-                                            <h3
-                                                class="text-lg font-bold text-gray-800"
-                                            >
-                                                Application Status
-                                            </h3>
-                                        </div>
-                                    </div>
 
-                                    <!-- Exam Details -->
-                                    <div class="mt-2 space-y-1 text-left">
-                                        <p class="text-sm">
-                                            Discover your standing for the
-                                            current application.
-                                        </p>
-                                    </div>
-                                </div>
-                            </Link>
-
-                            <Link
-                                :href="route('student.verification.index')"
-                                class="block h-full"
-                            >
-                                <div
-                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                        <!-- Before level assessment is done: guided vertical path (status → assessment → verification). -->
+                        <template v-if="showAssessmentQuickAccess">
+                            <div class="flex flex-col gap-6 max-w-3xl mb-10">
+                                <Link
+                                    :href="route('student.application-status')"
+                                    class="block w-full"
                                 >
-                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-                                    <span
-                                        class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
-                                        :class="
-                                            user.verification_completed
-                                                ? 'bg-green-100 text-green-700'
-                                                : user.verification_blocked
-                                                  ? 'bg-red-100 text-red-700'
-                                                  : 'bg-yellow-100 text-yellow-700'
-                                        "
+                                    <div
+                                        class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                                     >
-                                        {{
-                                            user.verification_completed
-                                                ? "Verified"
-                                                : user.verification_blocked
-                                                  ? "Blocked"
-                                                  : "Pending"
-                                        }}
-                                    </span>
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
-                                        >
-                                            <span class="material-symbols-outlined">verified_user</span>
-                                        </span>
-                                        <div class="flex-1 text-left">
-                                            <h3 class="text-lg font-bold text-gray-800">
-                                                Identity Verification
-                                            </h3>
+                                        <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span
+                                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                            >
+                                                <span class="material-symbols-outlined">contract</span>
+                                            </span>
+                                            <div class="flex-1 text-left">
+                                                <h3 class="text-lg font-bold text-gray-800">
+                                                    Application Status
+                                                </h3>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2 space-y-1 text-left">
+                                            <p class="text-sm">
+                                                Discover your standing for the current application.
+                                            </p>
                                         </div>
                                     </div>
-                                    <div class="mt-2 space-y-1 text-left">
-                                        <p class="text-sm">
-                                            Complete Ghana Card identity verification to continue course selection.
-                                        </p>
-                                    </div>
-                                </div>
-                            </Link>
+                                </Link>
 
+                                <div>
+                                    <p
+                                        class="mb-3 text-xs font-bold text-gray-400 uppercase tracking-widest"
+                                    >
+                                        Assessment
+                                    </p>
+                                    <Link
+                                        :href="route('student.level-assessment')"
+                                        class="block w-full"
+                                    >
+                                        <div
+                                            class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                                        >
+                                            <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                            <span
+                                                class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800"
+                                            >
+                                                Next
+                                            </span>
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <span
+                                                    class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                                >
+                                                    <span class="material-symbols-outlined">psychology</span>
+                                                </span>
+                                                <div class="flex-1 text-left">
+                                                    <h3 class="text-lg font-bold text-gray-800">
+                                                        Level Determination Assessment
+                                                    </h3>
+                                                </div>
+                                            </div>
+                                            <div class="mt-2 space-y-1 text-left">
+                                                <p class="text-sm">
+                                                    Complete this before identity verification. It places you at the right starting level.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </div>
+
+                                <div>
+                                    <p
+                                        class="mb-3 text-xs font-bold text-gray-400 uppercase tracking-widest"
+                                    >
+                                        Identity Verification
+                                    </p>
+                                    <Link
+                                        :href="route('student.verification.index')"
+                                        class="block w-full"
+                                    >
+                                        <div
+                                            class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                                        >
+                                            <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                            <span
+                                                class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
+                                                :class="
+                                                    user.verification_completed
+                                                        ? 'bg-green-100 text-green-700'
+                                                        : user.verification_blocked
+                                                          ? 'bg-red-100 text-red-700'
+                                                          : 'bg-yellow-100 text-yellow-700'
+                                                "
+                                            >
+                                                {{
+                                                    user.verification_completed
+                                                        ? "Verified"
+                                                        : user.verification_blocked
+                                                          ? "Blocked"
+                                                          : "Pending"
+                                                }}
+                                            </span>
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <span
+                                                    class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                                >
+                                                    <span class="material-symbols-outlined">verified_user</span>
+                                                </span>
+                                                <div class="flex-1 text-left">
+                                                    <h3 class="text-lg font-bold text-gray-800">
+                                                        Identity Verification
+                                                    </h3>
+                                                </div>
+                                            </div>
+                                            <div class="mt-2 space-y-1 text-left">
+                                                <p class="text-sm">
+                                                    Complete Ghana Card identity verification to continue course selection.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </div>
+                            </div>
+
+                            <template v-if="hasMoreShortcuts">
+                            <p
+                                class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest"
+                            >
+                                More shortcuts
+                            </p>
+                            <div
+                                class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
+                            >
                             <Link
                                 v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
                                 :href="route('student.results')"
@@ -488,21 +548,218 @@ const tieredTestTaken = computed(() => {
                                 </div>
                             </Link>
 
-                        </div>
-                    </div>
-                    <div v-if="!tieredTestTaken">
-                        <p
-                            class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest"
-                        >
-                            Assessment
-                        </p>
-                        <div
-                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8"
-                        >
-                            <ExamCard />
-                        </div>
-                    </div>
+                            </div>
+                            </template>
+                        </template>
 
+                        <!-- After level assessment: original flat Quick Access grid (no stacked onboarding). -->
+                        <div
+                            v-else
+                            class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
+                        >
+                            <Link
+                                :href="route('student.application-status')"
+                                class="block h-full"
+                            >
+                                <div
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                                >
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                        >
+                                            <span class="material-symbols-outlined">contract</span>
+                                        </span>
+                                        <div class="flex-1 text-left">
+                                            <h3 class="text-lg font-bold text-gray-800">
+                                                Application Status
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 space-y-1 text-left">
+                                        <p class="text-sm">
+                                            Discover your standing for the current application.
+                                        </p>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            <Link
+                                :href="route('student.verification.index')"
+                                class="block h-full"
+                            >
+                                <div
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                                >
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <span
+                                        class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
+                                        :class="
+                                            user.verification_completed
+                                                ? 'bg-green-100 text-green-700'
+                                                : user.verification_blocked
+                                                  ? 'bg-red-100 text-red-700'
+                                                  : 'bg-yellow-100 text-yellow-700'
+                                        "
+                                    >
+                                        {{
+                                            user.verification_completed
+                                                ? "Verified"
+                                                : user.verification_blocked
+                                                  ? "Blocked"
+                                                  : "Pending"
+                                        }}
+                                    </span>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                        >
+                                            <span class="material-symbols-outlined">verified_user</span>
+                                        </span>
+                                        <div class="flex-1 text-left">
+                                            <h3 class="text-lg font-bold text-gray-800">
+                                                Identity Verification
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 space-y-1 text-left">
+                                        <p class="text-sm">
+                                            Complete Ghana Card identity verification to continue course selection.
+                                        </p>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            <Link
+                                v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
+                                :href="route('student.results')"
+                                class="block h-full"
+                            >
+                                <div
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                                >
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                        >
+                                            <span class="material-symbols-outlined">task</span>
+                                        </span>
+                                        <div class="flex-1 text-left">
+                                            <h3 class="text-lg font-bold text-gray-800">
+                                                Results
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 space-y-1 text-left">
+                                        <p class="text-sm">
+                                            View your exam results and performance.
+                                        </p>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            <Link
+                                :href="route('student.assessment.index')"
+                                v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
+                                class="block h-full"
+                            >
+                                <div
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                                >
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                        >
+                                            <span class="material-symbols-outlined">rate_review</span>
+                                        </span>
+                                        <div class="flex-1 text-left">
+                                            <h3 class="text-lg font-bold text-gray-800">
+                                                Course Assessment
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 space-y-1 text-left">
+                                        <p class="text-sm">
+                                            Provide feedback and rating on course to improve course delivery.
+                                        </p>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            <Link
+                                v-if="user.isAdmitted"
+                                :href="route('student.attendance.show')"
+                                class="block h-full"
+                            >
+                                <div
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                                >
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                        >
+                                            <span class="material-symbols-outlined">rule</span>
+                                        </span>
+                                        <div class="flex-1 text-left">
+                                            <h3 class="text-lg font-bold text-gray-800">
+                                                Attendance
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 space-y-1 text-left">
+                                        <p class="text-sm">
+                                            This module displays your attendance record.
+                                        </p>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            <Link
+                                v-if="
+                                    tieredTestTaken &&
+                                    !user.isAdmitted &&
+                                    !user.shortlist
+                                "
+                                :href="route('student.change-course')"
+                                class="block h-full"
+                            >
+                                <div
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                                >
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                        >
+                                            <span class="material-symbols-outlined">swap_horiz</span>
+                                        </span>
+                                        <div class="flex-1 text-left">
+                                            <h3 class="text-lg font-bold text-gray-800">
+                                                {{
+                                                    user.registered_course
+                                                        ? "Change Course"
+                                                        : "Choose Course"
+                                                }}
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 space-y-1 text-left">
+                                        <p class="text-sm">
+                                            {{
+                                                user.registered_course
+                                                    ? "Change your course to a different one."
+                                                    : "Select a course to get started."
+                                            }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </Link>
+                        </div>
+                    </div>
                     <div v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS">
                         <p
                             class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest"

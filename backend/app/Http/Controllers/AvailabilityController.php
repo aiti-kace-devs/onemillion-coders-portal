@@ -455,7 +455,7 @@ class AvailabilityController extends Controller
             ->sortBy(function ($session) {
                 $time = $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? '';
 
-                // Chronological by wall-clock start of range (not session label); stable tie-breaker.
+                // Chronological by wall-clock start of the time range (not Morning/Afternoon label).
                 return [
                     $this->sessionStartMinutes($time),
                     strtolower(trim((string) $time)),
@@ -467,45 +467,19 @@ class AvailabilityController extends Controller
 
     protected function sessionStartMinutes(?string $time): int
     {
-        $raw = trim((string) $time);
-
-        if ($raw === '') {
-            return PHP_INT_MAX;
-        }
-
-        $parts = preg_split('/\s*[–—\-]\s*/u', $raw, 2);
-        $startTime = trim($parts[0] ?? '');
+        $raw = (string) $time;
+        $startTime = trim(preg_split('/\s*[–—\-]\s*/u', $raw, 2)[0] ?? '');
 
         if ($startTime === '') {
             return PHP_INT_MAX;
         }
 
-        // 12h with optional minutes: 8:00AM, 8:00 AM, 1:00PM, 8AM
-        if (preg_match('/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i', $startTime, $m)) {
-            $h = (int) $m[1];
-            $min = isset($m[2]) ? (int) $m[2] : 0;
-            $ap = strtolower($m[3]);
-            if ($ap === 'pm' && $h !== 12) {
-                $h += 12;
-            }
-            if ($ap === 'am' && $h === 12) {
-                $h = 0;
-            }
-
-            return ($h * 60) + $min;
-        }
-
-        // 24h HH:mm
-        if (preg_match('/^(\d{1,2}):(\d{2})$/', $startTime, $m)) {
-            return ((int) $m[1] * 60) + (int) $m[2];
-        }
-
         $timestamp = strtotime($startTime);
 
-        if ($timestamp !== false) {
-            return ((int) date('G', $timestamp) * 60) + (int) date('i', $timestamp);
+        if ($timestamp === false) {
+            return PHP_INT_MAX;
         }
 
-        return PHP_INT_MAX;
+        return ((int) date('G', $timestamp) * 60) + (int) date('i', $timestamp);
     }
 }

@@ -7,7 +7,6 @@ use App\Models\Course;
 use App\Models\CourseSession;
 use App\Models\MasterSession;
 use App\Models\ProgrammeBatch;
-use App\Models\User;
 use App\Services\AvailabilityService;
 use App\Services\BookingService;
 use App\Services\GhanaCardService;
@@ -23,8 +22,7 @@ class BookingController extends Controller
         BookingService $bookingService,
         AvailabilityService $availabilityService,
         GhanaCardService $ghanaCardService
-    ): JsonResponse
-    {
+    ): JsonResponse {
         // First validate the required fields without the session table dependency
         $validated = $request->validate([
             'programme_batch_id' => 'required|integer|exists:programme_batches,id',
@@ -33,7 +31,7 @@ class BookingController extends Controller
         ]);
 
         $batch = ProgrammeBatch::find($validated['programme_batch_id']);
-        if (!$batch->status) {
+        if (! $batch->status) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Programme batch is not active.',
@@ -41,12 +39,13 @@ class BookingController extends Controller
         }
 
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
         }
 
         if (! $ghanaCardService->isVerified($user)) {
             $verificationStatus = $ghanaCardService->buildStatus($user);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Please complete Ghana Card verification before booking a session.',
@@ -72,7 +71,7 @@ class BookingController extends Controller
         // Fetch session based on delivery mode
         if ($isInPerson) {
             $session = CourseSession::find($validated['session_id']);
-            if (!$session || $session->course_id !== $course->id) {
+            if (! $session || $session->course_id !== $course->id) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'The selected session id is invalid.',
@@ -81,7 +80,7 @@ class BookingController extends Controller
             }
         } else {
             $session = MasterSession::find($validated['session_id']);
-            if (!$session) {
+            if (! $session) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'The selected session id is invalid.',
@@ -110,6 +109,7 @@ class BookingController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Booking successful.',
+            'redirect_url' => url('/student/dashboard'),
             // 'data' => $booking->load('programmeBatch', 'courseSession', 'course'),
         ], 201);
     }
@@ -117,7 +117,7 @@ class BookingController extends Controller
     public function destroy(Request $request, Booking $booking, BookingService $bookingService): JsonResponse
     {
         $user = $request->user();
-        if (!$user || $booking->user_id !== $user->userId) {
+        if (! $user || $booking->user_id !== $user->userId) {
             return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
         }
 
@@ -132,7 +132,7 @@ class BookingController extends Controller
     public function mine(Request $request): JsonResponse
     {
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
         }
 

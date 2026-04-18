@@ -39,6 +39,119 @@ const courseSelectionCompleted = computed(
 const assessmentCompleted = computed(() => !!props.user_assessment?.completed);
 const verificationCompleted = computed(() => !!props.verification_status?.verified);
 const verificationBlocked = computed(() => !!props.verification_status?.blocked);
+
+/** Admission row exists — booking/confirmation is part of this student's journey (5-step flow). */
+const showConfirmationInFlow = computed(() => !!props.user_admission);
+
+const courseChosen = computed(
+    () =>
+        !!props.user?.registered_course || !!props.user_admission?.course_id,
+);
+
+/** Step 4 milestone: with a separate confirmation step, "course selection" ends at course/admission choice. */
+const courseSelectionMilestoneMet = computed(() => {
+    if (!showConfirmationInFlow.value) {
+        return courseSelectionCompleted.value;
+    }
+    return courseChosen.value;
+});
+
+const admissionConfirmationComplete = computed(
+    () => !!props.user_admission?.confirmed,
+);
+
+function stepVisualStatus(stepKey) {
+    if (stepKey === "submitted") {
+        /* Signed-in students have already registered; aligns with timeline step 1. */
+        return "complete";
+    }
+    if (stepKey === "assessment") {
+        if (assessmentCompleted.value) return "complete";
+        return "current";
+    }
+    if (stepKey === "verification") {
+        if (verificationBlocked.value) return "blocked";
+        if (verificationCompleted.value) return "complete";
+        if (assessmentCompleted.value) return "current";
+        return "upcoming";
+    }
+    if (stepKey === "course") {
+        if (courseSelectionMilestoneMet.value) return "complete";
+        if (verificationCompleted.value) return "current";
+        return "upcoming";
+    }
+    if (stepKey === "confirm") {
+        if (admissionConfirmationComplete.value) return "complete";
+        if (courseChosen.value) return "current";
+        return "upcoming";
+    }
+    return "upcoming";
+}
+
+function stepCardClass(stepKey) {
+    const s = stepVisualStatus(stepKey);
+    if (s === "complete") {
+        return "border-green-200 bg-green-50/90 ring-1 ring-green-100";
+    }
+    if (s === "current") {
+        return "border-amber-300 bg-amber-50/90 ring-1 ring-amber-100";
+    }
+    if (s === "blocked") {
+        return "border-red-200 bg-red-50/90 ring-1 ring-red-100";
+    }
+    return "border-gray-200 bg-gray-50/80";
+}
+
+function stepIconClass(stepKey) {
+    const s = stepVisualStatus(stepKey);
+    if (s === "complete") return "bg-green-500 text-white";
+    if (s === "current") return "bg-amber-500 text-white";
+    if (s === "blocked") return "bg-red-500 text-white";
+    return "bg-gray-200 text-gray-500";
+}
+
+const illustratedFlowSteps = computed(() => {
+    const base = [
+        {
+            key: "submitted",
+            n: 1,
+            label: "Application Submitted",
+            hint: "Registration — your student account is active.",
+            icon: "mark_email_read",
+        },
+        {
+            key: "assessment",
+            n: 2,
+            label: "Assessment",
+            hint: "Level determination test.",
+            icon: "psychology",
+        },
+        {
+            key: "verification",
+            n: 3,
+            label: "Identity Verification",
+            hint: "Ghana Card check.",
+            icon: "verified_user",
+        },
+        {
+            key: "course",
+            n: 4,
+            label: "Course Selection",
+            hint: "Choose course & session.",
+            icon: "school",
+        },
+    ];
+    if (showConfirmationInFlow.value) {
+        base.push({
+            key: "confirm",
+            n: 5,
+            label: "Application Confirmation",
+            hint: "Finalize admission after booking.",
+            icon: "task_alt",
+        });
+    }
+    return base;
+});
 </script>
 
 <template>
@@ -73,41 +186,56 @@ const verificationBlocked = computed(() => !!props.verification_status?.blocked)
                 </div>
 
                 <div class="p-6 bg-white sm:rounded-lg shadow">
-                    <p class="font-medium text-lg text-gray-900 mb-3">
+                    <p class="font-medium text-lg text-gray-900 mb-1">
                         Expected Flow
                     </p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+                    <p class="text-sm text-gray-500 mb-5">
+                        Same order and numbering as the Application Status steps below (step 1 is registration; you would not have this portal account without signing up).
+                        {{
+                            showConfirmationInFlow
+                                ? " This path includes a fifth step once an admission record exists: confirmation after booking."
+                                : " A fifth confirmation step appears after your admission record is created, if applicable."
+                        }}
+                    </p>
+
+                    <div
+                        class="grid gap-3 mb-8"
+                        :class="
+                            showConfirmationInFlow
+                                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
+                                : 'grid-cols-2 md:grid-cols-4'
+                        "
+                    >
                         <div
-                            class="rounded-lg border p-3"
-                            :class="{
-                                'border-green-200 bg-green-50': assessmentCompleted,
-                                'border-gray-200 bg-gray-50': !assessmentCompleted
-                            }"
+                            v-for="step in illustratedFlowSteps"
+                            :key="step.key"
+                            class="rounded-xl border p-4 flex flex-col items-center text-center transition-shadow shadow-sm hover:shadow-md min-h-[148px]"
+                            :class="stepCardClass(step.key)"
                         >
-                            <p class="text-xs uppercase text-gray-500">1</p>
-                            <p class="font-semibold text-sm">Assessment</p>
-                        </div>
-                        <div
-                            class="rounded-lg border p-3"
-                            :class="{
-                                'border-green-200 bg-green-50': verificationCompleted,
-                                'border-red-200 bg-red-50': !verificationCompleted && verificationBlocked,
-                                'border-gray-200 bg-gray-50': !verificationCompleted && !verificationBlocked
-                            }"
-                        >
-                            <p class="text-xs uppercase text-gray-500">2</p>
-                            <p class="font-semibold text-sm">Identity Verification</p>
-                        </div>
-                        <div
-                            class="rounded-lg border p-3"
-                            :class="{
-                                'border-green-200 bg-green-50': courseSelectionCompleted,
-                                'border-amber-200 bg-amber-50': !courseSelectionCompleted && verificationCompleted,
-                                'border-gray-200 bg-gray-50': !courseSelectionCompleted && !verificationCompleted
-                            }"
-                        >
-                            <p class="text-xs uppercase text-gray-500">3</p>
-                            <p class="font-semibold text-sm">Course Selection</p>
+                            <span
+                                :class="stepIconClass(step.key)"
+                                class="inline-flex items-center justify-center w-11 h-11 rounded-full mb-3"
+                            >
+                                <span
+                                    class="material-symbols-outlined text-[22px] leading-none"
+                                    >{{ step.icon }}</span
+                                >
+                            </span>
+                            <p
+                                class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-0.5"
+                            >
+                                Step {{ step.n }}
+                            </p>
+                            <p
+                                class="font-semibold text-sm text-gray-900 leading-snug"
+                            >
+                                {{ step.label }}
+                            </p>
+                            <p
+                                class="text-xs text-gray-600 mt-1.5 leading-snug"
+                            >
+                                {{ step.hint }}
+                            </p>
                         </div>
                     </div>
 
@@ -157,7 +285,7 @@ const verificationBlocked = computed(() => !!props.verification_status?.blocked)
                                 </div>
                             </li>
 
-                            <!-- Step 2: Level Determination Test -->
+                            <!-- Step 2: Assessment -->
                             <li class="mb-10 ml-6">
                                 <span
                                     :class="[
@@ -187,7 +315,7 @@ const verificationBlocked = computed(() => !!props.verification_status?.blocked)
                                                   : 'text-gray-400',
                                         ]"
                                     >
-                                        Level Determination Test
+                                        Assessment
                                     </h3>
                                     <svg
                                         v-if="isStepReached(1)"

@@ -26,11 +26,7 @@ import {
   deriveAvailabilityIssueFromBatches,
 } from "../lib/enrollmentAvailability";
 // Normalizes API batch list (cohort + session order) for display; see website/lib/inPersonEnrollmentUi.js.
-import {
-  normalizeInPersonBatches,
-  redirectToStudentDashboard,
-  sortSessionsChronologically,
-} from "../lib/inPersonEnrollmentUi";
+import { normalizeInPersonBatches, redirectToStudentDashboard } from "../lib/inPersonEnrollmentUi";
 import { getAvailableBatches, getInPersonAvailableBatches, getSiblingCentres, getSiblingCourses, createBooking, submitInPersonEnrollment, setLearningMode, joinWaitlist } from "../services/api";
 
 const IN_PERSON_DELIVERY_KEYS = new Set([
@@ -95,6 +91,8 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
   const [inPersonEnrollmentFlow, setInPersonEnrollmentFlow] = useState(false);
   const [inPersonMeta, setInPersonMeta] = useState(null);
   const [courseFullIssue, setCourseFullIssue] = useState(null);
+  /** Laravel absolute dashboard URL from API when available (online / self-paced success). */
+  const [enrollmentSuccessRedirectUrl, setEnrollmentSuccessRedirectUrl] = useState(null);
 
   const fetchBatchesForCourse = async (courseId) => {
     try {
@@ -112,10 +110,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
         return batches;
       }
       const data = await getAvailableBatches(courseId, token);
-      const batches = (data?.batches || []).map((b) => ({
-        ...b,
-        sessions: sortSessionsChronologically(b.sessions || []),
-      }));
+      const batches = normalizeInPersonBatches(data?.batches || []);
       setAvailableBatches(batches);
       setInPersonMeta((prev) => ({
         region_name: data?.region_name ?? prev?.region_name,
@@ -166,6 +161,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
     setCourseFullTab("centres");
     setInPersonEnrollmentFlow(inPerson);
     setInPersonMeta(null);
+    setEnrollmentSuccessRedirectUrl(null);
     setShowEnrollModal(true);
 
     if (inPerson) {
@@ -214,9 +210,12 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
     try {
       setEnrollSubmitting(true);
       setEnrollError(null);
-      await setLearningMode(payload, !needs, token);
+      const modeRes = await setLearningMode(payload, !needs, token);
 
       if (!needs) {
+        setEnrollmentSuccessRedirectUrl(
+          typeof modeRes?.redirect_url === "string" && modeRes.redirect_url ? modeRes.redirect_url : null,
+        );
         setEnrollSuccess(true);
       } else {
         setEnrollSubmitting(false);
@@ -289,6 +288,9 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
           400,
         );
       } else {
+        setEnrollmentSuccessRedirectUrl(
+          typeof result?.redirect_url === "string" && result.redirect_url ? result.redirect_url : null,
+        );
         setEnrollSuccess(true);
       }
     } catch (err) {
@@ -309,6 +311,11 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
     } finally { setEnrollSubmitting(false); }
   };
 
+  const handleSuccessfulEnrollmentClose = () => {
+    redirectToStudentDashboard(enrollmentSuccessRedirectUrl || undefined);
+    closeEnrollmentModal();
+  };
+
   const closeEnrollmentModal = () => {
     setShowEnrollModal(false);
     setEnrollmentStep(null);
@@ -326,11 +333,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
     setInPersonEnrollmentFlow(false);
     setInPersonMeta(null);
     setCourseFullIssue(null);
-  };
-
-  const handleEnrollmentSuccessClose = () => {
-    redirectToStudentDashboard();
-    closeEnrollmentModal();
+    setEnrollmentSuccessRedirectUrl(null);
   };
 
   const centreTitle = enrollingCentreTitle || "your centre";
@@ -600,7 +603,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                     </p>
                   )}
                   <button
-                    onClick={handleEnrollmentSuccessClose}
+                    onClick={handleSuccessfulEnrollmentClose}
                     className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
                   >
                     Close
@@ -649,7 +652,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                     </div>
                     <div className="text-center mb-5">
                       <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
-                        How would you like to study?
+                        One quick question
                       </h2>
                       <p className="text-gray-400 text-[11px] sm:text-sm line-clamp-1">
                         Enrolling in{" "}
@@ -658,51 +661,28 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                         </span>
                       </p>
                     </div>
-                    {enrollError && (
-                      <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl">
-                        <p className="text-red-700 text-sm">{enrollError}</p>
-                      </div>
-                    )}
-                    <div className="space-y-2.5 mb-3">
-                      {centreIsReady && (
-                        <button
-                          onClick={() => handleSupportAnswer(true)}
-                          disabled={enrollSubmitting}
-                          className="w-full p-3.5 sm:p-4 rounded-xl border-2 text-left transition-all active:scale-[0.99] bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md group disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-50 to-orange-50 flex items-center justify-center flex-shrink-0 group-hover:from-yellow-100 group-hover:to-orange-100 transition-colors">
-                              <FiMapPin className="w-4 h-4 text-yellow-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors">Study at a Centre</div>
-                              <div className="text-[11px] sm:text-xs text-gray-500 mt-0.5 leading-snug">Laptop and internet access provided at our support centre, with staff on hand</div>
-                            </div>
-                            <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
-                          </div>
+                    {!centreIsReady ? (
+                      <>
+                        <p className="text-[13px] sm:text-sm text-gray-500 mb-4 text-center">Accessibility support is not yet available at this centre</p>
+                        {enrollError && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{enrollError}</p></div>}
+                        <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="w-full p-3.5 rounded-xl border-2 text-sm font-semibold transition-all active:scale-[0.97] bg-yellow-400 hover:bg-yellow-500 text-gray-900 flex items-center justify-center gap-2 mb-3">
+                          {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "Enroll as self-paced"}
                         </button>
-                      )}
-                      <button
-                        onClick={() => handleSupportAnswer(false)}
-                        disabled={enrollSubmitting}
-                        className="w-full p-3.5 sm:p-4 rounded-xl border-2 text-left transition-all active:scale-[0.99] bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md group disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center flex-shrink-0 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors">
-                            {enrollSubmitting ? <FiLoader className="w-4 h-4 text-blue-600 animate-spin" /> : <FiMonitor className="w-4 h-4 text-blue-600" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors">Study from Home</div>
-                            <div className="text-[11px] sm:text-xs text-gray-500 mt-0.5 leading-snug">Complete your course entirely online using your own device, at your own pace</div>
-                          </div>
-                          <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
+                        <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 mb-3 text-center">Do you need any accessibility support?</h3>
+                        {enrollError && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{enrollError}</p></div>}
+                        <div className="grid grid-cols-2 gap-2.5 mb-4">
+                          <button onClick={() => handleSupportAnswer(true)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700">Yes, I do</button>
+                          <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700 flex items-center justify-center gap-2">
+                            {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "No, enroll me"}
+                          </button>
                         </div>
-                      </button>
-                    </div>
-                    {!centreIsReady && (
-                      <p className="text-[11px] text-gray-400 text-center mb-3">Centre-based study is not yet available at this centre</p>
+                        <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
+                      </>
                     )}
-                    <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
                   </>
                 )}
 
@@ -811,7 +791,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                       </span>
                     </div>
                     <div className="space-y-2">
-                      {sortSessionsChronologically(selectedBatch?.sessions || []).map((session) => {
+                      {(selectedBatch?.sessions || []).map((session) => {
                         const isSelected = selectedSession?.session_id === session.session_id;
                         const isFull = session.remaining === 0;
                         return (
@@ -866,9 +846,9 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                       Confirm enrollment
                     </h2>
                     {(() => {
-                      const regionDistrict = [inPersonMeta?.region_name, inPersonMeta?.district_name]
-                        .filter(Boolean)
-                        .join(" → ");
+                      const regionName = (inPersonMeta?.region_name && String(inPersonMeta.region_name).trim()) || "";
+                      const districtName = (inPersonMeta?.district_name && String(inPersonMeta.district_name).trim()) || "";
+                      const regionDistrict = [regionName, districtName].filter(Boolean).join(" → ");
                       const centreName =
                         (inPersonMeta?.centre_title && String(inPersonMeta.centre_title).trim()) ||
                         (enrollingCentreTitle && String(enrollingCentreTitle).trim()) ||

@@ -39,11 +39,8 @@ const allowedCoursePickerOrigins = computed(() => {
 });
 
 function onCoursePickerMessage(event) {
-    const messageType = event.data?.type;
-    if (
-        messageType !== "omcp-in-person-enrolled" &&
-        messageType !== "omcp-student-enrolled"
-    ) {
+    const t = event.data?.type;
+    if (t !== "omcp-in-person-enrolled" && t !== "omcp-student-enrollment-complete") {
         return;
     }
     const redirectUrl = event.data.redirectUrl;
