@@ -77,28 +77,9 @@ class ProfileController extends Controller
         $user = $request->user();
         $validated = $request->validated();
 
-        // Always update the separate name fields
-        $user->fill($validated);
-
-        // Always sync the name field with the separate fields
-        $user->setNameFromFields();
-
-        // Handle previous name tracking
-        if ($user->isDirty('name') && !$user->previous_name) {
-            $user->previous_name = $user->getOriginal('name');
-        }
-
-        if (isset($validated['name']) && $validated['name'] == $user->previous_name) {
-            $user->previous_name = null;
-        }
-
-        $user->details_updated_at = now();
+        $user->network_type = $validated['network_type'];
+        $user->mobile_no = $validated['mobile_no'];
         $user->save();
-
-        // activity('student')
-        //     ->causedBy($user)
-        //     ->event('Profile Modified')
-        //     ->log("{$user->name} successfully modified their profile.");
 
         return Redirect::route('student.profile.edit');
     }

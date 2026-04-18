@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AdmissionWaitlist;
 use App\Models\AppConfig;
 use App\Services\JwtService;
 use Illuminate\Http\Request;
@@ -64,6 +65,12 @@ class HandleInertiaRequests extends Middleware
             $quizJwtToken = app(JwtService::class)->generate($user->id);
         }
 
+        $isOnWaitlist = $user && ! $user->registered_course
+            ? AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->exists()
+            : false;
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -78,6 +85,7 @@ class HandleInertiaRequests extends Middleware
                             'hasAdmission' => $user?->hasAdmission(),
                             'hasAttendance' => $user?->hasAttendance(),
                             'assessment_completed' => $user?->userAssessment?->completed ?? false,
+                            'on_waitlist' => $isOnWaitlist,
                             'verification_completed' => $user?->isVerifiedByGhanaCard() ?? false,
                             'verification_blocked' => (bool) ($user?->is_verification_blocked ?? false),
                             'student_level' => config(SHOW_STUDENT_LEVEL, false) ? $user?->student_level : null,

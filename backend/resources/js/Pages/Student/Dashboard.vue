@@ -8,12 +8,83 @@ const props = defineProps({
     exams: Object,
     questionnaires: Object,
     registeredCourse: Object,
+    cohort: Object,
+    centre: Object,
+    waitlistPosition: Number,
 });
 
 const { config } = usePage().props;
 const user = computed(() => usePage().props.auth?.user || {});
+const isOnWaitlist = computed(() => !!user.value?.on_waitlist);
 
 const hasRegisteredCourse = computed(() => !!props.registeredCourse);
+
+const cohortLabel = computed(() => {
+    if (!props.cohort) return "";
+    if (props.cohort.title) return props.cohort.title;
+    if (props.cohort.batch_number)
+        return `Cohort ${props.cohort.batch_number}${props.cohort.year ? " - " + props.cohort.year : ""}`;
+    return "Cohort";
+});
+
+const cohortDetailRow = computed(() => {
+    if (!props.cohort) return [];
+    const items = [];
+    if (props.cohort.batch_number && props.cohort.title) {
+        items.push(`Cohort ${props.cohort.batch_number}`);
+    }
+    if (props.cohort.year) items.push(String(props.cohort.year));
+    if (props.cohort.start_date || props.cohort.end_date) {
+        const start = formatDate(props.cohort.start_date);
+        const end = formatDate(props.cohort.end_date);
+        if (start && end) items.push(`${start} — ${end}`);
+        else if (start) items.push(start);
+        else if (end) items.push(end);
+    }
+    return items;
+});
+
+const centreLocation = computed(() => {
+    if (!props.centre) return "";
+    const district = props.centre.gps_location?.[0]?.District;
+    const region = props.centre.region;
+    return [district, region].filter(Boolean).join(", ");
+});
+
+const centreDetailRow = computed(() => {
+    if (!props.centre) return [];
+    const items = [];
+    if (centreLocation.value) items.push(centreLocation.value);
+    if (props.centre.gps_address) items.push(props.centre.gps_address);
+    return items;
+});
+
+const directionsUrl = computed(() => {
+    if (!props.centre) return null;
+    const gps = props.centre.gps_location?.[0];
+    if (gps?.Latitude && gps?.Longitude) {
+        return `https://www.google.com/maps/search/?api=1&query=${gps.Latitude},${gps.Longitude}`;
+    }
+    const district = gps?.District ?? "";
+    const region = props.centre.region ?? "";
+    const query = [props.centre.title, district, region, "Ghana"]
+        .filter(Boolean)
+        .join(", ");
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+});
+
+const formatDate = (date) => {
+    if (!date) return "";
+    try {
+        return new Date(date).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
+    } catch {
+        return date;
+    }
+};
 
 const examList = computed(() => props.exams || []);
 const totalExams = computed(() => examList.value.length);
@@ -58,31 +129,103 @@ const tieredTestTaken = computed(() => {
                     <p class="text-gray-500 mt-1 font-medium text-lg">It's great to see you again. Here's what's happening today.</p>
                 </div>
 
-                <!-- Chosen Course Section -->
-                <div v-if="hasRegisteredCourse" class="mt-6">
+                <!-- Waitlist Notice -->
+                <div
+                    v-if="isOnWaitlist"
+                    class="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-6"
+                >
+                    <div class="flex items-start gap-4">
+                        <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 text-amber-600 shrink-0">
+                            <span class="material-symbols-outlined">hourglass_top</span>
+                        </span>
+                        <div>
+                            <h3 class="text-lg font-bold text-amber-800">You're on the Waitlist</h3>
+                            <p class="text-sm text-amber-700 mt-1">
+                                You are currently on the waitlist for your chosen course.
+                                You will be notified when a space becomes available.
+                            </p>
+                            <p v-if="waitlistPosition" class="text-sm font-semibold text-amber-800 mt-2">
+                                Your position: <span class="text-lg">#{{ waitlistPosition }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Section: Course + Centre on same row -->
+                <div
+                    v-if="hasRegisteredCourse"
+                    class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6"
+                >
+                    <!-- Course Details card -->
                     <div
-                        class="bg-white rounded-2xl shadow-sm border border-orange-100/50 p-6 transition-all duration-300 relative overflow-hidden group shadow-orange-500/5"
+                        class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                        :class="{ 'md:col-span-2': !centre }"
                     >
-                        <div class="absolute top-0 left-0 w-1.5 h-full bg-[#f9a825]"></div>
-                        <div class="flex items-center gap-4">
-                            <div
-                                class="p-3 bg-[#f9a825]/10 rounded-lg text-[#f9a825]"
-                            >
-                                <span class="material-symbols-outlined text-3xl"
-                                    >school</span
-                                >
-                            </div>
-                            <div>
-                                <p
-                                    class="text-gray-500 text-xs font-medium uppercase tracking-wider"
-                                >
-                                    Your Chosen Course
+                        <div class="absolute top-0 left-0 h-full w-1 bg-[#f9a825]"></div>
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]">
+                                <span class="material-symbols-outlined">school</span>
+                            </span>
+                            <div class="flex-1 text-left">
+                                <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">
+                                    {{ isOnWaitlist ? 'Chosen Course' : 'Registered Course' }}
                                 </p>
-                                <h3 class="text-xl font-bold text-gray-800">
+                                <h3 class="text-lg font-bold text-gray-800">
                                     {{ registeredCourse.course_name }}
                                 </h3>
                             </div>
                         </div>
+                        <div v-if="cohort" class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left">
+                            <span class="inline-flex items-center gap-1 text-[#f9a825]">
+                                <span class="material-symbols-outlined text-base">groups</span>
+                            </span>
+                            <span class="font-medium">{{ cohortLabel }}</span>
+                            <template v-for="(item, idx) in cohortDetailRow" :key="idx">
+                                <span class="w-1 h-1 rounded-full bg-gray-300"></span>
+                                <span>{{ item }}</span>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Centre Details card (with directions) -->
+                    <div
+                        v-if="centre"
+                        class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                    >
+                        <div class="absolute top-0 left-0 h-full w-1 bg-[#f9a825]"></div>
+                        <span
+                            v-if="centre.is_pwd_friendly"
+                            class="absolute top-4 right-4 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700"
+                        >PWD Friendly</span>
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]">
+                                <span class="material-symbols-outlined">location_on</span>
+                            </span>
+                            <div class="flex-1 text-left">
+                                <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">Centre Details</p>
+                                <h3 class="text-lg font-bold text-gray-800">{{ centre.title }}</h3>
+                            </div>
+                        </div>
+                        <div
+                            v-if="centreDetailRow.length"
+                            class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left"
+                        >
+                            <template v-for="(item, idx) in centreDetailRow" :key="idx">
+                                <span v-if="idx > 0" class="w-1 h-1 rounded-full bg-gray-300"></span>
+                                <span>{{ item }}</span>
+                            </template>
+                        </div>
+                        <!-- Directions link inside centre card -->
+                        <a
+                            v-if="directionsUrl"
+                            :href="directionsUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[#f9a825] hover:text-amber-700 transition-colors"
+                        >
+                            <span class="material-symbols-outlined text-base">near_me</span>
+                            Get Directions
+                        </a>
                     </div>
                 </div>
 
@@ -94,7 +237,7 @@ const tieredTestTaken = computed(() => {
                             Quick Access
                         </p>
                         <div
-                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                            class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
                         >
                             <Link
                                 :href="route('student.application-status')"
@@ -344,6 +487,7 @@ const tieredTestTaken = computed(() => {
                                     </div>
                                 </div>
                             </Link>
+
                         </div>
                     </div>
                     <div v-if="!tieredTestTaken">

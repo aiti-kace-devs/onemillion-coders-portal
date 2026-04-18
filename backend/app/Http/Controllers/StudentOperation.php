@@ -2,52 +2,48 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\StudentAdmitted;
-use App\Models\Oex_question_master;
-use App\Models\OexExamMaster;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
-use App\Models\Oex_student;
-use App\Models\Oex_exam_master;
-use App\Models\OexQuestionMaster;
-use App\Models\Oex_result;
-use App\Models\User;
-use App\Models\CourseSession;
-use App\Models\Course;
-use App\Models\Branch;
-use App\Models\Centre;
-use App\Models\UserAdmission;
-use App\Models\user_exam;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use App\Services\Scheduling\ConfirmStudentSessionService;
+use App\Events\AdmissionDeleted;
 use App\Jobs\CreateStudentAdmissionJob;
 use App\Jobs\TestSubmittedJob;
 use App\Models\AdmissionRejection;
-use Illuminate\Support\Facades\Redirect;
-use Illuminate\Validation\Rule;
-use Inertia\Inertia;
+use App\Models\Branch;
+use App\Models\Centre;
+use App\Models\Course;
+use App\Models\CourseSession;
+use App\Models\Notification;
+use App\Models\Oex_exam_master;
+use App\Models\Oex_question_master;
+use App\Models\Oex_result;
+use App\Models\OexExamMaster;
+use App\Models\OexQuestionMaster;
 use App\Models\Questionnaire;
 use App\Models\QuestionnaireResponse;
-use App\Http\Controllers\NotificationController;
-use App\Models\Notification;
+use App\Models\User;
+use App\Models\user_exam;
+use App\Models\UserAdmission;
+use App\Models\UserAssessment;
 use App\Services\GhanaCardService;
 use App\Services\JwtService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use Spatie\Activitylog\Models\Activity;
-
-use App\Models\UserAssessment;
-use App\Events\AdmissionDeleted;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class StudentOperation extends Controller
 {
-    //student dashboard
+    // student dashboard
     public function dashboard()
     {
         $user = Auth::user();
+        $isOnWaitlist = !$user->registered_course
+            && \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->exists();
 
         $questionnaires = Questionnaire::where('active', true)
             ->latest()
@@ -57,18 +53,87 @@ class StudentOperation extends Controller
                     ->where('questionnaire_id', $q->id)
                     ->where('is_submitted', true)
                     ->exists();
+
                 return $q;
             });
 
         $registeredCourse = null;
-        if ($user->registered_course) {
-            $registeredCourse = Course::where('id', $user->registered_course)
-                ->first(['id', 'course_name']);
+        $cohort = null;
+        $centre = null;
+
+        $isEnrolled = (bool) $user->registered_course;
+        $showPlacementDetails = $isEnrolled;
+
+        // Determine the course to display: registered course, or waitlisted course
+        $courseId = $user->registered_course;
+
+        if (!$courseId && $isOnWaitlist) {
+            $courseId = \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->value('course_id');
+        }
+
+        if ($courseId) {
+            $fullCourse = Course::with(['centre.branch', 'batch', 'programme'])
+                ->find($courseId);
+
+            if ($fullCourse) {
+                // For waitlisted students (not enrolled), show only the programme name
+                $courseName = $fullCourse->course_name;
+                if (!$isEnrolled && $isOnWaitlist && $fullCourse->programme) {
+                    $courseName = $fullCourse->programme->title;
+                }
+
+                $registeredCourse = [
+                    'id' => $fullCourse->id,
+                    'course_name' => $courseName,
+                ];
+
+                if ($showPlacementDetails && $fullCourse->batch) {
+                    $cohort = [
+                        'id' => $fullCourse->batch->id,
+                        'title' => $fullCourse->batch->title,
+                        'batch_number' => $fullCourse->batch->batch_number,
+                        'year' => $fullCourse->batch->year,
+                        'start_date' => $fullCourse->batch->start_date,
+                        'end_date' => $fullCourse->batch->end_date,
+                    ];
+                }
+
+                if ($showPlacementDetails && $fullCourse->centre) {
+                    $centre = [
+                        'id' => $fullCourse->centre->id,
+                        'title' => $fullCourse->centre->title,
+                        'gps_address' => $fullCourse->centre->gps_address,
+                        'gps_location' => $fullCourse->centre->gps_location,
+                        'is_pwd_friendly' => $fullCourse->centre->is_pwd_friendly,
+                        'region' => $fullCourse->centre->branch?->title,
+                    ];
+                }
+            }
+        }
+
+        // Compute waitlist position if on waitlist
+        $waitlistPosition = null;
+        if ($isOnWaitlist) {
+            $entry = \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->first();
+
+            if ($entry) {
+                $waitlistPosition = \App\Models\AdmissionWaitlist::where('course_id', $entry->course_id)
+                    ->whereIn('status', ['pending', 'notified'])
+                    ->where('created_at', '<=', $entry->created_at)
+                    ->count();
+            }
         }
 
         return Inertia::render('Student/Dashboard', [
             'questionnaires' => $questionnaires,
-            'registeredCourse' => $registeredCourse
+            'registeredCourse' => $registeredCourse,
+            'cohort' => $cohort,
+            'centre' => $centre,
+            'waitlistPosition' => $waitlistPosition,
         ]);
     }
 
@@ -121,9 +186,8 @@ class StudentOperation extends Controller
         $verifyBaseUrl = rtrim((string) config('app.quiz_frontend_url', ''), '/');
         $parentOrigin = rtrim((string) config('app.url', ''), '/');
         $embedUrl = $verifyBaseUrl !== ''
-            ? "$verifyBaseUrl/verify-user?ghcard_number=" . urlencode($user->ghcard) . "&token=" . urlencode($token) . "&embed=1&parent_origin=" . urlencode($parentOrigin)
+            ? "$verifyBaseUrl/verify-user?ghcard_number=" . urlencode($user->ghcard) . '&token=' . urlencode($token) . '&embed=1&parent_origin=' . urlencode($parentOrigin)
             : null;
-
 
         return Inertia::render('Student/Verification', [
             'verification_status' => $verificationStatus,
@@ -176,7 +240,7 @@ class StudentOperation extends Controller
         return Inertia::render('Student/LevelAssessment');
     }
 
-    //Exam page
+    // Exam page
     public function exam()
     {
         $exams = user_exam::select(['user_exams.*', 'users.name', 'oex_exam_masters.*', 'oex_categories.name as category_name'])
@@ -190,11 +254,10 @@ class StudentOperation extends Controller
             ->get()
             ->toArray();
 
-
         return Inertia::render('Student/Exam/Index', compact('exams'));
     }
 
-    //join exam page
+    // join exam page
     public function join_exam($id)
     {
 
@@ -262,10 +325,10 @@ class StudentOperation extends Controller
         if ($randomExamId) {
             $questions = OexQuestionMaster::select(
                 [
-                    "id",
-                    "exam_set_id",
-                    "questions",
-                    "options",
+                    'id',
+                    'exam_set_id',
+                    'questions',
+                    'options',
                 ]
             )
                 ->where('exam_id', $id)
@@ -285,10 +348,10 @@ class StudentOperation extends Controller
 
                 $generalQuestions = OexQuestionMaster::select(
                     [
-                        "id",
-                        "exam_set_id",
-                        "questions",
-                        "options",
+                        'id',
+                        'exam_set_id',
+                        'questions',
+                        'options',
                     ]
                 )
                     ->where('exam_id', $id)
@@ -318,10 +381,11 @@ class StudentOperation extends Controller
 
         $data = ['status' => 'true', 'message' => 'started successfully'];
         $data['questions'] = $questions;
+
         return response()->json($data);
     }
 
-    //On submit
+    // On submit
     public function submit_questions(Request $request)
     {
         $user = Auth::guard('web')->user();
@@ -380,7 +444,7 @@ class StudentOperation extends Controller
 
         $userId = $user->userId;
 
-        $res = new Oex_result();
+        $res = new Oex_result;
         $res->exam_id = $request->exam_id;
         $res->user_id = $user->id;
         $res->yes_ans = $yes_ans;
@@ -406,7 +470,7 @@ class StudentOperation extends Controller
         return redirect(route('student.exam.index'));
     }
 
-    //Applying for exam
+    // Applying for exam
     public function apply_exam($id)
     {
         $checkuser = user_exam::where('user_id', Auth::guard('web')->user()->id)
@@ -417,7 +481,7 @@ class StudentOperation extends Controller
         if ($checkuser) {
             $arr = ['status' => 'false', 'message' => 'Already applied, see your exam section'];
         } else {
-            $exam_user = new user_exam();
+            $exam_user = new user_exam;
 
             $exam_user->user_id = Auth::guard('web')->user()->id;
             $exam_user->exam_id = $id;
@@ -432,7 +496,7 @@ class StudentOperation extends Controller
         echo json_encode($arr);
     }
 
-    //View Result
+    // View Result
     public function view_result($id)
     {
         $user = Auth::guard('web')->user();
@@ -468,6 +532,7 @@ class StudentOperation extends Controller
                     'key' => 'info',
                 ]);
         }
+
         return Inertia::render('Student/Exam/Result', [
             'exam' => $exam,
             'result' => $result,
@@ -475,7 +540,7 @@ class StudentOperation extends Controller
         ]);
     }
 
-    //View answer
+    // View answer
     public function view_answer($id)
     {
         $data['question'] = Oex_question_master::where('exam_id', $id)->get()->toArray();
@@ -515,6 +580,7 @@ class StudentOperation extends Controller
 
         $sessions = $sessions->map(function ($session) {
             $session->slotLeft = $session->slotLeft();
+
             return $session;
         });
 
@@ -606,6 +672,7 @@ class StudentOperation extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error($e);
+
             return redirect()->back()->with([
                 'flash' => 'Unable to confirm session. No slots available. Refresh page and try again later',
                 'key' => 'error',
@@ -613,7 +680,7 @@ class StudentOperation extends Controller
         }
     }
 
-    //Display change course form
+    // Display change course form
 
     public function change_course()
     {
@@ -621,7 +688,7 @@ class StudentOperation extends Controller
 
         if ($user->shortlist) {
             return redirect()
-                ->route('student.application-status')
+                ->route('student.dashboard')
                 ->with([
                     'flash' => 'Your course selection is now locked because you have been shortlisted. If you need assistance, please contact support.',
                     'key' => 'info',
@@ -641,9 +708,10 @@ class StudentOperation extends Controller
 
         return Inertia::render('Student/ChangeCourse', [
             'user' => $user,
-            'currentCourse' => $currentCourse
+            'currentCourse' => $currentCourse,
         ]);
     }
+
     // Select training center
     public function select_center($branch_id)
     {
@@ -809,6 +877,11 @@ class StudentOperation extends Controller
                 ]);
             });
 
+            // Clean up any stale waitlist entries for this user
+            \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->update(['status' => 'removed']);
+
             AdmissionRejection::create([
                 'user_id' => $user->userId,
                 'course_id' => $courseId,
@@ -841,6 +914,7 @@ class StudentOperation extends Controller
             ->join('course_sessions', 'user_admission.session', '=', 'course_sessions.id')
             ->join('courses', 'user_admission.course_id', '=', 'courses.id')
             ->first();
+
         return view('student.id-qr', [
             'user' => $user,
         ]);
@@ -854,6 +928,7 @@ class StudentOperation extends Controller
     public function get_meeting_link_page()
     {
         $session = CourseSession::find(UserAdmission::where('user_id', Auth::guard('web')->user()->userId)->firstOrFail()->session);
+
         return view('student.meeting-link', [
             'session' => $session,
         ]);
@@ -1034,7 +1109,6 @@ class StudentOperation extends Controller
         $totalSections = count($questionnaire->schema);
         $schema = $section['questions'];
 
-
         $validationRules = [
             'response_data' => 'required|array',
         ];
@@ -1077,27 +1151,26 @@ class StudentOperation extends Controller
 
                 if (!empty($field['validators']['required'])) {
                     $rules[] = 'required';
-                    $customMessages["{$fieldKey}.required"] = "This field is required.";
+                    $customMessages["{$fieldKey}.required"] = 'This field is required.';
                 }
 
                 switch ($field['type']) {
                     case 'text':
                     case 'textarea':
                         $rules[] = 'string';
-                        $customMessages["{$fieldKey}.string"] = "This field must be a string.";
+                        $customMessages["{$fieldKey}.string"] = 'This field must be a string.';
                         break;
 
                     case 'radio':
                     case 'select':
                         $rules[] = 'string';
-                        $customMessages["{$fieldKey}.string"] = "This field must be a valid option.";
+                        $customMessages["{$fieldKey}.string"] = 'This field must be a valid option.';
                         break;
 
                     case 'checkbox':
                         $rules[] = 'array';
-                        $customMessages["{$fieldKey}.array"] = "This field must be an array.";
+                        $customMessages["{$fieldKey}.array"] = 'This field must be an array.';
                         break;
-
 
                     default:
                         $rules[] = 'nullable';
@@ -1240,7 +1313,7 @@ class StudentOperation extends Controller
                 'questions_answered' => 0,
                 'correct_answers' => 0,
                 'wrong_answers' => 0,
-                'answered_question_ids' => []
+                'answered_question_ids' => [],
             ]
         );
 
@@ -1248,7 +1321,7 @@ class StudentOperation extends Controller
             return response()->json([
                 'status' => 'completed',
                 'message' => 'Assessment already completed.',
-                'user_level' => $user->student_level
+                'user_level' => $user->student_level,
             ]);
         }
 
@@ -1262,7 +1335,7 @@ class StudentOperation extends Controller
                 'message' => 'Time limit exceeded! You have failed this level.',
                 'level_complete' => true,
                 'passed_level' => false,
-                'user_overall_level' => $user->student_level
+                'user_overall_level' => $user->student_level,
             ], 403);
         }
         $level = $assessment->current_level;
@@ -1275,17 +1348,17 @@ class StudentOperation extends Controller
             ->inRandomOrder()
             ->first();
 
-
-
         if (!$question) {
-            //complete assessment
+            // complete assessment
             $this->completeAssessment($user, $assessment, false);
+
             return response()->json([
                 'status' => 'completed',
                 'message' => 'Assessment already completed.',
-                'user_level' => $user->student_level
+                'user_level' => $user->student_level,
             ]);
         }
+
         return response()->json([
             'status' => 'success',
             'question' => [
@@ -1295,7 +1368,7 @@ class StudentOperation extends Controller
                 'level' => $level,
                 'progress' => $assessment->questions_answered + 1,
                 'total_level_questions' => config('ASSESSMENT_MAX_QUESTIONS', 10),
-                'time_remaining_seconds' => $timeRemainingSeconds
+                'time_remaining_seconds' => $timeRemainingSeconds,
             ],
             'violation_count' => $assessment->violation_count,
         ]);
@@ -1308,7 +1381,7 @@ class StudentOperation extends Controller
         $request->validate([
             'question_id' => 'required|exists:oex_question_masters,id',
             'answer' => 'required|string',
-            'user_id' => 'sometimes|exists:users,userId'
+            'user_id' => 'sometimes|exists:users,userId',
         ]);
 
         $assessment = UserAssessment::where('user_id', $user->id)
@@ -1318,7 +1391,7 @@ class StudentOperation extends Controller
         if (!$assessment) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'No active assessment found.'
+                'message' => 'No active assessment found.',
             ], 404);
         }
 
@@ -1343,7 +1416,7 @@ class StudentOperation extends Controller
         if (in_array($question->id, $answeredIds)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Question already answered.'
+                'message' => 'Question already answered.',
             ], 400);
         }
 
@@ -1434,7 +1507,7 @@ class StudentOperation extends Controller
         if (!$assessment) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'No active assessment found.'
+                'message' => 'No active assessment found.',
             ], 404);
         }
 
@@ -1472,6 +1545,7 @@ class StudentOperation extends Controller
 
         $timeoutSeconds = config('ASSESSMENT_LEVEL_TIMEOUT_SECONDS', 900);
         $timeElapsedSeconds = now()->getTimestamp() - $assessment->level_started_at->getTimestamp();
+
         return $timeoutSeconds - $timeElapsedSeconds;
     }
 
