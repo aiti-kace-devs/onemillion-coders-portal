@@ -192,6 +192,40 @@ class User extends Authenticatable
         return $this->hasMany(UserAdmission::class, 'user_id', 'userId');
     }
 
+    public function getSelectedSessionAttribute()
+    {
+        $admission = $this->admission;
+        if (!$admission) return 'N/A';
+
+        $sessionRecord = $admission->courseSession;
+        $batch = $admission->programmeBatch;
+
+        $dates = "";
+        if ($batch) {
+            $start = $batch->start_date?->format('jS M') ?? '';
+            $end = $batch->end_date?->format('jS M') ?? '';
+            $dates = "{$start} - {$end}";
+        }
+
+        $sessionTime = $sessionRecord?->course_time ?? '';
+
+        return trim("{$dates} " . ($sessionTime ? "({$sessionTime})" : "")) ?: ($admission->session ?? 'N/A');
+    }
+
+    /**
+     * Get the validity period for the ID card
+     */
+    public function getValidityPeriodAttribute()
+    {
+        $admissionBatch = $this->admission?->programmeBatch?->admissionBatch;
+        if (!$admissionBatch) return 'N/A';
+
+        $start = \Carbon\Carbon::parse($admissionBatch->start_date)->format('M, Y');
+        $end = \Carbon\Carbon::parse($admissionBatch->end_date)->format('M, Y');
+
+        return trim("{$start} - {$end}") ?: 'N/A';
+    }
+
 
     public function isAdmitted()
     {
@@ -382,13 +416,6 @@ class User extends Authenticatable
         return $this->admission?->course?->course_name;
     }
 
-    /**
-     * Get the session name (e.g., Morning, Evening)
-     */
-    public function getSelectedSessionAttribute()
-    {
-        return $this->admission?->courseSession?->session;
-    }
 
     /**
      * Get the date the admission was confirmed (used as verification date)
