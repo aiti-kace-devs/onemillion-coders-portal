@@ -30,17 +30,22 @@ class SyncPublicStatisticsMetricsCommand extends Command
             return self::FAILURE;
         }
 
-        $usersRegistered = User::query()->count();
-        $districts = District::query()->where('status', true)->count();
-        $studentsTrained = UserAdmission::query()->whereNotNull('confirmed')->count();
+        $usersRegisteredCount = User::query()->count();
+        $districts = District::query()
+            ->whereHas('centres', fn ($q) => $q->where('is_ready', true))
+            ->count();
+        $studentsTrainedCount = UserAdmission::query()->whereNotNull('confirmed')->count();
+
+        $usersRegistered = $this->formatCompactCount($usersRegisteredCount);
+        $studentsTrained = $this->formatCompactCount($studentsTrainedCount);
 
         $entry->set('live_users_registered', $usersRegistered);
         $entry->set('live_districts', $districts);
         $entry->set('live_students_trained', $studentsTrained);
 
         $numbersByMetricId = [
-            'live_users_registered' => (string) $usersRegistered,
-            'live_students_trained' => (string) $studentsTrained,
+            'live_users_registered' => $usersRegistered,
+            'live_students_trained' => $studentsTrained,
             'live_districts' => (string) $districts,
         ];
 
@@ -66,8 +71,35 @@ class SyncPublicStatisticsMetricsCommand extends Command
         $entry->set('metrics', $metrics);
         $entry->save();
 
-        $this->info("Synced: users={$usersRegistered}, districts={$districts}, admitted={$studentsTrained}");
+        $this->info("Synced: users={$usersRegistered} ({$usersRegisteredCount}), districts={$districts}, students={$studentsTrained} ({$studentsTrainedCount})");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Format large counts for display (e.g. 1.2K, 155K, 1.5M).
+     */
+    private function formatCompactCount(int $n): string
+    {
+        if ($n >= 1_000_000) {
+            return $this->formatWithSuffix($n, 1_000_000, 'M');
+        }
+        if ($n >= 1_000) {
+            return $this->formatWithSuffix($n, 1_000, 'K');
+        }
+
+        return (string) $n;
+    }
+
+    private function formatWithSuffix(int $n, int $divisor, string $suffix): string
+    {
+        $v = $n / $divisor;
+        $rounded = round($v, 1);
+
+        if (abs($rounded - (int) $rounded) < 0.001) {
+            return ((string) (int) $rounded).$suffix;
+        }
+
+        return rtrim(rtrim(sprintf('%.1f', $rounded), '0'), '.').$suffix;
     }
 }

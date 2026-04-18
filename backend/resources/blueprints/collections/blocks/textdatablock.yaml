@@ -38,9 +38,9 @@ tabs:
               display: Metrics
             handle: metrics
           - field:
-              type: integer
+              type: text
               display: "Users registered"
-              instructions: "Automated total from the database (scheduled job). Read-only — use Metrics above for labels and presentation only."
+              instructions: "Automated total from the database (scheduled job), shown as K/M when large. Read-only — use Metrics above for labels and presentation only."
               read_only: true
               localizable: false
             handle: live_users_registered
@@ -52,9 +52,9 @@ tabs:
               localizable: false
             handle: live_districts
           - field:
-              type: integer
+              type: text
               display: "Students trained"
-              instructions: "Confirmed admissions count — maintained by the system."
+              instructions: "Confirmed admissions count (K/M when large) — maintained by the system."
               read_only: true
               localizable: false
             handle: live_students_trained
