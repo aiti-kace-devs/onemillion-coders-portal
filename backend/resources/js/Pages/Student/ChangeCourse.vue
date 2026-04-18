@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted } from "vue";
 import { Head, usePage } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
 
@@ -24,6 +24,54 @@ const courseSelectionUrl = computed(() => {
     const token = quiz_jwt_token;
     const path = `${base}/courses/${user.userId}`;
     return token ? `${path}?token=${token}` : path;
+});
+
+const allowedCoursePickerOrigins = computed(() => {
+    const raw = quiz_frontend_url || "";
+    if (!raw) {
+        return [];
+    }
+    try {
+        return [new URL(raw).origin];
+    } catch {
+        return [];
+    }
+});
+
+function onCoursePickerMessage(event) {
+    if (event.data?.type !== "omcp-in-person-enrolled") {
+        return;
+    }
+    const redirectUrl = event.data.redirectUrl;
+    if (typeof redirectUrl !== "string" || !redirectUrl) {
+        return;
+    }
+    let redirectOrigin = "";
+    try {
+        redirectOrigin = new URL(redirectUrl).origin;
+    } catch {
+        return;
+    }
+    if (redirectOrigin !== window.location.origin) {
+        return;
+    }
+    const allowed = allowedCoursePickerOrigins.value;
+    const originOk =
+        allowed.length > 0
+            ? allowed.includes(event.origin)
+            : event.origin === window.location.origin;
+    if (!originOk) {
+        return;
+    }
+    window.location.assign(redirectUrl);
+}
+
+onMounted(() => {
+    window.addEventListener("message", onCoursePickerMessage);
+});
+
+onUnmounted(() => {
+    window.removeEventListener("message", onCoursePickerMessage);
 });
 </script>
 

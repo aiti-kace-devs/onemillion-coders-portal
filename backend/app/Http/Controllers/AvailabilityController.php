@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Batch;
 use App\Models\Centre;
 use App\Models\Course;
+use App\Models\CourseSession;
 use App\Models\MasterSession;
 use App\Models\Programme;
 use App\Models\ProgrammeBatch;
@@ -50,7 +51,7 @@ class AvailabilityController extends Controller
 
         $courseId = (int) $request->input('course_id');
 
-        $course = Course::with(['programme', 'centre'])->find($courseId);
+        $course = Course::with(['programme.courseCertification', 'centre.branch', 'centre.districts'])->find($courseId);
 
         if (! $course || ! $course->programme || ! $course->centre) {
             return response()->json(['success' => false, 'message' => 'Course or centre not found.'], 404);
@@ -59,6 +60,11 @@ class AvailabilityController extends Controller
         $centre = $course->centre;
         $programme = $course->programme;
         $courseType = $programme->courseType();
+        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
+
+        $regionName = $centre->branch?->title;
+        $districtName = $centre->districts->first()?->title;
+        $certificateTitle = $programme->courseCertification->first()?->title;
 
         // Find the current active admission batch
         $today = Carbon::today();
@@ -73,7 +79,10 @@ class AvailabilityController extends Controller
                 'success' => true,
                 'centre' => ['id' => $centre->id, 'title' => $centre->title],
                 'course_type' => $courseType,
-                'capacity' => $centre->slotCapacityFor($courseType),
+                'capacity' => $isInPerson ? null : $centre->slotCapacityFor($courseType),
+                'region_name' => $regionName,
+                'district_name' => $districtName,
+                'certificate_title' => $certificateTitle,
                 'batches' => [],
             ]);
         }
@@ -90,33 +99,48 @@ class AvailabilityController extends Controller
                 'success' => true,
                 'centre' => ['id' => $centre->id, 'title' => $centre->title],
                 'course_type' => $courseType,
-                'capacity' => $centre->slotCapacityFor($courseType),
+                'capacity' => $isInPerson ? null : $centre->slotCapacityFor($courseType),
+                'region_name' => $regionName,
+                'district_name' => $districtName,
+                'certificate_title' => $certificateTitle,
                 'batches' => [],
             ]);
         }
 
-        // Get active master sessions for this course type
-        $sessions = MasterSession::where('course_type', $courseType)
-            ->where('status', true)
-            ->get();
+        // Get active sessions for this course type or centre-specific for in-person
+        if ($isInPerson) {
+            $sessions = CourseSession::where('course_id', $courseId)
+                ->where('status', true)
+                ->get();
+        } else {
+            $sessions = MasterSession::where('course_type', $courseType)
+                ->where('status', true)
+                ->get();
+        }
         $sessions = $this->sortMasterSessions($sessions);
 
-        // Batch fetch all remaining seats at once
-        $remainingSeats = $bookingService->getRemainingSeatsBatch(
-            $centre->id,
-            $batches->pluck('id')->toArray(),
-            $sessions->pluck('id')->toArray()
-        );
+        // Calculate capacity
+        $capacity = $isInPerson ? $sessions->sum('limit') : $centre->slotCapacityFor($courseType);
 
-        $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats) {
-            $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats) {
+        // Batch fetch all remaining seats at once (only for master sessions)
+        $remainingSeats = [];
+        if (! $isInPerson) {
+            $remainingSeats = $bookingService->getRemainingSeatsBatch(
+                $centre->id,
+                $batches->pluck('id')->toArray(),
+                $sessions->pluck('id')->toArray()
+            );
+        }
+
+        $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats, $isInPerson) {
+            $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, $isInPerson) {
                 $key = "{$batch->id}:{$session->id}";
 
                 return [
                     'session_id' => $session->id,
-                    'session_name' => "{$session->session_type} Session",
-                    'time' => $session->time,
-                    'remaining' => $remainingSeats[$key] ?? 0,
+                    'session_name' => $isInPerson ? ($session->session ?? 'Unknown') : ($session->session_type ?? $session->name ?? optional($session->masterSession)->session_type ?? 'Unknown Session'),
+                    'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? 'Unknown',
+                    'remaining' => $isInPerson ? ($session->limit ?? 0) : ($remainingSeats[$key] ?? 0),
                 ];
             })->values()->toArray();
 
@@ -133,7 +157,10 @@ class AvailabilityController extends Controller
             'success' => true,
             'centre' => ['id' => $centre->id, 'title' => $centre->title],
             'course_type' => $courseType,
-            'capacity' => $centre->slotCapacityFor($courseType),
+            'capacity' => $isInPerson ? null : $capacity,
+            'region_name' => $regionName,
+            'district_name' => $districtName,
+            'certificate_title' => $certificateTitle,
             'batches' => $batchData,
         ]);
     }
@@ -283,7 +310,7 @@ class AvailabilityController extends Controller
             );
 
             $totalAvailable = 0;
-            
+
             $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats, &$totalAvailable) {
                 $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, &$totalAvailable) {
                     $key = "{$batch->id}:{$session->id}";
@@ -426,10 +453,21 @@ class AvailabilityController extends Controller
     {
         return collect($sessions)
             ->sortBy(function ($session) {
+                // MasterSession: session_type = "Morning", "Afternoon", "Evening"
+                // CourseSession: session_type = "course" or "centre", use session column directly
+                $sessionType = $session->session_type ?? '';
+
+                // For CourseSession, use the session column which stores the period name
+                if (strtolower(trim((string) $sessionType)) === 'course' || strtolower(trim((string) $sessionType)) === 'centre') {
+                    $sessionType = $session->session ?? '';
+                }
+
+                $time = $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? '';
+
                 return [
-                    $this->sessionTypePriority($session->session_type ?? null),
-                    $this->sessionStartMinutes($session->time ?? null),
-                    strtolower(trim((string) ($session->time ?? ''))),
+                    $this->sessionTypePriority($sessionType),
+                    $this->sessionStartMinutes($time),
+                    strtolower(trim((string) $time)),
                     (int) ($session->id ?? 0),
                 ];
             }, SORT_REGULAR)

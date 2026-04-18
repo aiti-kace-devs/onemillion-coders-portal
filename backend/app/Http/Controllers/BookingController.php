@@ -25,10 +25,11 @@ class BookingController extends Controller
         GhanaCardService $ghanaCardService
     ): JsonResponse
     {
+        // First validate the required fields without the session table dependency
         $validated = $request->validate([
             'programme_batch_id' => 'required|integer|exists:programme_batches,id',
             'course_id' => 'required|integer|exists:courses,id',
-            'session_id' => 'required|integer|exists:master_sessions,id',
+            'session_id' => 'required|integer',
         ]);
 
         $batch = ProgrammeBatch::find($validated['programme_batch_id']);
@@ -58,13 +59,35 @@ class BookingController extends Controller
         }
 
         $course = Course::find($validated['course_id']);
-        $session = MasterSession::find($validated['session_id']);
+        $programme = $course->programme;
+        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
 
         if ($course->programme_id !== $batch->programme_id) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Course does not belong to this programme batch.',
             ], 422);
+        }
+
+        // Fetch session based on delivery mode
+        if ($isInPerson) {
+            $session = CourseSession::find($validated['session_id']);
+            if (!$session || $session->course_id !== $course->id) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'The selected session id is invalid.',
+                    'errors' => ['session_id' => ['The selected session id is invalid.']],
+                ], 422);
+            }
+        } else {
+            $session = MasterSession::find($validated['session_id']);
+            if (!$session) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'The selected session id is invalid.',
+                    'errors' => ['session_id' => ['The selected session id is invalid.']],
+                ], 422);
+            }
         }
 
         try {
