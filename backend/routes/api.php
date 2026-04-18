@@ -31,6 +31,11 @@ Route::prefix('availability')->name('api.availability.')->middleware('user.token
     Route::get('/sibling-courses', [App\Http\Controllers\Admin\Api\CourseMatchAPIController::class, 'siblingCourses'])->name('sibling-courses');
 });
 
+// Programme availability per centre — authenticated
+Route::get('/programmes/{programmeId}/availability-per-centre', [
+    App\Http\Controllers\Admin\Api\CourseProgrammeController::class, 'availabilityPerCentre'
+])->name('api.programmes.availability-per-centre');
+
 
 // Booking endpoints — student reserves/cancels a programme_batch slot
 Route::prefix('bookings')->name('api.bookings.')->middleware(['user.token', 'student.verification.flow'])->group(function () {
