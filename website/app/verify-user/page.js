@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   FiShield,
   FiCamera,
@@ -13,8 +14,13 @@ import {
   FiArrowRight,
   FiCreditCard,
 } from "react-icons/fi";
-import LivenessDetection from "../../components/verification/LivenessDetection";
 import { submitGhanaCardVerification } from "../../services/api";
+import { preloadLivenessAssets } from "../../lib/livenessPreload";
+
+const LivenessDetection = dynamic(
+  () => import("../../components/verification/LivenessDetection"),
+  { ssr: false },
+);
 
 const GHANA_CARD_PIN_REGEX = /^GHA-\d{9}-\d$/;
 
@@ -121,6 +127,12 @@ function VerifyUserContent() {
       sendParentMessage("verification_failed", message);
     }
   }, [token, sendParentMessage]);
+
+  // Warm MediaPipe WASM + face-landmarker model while the user fills in the PIN,
+  // so the liveness step starts instantly.
+  useEffect(() => {
+    if (step === "pin") preloadLivenessAssets();
+  }, [step]);
 
   const currentStepIndex = STEPS.findIndex((s) => s.key === step);
 
