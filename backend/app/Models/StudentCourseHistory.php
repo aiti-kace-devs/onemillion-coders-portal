@@ -4,18 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class OldAdmission extends Model
+class StudentCourseHistory extends Model
 {
-    protected $table = 'old_admissions';
+    protected $table = 'student_course_histories';
 
     protected $fillable = [
         'user_id',
         'course_id',
         'centre_id',
+        'session_id',
         'batch_id',
-        'confirmed',
-        'email_sent',
-        'session',
         'status',
         'support_status',
         'started_at',
@@ -24,8 +22,6 @@ class OldAdmission extends Model
     ];
 
     protected $casts = [
-        'confirmed' => 'datetime',
-        'email_sent' => 'datetime',
         'started_at' => 'datetime',
         'ended_at' => 'datetime',
         'support_status' => 'boolean',
@@ -33,22 +29,22 @@ class OldAdmission extends Model
 
     public function course()
     {
-        return $this->belongsTo(Course::class, 'course_id');
+        return $this->belongsTo(Course::class);
     }
 
     public function centre()
     {
-        return $this->belongsTo(Centre::class, 'centre_id');
+        return $this->belongsTo(Centre::class);
+    }
+
+    public function session()
+    {
+        return $this->belongsTo(CourseSession::class, 'session_id');
     }
 
     public function batch()
     {
-        return $this->belongsTo(Batch::class, 'batch_id');
-    }
-
-    public function sessionRecord()
-    {
-        return $this->belongsTo(CourseSession::class, 'session');
+        return $this->belongsTo(Batch::class);
     }
 
     public function user()

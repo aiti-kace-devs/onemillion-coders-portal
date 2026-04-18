@@ -47,6 +47,10 @@ class StudentOperation extends Controller
     public function dashboard()
     {
         $user = Auth::user();
+        $isOnWaitlist = ! $user->registered_course
+            && \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->exists();
 
         $questionnaires = Questionnaire::where('active', true)
             ->latest()
@@ -60,14 +64,82 @@ class StudentOperation extends Controller
             });
 
         $registeredCourse = null;
-        if ($user->registered_course) {
-            $registeredCourse = Course::where('id', $user->registered_course)
-                ->first(['id', 'course_name']);
+        $cohort = null;
+        $centre = null;
+
+        $isEnrolled = (bool) $user->registered_course;
+        $showPlacementDetails = $isEnrolled;
+
+        // Determine the course to display: registered course, or waitlisted course
+        $courseId = $user->registered_course;
+
+        if (! $courseId && $isOnWaitlist) {
+            $courseId = \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->value('course_id');
+        }
+
+        if ($courseId) {
+            $fullCourse = Course::with(['centre.branch', 'batch', 'programme'])
+                ->find($courseId);
+
+            if ($fullCourse) {
+                // For waitlisted students (not enrolled), show only the programme name
+                $courseName = $fullCourse->course_name;
+                if (! $isEnrolled && $isOnWaitlist && $fullCourse->programme) {
+                    $courseName = $fullCourse->programme->title;
+                }
+
+                $registeredCourse = [
+                    'id' => $fullCourse->id,
+                    'course_name' => $courseName,
+                ];
+
+                if ($showPlacementDetails && $fullCourse->batch) {
+                    $cohort = [
+                        'id' => $fullCourse->batch->id,
+                        'title' => $fullCourse->batch->title,
+                        'batch_number' => $fullCourse->batch->batch_number,
+                        'year' => $fullCourse->batch->year,
+                        'start_date' => $fullCourse->batch->start_date,
+                        'end_date' => $fullCourse->batch->end_date,
+                    ];
+                }
+
+                if ($showPlacementDetails && $fullCourse->centre) {
+                    $centre = [
+                        'id' => $fullCourse->centre->id,
+                        'title' => $fullCourse->centre->title,
+                        'gps_address' => $fullCourse->centre->gps_address,
+                        'gps_location' => $fullCourse->centre->gps_location,
+                        'is_pwd_friendly' => $fullCourse->centre->is_pwd_friendly,
+                        'region' => $fullCourse->centre->branch?->title,
+                    ];
+                }
+            }
+        }
+
+        // Compute waitlist position if on waitlist
+        $waitlistPosition = null;
+        if ($isOnWaitlist) {
+            $entry = \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->first();
+
+            if ($entry) {
+                $waitlistPosition = \App\Models\AdmissionWaitlist::where('course_id', $entry->course_id)
+                    ->whereIn('status', ['pending', 'notified'])
+                    ->where('created_at', '<=', $entry->created_at)
+                    ->count();
+            }
         }
 
         return Inertia::render('Student/Dashboard', [
             'questionnaires' => $questionnaires,
-            'registeredCourse' => $registeredCourse
+            'registeredCourse' => $registeredCourse,
+            'cohort' => $cohort,
+            'centre' => $centre,
+            'waitlistPosition' => $waitlistPosition,
         ]);
     }
 
@@ -779,6 +851,11 @@ class StudentOperation extends Controller
                     'registered_course' => null,
                 ]);
             });
+
+            // Clean up any stale waitlist entries for this user
+            \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->update(['status' => 'removed']);
 
             AdmissionRejection::create([
                 'user_id' => $user->userId,
