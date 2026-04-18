@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdmissionRejection;
 use App\Models\Course;
 use App\Models\OldAdmission;
 use App\Models\UserAdmission;
@@ -29,14 +30,17 @@ class CourseHistoryController extends Controller
             ->orderByDesc('created_at')
             ->paginate(15);
 
-        $stats = OldAdmission::where('user_id', $userId)
-            ->selectRaw("
-                COUNT(*) as total,
-                SUM(status = 'admitted') as admitted_count,
-                SUM(status = 'confirmed') as confirmed_count,
-                SUM(status = 'revoked') as revoked_count
-            ")
-            ->first();
+        $total = OldAdmission::where('user_id', $userId)->count();
+        $ongoingCount = UserAdmission::where('user_id', $userId)->count();
+        $rejectedCount = AdmissionRejection::where('user_id', $userId)->count();
+        $completedCount = max(0, $total - $ongoingCount - $rejectedCount);
+
+        $stats = [
+            'total'           => $total,
+            'completed_count' => $completedCount,
+            'ongoing_count'   => $ongoingCount,
+            'rejected_count'  => $rejectedCount,
+        ];
 
         $history->getCollection()->transform(fn ($h) => [
             'id'           => $h->id,
@@ -59,7 +63,6 @@ class CourseHistoryController extends Controller
             ->toArray();
 
         $centreIds = OldAdmission::where('user_id', $userId)
-            ->whereIn('status', ['admitted', 'confirmed'])
             ->whereNotNull('centre_id')
             ->pluck('centre_id')
             ->unique()

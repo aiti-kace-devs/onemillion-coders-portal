@@ -47,9 +47,10 @@ class StudentOperation extends Controller
     public function dashboard()
     {
         $user = Auth::user();
-        $isOnWaitlist = \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
-            ->whereIn('status', ['pending', 'notified'])
-            ->exists();
+        $isOnWaitlist = ! $user->registered_course
+            && \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->exists();
 
         $questionnaires = Questionnaire::where('active', true)
             ->latest()
@@ -66,9 +67,8 @@ class StudentOperation extends Controller
         $cohort = null;
         $centre = null;
 
-        // If user has registered_course, they are enrolled — waitlist is stale
         $isEnrolled = (bool) $user->registered_course;
-        $showPlacementDetails = $isEnrolled && ! $isOnWaitlist;
+        $showPlacementDetails = $isEnrolled;
 
         // Determine the course to display: registered course, or waitlisted course
         $courseId = $user->registered_course;
@@ -119,11 +119,27 @@ class StudentOperation extends Controller
             }
         }
 
+        // Compute waitlist position if on waitlist
+        $waitlistPosition = null;
+        if ($isOnWaitlist) {
+            $entry = \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                ->whereIn('status', ['pending', 'notified'])
+                ->first();
+
+            if ($entry) {
+                $waitlistPosition = \App\Models\AdmissionWaitlist::where('course_id', $entry->course_id)
+                    ->whereIn('status', ['pending', 'notified'])
+                    ->where('created_at', '<=', $entry->created_at)
+                    ->count();
+            }
+        }
+
         return Inertia::render('Student/Dashboard', [
             'questionnaires' => $questionnaires,
             'registeredCourse' => $registeredCourse,
             'cohort' => $cohort,
             'centre' => $centre,
+            'waitlistPosition' => $waitlistPosition,
         ]);
     }
 

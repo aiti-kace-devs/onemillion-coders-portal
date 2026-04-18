@@ -65,7 +65,7 @@ class HandleInertiaRequests extends Middleware
             $quizJwtToken = app(JwtService::class)->generate($user->id);
         }
 
-        $isOnWaitlist = $user
+        $isOnWaitlist = $user && ! $user->registered_course
             ? AdmissionWaitlist::where('user_id', $user->userId)
                 ->whereIn('status', ['pending', 'notified'])
                 ->exists()

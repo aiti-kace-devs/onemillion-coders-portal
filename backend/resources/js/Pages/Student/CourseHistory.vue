@@ -40,14 +40,11 @@ const filteredHistory = computed(() => {
 });
 
 // ── Stat cards ───────────────────────────────────────────────────────────────
-const total = computed(() => props.stats?.total ?? 0);
-function pct(n) { return (!total.value || !n) ? 0 : Math.round((n / total.value) * 100); }
-
 const statCards = computed(() => [
-    { label: "Total Enrolled", count: total.value,               icon: "school",        sub: "All cohorts"           },
-    { label: "Admitted",       count: props.stats?.admitted_count ?? 0, icon: "pending",       sub: "Awaiting confirmation" },
-    { label: "Active Courses", count: props.stats?.confirmed_count ?? 0,icon: "check_circle",  sub: "Currently enrolled"    },
-    { label: "Revoked",        count: props.stats?.revoked_count ?? 0,  icon: "block",         sub: "Access removed"        },
+    { label: "Total Enrolled", count: props.stats?.total ?? 0,           icon: "school",           sub: "All cohorts"            },
+    { label: "Completed",      count: props.stats?.completed_count ?? 0, icon: "verified",         sub: "Successfully completed" },
+    { label: "Ongoing Course", count: props.stats?.ongoing_count ?? 0,   icon: "pending_actions",  sub: "Currently active"       },
+    { label: "Rejected",       count: props.stats?.rejected_count ?? 0,  icon: "block",            sub: "Admission rejected"     },
 ]);
 
 // ── Dates ────────────────────────────────────────────────────────────────────
@@ -126,8 +123,8 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
                     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
                         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                             <div class="flex items-center gap-2">
-                                <h3 class="text-sm font-semibold text-gray-800">All courses</h3>
-                                <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500">
+                                <h3 class="text-base font-semibold text-gray-800">All courses</h3>
+                                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
                                     {{ filteredHistory.length }}
                                 </span>
                             </div>
@@ -136,10 +133,10 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
                                     v-for="opt in filterOptions"
                                     :key="opt.value"
                                     @click="statusFilter = opt.value"
-                                    class="px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors"
+                                    class="px-2.5 py-1 text-xs font-medium rounded-md transition-colors"
                                     :class="statusFilter === opt.value
-                                        ? 'bg-gray-900 text-white'
-                                        : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'"
+                                        ? 'bg-[#f9a825] text-white shadow-sm'
+                                        : 'text-gray-400 hover:bg-orange-50 hover:text-orange-600'"
                                 >
                                     {{ opt.label }}
                                 </button>
@@ -152,17 +149,17 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
                                 :key="item.id"
                                 class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/60 transition-colors"
                             >
-                                <div class="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold" :class="avatarClass(item)">
+                                <div class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold" :class="avatarClass(item)">
                                     {{ courseInitial(item.course_name) }}
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2 flex-wrap">
-                                        <h4 class="text-sm font-semibold text-gray-900 truncate">{{ item.course_name ?? "—" }}</h4>
-                                        <span class="shrink-0 inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase" :class="statusCfg(item.status).badge">
+                                        <h4 class="text-base font-semibold text-gray-900 truncate">{{ item.course_name ?? "—" }}</h4>
+                                        <span class="shrink-0 inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase" :class="statusCfg(item.status).badge">
                                             {{ statusCfg(item.status).label }}
                                         </span>
                                     </div>
-                                    <p class="text-[11px] text-gray-400 mt-0.5 truncate">{{ item.centre ?? "—" }}</p>
+                                    <p class="text-sm text-gray-400 mt-0.5 truncate">{{ item.centre ?? "—" }}</p>
                                 </div>
                             </div>
                         </div>
@@ -203,11 +200,11 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
                             <div v-for="item in history.data" :key="'tl-'+item.id" class="relative flex items-start gap-3 pl-5">
                                 <div class="absolute left-0 top-[5px] w-[11px] h-[11px] rounded-full ring-2 ring-white shrink-0" :class="statusCfg(item.status).dot"/>
                                 <div class="min-w-0">
-                                    <p class="text-[12px] font-semibold text-gray-800 leading-snug truncate">{{ item.course_name ?? "—" }}</p>
-                                    <p class="text-[11px] text-gray-400 mt-0.5">
+                                    <p class="text-sm font-semibold text-gray-800 leading-snug truncate">{{ item.course_name ?? "—" }}</p>
+                                    <p class="text-xs text-gray-400 mt-0.5">
                                         {{ statusCfg(item.status).label }} &middot; {{ formatDateRange(item) }}
                                     </p>
-                                    <p v-if="item.session || item.session_time" class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
+                                    <p v-if="item.session || item.session_time" class="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1">
                                         <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>

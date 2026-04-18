@@ -10,6 +10,7 @@ const props = defineProps({
     registeredCourse: Object,
     cohort: Object,
     centre: Object,
+    waitlistPosition: Number,
 });
 
 const { config } = usePage().props;
@@ -128,87 +129,65 @@ const tieredTestTaken = computed(() => {
                     <p class="text-gray-500 mt-1 font-medium text-lg">It's great to see you again. Here's what's happening today.</p>
                 </div>
 
-                <!-- Summary Section: Course -->
+                <!-- Waitlist Notice -->
+                <div
+                    v-if="isOnWaitlist"
+                    class="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-6"
+                >
+                    <div class="flex items-start gap-4">
+                        <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 text-amber-600 shrink-0">
+                            <span class="material-symbols-outlined">hourglass_top</span>
+                        </span>
+                        <div>
+                            <h3 class="text-lg font-bold text-amber-800">You're on the Waitlist</h3>
+                            <p class="text-sm text-amber-700 mt-1">
+                                You are currently on the waitlist for your chosen course.
+                                You will be notified when a space becomes available.
+                            </p>
+                            <p v-if="waitlistPosition" class="text-sm font-semibold text-amber-800 mt-2">
+                                Your position: <span class="text-lg">#{{ waitlistPosition }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Section: Course + Centre on same row -->
                 <div
                     v-if="hasRegisteredCourse"
-                    class="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
+                    class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6"
                 >
+                    <!-- Course Details card -->
                     <div
                         class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                        :class="'md:col-span-2 xl:col-span-3'"
+                        :class="{ 'md:col-span-2': !centre }"
                     >
                         <div class="absolute top-0 left-0 h-full w-1 bg-[#f9a825]"></div>
                         <div class="flex items-center gap-3 mb-2">
-                            <span
-                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]"
-                            >
-                                <span class="material-symbols-outlined"
-                                    >school</span
-                                >
+                            <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]">
+                                <span class="material-symbols-outlined">school</span>
                             </span>
                             <div class="flex-1 text-left">
-                                <p
-                                    class="text-gray-500 text-xs font-medium uppercase tracking-wider"
-                                >
-                                    Registered Course
+                                <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">
+                                    {{ isOnWaitlist ? 'Chosen Course' : 'Registered Course' }}
                                 </p>
                                 <h3 class="text-lg font-bold text-gray-800">
                                     {{ registeredCourse.course_name }}
                                 </h3>
                             </div>
                         </div>
-                    </div>
-
-                </div>
-
-                <!-- Summary Section: Cohort + Centre -->
-                <div
-                    v-if="!isOnWaitlist && (cohort || centre)"
-                    class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6"
-                >
-                    <div
-                        v-if="cohort"
-                        class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                    >
-                        <div class="absolute top-0 left-0 h-full w-1 bg-[#f9a825]"></div>
-                        <div class="flex items-center gap-3 mb-2">
-                            <span
-                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]"
-                            >
-                                <span class="material-symbols-outlined"
-                                    >groups</span
-                                >
+                        <div v-if="cohort" class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left">
+                            <span class="inline-flex items-center gap-1 text-[#f9a825]">
+                                <span class="material-symbols-outlined text-base">groups</span>
                             </span>
-                            <div class="flex-1 text-left">
-                                <p
-                                    class="text-gray-500 text-xs font-medium uppercase tracking-wider"
-                                >
-                                    Cohort Details
-                                </p>
-                                <h3
-                                    class="text-lg font-bold text-gray-800"
-                                >
-                                    {{ cohortLabel }}
-                                </h3>
-                            </div>
-                        </div>
-                        <div
-                            v-if="cohortDetailRow.length"
-                            class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left"
-                        >
-                            <template
-                                v-for="(item, idx) in cohortDetailRow"
-                                :key="idx"
-                            >
-                                <span
-                                    v-if="idx > 0"
-                                    class="w-1 h-1 rounded-full bg-gray-300"
-                                ></span>
+                            <span class="font-medium">{{ cohortLabel }}</span>
+                            <template v-for="(item, idx) in cohortDetailRow" :key="idx">
+                                <span class="w-1 h-1 rounded-full bg-gray-300"></span>
                                 <span>{{ item }}</span>
                             </template>
                         </div>
                     </div>
 
+                    <!-- Centre Details card (with directions) -->
                     <div
                         v-if="centre"
                         class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
@@ -217,44 +196,36 @@ const tieredTestTaken = computed(() => {
                         <span
                             v-if="centre.is_pwd_friendly"
                             class="absolute top-4 right-4 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700"
-                            >PWD Friendly</span
-                        >
+                        >PWD Friendly</span>
                         <div class="flex items-center gap-3 mb-2">
-                            <span
-                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]"
-                            >
-                                <span class="material-symbols-outlined"
-                                    >location_on</span
-                                >
+                            <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]">
+                                <span class="material-symbols-outlined">location_on</span>
                             </span>
                             <div class="flex-1 text-left">
-                                <p
-                                    class="text-gray-500 text-xs font-medium uppercase tracking-wider"
-                                >
-                                    Centre Details
-                                </p>
-                                <h3
-                                    class="text-lg font-bold text-gray-800"
-                                >
-                                    {{ centre.title }}
-                                </h3>
+                                <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">Centre Details</p>
+                                <h3 class="text-lg font-bold text-gray-800">{{ centre.title }}</h3>
                             </div>
                         </div>
                         <div
                             v-if="centreDetailRow.length"
                             class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left"
                         >
-                            <template
-                                v-for="(item, idx) in centreDetailRow"
-                                :key="idx"
-                            >
-                                <span
-                                    v-if="idx > 0"
-                                    class="w-1 h-1 rounded-full bg-gray-300"
-                                ></span>
+                            <template v-for="(item, idx) in centreDetailRow" :key="idx">
+                                <span v-if="idx > 0" class="w-1 h-1 rounded-full bg-gray-300"></span>
                                 <span>{{ item }}</span>
                             </template>
                         </div>
+                        <!-- Directions link inside centre card -->
+                        <a
+                            v-if="directionsUrl"
+                            :href="directionsUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[#f9a825] hover:text-amber-700 transition-colors"
+                        >
+                            <span class="material-symbols-outlined text-base">near_me</span>
+                            Get Directions
+                        </a>
                     </div>
                 </div>
 
@@ -517,44 +488,6 @@ const tieredTestTaken = computed(() => {
                                 </div>
                             </Link>
 
-                            <a
-                                v-if="directionsUrl"
-                                :href="directionsUrl"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="block h-full"
-                            >
-                                <div
-                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                                >
-                                    <!-- Hover Accent Line -->
-                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-                                    <!-- Icon and Title -->
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
-                                        >
-                                            <span
-                                                class="material-symbols-outlined"
-                                                >near_me</span
-                                            >
-                                        </span>
-                                        <div class="flex-1 text-left">
-                                            <h3
-                                                class="text-lg font-bold text-gray-800"
-                                            >
-                                                Get directions
-                                            </h3>
-                                        </div>
-                                    </div>
-                                    <!-- Exam Details -->
-                                    <div class="mt-2 space-y-1 text-left">
-                                        <p class="text-sm">
-                                            Open location in maps
-                                        </p>
-                                    </div>
-                                </div>
-                            </a>
                         </div>
                     </div>
                     <div v-if="!tieredTestTaken">
