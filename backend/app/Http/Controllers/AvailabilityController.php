@@ -100,7 +100,7 @@ class AvailabilityController extends Controller
         // Get active sessions for this course type or centre-specific for in-person
         if ($isInPerson) {
             $sessions = CourseSession::where('course_id', $courseId)
-                ->where('status', 1)
+                ->where('status', true)
                 ->get();
         } else {
             $sessions = MasterSession::where('course_type', $courseType)

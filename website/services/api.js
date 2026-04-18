@@ -258,7 +258,7 @@ export const getAvailableBatches = async (courseId, token) => {
  */
 export const getInPersonAvailableBatches = async (courseId, token) => {
   try {
-    const response = await apiRequest(`availability/in-person/batches?course_id=${courseId}`, {
+    const response = await apiRequest(`availability/batches?course_id=${courseId}`, {
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response;
