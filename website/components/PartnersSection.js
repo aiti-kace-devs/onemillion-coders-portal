@@ -90,9 +90,9 @@ export default function PartnersSection({ data }) {
             visible: {
               opacity: 1,
               transition: {
-                duration: prefersReducedMotion ? 0.3 : 0.6,
-                delay: prefersReducedMotion ? 0.2 : 0.6,
-                staggerChildren: prefersReducedMotion ? 0 : 0.08,
+                duration: prefersReducedMotion ? 0.3 : 0.5,
+                delay: prefersReducedMotion ? 0.2 : 0.3,
+                staggerChildren: prefersReducedMotion ? 0 : 0.03,
               },
             },
           }}

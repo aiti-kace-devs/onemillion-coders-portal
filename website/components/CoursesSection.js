@@ -147,7 +147,7 @@ const CoursesSection = ({ categories: apiCategories }) => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: prefersReducedMotion ? 0 : 0.08,
+        staggerChildren: prefersReducedMotion ? 0 : 0.04,
         duration: prefersReducedMotion ? 0.3 : 0.6,
       },
     },
