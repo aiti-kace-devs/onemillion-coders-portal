@@ -87,12 +87,12 @@ class MailerHelper
         $recipientLog = $bulk ? "{$recipientCount} recipients (BCC)" : (is_array($emails) ? implode(', ', $emails) : $emails);
 
         if ($bulk) {
-            Mail::to(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
+            Mail::to(config('mail.from.address', 'no-reply@onemillioncoders.gov.gh'))
                 ->bcc($emails)
                 ->send($mailable);
         } else {
             Mail::to($emails)
-                ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
+                // ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                 ->send($mailable);
         }
 

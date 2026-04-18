@@ -75,7 +75,10 @@ function VerifyUserContent() {
   const [submitError, setSubmitError] = useState(null);
 
   useEffect(() => {
-    if (typeof window === "undefined" || window.parent === window) return;
+    if (typeof window === "undefined" || window.parent === window) {
+      window.document.body.innerHTML = "<p>Please access this page from the student portal.</p>";
+      return;
+    };
 
     //get ghcard number from query param and fill the input
     const ghCardNumber = searchParams.get("ghcard_number");
@@ -238,8 +241,8 @@ function VerifyUserContent() {
               <React.Fragment key={s.key}>
                 <div className="flex items-center space-x-2">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${i < currentStepIndex ? "bg-green-500 text-white"
-                      : i === currentStepIndex ? "bg-yellow-400 text-gray-900"
-                        : "bg-gray-100 text-gray-400 "
+                    : i === currentStepIndex ? "bg-yellow-400 text-gray-900"
+                      : "bg-gray-100 text-gray-400 "
                     }`}>
                     {i < currentStepIndex ? (
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -250,8 +253,8 @@ function VerifyUserContent() {
                     )}
                   </div>
                   <span className={`text-xs font-medium hidden sm:block ${i === currentStepIndex ? "text-gray-900"
-                      : i < currentStepIndex ? "text-green-600"
-                        : "text-gray-400"
+                    : i < currentStepIndex ? "text-green-600"
+                      : "text-gray-400"
                     }`}>
                     {s.label}
                   </span>

@@ -1,57 +1,172 @@
 {
-    "success": true,
-        "available_centres": [
-            {
-                "branch_name": "Ahafo Region",
-                "district_name": "Asunafo South",
-                "centre_name": "KUKUOM CIC",
-                "capacity": 20,
-                "batches": [
-                    {
-                        "batch": "Cohort 1",
-                        "start_date": "2026-04-01",
-                        "end_date": "2026-06-09",
-                        "sessions": [
-                            {
-                                "session_name": "Morning Session",
-                                "time": "8AM - 11:45AM",
-                                "remaining": 20
-                            },
-                            {
-                                "session_name": "Afternoon Session",
-                                "time": "1PM - 4:45PM",
-                                "remaining": 20
-                            }
-                        ]
-                    }
-                ]
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "Quarter 1",
+      "description": null,
+      "start_date": "2025-07-01",
+      "end_date": "2025-09-30",
+      "programmes": [
+          {
+              "id": 1,
+              "title": "Certified Data Protection Officer  (CDPO)",
+              "duration": "1 Week",
+              "start_date": "2025-04-14",
+              "end_date": "2025-04-18",
+              "status": true,
+              "created_at": "2025-03-31T12:41:20.000000Z",
+              "updated_at": "2025-04-12T19:06:16.000000Z",
+              "course_category_id": 2,
+              "cover_image_id": null,
+              "description": null,
+              "sub_title": null,
+              "level": null,
+              "job_responsible": null,
+              "image": null,
+              "overview": null,
+              "prerequisites": null,
+              "course_modules_count": 0,
+              "category": {
+                "id": 2,
+                "title": "DATA Protection",
+                "description": null,
+                "icon": null,
+                "status": false,
+                "created_at": "2025-07-14T15:36:03.000000Z",
+                "updated_at": "2025-07-14T15:36:03.000000Z"
+              },
+              "course_certification": [],
+              "course_modules": []
+        },
+
+        {
+            "id": 2,
+            "title": "Certified Cybersecurity Professional",
+            "duration": "5 Weeks",
+            "start_date": "2025-04-14",
+            "end_date": "2025-05-16",
+            "status": true,
+            "created_at": "2025-03-31T12:41:28.000000Z",
+            "updated_at": "2025-04-12T19:05:12.000000Z",
+            "course_category_id": 2,
+            "cover_image_id": null,
+            "description": null,
+            "sub_title": null,
+            "level": null,
+            "job_responsible": null,
+            "image": null,
+            "overview": null,
+            "prerequisites": null,
+            "course_modules_count": 0,
+            "category": {
+              "id": 2,
+              "title": "DATA Protection",
+              "description": null,
+              "icon": null,
+              "status": false,
+              "created_at": "2025-07-14T15:36:03.000000Z",
+              "updated_at": "2025-07-14T15:36:03.000000Z"
             },
-            {
-                "branch_name": "Ahafo Region",
-                "district_name": "Kintampo South",
-                "centre_name": "JEMA CIC",
-                "capacity": 20,
-                "batches": [
-                    {
-                        "batch": "Cohort 1",
-                        "start_date": "2026-04-01",
-                        "end_date": "2026-06-09",
-                        "sessions": [
-                            {
-                                "session_name": "Morning Session",
-                                "time": "8AM - 11:45AM",
-                                "remaining": 20
-                            },
-                            {
-                                "session_name": "Afternoon Session",
-                                "time": "1PM - 4:45PM",
-                                "remaining": 20
-                            }
-                        ]
-                    }
-                ]
-            }
-         
-        ]
-    
+            "course_certification": [],
+            "course_modules": []
+        }
+      ]
+    },
+
+
+    {
+      "id": 2,
+      "title": "Quarter 2",
+      "description": null,
+      "start_date": "2025-07-01",
+      "end_date": "2025-09-30",
+      "programmes": [
+          {
+            "id": 3,
+            "title": "Data Analyst Associate",
+            "duration": "5 Weeks",
+            "start_date": "2025-04-14",
+            "end_date": "2025-05-16",
+            "status": true,
+            "created_at": "2025-03-31T19:33:14.000000Z",
+            "updated_at": "2025-04-12T19:03:59.000000Z",
+            "course_category_id": 3,
+            "cover_image_id": null,
+            "description": null,
+            "sub_title": null,
+            "level": null,
+            "job_responsible": null,
+            "image": null,
+            "overview": null,
+            "prerequisites": null,
+            "course_modules_count": 6,
+            "category": {
+              "id": 3,
+              "title": "Artificial Intelligence Training",
+              "description": null,
+              "icon": null,
+              "status": true,
+              "created_at": "2025-07-14T15:36:17.000000Z",
+              "updated_at": "2025-07-14T15:36:17.000000Z"
+            },
+            "course_certification": [],
+            "course_modules": [
+              {
+                "id": 5,
+                "title": "Power BI Basics - Interface, data import, simple visuals",
+                "programme_id": 3,
+                "description": null,
+                "status": true,
+                "created_at": "2025-07-15T20:24:05.000000Z",
+                "updated_at": "2025-07-15T20:24:05.000000Z"
+              },
+              {
+                "id": 6,
+                "title": "Data Cleaning (Power Query) - Transformations, merging, error handling",
+                "programme_id": 3,
+                "description": null,
+                "status": true,
+                "created_at": "2025-07-15T20:24:16.000000Z",
+                "updated_at": "2025-07-15T20:24:16.000000Z"
+              }
+            ],
+            "courses": [
+              {
+                "id": 27,
+                "course_name": "Data Analyst Associate - (Ashanti Region)",
+                "course": null,
+                "batch_id": null,
+                "location": "Ashanti Region",
+                "duration": "5 Weeks",
+                "no_of_days": null,
+                "start_date": null,
+                "end_date": null,
+                "status": true,
+                "created_at": "2025-04-09T08:28:15.000000Z",
+                "updated_at": "2025-07-21T11:23:03.000000Z",
+                "centre_id": 4,
+                "programme_id": 3
+              },
+              {
+                "id": 28,
+                "course_name": "Data Analyst Associate - (Upper East Region)",
+                "course": null,
+                "batch_id": null,
+                "location": "Upper East Region",
+                "duration": "5 Weeks",
+                "no_of_days": null,
+                "start_date": null,
+                "end_date": null,
+                "status": true,
+                "created_at": "2025-04-09T08:28:26.000000Z",
+                "updated_at": "2025-07-21T11:22:58.000000Z",
+                "centre_id": 2,
+                "programme_id": 3
+              }
+            ]
+        }
+      ]
+    }
+  ]
 }
