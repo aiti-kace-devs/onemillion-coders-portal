@@ -43,7 +43,6 @@ class BookingService
                 // Bypass the cache and compute remaining seats fresh inside the lock
                 $remaining = $this->computeRemainingSeats($centreId, $batch, $session);
 
-
                 if ($remaining <= 0) {
                     throw new Exception('Course session is full.');
                 }
@@ -52,7 +51,6 @@ class BookingService
                 $existing = Booking::where('user_id', $user->userId)
                     ->where('programme_batch_id', $batch->id)
                     ->first();
-
 
                 if ($existing) {
                     return $existing;
@@ -118,8 +116,9 @@ class BookingService
     public function cancel(Booking $booking): bool
     {
         $batch = $booking->programmeBatch;
-        if (!$batch) {
+        if (! $batch) {
             $booking->delete();
+
             return false;
         }
 
@@ -135,7 +134,7 @@ class BookingService
             );
 
             $slotRestored = true;
-            event(new AdmissionSlotFreed($batch, $booking));
+            event(new AdmissionSlotFreed($batch, $booking->userAdmission));
         }
 
         $booking->delete();
@@ -164,7 +163,7 @@ class BookingService
             $centre = Centre::find($centreId);
             $session = MasterSession::find($sessionId);
 
-            if (!$batch || !$centre || !$session) {
+            if (! $batch || ! $centre || ! $session) {
                 return 0;
             }
 
@@ -181,7 +180,7 @@ class BookingService
     protected function computeRemainingSeats(int $centreId, ProgrammeBatch $batch, MasterSession $session): int
     {
         $centre = Centre::find($centreId);
-        if (!$centre) {
+        if (! $centre) {
             return 0;
         }
 
@@ -263,7 +262,7 @@ class BookingService
             ->where('status', true)
             ->first();
 
-        if (!$admissionBatch || !$admissionBatch->end_date) {
+        if (! $admissionBatch || ! $admissionBatch->end_date) {
             return false;
         }
 
@@ -277,7 +276,7 @@ class BookingService
             ->whereNotNull('duration_in_days')
             ->min('duration_in_days');
 
-        if (!$smallestLongDuration) {
+        if (! $smallestLongDuration) {
             return false;
         }
 
@@ -290,9 +289,9 @@ class BookingService
      * This avoids N+1 query problems by loading all data in bulk and
      * computing seats with minimal database queries.
      *
-     * @param int $centreId The centre ID
-     * @param array $batchIds Array of programme batch IDs
-     * @param array $sessionIds Array of master session IDs
+     * @param  int  $centreId  The centre ID
+     * @param  array  $batchIds  Array of programme batch IDs
+     * @param  array  $sessionIds  Array of master session IDs
      * @return array Map of "batchId:sessionId" => remainingSeats
      */
     public function getRemainingSeatsBatch(int $centreId, array $batchIds, array $sessionIds): array
@@ -302,7 +301,7 @@ class BookingService
         }
 
         $centre = Centre::find($centreId);
-        if (!$centre) {
+        if (! $centre) {
             return [];
         }
 
@@ -323,14 +322,15 @@ class BookingService
 
         foreach ($batchIds as $batchId) {
             $batch = $batches->get($batchId);
-            if (!$batch) {
+            if (! $batch) {
                 continue;
             }
 
             foreach ($sessionIds as $sessionId) {
                 $session = $sessions->get($sessionId);
-                if (!$session) {
+                if (! $session) {
                     $results["{$batchId}:{$sessionId}"] = 0;
+
                     continue;
                 }
 
@@ -341,6 +341,7 @@ class BookingService
                 $cached = Cache::get($cacheKey);
                 if ($cached !== null) {
                     $results[$key] = (int) $cached;
+
                     continue;
                 }
 
@@ -351,6 +352,7 @@ class BookingService
                 if ($capacity === null || $capacity <= 0) {
                     $results[$key] = 0;
                     Cache::put($cacheKey, 0, now()->addHour());
+
                     continue;
                 }
 
@@ -359,6 +361,7 @@ class BookingService
                 $maxOccupied = $sessionOccupancy
                     ->filter(function ($row) use ($batch) {
                         $date = Carbon::parse($row->date);
+
                         return $date->between($batch->start_date, $batch->end_date);
                     })
                     ->max('occupied_count') ?? 0;
