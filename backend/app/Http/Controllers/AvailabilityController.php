@@ -51,7 +51,7 @@ class AvailabilityController extends Controller
 
         $courseId = (int) $request->input('course_id');
 
-        $course = Course::with(['programme', 'centre'])->find($courseId);
+        $course = Course::with(['programme.courseCertification', 'centre.branch', 'centre.districts'])->find($courseId);
 
         if (! $course || ! $course->programme || ! $course->centre) {
             return response()->json(['success' => false, 'message' => 'Course or centre not found.'], 404);
@@ -61,6 +61,10 @@ class AvailabilityController extends Controller
         $programme = $course->programme;
         $courseType = $programme->courseType();
         $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
+
+        $regionName = $centre->branch?->title;
+        $districtName = $centre->districts->first()?->title;
+        $certificateTitle = $programme->courseCertification->first()?->title;
 
         // Find the current active admission batch
         $today = Carbon::today();
@@ -75,7 +79,10 @@ class AvailabilityController extends Controller
                 'success' => true,
                 'centre' => ['id' => $centre->id, 'title' => $centre->title],
                 'course_type' => $courseType,
-                'capacity' => $centre->slotCapacityFor($courseType),
+                'capacity' => $isInPerson ? null : $centre->slotCapacityFor($courseType),
+                'region_name' => $regionName,
+                'district_name' => $districtName,
+                'certificate_title' => $certificateTitle,
                 'batches' => [],
             ]);
         }
@@ -92,7 +99,10 @@ class AvailabilityController extends Controller
                 'success' => true,
                 'centre' => ['id' => $centre->id, 'title' => $centre->title],
                 'course_type' => $courseType,
-                'capacity' => $centre->slotCapacityFor($courseType),
+                'capacity' => $isInPerson ? null : $centre->slotCapacityFor($courseType),
+                'region_name' => $regionName,
+                'district_name' => $districtName,
+                'certificate_title' => $certificateTitle,
                 'batches' => [],
             ]);
         }
@@ -147,7 +157,10 @@ class AvailabilityController extends Controller
             'success' => true,
             'centre' => ['id' => $centre->id, 'title' => $centre->title],
             'course_type' => $courseType,
-            'capacity' => $capacity,
+            'capacity' => $isInPerson ? null : $capacity,
+            'region_name' => $regionName,
+            'district_name' => $districtName,
+            'certificate_title' => $certificateTitle,
             'batches' => $batchData,
         ]);
     }
@@ -297,7 +310,7 @@ class AvailabilityController extends Controller
             );
 
             $totalAvailable = 0;
-            
+
             $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats, &$totalAvailable) {
                 $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, &$totalAvailable) {
                     $key = "{$batch->id}:{$session->id}";
@@ -440,10 +453,21 @@ class AvailabilityController extends Controller
     {
         return collect($sessions)
             ->sortBy(function ($session) {
+                // MasterSession: session_type = "Morning", "Afternoon", "Evening"
+                // CourseSession: session_type = "course" or "centre", use session column directly
+                $sessionType = $session->session_type ?? '';
+
+                // For CourseSession, use the session column which stores the period name
+                if (strtolower(trim((string) $sessionType)) === 'course' || strtolower(trim((string) $sessionType)) === 'centre') {
+                    $sessionType = $session->session ?? '';
+                }
+
+                $time = $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? '';
+
                 return [
-                    $this->sessionTypePriority($session->session_type ?? optional($session->masterSession)->session_type),
-                    $this->sessionStartMinutes($session->time ?? optional($session->masterSession)->time),
-                    strtolower(trim((string) ($session->time ?? optional($session->masterSession)->time ?? ''))),
+                    $this->sessionTypePriority($sessionType),
+                    $this->sessionStartMinutes($time),
+                    strtolower(trim((string) $time)),
                     (int) ($session->id ?? 0),
                 ];
             }, SORT_REGULAR)
