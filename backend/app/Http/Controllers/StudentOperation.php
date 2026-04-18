@@ -21,6 +21,7 @@ use App\Models\user_exam;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use App\Services\Scheduling\ConfirmStudentSessionService;
 use App\Jobs\CreateStudentAdmissionJob;
 use App\Jobs\TestSubmittedJob;
@@ -140,6 +141,26 @@ class StudentOperation extends Controller
             'success' => true,
             'data' => $status,
         ]);
+    }
+
+    public function verification_image()
+    {
+        $user = Auth::guard('web')->user();
+        $status = app(GhanaCardService::class)->buildStatus($user);
+
+        if (!data_get($status, 'image.available')) {
+            abort(404);
+        }
+
+        $disk = data_get($status, 'image.storage_disk');
+        $path = data_get($status, 'image.storage_path');
+
+        if (!Storage::disk($disk)->exists($path)) {
+            abort(404);
+        }
+
+        return response(Storage::disk($disk)->get($path))
+            ->header('Content-Type', Storage::disk($disk)->mimeType($path));
     }
 
     public function level_assessment()

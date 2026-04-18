@@ -257,7 +257,7 @@ const generateIDCard = () => {
         ctx.drawImage(qrCanvas, 250, 120, 56, 56);
       }, 100); // Wait for QR to render
     };
-    img.src = "/assets/images/Oval.png";
+    img.src = props.user.ghcard_image_url || "/assets/images/Oval.png";
   }
 };
 
@@ -287,7 +287,7 @@ const downloadIDCard = () => {
           <div class="flex flex-col md:flex-row items-center gap-6 relative">
             <div class="rounded-full shadow w-24 h-24 overflow-hidden">
               <img
-                :src="`/assets/images/Oval.png`"
+                :src="user.ghcard_image_url || `/assets/images/Oval.png`"
                 class="h-full w-full object-cover rounded-full"
                 alt="profile photo"
               />
