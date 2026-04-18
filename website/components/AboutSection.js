@@ -37,8 +37,8 @@ const AboutSection = ({ data }) => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: prefersReducedMotion ? 0 : 0.15,
-        duration: prefersReducedMotion ? 0.3 : 0.8,
+        staggerChildren: prefersReducedMotion ? 0 : 0.08,
+        duration: prefersReducedMotion ? 0.3 : 0.6,
       },
     },
   };

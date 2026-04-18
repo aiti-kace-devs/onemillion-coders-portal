@@ -2,7 +2,12 @@
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
-import { FaceLandmarker, FilesetResolver, DrawingUtils } from "@mediapipe/tasks-vision";
+import { FaceLandmarker, DrawingUtils } from "@mediapipe/tasks-vision";
+import {
+  FACE_LANDMARKER_MODEL_URL,
+  getFilesetResolverPromise,
+  prefetchFaceLandmarkerModel,
+} from "../../lib/livenessPreload";
 
 const CHALLENGE_LABELS = {
   center_face: "Position your face in the oval",
@@ -92,6 +97,7 @@ export default function LivenessDetection({ onComplete, onCancel }) {
   const [videoFilter, setVideoFilter] = useState("brightness(1)");
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isModelReady, setIsModelReady] = useState(false);
   const [error, setError] = useState(null);
   const [cameraPermission, setCameraPermission] = useState("prompt");
   const [hasStartedCamera, setHasStartedCamera] = useState(false);
@@ -152,6 +158,22 @@ export default function LivenessDetection({ onComplete, onCancel }) {
     setIsLoading(true);
     setError(null);
 
+    // Kick off model prep in parallel with camera permission prompt.
+    // Both calls are idempotent and cached — safe to call even if preload ran earlier.
+    prefetchFaceLandmarkerModel();
+    const landmarkerPromise = getFilesetResolverPromise().then((filesetResolver) =>
+      FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath: FACE_LANDMARKER_MODEL_URL,
+          delegate: "GPU",
+        },
+        runningMode: "VIDEO",
+        numFaces: 1,
+        outputFacialTransformationMatrixes: false,
+        outputFaceBlendshapes: false,
+      }),
+    );
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: 640, height: 480 },
@@ -166,30 +188,33 @@ export default function LivenessDetection({ onComplete, onCancel }) {
         await videoRef.current.play();
       }
 
-      const filesetResolver = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-      );
+      // Camera is live — drop the full-screen spinner immediately so the user
+      // sees their own face while the landmarker finishes loading in the
+      // background. The detection loop no-ops until faceLandmarkerRef is set.
+      setIsLoading(false);
 
-      const faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
-        baseOptions: {
-          modelAssetPath:
-            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
-          delegate: "GPU",
-        },
-        runningMode: "VIDEO",
-        numFaces: 1,
-        outputFacialTransformationMatrixes: false,
-        outputFaceBlendshapes: false,
-      });
+      const faceLandmarker = await landmarkerPromise;
+
+      // First detectForVideo call pays shader-compile cost. Warm it against the
+      // live video so the first real frame runs at full speed.
+      try {
+        if (videoRef.current && videoRef.current.readyState >= 2) {
+          faceLandmarker.detectForVideo(videoRef.current, performance.now());
+        }
+      } catch {
+        // Warmup is best-effort.
+      }
 
       faceLandmarkerRef.current = faceLandmarker;
       challengeStartRef.current = Date.now();
+      setIsModelReady(true);
     } catch (err) {
       console.error("Failed to initialize liveness detection:", err);
+      // Swallow rejection on the unused landmarker to avoid an unhandled rejection.
+      landmarkerPromise.catch(() => {});
       setCameraPermission("denied");
       setError("Camera access is required to continue verification. Please allow camera permission and try again.");
       setHasStartedCamera(false);
-    } finally {
       setIsLoading(false);
     }
   }, []);
@@ -574,8 +599,18 @@ export default function LivenessDetection({ onComplete, onCancel }) {
             <div className="text-center text-white">
               <motion.div className="w-10 h-10 border-2 border-white/30 border-t-white rounded-full mx-auto mb-4" animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
               <p className="text-sm font-medium">Starting camera...</p>
-              <p className="text-xs text-gray-400 mt-1">Loading face detection model</p>
             </div>
+          </div>
+        )}
+
+        {!isLoading && hasStartedCamera && !isModelReady && (
+          <div className="absolute top-3 left-3 z-10 flex items-center space-x-2 bg-black/60 text-white text-xs font-medium px-3 py-1.5 rounded-full backdrop-blur-sm">
+            <motion.span
+              className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            />
+            <span>Preparing detection…</span>
           </div>
         )}
 

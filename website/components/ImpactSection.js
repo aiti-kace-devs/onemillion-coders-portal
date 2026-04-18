@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   FiChevronLeft,
   FiChevronRight,
@@ -18,6 +18,7 @@ const ImpactSection = ({ data }) => {
 
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const prefersReducedMotion = useReducedMotion();
 
   // Get API data
   const textDataBlock = data?.section_items?.find(item => item.blueprint === 'textdatablock');
@@ -54,7 +55,7 @@ const ImpactSection = ({ data }) => {
   // Auto-play functionality
   useEffect(() => {
     let interval;
-    if (isAutoPlaying && testimonials.length > 0) {
+    if (isAutoPlaying && testimonials.length > 0 && !prefersReducedMotion) {
       interval = setInterval(() => {
         setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
       }, 7000); // Change every 7 seconds
@@ -65,7 +66,7 @@ const ImpactSection = ({ data }) => {
         clearInterval(interval);
       }
     };
-  }, [isAutoPlaying, testimonials.length]);
+  }, [isAutoPlaying, testimonials.length, prefersReducedMotion]);
 
   // Resume auto-play after user stops interacting
   useEffect(() => {
@@ -269,6 +270,7 @@ const ImpactSection = ({ data }) => {
                   initial="enter"
                   animate="center"
                   exit="exit"
+                  style={{ willChange: "transform, opacity" }}
                   className="relative flex flex-col md:flex-row gap-8 items-center"
                 >
                   {/* Profile Section */}
@@ -408,6 +410,7 @@ const ImpactSection = ({ data }) => {
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
               transition={{ duration: 0.3, delay: 0.25 }}
               className="text-gray-500 text-sm mt-4 max-w-md mx-auto"
             >

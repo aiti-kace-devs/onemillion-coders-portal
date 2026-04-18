@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   FiGlobe,
   FiZap,
@@ -85,6 +85,7 @@ const REGION_ORDER = [
 
 const TechGhanaSection = () => {
   const router = useRouter();
+  const prefersReducedMotion = useReducedMotion();
   const [hoveredRegion, setHoveredRegion] = useState(null);
   const [branchesData, setBranchesData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -223,7 +224,7 @@ const TechGhanaSection = () => {
 
   // Auto-cycle through regions top to bottom
   useEffect(() => {
-    if (!mapRef.current || !svgContent) return;
+    if (!mapRef.current || !svgContent || prefersReducedMotion) return;
 
     const interval = setInterval(() => {
       if (userInteracting.current || !mapInView) return;
@@ -236,7 +237,7 @@ const TechGhanaSection = () => {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [svgContent, mapInView]);
+  }, [svgContent, mapInView, prefersReducedMotion]);
 
   // Highlight hovered region by setting inline styles directly on the SVG path
   useEffect(() => {
