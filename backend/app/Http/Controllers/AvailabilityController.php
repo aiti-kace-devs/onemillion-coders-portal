@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Batch;
 use App\Models\Centre;
 use App\Models\Course;
+use App\Models\CourseSession;
 use App\Models\MasterSession;
 use App\Models\Programme;
 use App\Models\ProgrammeBatch;
@@ -59,6 +60,7 @@ class AvailabilityController extends Controller
         $centre = $course->centre;
         $programme = $course->programme;
         $courseType = $programme->courseType();
+        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
 
         // Find the current active admission batch
         $today = Carbon::today();
@@ -95,28 +97,40 @@ class AvailabilityController extends Controller
             ]);
         }
 
-        // Get active master sessions for this course type
-        $sessions = MasterSession::where('course_type', $courseType)
-            ->where('status', true)
-            ->get();
+        // Get active sessions for this course type or centre-specific for in-person
+        if ($isInPerson) {
+            $sessions = CourseSession::where('course_id', $courseId)
+                ->where('status', 1)
+                ->get();
+        } else {
+            $sessions = MasterSession::where('course_type', $courseType)
+                ->where('status', true)
+                ->get();
+        }
         $sessions = $this->sortMasterSessions($sessions);
 
-        // Batch fetch all remaining seats at once
-        $remainingSeats = $bookingService->getRemainingSeatsBatch(
-            $centre->id,
-            $batches->pluck('id')->toArray(),
-            $sessions->pluck('id')->toArray()
-        );
+        // Calculate capacity
+        $capacity = $isInPerson ? $sessions->sum('limit') : $centre->slotCapacityFor($courseType);
 
-        $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats) {
-            $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats) {
+        // Batch fetch all remaining seats at once (only for master sessions)
+        $remainingSeats = [];
+        if (! $isInPerson) {
+            $remainingSeats = $bookingService->getRemainingSeatsBatch(
+                $centre->id,
+                $batches->pluck('id')->toArray(),
+                $sessions->pluck('id')->toArray()
+            );
+        }
+
+        $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats, $isInPerson) {
+            $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, $isInPerson) {
                 $key = "{$batch->id}:{$session->id}";
 
                 return [
                     'session_id' => $session->id,
-                    'session_name' => "{$session->session_type} Session",
-                    'time' => $session->time,
-                    'remaining' => $remainingSeats[$key] ?? 0,
+                    'session_name' => $isInPerson ? ($session->session ?? 'Unknown') : ($session->session_type ?? $session->name ?? optional($session->masterSession)->session_type ?? 'Unknown Session'),
+                    'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? 'Unknown',
+                    'remaining' => $isInPerson ? ($session->limit ?? 0) : ($remainingSeats[$key] ?? 0),
                 ];
             })->values()->toArray();
 
@@ -133,7 +147,7 @@ class AvailabilityController extends Controller
             'success' => true,
             'centre' => ['id' => $centre->id, 'title' => $centre->title],
             'course_type' => $courseType,
-            'capacity' => $centre->slotCapacityFor($courseType),
+            'capacity' => $capacity,
             'batches' => $batchData,
         ]);
     }
@@ -427,9 +441,9 @@ class AvailabilityController extends Controller
         return collect($sessions)
             ->sortBy(function ($session) {
                 return [
-                    $this->sessionTypePriority($session->session_type ?? null),
-                    $this->sessionStartMinutes($session->time ?? null),
-                    strtolower(trim((string) ($session->time ?? ''))),
+                    $this->sessionTypePriority($session->session_type ?? optional($session->masterSession)->session_type),
+                    $this->sessionStartMinutes($session->time ?? optional($session->masterSession)->time),
+                    strtolower(trim((string) ($session->time ?? optional($session->masterSession)->time ?? ''))),
                     (int) ($session->id ?? 0),
                 ];
             }, SORT_REGULAR)
