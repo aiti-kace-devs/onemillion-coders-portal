@@ -159,6 +159,14 @@ class StudentOperation extends Controller
             abort(404);
         }
 
+        if (method_exists(Storage::disk($disk), 'temporaryUrl')) {
+            try {
+                return redirect(Storage::disk($disk)->temporaryUrl($path, now()->addMinutes(15)));
+            } catch (\Exception $e) {
+                Log::warning("Failed to generate temporary URL for verification image: " . $e->getMessage());
+            }
+        }
+
         return response(Storage::disk($disk)->get($path))
             ->header('Content-Type', Storage::disk($disk)->mimeType($path));
     }
