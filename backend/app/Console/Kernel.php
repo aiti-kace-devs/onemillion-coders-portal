@@ -31,7 +31,7 @@ class Kernel extends ConsoleKernel
         // Purge expired / stale OTP verification records every minute
         $schedule->command('otp:clean')->everyMinute();
 
-        $schedule->command('metrics:sync-public-statistics')->hourly();
+        $schedule->command('metrics:sync-public-statistics')->dailyAt('02:00');
     }
 
     /**
