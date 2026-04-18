@@ -44,7 +44,7 @@ const statCards = computed(() => [
     { label: "Total Enrolled", count: props.stats?.total ?? 0,           icon: "school",           sub: "All cohorts"            },
     { label: "Completed",      count: props.stats?.completed_count ?? 0, icon: "verified",         sub: "Successfully completed" },
     { label: "Ongoing Course", count: props.stats?.ongoing_count ?? 0,   icon: "pending_actions",  sub: "Currently active"       },
-    { label: "Rejected",       count: props.stats?.rejected_count ?? 0,  icon: "block",            sub: "Admission rejected"     },
+    { label: "Revoked",        count: props.stats?.revoked_count ?? 0,   icon: "block",            sub: "Access removed"         },
 ]);
 
 // ── Dates ────────────────────────────────────────────────────────────────────
@@ -266,8 +266,8 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
                             </div>
                             <Link
                                 v-if="canEnroll"
-                                :href="route('student.application-status')"
-                                class="mt-3 flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors"
+                                :href="route('student.change-course')"
+                                class="mt-3 flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-md bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors"
                             >
                                 Apply
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
