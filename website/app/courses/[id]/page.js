@@ -1016,31 +1016,42 @@ export default function CoursesPage({ params }) {
                     <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"><FiX className="w-4.5 h-4.5" /></button>
                     <div className="flex justify-center mb-3 sm:hidden"><div className="w-8 h-1 bg-gray-200 rounded-full" /></div>
                     <div className="text-center mb-5">
-                      <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">One quick question</h2>
+                      <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">How would you like to study?</h2>
                       <p className="text-gray-400 text-[11px] sm:text-sm line-clamp-1">Enrolling in <span className="text-gray-600">{enrolledCourseName}</span></p>
                     </div>
-                    {selectedCentre?.is_ready === false ? (
-                      <>
-                        <p className="text-[13px] sm:text-sm text-gray-500 mb-4 text-center">Accessibility support is not yet available at this centre</p>
-                        {error && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{error}</p></div>}
-                        <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="w-full p-3.5 rounded-xl border-2 text-sm font-semibold transition-all active:scale-[0.97] bg-yellow-400 hover:bg-yellow-500 text-gray-900 flex items-center justify-center gap-2 mb-3">
-                          {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "Enroll as self-paced"}
+                    {error && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{error}</p></div>}
+                    <div className="space-y-2.5 mb-3">
+                      {selectedCentre?.is_ready !== false && (
+                        <button onClick={() => handleSupportAnswer(true)} disabled={enrollSubmitting} className="w-full p-3.5 sm:p-4 rounded-xl border-2 text-left transition-all active:scale-[0.99] bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md group disabled:opacity-60 disabled:cursor-not-allowed">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-50 to-orange-50 flex items-center justify-center flex-shrink-0 group-hover:from-yellow-100 group-hover:to-orange-100 transition-colors">
+                              <FiMapPin className="w-4 h-4 text-yellow-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors">Study at a Centre</div>
+                              <div className="text-[11px] sm:text-xs text-gray-500 mt-0.5 leading-snug">Laptop and internet provided at our support centre, with staff on hand</div>
+                            </div>
+                            <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
+                          </div>
                         </button>
-                        <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
-                      </>
-                    ) : (
-                      <>
-                        <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 mb-3 text-center">Do you need any accessibility support?</h3>
-                        {error && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{error}</p></div>}
-                        <div className="grid grid-cols-2 gap-2.5 mb-4">
-                          <button onClick={() => handleSupportAnswer(true)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700">Yes, I do</button>
-                          <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700 flex items-center justify-center gap-2">
-                            {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "No, enroll me"}
-                          </button>
+                      )}
+                      <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="w-full p-3.5 sm:p-4 rounded-xl border-2 text-left transition-all active:scale-[0.99] bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md group disabled:opacity-60 disabled:cursor-not-allowed">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center flex-shrink-0 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors">
+                            {enrollSubmitting ? <FiLoader className="w-4 h-4 text-blue-600 animate-spin" /> : <FiMonitor className="w-4 h-4 text-blue-600" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors">Study from Home</div>
+                            <div className="text-[11px] sm:text-xs text-gray-500 mt-0.5 leading-snug">Complete your course online using your own device, at your own pace</div>
+                          </div>
+                          <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
                         </div>
-                        <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
-                      </>
+                      </button>
+                    </div>
+                    {selectedCentre?.is_ready === false && (
+                      <p className="text-[11px] text-gray-400 text-center mb-3">Centre-based study is not yet available at this centre</p>
                     )}
+                    <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
                   </>
                 )}
               </motion.div>
@@ -2193,7 +2204,7 @@ export default function CoursesPage({ params }) {
 
                             <div className="text-center mb-5">
                               <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
-                                One quick question
+                                How would you like to study?
                               </h2>
                               <p className="text-gray-400 text-[11px] sm:text-sm line-clamp-1">
                                 Enrolling in{" "}
@@ -2203,28 +2214,39 @@ export default function CoursesPage({ params }) {
                               </p>
                             </div>
 
-                            {selectedCentre?.is_ready === false ? (
-                              <>
-                                <p className="text-[13px] sm:text-sm text-gray-500 mb-4 text-center">Accessibility support is not yet available at this centre</p>
-                                {error && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{error}</p></div>}
-                                <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="w-full p-3.5 rounded-xl border-2 text-sm font-semibold transition-all active:scale-[0.97] bg-yellow-400 hover:bg-yellow-500 text-gray-900 flex items-center justify-center gap-2 mb-3">
-                                  {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "Enroll as self-paced"}
+                            {error && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{error}</p></div>}
+                            <div className="space-y-2.5 mb-3">
+                              {selectedCentre?.is_ready !== false && (
+                                <button onClick={() => handleSupportAnswer(true)} disabled={enrollSubmitting} className="w-full p-3.5 sm:p-4 rounded-xl border-2 text-left transition-all active:scale-[0.99] bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md group disabled:opacity-60 disabled:cursor-not-allowed">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-50 to-orange-50 flex items-center justify-center flex-shrink-0 group-hover:from-yellow-100 group-hover:to-orange-100 transition-colors">
+                                      <FiMapPin className="w-4 h-4 text-yellow-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors">Study at a Centre</div>
+                                      <div className="text-[11px] sm:text-xs text-gray-500 mt-0.5 leading-snug">Laptop and internet provided at our support centre, with staff on hand</div>
+                                    </div>
+                                    <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
+                                  </div>
                                 </button>
-                                <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
-                              </>
-                            ) : (
-                              <>
-                                <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 mb-3 text-center">Do you need any accessibility support?</h3>
-                                {error && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{error}</p></div>}
-                                <div className="grid grid-cols-2 gap-2.5 mb-4">
-                                  <button onClick={() => handleSupportAnswer(true)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700">Yes, I do</button>
-                                  <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700 flex items-center justify-center gap-2">
-                                    {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "No, enroll me"}
-                                  </button>
+                              )}
+                              <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="w-full p-3.5 sm:p-4 rounded-xl border-2 text-left transition-all active:scale-[0.99] bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md group disabled:opacity-60 disabled:cursor-not-allowed">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center flex-shrink-0 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors">
+                                    {enrollSubmitting ? <FiLoader className="w-4 h-4 text-blue-600 animate-spin" /> : <FiMonitor className="w-4 h-4 text-blue-600" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-semibold text-gray-900 group-hover:text-yellow-700 transition-colors">Study from Home</div>
+                                    <div className="text-[11px] sm:text-xs text-gray-500 mt-0.5 leading-snug">Complete your course online using your own device, at your own pace</div>
+                                  </div>
+                                  <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
                                 </div>
-                                <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
-                              </>
+                              </button>
+                            </div>
+                            {selectedCentre?.is_ready === false && (
+                              <p className="text-[11px] text-gray-400 text-center mb-3">Centre-based study is not yet available at this centre</p>
                             )}
+                            <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
                           </>
                         )}
 
