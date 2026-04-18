@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { Head, usePage, Link } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
 import ExamCard from "../../Components/ExamCard.vue";
+import RevokeOrDeclineAdmissionModal from "@/Components/RevokeOrDeclineAdmissionModal.vue";
 
 const props = defineProps({
     exams: Object,
@@ -11,6 +12,7 @@ const props = defineProps({
     cohort: Object,
     centre: Object,
     waitlistPosition: Number,
+    userAdmission: Object,
 });
 
 const { config } = usePage().props;
@@ -162,28 +164,42 @@ const tieredTestTaken = computed(() => {
                         :class="{ 'md:col-span-2': !centre }"
                     >
                         <div class="absolute top-0 left-0 h-full w-1 bg-[#f9a825]"></div>
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]">
-                                <span class="material-symbols-outlined">school</span>
-                            </span>
-                            <div class="flex-1 text-left">
-                                <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">
-                                    {{ isOnWaitlist ? 'Chosen Course' : 'Registered Course' }}
-                                </p>
-                                <h3 class="text-lg font-bold text-gray-800">
-                                    {{ registeredCourse.course_name }}
-                                </h3>
+                        <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]">
+                                        <span class="material-symbols-outlined">school</span>
+                                    </span>
+                                    <div class="flex-1 text-left">
+                                        <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">
+                                            {{ isOnWaitlist ? 'Chosen Course' : 'Registered Course' }}
+                                        </p>
+                                        <h3 class="text-lg font-bold text-gray-800">
+                                            {{ registeredCourse.course_name }}
+                                        </h3>
+                                    </div>
+                                </div>
+                                <div v-if="cohort" class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left">
+                                    <span class="inline-flex items-center gap-1 text-[#f9a825]">
+                                        <span class="material-symbols-outlined text-base">groups</span>
+                                    </span>
+                                    <span class="font-medium">{{ cohortLabel }}</span>
+                                    <template v-for="(item, idx) in cohortDetailRow" :key="idx">
+                                        <span class="w-1 h-1 rounded-full bg-gray-300"></span>
+                                        <span>{{ item }}</span>
+                                    </template>
+                                </div>
                             </div>
-                        </div>
-                        <div v-if="cohort" class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left">
-                            <span class="inline-flex items-center gap-1 text-[#f9a825]">
-                                <span class="material-symbols-outlined text-base">groups</span>
-                            </span>
-                            <span class="font-medium">{{ cohortLabel }}</span>
-                            <template v-for="(item, idx) in cohortDetailRow" :key="idx">
-                                <span class="w-1 h-1 rounded-full bg-gray-300"></span>
-                                <span>{{ item }}</span>
-                            </template>
+                            <div
+                                v-if="userAdmission?.confirmed && user?.id"
+                                class="w-full shrink-0 border-t border-gray-100 pt-6 lg:w-auto lg:max-w-sm lg:border-t-0 lg:pt-0 lg:pl-4 lg:[&>p]:text-right lg:[&>div.mt-6:first-of-type]:flex lg:[&>div.mt-6:first-of-type]:justify-end"
+                            >
+                                <RevokeOrDeclineAdmissionModal
+                                    :user="user"
+                                    :session="userAdmission"
+                                    :show-intro-text="false"
+                                />
+                            </div>
                         </div>
                     </div>
 
