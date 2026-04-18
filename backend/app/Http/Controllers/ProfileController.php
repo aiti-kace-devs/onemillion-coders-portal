@@ -29,6 +29,7 @@ class ProfileController extends Controller
             'student_name' => $user->student_name,
             'course_name' => $user->course_name,
             'selected_session' => $user->selected_session,
+            'validity_period' => $user->validity_period,
             'verification_date' => $user->verification_date,
             'ghcard_verified' => (bool) data_get($verificationStatus, 'verified', false),
             'ghcard_verification_status' => data_get($verificationStatus, 'verified', false) ? 'verified' : 'pending',
@@ -55,10 +56,12 @@ class ProfileController extends Controller
             'registered_course',
             'course_name',
             'selected_session',
+            'validity_period',
             'verification_date',
             'ghcard_verified',
             'ghcard_verification_status',
             'ghcard_latest_attempt',
+            'ghcard_image_url',
             'isAdmitted'
         ])->toArray();
 

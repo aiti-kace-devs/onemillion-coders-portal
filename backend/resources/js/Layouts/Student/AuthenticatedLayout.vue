@@ -249,12 +249,12 @@ const user = computed(() => auth.value.user ?? {});
 
             <!-- Top Nav -->
             <header
-                class="sticky top-0 h-16 bg-white/80 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 border-b border-gray-100/50 z-50 transition-all duration-300"
+                class="sticky top-0 h-16 bg-white/90 backdrop-blur-lg flex items-center justify-between px-6 lg:px-8 border-b border-gray-200/80 z-50 transition-all duration-300 shadow-sm"
                 role="banner"
             >
-                <div class="flex items-center gap-x-3">
+                <div class="flex items-center gap-x-4">
                     <button
-                        class="block lg:hidden cursor-pointer rounded-md p-1.5 text-gray-500 hover:bg-gray-100 focus:outline-none"
+                        class="block lg:hidden cursor-pointer rounded-lg p-2 hover:bg-gray-100 text-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
                         @click="isSidebarCollapsed = false"
                         aria-label="Open Sidebar"
                         :aria-expanded="!isSidebarCollapsed"
@@ -277,24 +277,27 @@ const user = computed(() => auth.value.user ?? {});
 
                     <div
                         v-if="$slots.header"
-                        class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-lg text-gray-800 leading-tight"
+                        class="overflow-hidden whitespace-nowrap text-ellipsis"
                     >
-                        <slot name="header" />
+                        <!-- Give context to the slot title -->
+                        <div class="text-xl md:text-2xl font-bold tracking-tight text-gray-900 drop-shadow-sm">
+                            <slot name="header" />
+                        </div>
                     </div>
                 </div>
 
                 <!-- Notification Bell -->
                 <Link
                     :href="route('student.notifications.index')"
-                    class="relative p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    class="relative p-2.5 rounded-full text-gray-500 hover:text-amber-600 hover:bg-amber-50 bg-gray-50 border border-gray-200 transition-all duration-200 shadow-sm"
                     aria-label="Notifications"
                 >
-                    <span class="material-symbols-outlined text-[22px]"
+                    <span class="material-symbols-outlined text-[20px] block"
                         >notifications</span
                     >
                     <span
                         v-if="auth?.unreadNotifications > 0"
-                        class="absolute top-1 right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white"
+                        class="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-sm ring-2 ring-white"
                     >
                         {{
                             auth.unreadNotifications > 99
@@ -304,13 +307,13 @@ const user = computed(() => auth.value.user ?? {});
                     </span>
                 </Link>
             </header>
+
             <div
                 v-if="!hideGradient"
                 class="h-1.5 w-full bg-gradient-to-r from-red-600 via-yellow-400 to-green-600 z-40 sticky top-16"
             ></div>
-
             <!-- Page content -->
-            <main :class="props.fullHeight ? '' : 'py-6 px-4 lg:px-8'">
+            <main :class="props.fullHeight ? '' : 'py-8 px-4 lg:px-8 max-w-7xl mx-auto w-full'">
                 <slot />
             </main>
         </div>

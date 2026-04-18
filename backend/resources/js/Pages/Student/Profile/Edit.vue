@@ -212,32 +212,36 @@ const generateIDCard = () => {
       );
 
       ctx.fillStyle = "#374151";
-      ctx.font = "11px Figtree";
+      ctx.font = "bold 10px Figtree";
       ctx.fillText("Index No.:", 15, 160);
       ctx.fillStyle = "#000";
-      ctx.font = "bold 11px Figtree";
+      ctx.font = "bold 10px Figtree";
       ctx.fillText("2072245", 70, 160);
 
       ctx.fillStyle = "#374151";
-      ctx.font = "11px Figtree";
-      ctx.fillText("Session:", 140, 160);
+      ctx.font = "bold 10px Figtree";
+      ctx.fillText("Cohort:", 140, 160);
       ctx.fillStyle = "#000";
-      ctx.font = "bold 11px Figtree";
-      ctx.fillText(props.user.selected_session.toUpperCase() || "N/A", 187, 160);
-
-      ctx.fillStyle = "#374151";
-      ctx.font = "11px Figtree";
-      ctx.fillText("Validity:", 15, 180);
-      ctx.fillStyle = "#000";
-      ctx.font = "bold 7px Figtree";
       wrapText(
         ctx,
-        "July, 2025 - September, 2025".toUpperCase(),
+        (props.user.selected_session || "N/A").toUpperCase(),
+        187,
+        160,
+        100,
+        12
+      );
+
+      ctx.fillStyle = "#374151";
+      ctx.font = "bold 10px Figtree";
+      ctx.fillText("Validity:", 15, 180);
+      ctx.fillStyle = "#000";
+      wrapText(
+        ctx,
+        (props.user.validity_period || "N/A").toUpperCase(),
         70,
         180,
         200,
-        14,
-        "bold 10px Figtree"
+        14
       );
 
       ctx.fillStyle = "#374151";
@@ -297,7 +301,7 @@ const downloadIDCard = () => {
                 {{ user.student_name }}
               </div>
               <div class="text-sm text-gray-500">{{ user.course_name }}</div>
-              <div class="text-sm text-gray-400">{{ user.selected_session }} Session</div>
+              <div class="text-sm text-gray-400">{{ user.selected_session }} Cohort</div>
             </div>
             <div class="flex items-center gap-4">
               <button
