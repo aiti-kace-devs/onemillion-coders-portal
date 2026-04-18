@@ -101,7 +101,7 @@ class SendBulkEmailJob implements ShouldQueue
             } else if ($this->template && $this->correctTemplate) {
                 foreach ($chunk as $recipient) {
                     Mail::to($recipient->email)
-                        ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
+                        // ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                         ->send(new $this->template($recipient));
                     $userId = $recipient->id ?? User::where('email', $recipient->email)->value('id');
                     if ($userId) {
@@ -137,7 +137,7 @@ class SendBulkEmailJob implements ShouldQueue
             $chunkedUsers = User::whereIn('id', $ids)->get()->all();
             foreach ($chunkedUsers as $user) {
                 Mail::to($user->email)
-                    ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
+                    // ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                     ->send(new $this->template($user));
                 NotificationController::notify($user->id, 'email', $this->subject, $this->subject);
             }
@@ -167,12 +167,12 @@ class SendBulkEmailJob implements ShouldQueue
         $mailable = new GenericEmail($replaceContent, $subject, "mail.temp.$filename");
 
         if ($bulk) {
-            Mail::to(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
+            Mail::to(config('mail.from.address', 'no-reply@onemillioncoders.gov.gh'))
                 ->bcc($emails)
                 ->send($mailable);
         } else {
             Mail::to($emails)
-                ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
+                // ->bcc(config('mail.from.address', 'no-reply@gi-kace.gov.gh'))
                 ->send($mailable);
         }
         $this->removeView($filename);
