@@ -15,10 +15,17 @@ const form = useForm({
     password_confirmation: '',
 });
 
+const successMessage = ref('');
+
 const updatePassword = () => {
+    successMessage.value = '';
     form.put(route('password.update'), {
         preserveScroll: true,
-        onSuccess: () => form.reset(),
+        onSuccess: () => {
+            form.reset();
+            successMessage.value = 'Password updated successfully.';
+            setTimeout(() => { successMessage.value = ''; }, 5000);
+        },
         onError: () => {
             if (form.errors.password) {
                 form.reset('password', 'password_confirmation');
@@ -39,7 +46,7 @@ const updatePassword = () => {
             <h2 class="text-lg font-medium text-gray-900">Update Password</h2>
 
             <p class="mt-1 text-sm text-gray-600">
-                Ensure your account is using a long, random password to stay secure.
+                Password must be 6–64 characters with at least one uppercase letter, one lowercase letter, and one number.
             </p>
         </header>
 
@@ -97,7 +104,7 @@ const updatePassword = () => {
                     leave-active-class="transition ease-in-out"
                     leave-to-class="opacity-0"
                 >
-                    <p v-if="form.recentlySuccessful" class="text-sm text-gray-600">Saved.</p>
+                    <p v-if="successMessage" class="text-sm text-green-600 font-medium">{{ successMessage }}</p>
                 </Transition>
             </div>
         </form>
