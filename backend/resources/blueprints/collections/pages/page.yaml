@@ -2,74 +2,72 @@ tabs:
   main:
     display: Main
     sections:
-      -
-        fields:
-          -
-            handle: title
-            field:
+      - fields:
+          - field:
               type: text
               required: true
               validate:
                 - required
-          -
-            handle: steps
-            field:
-              type: replicator
-              display: Steps
-              instructions: 'The blocks used for this page'
+            handle: title
+          - field:
+              type: markdown
+              localizable: true
+              escape_markup: true
+            handle: content
+          - field:
               sets:
                 new_set_group:
-                  display: 'New Set Group'
                   sets:
                     section:
-                      display: Section
                       icon: addon-boxes-stack
                       fields:
-                        -
-                          handle: name
-                          field:
+                        - field:
                             type: text
                             display: Name
                             validate:
                               - required
                               - alpha_dash
-                            placeholder: 'Block Name'
-                            instructions: 'The block name'
-                        -
-                          handle: caption
-                          field:
+                            placeholder: "Block Name"
+                            instructions: "The block name"
+                          handle: name
+                        - field:
                             type: text
                             display: Caption
-                        -
-                          handle: description
-                          field:
-                            escape_markup: true
-                            type: markdown
+                          handle: caption
+                        - field:
+                            type: text
                             display: Description
-                        -
-                          handle: images
-                          field:
-                            container: google_cloud
-                            type: assets
-                            display: Images
+                          handle: description
+                        - field:
+                            type: entries
+                            display: "Section Items"
+                            listable: true
+                            sortable: false
+                            validate:
+                              - required
+                            instructions: "The collection items for this block"
+                          handle: section_items
+                      display: Section
+                  display: "New Set Group"
+              type: replicator
+              display: Sections
+              instructions: "The blocks used for this page"
+            handle: sections
   sidebar:
     display: Sidebar
     sections:
-      -
-        fields:
-          -
-            handle: slug
-            field:
+      - fields:
+          - field:
               type: slug
+              validate: "max:200"
               localizable: true
-              validate: 'max:200'
-          -
-            handle: parent
-            field:
+            handle: slug
+          - field:
               type: entries
+              listable: false
+              max_items: 1
               collections:
                 - pages
-              max_items: 1
-              listable: false
               localizable: true
+            handle: parent
 title: Page
