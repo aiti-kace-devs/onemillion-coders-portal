@@ -132,6 +132,14 @@ class StudentOnboardingService
             return true;
         }
 
+        if (
+            $user
+            && $request->routeIs('student.application-review.index')
+            && $this->hasCompletedApplicationReview($user)
+        ) {
+            return true;
+        }
+
         return match ($blockingStep) {
             self::STEP_APPLICATION_REVIEW => $request->routeIs(
                 'student.application-review.index',

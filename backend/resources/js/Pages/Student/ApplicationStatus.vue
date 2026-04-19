@@ -352,8 +352,22 @@ const illustratedFlowSteps = computed(() => {
                                     class="mt-2 text-sm text-gray-700 pl-2"
                                 >
                                     <template v-if="reviewCompleted">
-                                        You have reviewed the enrollment overview and
-                                        confirmed you are ready to continue.
+                                        <p>
+                                            You have reviewed the enrollment overview and confirmed you are ready to
+                                            continue. You can still open this step for reference (read-only).
+                                        </p>
+                                        <div class="mt-5">
+                                            <Link
+                                                :href="
+                                                    route(
+                                                        'student.application-review.index',
+                                                    )
+                                                "
+                                                class="inline-flex items-center px-6 py-2.5 rounded-xl font-semibold text-sm border border-gray-300 text-gray-800 bg-white hover:bg-gray-50 transition duration-150 shadow-sm"
+                                            >
+                                                View application review again
+                                            </Link>
+                                        </div>
                                     </template>
                                     <template v-else>
                                         Read the overview of each enrollment step, then

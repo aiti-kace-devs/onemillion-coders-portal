@@ -42,7 +42,6 @@ import {
   getSiblingCentres,
   getSiblingCourses,
   createBooking,
-  submitInPersonEnrollment,
   setLearningMode,
   joinWaitlist,
 } from "../../../services/api";
@@ -935,24 +934,15 @@ export default function CoursesPage({ params }) {
     try {
       setEnrollSubmitting(true);
       setError(null);
-      const result = inPersonEnrollmentFlow
-        ? await submitInPersonEnrollment(
-            {
-              programme_batch_id: selectedBatch.id,
-              course_id: enrollingCourseId,
-              course_session_id: selectedSession.session_id,
-            },
-            token,
-          )
-        : await createBooking(
-            {
-              programme_batch_id: selectedBatch.id,
-              course_id: enrollingCourseId,
-              session_id: selectedSession.session_id,
-            },
-            token,
-            { selfPace: studyModeChoice === "home" },
-          );
+      const result = await createBooking(
+        {
+          programme_batch_id: selectedBatch.id,
+          course_id: enrollingCourseId,
+          session_id: selectedSession.session_id,
+        },
+        token,
+        { selfPace: !inPersonEnrollmentFlow && studyModeChoice === "home" },
+      );
       if (result.conflict) {
         // 409 — batch filled up, re-fetch batches
         const batches = await fetchBatchesForCourse(enrollingCourseId);

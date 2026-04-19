@@ -56,6 +56,8 @@ class AppConfigServiceProvider extends ServiceProvider
         defined('WAITLIST_NOTIFY_LIMIT') or define('WAITLIST_NOTIFY_LIMIT', 'WAITLIST_NOTIFY_LIMIT');
         defined('AVAILABILITY_CACHE_TTL') or define('AVAILABILITY_CACHE_TTL', 'AVAILABILITY_CACHE_TTL');
 
+        defined('APPLICATION_REVIEW_IFRAME_URL') or define('APPLICATION_REVIEW_IFRAME_URL', 'APPLICATION_REVIEW_IFRAME_URL');
+
         // Session Reminder settings
         defined('ONE_WEEK_REMINDER') or define('ONE_WEEK_REMINDER', 'ONE_WEEK_REMINDER');
         defined('THREE_DAYS_REMINDER') or define('THREE_DAYS_REMINDER', 'THREE_DAYS_REMINDER');
@@ -74,7 +76,7 @@ class AppConfigServiceProvider extends ServiceProvider
     private function loadDatabaseConfig()
     {
         try {
-            //code...
+            // code...
             $configs = AppConfig::all(); // Fetch all configurations
             foreach ($configs as $config) {
                 $value = $config->value;
@@ -91,9 +93,8 @@ class AppConfigServiceProvider extends ServiceProvider
                 // dump($config->key, $value);
             }
         } catch (\Throwable $th) {
-            //throw $th;
+            // throw $th;
         }
-
 
         // dd(Config::all());
     }

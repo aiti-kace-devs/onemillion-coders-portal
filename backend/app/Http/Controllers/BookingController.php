@@ -63,12 +63,18 @@ class BookingController extends Controller
             ], 404);
         }
 
+        if (! $request->filled('session_id') && $request->filled('course_session_id')) {
+            $request->merge(['session_id' => (int) $request->input('course_session_id')]);
+        }
+
         $programme = $course->programme;
-        $isInPerson = $programme->isInPerson();
-        $selfPace = ! $isInPerson && ($request->boolean('self_pace') || $request->boolean('self-pace'));
+        $selfPace = $request->boolean('self_pace') || $request->boolean('self-pace');
+        // Hybrid "online" programmes can have centre timetable rows; study-from-home uses master sessions + self_pace.
+        $usesCentreSessionBooking = $course->isInPersonProgramme()
+            && ! ($course->isOnlineProgramme() && $selfPace);
 
         $validated = array_merge($validated, $request->validate([
-            'session_id' => $selfPace ? 'nullable|integer' : 'required|integer',
+            'session_id' => (! $usesCentreSessionBooking && $selfPace) ? 'nullable|integer' : 'required|integer',
         ]));
 
         if ($course->programme_id !== $batch->programme_id) {
@@ -78,10 +84,13 @@ class BookingController extends Controller
             ], 422);
         }
 
-        // Fetch session based on delivery mode
-        if ($isInPerson) {
+        // Fetch session: centre timetable row vs master (online) session
+        if ($usesCentreSessionBooking) {
             $session = CourseSession::find($validated['session_id']);
-            if (! $session || $session->course_id !== $course->id) {
+            if (! $session
+                || (int) $session->course_id !== (int) $course->id
+                || (int) $session->centre_id !== (int) $course->centre_id
+                || $session->session_type !== CourseSession::TYPE_CENTRE) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'The selected session id is invalid.',
@@ -110,7 +119,13 @@ class BookingController extends Controller
         }
 
         try {
-            $booking = $bookingService->book($user, $course, $batch, $session, $selfPace);
+            $booking = $bookingService->book(
+                $user,
+                $course,
+                $batch,
+                $session,
+                $usesCentreSessionBooking ? false : $selfPace
+            );
         } catch (Exception $e) {
             $recommendations = $availabilityService->getAvailableSlots(
                 $course->centre_id,

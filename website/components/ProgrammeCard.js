@@ -27,7 +27,7 @@ import {
 } from "../lib/enrollmentAvailability";
 // Normalizes API batch list (cohort + session order) for display; see website/lib/inPersonEnrollmentUi.js.
 import { normalizeInPersonBatches, redirectToStudentDashboard } from "../lib/inPersonEnrollmentUi";
-import { getAvailableBatches, getInPersonAvailableBatches, getSiblingCentres, getSiblingCourses, createBooking, submitInPersonEnrollment, setLearningMode, joinWaitlist } from "../services/api";
+import { getAvailableBatches, getInPersonAvailableBatches, getSiblingCentres, getSiblingCourses, createBooking, setLearningMode, joinWaitlist } from "../services/api";
 
 const IN_PERSON_DELIVERY_KEYS = new Set([
   "inperson",
@@ -325,20 +325,15 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
     try {
       setEnrollSubmitting(true);
       setEnrollError(null);
-      const result = inPersonEnrollmentFlow
-        ? await submitInPersonEnrollment(
-            {
-              programme_batch_id: selectedBatch.id,
-              course_id: enrollingCourseId,
-              course_session_id: selectedSession.session_id,
-            },
-            token,
-          )
-        : await createBooking(
-            { programme_batch_id: selectedBatch.id, course_id: enrollingCourseId, session_id: selectedSession.session_id },
-            token,
-            { selfPace: studyModeChoice === "home" },
-          );
+      const result = await createBooking(
+        {
+          programme_batch_id: selectedBatch.id,
+          course_id: enrollingCourseId,
+          session_id: selectedSession.session_id,
+        },
+        token,
+        { selfPace: !inPersonEnrollmentFlow && studyModeChoice === "home" },
+      );
       if (result.conflict) {
         const batches = await fetchBatchesForCourse(enrollingCourseId);
         const hasAvailable = batches.some((b) =>

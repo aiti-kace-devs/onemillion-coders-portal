@@ -279,16 +279,14 @@ class RegistrationFormAPIController extends Controller
                 ], 422);
             }
 
-            $user->registered_course = $course->id;
-            $user->support = true;
-            $user->shortlist = true;
-            $user->save();
+            // Do not set registered_course, shortlist, or UserAdmission here — that made the
+            // dashboard look "admitted" before the student confirmed cohort + session via POST /api/bookings.
+            // BookingService::book() persists registration and sets support = true after a successful booking.
 
             return response()->json([
                 'success' => true,
-                'redirect_url' => url('/student/dashboard'),
                 'data' => [
-                    'message' => 'You have successfully enabled resource support for your registration.',
+                    'message' => 'Centre-based support is available. Continue to choose your cohort and session.',
                 ],
             ]);
         }
