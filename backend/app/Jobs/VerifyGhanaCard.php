@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Http\Controllers\NotificationController;
 use App\Models\User;
 use App\Services\GhanaCardService;
 use Illuminate\Bus\Queueable;
@@ -35,7 +36,24 @@ class VerifyGhanaCard implements ShouldQueue
         $imageContents = Storage::disk('private_cloud')->get($this->tempImagePath);
 
         // Pass the raw contents to the service (Intervention Image can handle raw binary)
-        $service->verify($this->user, $imageContents);
+        $verification = $service->verify($this->user, $imageContents);
+
+        if ($verification->code === '00' && $verification->verified) {
+            NotificationController::notify(
+                $this->user->id,
+                'VERIFICATION',
+                'Verification Successful',
+                'Your identity has been verified successfully. Your Ghana Card details have been confirmed.'
+            );
+        } else {
+            $userMessage = $service->buildUserSafeStatusMessage($verification->code, (string) $verification->status_message);
+            NotificationController::notify(
+                $this->user->id,
+                'VERIFICATION',
+                'Verification Unsuccessful',
+                $userMessage
+            );
+        }
 
         // Cleanup
         Storage::disk('private_cloud')->delete($this->tempImagePath);
