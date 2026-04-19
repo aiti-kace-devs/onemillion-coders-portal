@@ -212,24 +212,32 @@ onUnmounted(() => {
         <div class="py-6 space-y-6">
             <!-- Header Section -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
-                <!-- Top decoration line -->
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 via-amber-500 to-red-500"></div>
-                
-                <div class="p-6 md:p-8">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div>
-                            <h3 class="text-2xl font-bold text-gray-900 tracking-tight">Ghana Card Verification</h3>
-                            <p class="text-gray-500 mt-1 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-sm text-gray-400">history</span>
-                                Attempts used: <span class="font-semibold text-gray-700">{{ attempts.used }}</span> /
-                                <span class="font-semibold text-gray-700">{{ attempts.max }}</span>
-                                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider ml-1 border px-2 py-0.5 rounded-full bg-gray-50">{{ attempts.remaining }} remaining</span>
-                            </p>
+                <!-- Subtle side accent -->
+                <div class="absolute top-0 left-0 w-1.5 h-full bg-amber-400"></div>
+
+                <div class="p-6 md:p-8 ml-1.5">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+                                <span class="material-symbols-outlined text-2xl">fingerprint</span>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold text-gray-900 tracking-tight">Ghana Card Verification</h3>
+                                <div class="flex flex-wrap items-center gap-y-2 gap-x-4 mt-1.5">
+                                    <p class="text-gray-500 text-sm flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined text-sm text-gray-400">history</span>
+                                        Failed attempts: <span class="font-bold text-gray-800">{{ attempts.used }} / {{ attempts.max }}</span>
+                                    </p>
+                                    <span class="text-[10px] font-bold text-amber-700 uppercase tracking-widest px-2.5 py-1 rounded-lg bg-amber-100/50 border border-amber-200/50">
+                                        {{ attempts.remaining }} retries remaining
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                         <button v-if="!isVerified"
-                            class="inline-flex items-center gap-2 justify-center px-5 py-2.5 rounded-xl bg-amber-50 shadow-sm border border-amber-200 hover:bg-amber-100 text-amber-700 font-semibold transition-all duration-200 disabled:opacity-60 focus:ring-2 focus:ring-amber-500 focus:ring-offset-1"
+                            class="inline-flex items-center gap-2 justify-center px-5 py-2.5 rounded-xl bg-green-600 text-white font-semibold transition-all duration-200 hover:bg-green-700 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed focus:ring-2 focus:ring-green-500 focus:ring-offset-1 border border-green-700/10"
                             :disabled="isRefreshing" @click="refreshStatus">
-                            <span class="material-symbols-outlined" :class="{'animate-spin': isRefreshing}">refresh</span>
+                            <span class="material-symbols-outlined text-[20px]" :class="{'animate-spin': isRefreshing}">refresh</span>
                             {{ isRefreshing ? "Refreshing..." : "Refresh Status" }}
                         </button>
                     </div>
@@ -311,13 +319,13 @@ onUnmounted(() => {
                         <!-- Profile Details -->
                         <div class="w-full flex-1">
                             <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Personal Identity Data</h4>
-                            
+
                             <div class="space-y-4">
                                 <div class="bg-gray-50 rounded-lg p-3">
                                     <span class="block text-xs font-medium text-gray-500 mb-1">Full Name</span>
                                     <span class="block text-base font-semibold text-gray-900">{{ profile.name || "N/A" }}</span>
                                 </div>
-                                
+
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="block text-xs font-medium text-gray-500 mb-1">First Name</span>
@@ -373,7 +381,7 @@ onUnmounted(() => {
                             Use the secure interface below to verify your identity. The page will refresh automatically upon completion.
                         </p>
                     </div>
-                    
+
                     <div class="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-inner p-1">
                         <iframe ref="verificationIframeRef" :src="verification_embed_url"
                             class="w-full rounded-lg bg-white" :style="{ height: `${iframeHeight}px` }"

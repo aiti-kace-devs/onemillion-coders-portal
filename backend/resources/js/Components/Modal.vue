@@ -104,13 +104,20 @@ const maxWidthClass = computed(() => {
             class="mb-6 p-5 rounded-sm overflow-hidden shadow-sm transform transition-all sm:w-full sm:mx-auto"
             :class="[maxWidthClass, bgColor]"
           >
-            <div class="flex justify-between items-center mb-6">
-              <p class="text-xl font-normal capitalize">{{ props.modalTitle }}</p>
-              <button @click="close" v-if="props.closeable">
-                <span class="material-symbols-outlined text-3xl"> close </span>
+            <div 
+              class="flex items-center" 
+              :class="props.modalTitle ? 'justify-between mb-6' : 'justify-end mb-2'"
+            >
+              <p v-if="props.modalTitle" class="text-xl font-normal capitalize">{{ props.modalTitle }}</p>
+              <button 
+                @click="close" 
+                v-if="props.closeable"
+                class="hover:opacity-75 transition-opacity"
+              >
+                <span class="material-symbols-outlined text-2xl"> close </span>
               </button>
             </div>
-            <slot v-if="show" />
+            <slot />
           </div>
         </transition>
       </div>
