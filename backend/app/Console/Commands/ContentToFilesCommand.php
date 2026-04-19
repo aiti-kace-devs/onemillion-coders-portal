@@ -47,6 +47,8 @@ class ContentToFilesCommand extends Command
      * @var array<int, string>
      */
     protected array $importCommands = [
+        // Sites must exist before other imports so Statamic can resolve the current site (e.g. Cascade).
+        'statamic:eloquent:import-sites',
         'statamic:eloquent:import-assets',
         'statamic:eloquent:import-blueprints',
         'statamic:eloquent:import-collections',
@@ -56,7 +58,6 @@ class ContentToFilesCommand extends Command
         'statamic:eloquent:import-taxonomies',
         'statamic:eloquent:import-navs',
         // 'statamic:eloquent:import-revisions',
-        'statamic:eloquent:import-sites',
         'statamic:eloquent:import-users',
     ];
 
@@ -70,24 +71,26 @@ class ContentToFilesCommand extends Command
 
         if ($push && $pull) {
             $this->error('Use either --push or --pull, not both.');
+
             return self::FAILURE;
         }
 
         if (! $push && ! $pull) {
             $this->error('Specify --push (DB to files) or --pull (files to DB).');
+
             return self::FAILURE;
         }
 
         $commands = $pull ? $this->exportCommands : $this->importCommands;
         $direction = $pull ? 'Exporting database content to files' : 'Importing file content to database';
 
-        $this->info($direction . '...');
+        $this->info($direction.'...');
 
         $phpBinary = defined('PHP_BINARY') ? PHP_BINARY : 'php';
         $artisan = base_path('artisan');
 
         foreach ($commands as $command) {
-            $this->line('  Running: ' . $command);
+            $this->line('  Running: '.$command);
             $process = new Process(
                 [$phpBinary, $artisan, $command, '--no-interaction'],
                 base_path(),
@@ -99,12 +102,14 @@ class ContentToFilesCommand extends Command
                 $this->output->write($buffer);
             });
             if (! $process->isSuccessful()) {
-                $this->error('Command failed: ' . $command);
+                $this->error('Command failed: '.$command);
+
                 return self::FAILURE;
             }
         }
 
         $this->info($push ? 'Content exported to files.' : 'Content imported from files.');
+
         return self::SUCCESS;
     }
 }

@@ -1,5 +1,6 @@
+# Statamic requires at least one site. Do not leave this file empty ({ }).
 default:
-  name: 'Default'
-  url: '/'
-  locale: 'en'
-  lang: 'en'
+  name: English
+  url: /
+  locale: en
+  lang: en
