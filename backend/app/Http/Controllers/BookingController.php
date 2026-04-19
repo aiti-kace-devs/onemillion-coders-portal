@@ -10,6 +10,7 @@ use App\Models\ProgrammeBatch;
 use App\Models\User;
 use App\Services\AvailabilityService;
 use App\Services\BookingService;
+use App\Services\GhanaCardService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -17,12 +18,18 @@ use Illuminate\Http\Request;
 
 class BookingController extends Controller
 {
-    public function store(Request $request, BookingService $bookingService, AvailabilityService $availabilityService): JsonResponse
+    public function store(
+        Request $request,
+        BookingService $bookingService,
+        AvailabilityService $availabilityService,
+        GhanaCardService $ghanaCardService
+    ): JsonResponse
     {
+        // First validate the required fields without the session table dependency
         $validated = $request->validate([
             'programme_batch_id' => 'required|integer|exists:programme_batches,id',
             'course_id' => 'required|integer|exists:courses,id',
-            'session_id' => 'required|integer|exists:master_sessions,id',
+            'session_id' => 'required|integer',
         ]);
 
         $batch = ProgrammeBatch::find($validated['programme_batch_id']);
@@ -38,14 +45,49 @@ class BookingController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
         }
 
+        if (! $ghanaCardService->isVerified($user)) {
+            $verificationStatus = $ghanaCardService->buildStatus($user);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Please complete Ghana Card verification before booking a session.',
+                'error' => ['code' => 'verification_required'],
+                'meta' => [
+                    'attempts' => $verificationStatus['attempts'],
+                    'blocked' => $verificationStatus['blocked'],
+                ],
+            ], 403);
+        }
+
         $course = Course::find($validated['course_id']);
-        $session = MasterSession::find($validated['session_id']);
+        $programme = $course->programme;
+        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
 
         if ($course->programme_id !== $batch->programme_id) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Course does not belong to this programme batch.',
             ], 422);
+        }
+
+        // Fetch session based on delivery mode
+        if ($isInPerson) {
+            $session = CourseSession::find($validated['session_id']);
+            if (!$session || $session->course_id !== $course->id) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'The selected session id is invalid.',
+                    'errors' => ['session_id' => ['The selected session id is invalid.']],
+                ], 422);
+            }
+        } else {
+            $session = MasterSession::find($validated['session_id']);
+            if (!$session) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'The selected session id is invalid.',
+                    'errors' => ['session_id' => ['The selected session id is invalid.']],
+                ], 422);
+            }
         }
 
         try {
@@ -94,7 +136,7 @@ class BookingController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
         }
 
-        $bookings = Booking::confirmed()
+        $bookings = Booking::query()->where('status', true)
             ->where('user_id', $user->userId)
             ->with('programmeBatch.centre', 'programmeBatch.programme', 'courseSession', 'course')
             ->get();

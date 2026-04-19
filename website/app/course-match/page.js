@@ -65,11 +65,15 @@ export default function CourseMatchPage() {
   // Sync step and region to query params
   useEffect(() => {
     if (step === "region") return;
+    const hasAnswers = Object.keys(answers).length > 0;
+    const hasQuizState = hasAnswers || currentQuestion > 0 || step === "results";
     updateQueryParams({
       step,
       region: selectedRegion?.id || null,
+      q: step === "quiz" && hasQuizState ? currentQuestion : null,
+      a: hasAnswers && (step === "quiz" || step === "results") ? JSON.stringify(answers) : null,
     });
-  }, [step, selectedRegion, updateQueryParams]);
+  }, [step, selectedRegion, currentQuestion, answers, updateQueryParams]);
 
   // Icon mapping for different question tags
   const getQuestionIcon = (tag) => {
@@ -87,6 +91,8 @@ export default function CourseMatchPage() {
   const restoreFromParams = async (regions) => {
     const savedStep = searchParams.get("step");
     const regionId = searchParams.get("region");
+    const savedQuestion = parseInt(searchParams.get("q"));
+    const savedAnswersRaw = searchParams.get("a");
 
     if (!savedStep || savedStep === "region" || !regionId) return;
 
@@ -95,14 +101,50 @@ export default function CourseMatchPage() {
       if (!region) return;
       setSelectedRegion(region);
 
-      // If user was on quiz step, re-fetch questions
+      // Parse stored answers once for both quiz and results restoration
+      let parsedAnswers = {};
+      if (savedAnswersRaw) {
+        try {
+          parsedAnswers = JSON.parse(savedAnswersRaw);
+          setAnswers(parsedAnswers);
+        } catch {
+          parsedAnswers = {};
+        }
+      }
+
+      // If user was on quiz step, re-fetch questions and restore question index
       if (savedStep === "quiz") {
         try {
           const questionsData = await getCourseMatchQuestions("General");
           setQuestions(questionsData || []);
+          if (!Number.isNaN(savedQuestion)) {
+            setCurrentQuestion(Math.max(0, savedQuestion));
+          }
         } catch {
           // If questions fail to load, user stays on region step
           return;
+        }
+      }
+
+      // If user was on results, regenerate recommendations from stored answers
+      if (savedStep === "results") {
+        if (Object.keys(parsedAnswers).length === 0) {
+          // No answers to regenerate from — start fresh
+          return;
+        }
+        try {
+          setSubmitting(true);
+          const optionIds = Object.values(parsedAnswers).flat();
+          const recs = await getCourseRecommendations({
+            optionIds,
+            regionId: region.id,
+          });
+          setRecommendations(recs || []);
+        } catch {
+          // If regenerate fails, fall back to region step
+          return;
+        } finally {
+          setSubmitting(false);
         }
       }
 
@@ -226,7 +268,7 @@ export default function CourseMatchPage() {
     setSearchQuery("");
     setQuestions([]);
     setError(null);
-    updateQueryParams({ step: null, region: null });
+    updateQueryParams({ step: null, region: null, q: null, a: null });
   };
 
   const activeQuestion = questions[currentQuestion];

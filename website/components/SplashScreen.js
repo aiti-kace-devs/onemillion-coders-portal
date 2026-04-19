@@ -145,9 +145,12 @@ const SplashScreen = ({ onDismiss }) => {
   );
 
   useEffect(() => {
+    // Determine if the app is loaded inside an iframe
+    const isEmbedded = window !== window.parent || new URLSearchParams(window.location.search).get("embed") === "true";
+
     // Check if user has opted out of seeing the splash screen
     const hasOptedOut = localStorage.getItem("splashScreenOptOut");
-    if (hasOptedOut === "true") {
+    if (hasOptedOut === "true" || isEmbedded) {
       setIsVisible(false);
       onDismiss();
       return;

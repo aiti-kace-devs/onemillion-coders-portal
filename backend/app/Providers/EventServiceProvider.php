@@ -6,12 +6,14 @@ use App\Events\FormSubmittedEvent;
 use App\Events\UserRegistered;
 use App\Events\CourseChanged;
 use App\Events\AdmissionSlotFreed;
+use App\Events\AdmissionDeleted;
 use App\Events\ProgrammeBatchCreated;
 use App\Listeners\EmailSentListener;
 use App\Listeners\FormSubmitedListener;
 use App\Listeners\SendExamLoginCredentials;
 use App\Listeners\CourseChangedListener;
 use App\Listeners\NotifyWaitlistedUsers;
+use App\Listeners\NotifyWaitlistedUsersOnAdmissionDeleted;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -43,6 +45,9 @@ class EventServiceProvider extends ServiceProvider
         AdmissionSlotFreed::class => [
             NotifyWaitlistedUsers::class . '@onSlotFreed',
         ],
+        AdmissionDeleted::class => [
+            NotifyWaitlistedUsersOnAdmissionDeleted::class,
+        ],
         ProgrammeBatchCreated::class => [
             NotifyWaitlistedUsers::class . '@onBatchCreated',
         ],
@@ -62,5 +67,6 @@ class EventServiceProvider extends ServiceProvider
         \App\Models\Centre::observe(\App\Observers\CentreObserver::class);
         \App\Models\Booking::observe(\App\Observers\BookingObserver::class);
         \App\Models\ProgrammeBatch::observe(\App\Observers\ProgrammeBatchObserver::class);
+        \App\Models\UserAdmission::observe(\App\Observers\UserAdmissionObserver::class);
     }
 }

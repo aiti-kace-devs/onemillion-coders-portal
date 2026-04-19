@@ -24,8 +24,10 @@ class SmsTemplateRequest extends FormRequest
      */
     public function rules()
     {
+        $id = $this->route('id') ?? $this->route('sms_template');
+
         return [
-            'name' => 'required|string|max:255|unique:sms_templates,name',
+            'name' => 'required|string|max:255|unique:sms_templates,name,' . $id,
             'content' => 'required|string',
         ];
     }

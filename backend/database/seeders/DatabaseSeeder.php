@@ -23,5 +23,10 @@ class DatabaseSeeder extends Seeder
         $this->call(PermissionSeeder::class);
         $this->call(ProgrammeTagSeeder::class);
         $this->call(UpdateCourseNamesSeeder::class);
+
+        // Opt-in realistic lifecycle seed for QA/UAT datasets.
+        if ((bool) env('SEED_REALISTIC_LIFECYCLE', false)) {
+            $this->call(RealisticStudentLifecycleSeeder::class);
+        }
     }
 }

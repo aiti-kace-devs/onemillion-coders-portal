@@ -2,29 +2,9 @@
 
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
-import { useState, useEffect } from "react";
 
 export default function PartnersSection({ data }) {
-  const [isMobile, setIsMobile] = useState(false);
   const prefersReducedMotion = useReducedMotion();
-
-  // Detect mobile device (debounced)
-  useEffect(() => {
-    let timeoutId;
-    const checkMobile = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        setIsMobile(window.innerWidth < 768);
-      }, 150);
-    };
-
-    setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', checkMobile);
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('resize', checkMobile);
-    };
-  }, []);
 
   // Use only API data
   const partners = data?.section_items?.map((partner) => ({
@@ -110,9 +90,9 @@ export default function PartnersSection({ data }) {
             visible: {
               opacity: 1,
               transition: {
-                duration: prefersReducedMotion ? 0.3 : 0.6,
-                delay: prefersReducedMotion ? 0.2 : 0.6,
-                staggerChildren: prefersReducedMotion ? 0 : 0.08,
+                duration: prefersReducedMotion ? 0.3 : 0.5,
+                delay: prefersReducedMotion ? 0.2 : 0.3,
+                staggerChildren: prefersReducedMotion ? 0 : 0.03,
               },
             },
           }}
@@ -132,12 +112,8 @@ export default function PartnersSection({ data }) {
               whileHover={prefersReducedMotion ? {} : { y: -8 }}
               className="group"
             >
-              <div 
-                className={`cursor-pointer relative h-32 sm:h-40 lg:h-48 border rounded-xl lg:rounded-2xl p-4 sm:p-6 lg:p-8 transition-all duration-300 ease-out group-hover:scale-[1.02] ${
-                  isMobile
-                    ? 'bg-gradient-to-br from-gray-50 via-white to-gray-100 border-gray-200/50 shadow-lg hover:shadow-xl hover:from-yellow-50 hover:via-white hover:to-yellow-50 hover:border-yellow-300/60'
-                    : 'backdrop-blur-sm bg-white/10 border-white/20 hover:bg-white/15 hover:border-yellow-500/40 hover:shadow-xl hover:shadow-yellow-500/20'
-                }`}
+              <div
+                className="cursor-pointer relative h-32 sm:h-40 lg:h-48 border rounded-xl lg:rounded-2xl p-4 sm:p-6 lg:p-8 transition-all duration-300 ease-out group-hover:scale-[1.02] bg-gradient-to-br from-gray-50 via-white to-gray-100 border-gray-200/50 shadow-lg hover:shadow-xl hover:from-yellow-50 hover:via-white hover:to-yellow-50 hover:border-yellow-300/60"
                 onClick={() => {
                   if (partner.url) {
                     window.open(partner.url, "_blank");
@@ -145,19 +121,11 @@ export default function PartnersSection({ data }) {
                 }}
               >
                 {/* Enhanced Glow Effect with multiple layers */}
-                <div className={`absolute inset-0 rounded-xl lg:rounded-2xl transition-all duration-300 ease-out ${
-                  isMobile
-                    ? 'bg-gradient-to-br from-yellow-400/8 via-transparent to-blue-400/8 opacity-100 group-hover:from-yellow-400/12 group-hover:to-blue-400/12' // Subtle multi-color glow
-                    : 'bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100'
-                }`}></div>
+                <div className="absolute inset-0 rounded-xl lg:rounded-2xl transition-all duration-300 ease-out bg-gradient-to-br from-yellow-400/8 via-transparent to-blue-400/8 opacity-100 group-hover:from-yellow-400/12 group-hover:to-blue-400/12"></div>
 
                 {/* Decorative corner elements */}
-                {isMobile && (
-                  <>
-                    <div className="absolute top-2 right-2 w-3 h-3 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 opacity-20"></div>
-                    <div className="absolute bottom-2 left-2 w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-green-400 opacity-20"></div>
-                  </>
-                )}
+                <div className="absolute top-2 right-2 w-3 h-3 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 opacity-20"></div>
+                <div className="absolute bottom-2 left-2 w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-green-400 opacity-20"></div>
 
                 {/* Logo Container */}
                 <div className="relative h-full flex items-center justify-center">
@@ -167,22 +135,14 @@ export default function PartnersSection({ data }) {
                       alt={partner.name}
                       width={partner.width}
                       height={partner.height}
-                      className={`object-contain max-w-full max-h-full transition-all duration-300 ease-out drop-shadow-sm ${
-                        isMobile 
-                          ? 'brightness-105 contrast-110 saturate-105' // Subtle enhancement on mobile
-                          : 'brightness-0 invert group-hover:brightness-105 group-hover:contrast-110 group-hover:saturate-105 group-hover:invert-0 group-hover:drop-shadow-lg' // Enhanced on desktop hover
-                      }`}
+                      className="object-contain max-w-full max-h-full transition-all duration-300 ease-out drop-shadow-sm brightness-105 contrast-110 saturate-105 group-hover:drop-shadow-lg"
                       sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                     />
                   </div>
                 </div>
 
                 {/* Subtle border accent */}
-                <div className={`absolute inset-0 rounded-xl lg:rounded-2xl transition-all duration-300 pointer-events-none ${
-                  isMobile
-                    ? 'ring-1 ring-gray-200/50 group-hover:ring-yellow-300/60'
-                    : ''
-                }`}></div>
+                <div className="absolute inset-0 rounded-xl lg:rounded-2xl transition-all duration-300 pointer-events-none ring-1 ring-gray-200/50 group-hover:ring-yellow-300/60"></div>
               </div>
             </motion.div>
           ))}

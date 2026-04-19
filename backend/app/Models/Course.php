@@ -19,7 +19,7 @@ class Course extends Model
             ->logFillable()
             ->logOnlyDirty()
             ->useLogName('course')
-            ->setDescriptionForEvent(fn(string $event) => "Course {$event}");
+            ->setDescriptionForEvent(fn (string $event) => "Course {$event}");
     }
 
     protected $fillable = [
@@ -66,12 +66,37 @@ class Course extends Model
     public function isOnlineProgramme(): bool
     {
         $mode = $this->programme?->mode_of_delivery;
+
         return strtolower(trim((string) $mode)) === 'online';
+    }
+
+    public function isInPersonProgramme(): bool
+    {
+        if ($this->programme?->isInPerson()) {
+            return true;
+        }
+
+        if ($this->isOnlineProgramme()) {
+            return false;
+        }
+
+        return $this->hasActiveCentreSessionsForEnrollment();
+    }
+
+    /**
+     * True when this course has centre timetable rows used for in-person batch enrollment.
+     */
+    public function hasActiveCentreSessionsForEnrollment(): bool
+    {
+        return $this->sessions()
+            ->where('session_type', CourseSession::TYPE_CENTRE)
+            ->where('status', true)
+            ->exists();
     }
 
     public function siblingCourseIdsForProgrammeBatch(): array
     {
-        if (!$this->programme_id || !$this->batch_id) {
+        if (! $this->programme_id || ! $this->batch_id) {
             return $this->id ? [$this->id] : [];
         }
 
@@ -112,7 +137,7 @@ class Course extends Model
     {
         $user = auth()->user();
 
-        if (!$user) {
+        if (! $user) {
             return $query->whereNull('courses.id');
         }
 
@@ -131,13 +156,18 @@ class Course extends Model
         }
     }
 
-
     protected static function booted()
     {
         static::deleting(function ($course) {
             // Ensure dependent records are removed first (FK constraints are restrict in the DB).
             $course->sessions()->delete();
             $course->assignedAdmins()->detach();
+
+            User::where('registered_course', $course->id)
+            ->update([
+                'registered_course' => null,
+                'shortlist' => false,
+            ]);
         });
 
         static::saving(function ($course) {

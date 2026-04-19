@@ -112,7 +112,7 @@ class Admin extends Authenticatable
             return Course::query()
                 ->whereIn('centre_id', $centreIds)
                 ->pluck('id')
-                ->map(fn ($courseId) => (int) $courseId)
+                ->map(fn($courseId) => (int) $courseId)
                 ->all();
         }
 
@@ -131,6 +131,11 @@ class Admin extends Authenticatable
         return $this->belongsToMany(Centre::class, 'admin_centre', 'admin_id', 'centre_id')
             ->select(['centres.id', 'centres.title', 'centres.branch_id', 'centres.status'])
             ->withTimestamps();
+    }
+
+    public function centres()
+    {
+        return $this->assignedCentres();
     }
 
     /**
@@ -164,11 +169,6 @@ class Admin extends Authenticatable
     public function courses()
     {
         return $this->assignedCourses();
-    }
-
-    public function centres()
-    {
-        return $this->assignedCentres();
     }
 
     public function sendPasswordResetNotification($token)

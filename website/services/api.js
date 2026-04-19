@@ -252,6 +252,23 @@ export const getAvailableBatches = async (courseId, token) => {
 };
 
 /**
+ * In-person programmes: cohorts + centre course_sessions (optional per-session limits).
+ * @param {number} courseId
+ * @param {string} token
+ */
+export const getInPersonAvailableBatches = async (courseId, token) => {
+  try {
+    const response = await apiRequest(`availability/batches?course_id=${courseId}`, {
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to fetch in-person batches:', error);
+    throw error;
+  }
+};
+
+/**
  * Fetch sibling centres offering the same course
  * @param {number} courseId
  * @param {number} centreId
@@ -274,13 +291,23 @@ export const getSiblingCentres = async (courseId, centreId, token, limit = 3) =>
 /**
  * Fetch sibling courses (recommended + available) for a user
  * @param {string} userId
+ * @param {number|null} courseId
  * @param {string} token
  * @param {number} limit
  * @returns {Promise<Object>} - { success, matches, available_courses }
  */
-export const getSiblingCourses = async (userId, token, limit = 3) => {
+export const getSiblingCourses = async (userId, courseId, token, limit = 3) => {
   try {
-    const response = await apiRequest(`availability/sibling-courses?userId=${userId}&limit=${limit}`, {
+    const params = new URLSearchParams({
+      userId,
+      limit: String(limit),
+    });
+
+    if (courseId !== null && courseId !== undefined) {
+      params.set('course_id', String(courseId));
+    }
+
+    const response = await apiRequest(`availability/sibling-courses?${params.toString()}`, {
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response;
@@ -309,6 +336,28 @@ export const createBooking = async (data, token) => {
       return { conflict: true, ...error.response.data };
     }
     console.error('Failed to create booking:', error);
+    throw error;
+  }
+};
+
+/**
+ * Confirm in-person enrollment (separate from online POST /bookings).
+ * @param {{ programme_batch_id: number, course_id: number, course_session_id: number }} data
+ * @param {string} token
+ */
+export const submitInPersonEnrollment = async (data, token) => {
+  try {
+    const response = await apiRequest('in-person-enrollment', {
+      method: 'POST',
+      data,
+      ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    });
+    return response;
+  } catch (error) {
+    if (error.response?.status === 409) {
+      return { conflict: true, ...error.response.data };
+    }
+    console.error('Failed to submit in-person enrollment:', error);
     throw error;
   }
 };

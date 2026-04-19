@@ -1,30 +1,14 @@
 <script setup>
 import { ref, computed } from "vue";
-import ApplicationLogo from "@/Components/ApplicationLogo.vue";
-import Dropdown from "@/Components/Dropdown.vue";
-import DropdownLink from "@/Components/DropdownLink.vue";
 import SidebarNavLink from "@/Components/SidebarNavLink.vue";
 import { Link, usePage } from "@inertiajs/vue3";
-import SidebarSectionHeader from "@/Components/SidebarSectionHeader.vue";
 
-const showingNavigationDropdown = ref(false);
 const isSidebarCollapsed = ref(true);
-const sidebarNavIcon = computed(() =>
-    isSidebarCollapsed.value
-        ? "block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 bg-gray-100 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out"
-        : "block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out"
-);
 
 const toggleSidebar = () => {
     isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
 
-const hardRedirect = (url, event) => {
-    window.location.href = url;
-    // event.stopPropagation();
-    event.stopImmediatePropagation();
-    return false;
-};
 
 // Get the current route name for active link highlighting
 const { component } = usePage().props;

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\User;
+use App\Services\GhanaCardService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,7 @@ class ProfileController extends Controller
     public function edit(Request $request): Response
     {
         $user = $request->user()->load(['admission.course', 'admission.courseSession']);
+        $verificationStatus = app(GhanaCardService::class)->buildStatus($user);
 
         $userData = array_merge($user->toArray(), [
             'isAdmitted' => $user->isAdmitted(),
@@ -28,11 +30,15 @@ class ProfileController extends Controller
             'course_name' => $user->course_name,
             'selected_session' => $user->selected_session,
             'verification_date' => $user->verification_date,
+            'ghcard_verified' => (bool) data_get($verificationStatus, 'verified', false),
+            'ghcard_verification_status' => data_get($verificationStatus, 'verified', false) ? 'verified' : 'pending',
+            'ghcard_latest_attempt' => data_get($verificationStatus, 'latest_attempt'),
         ]);
 
         $userData = collect($userData)->only([
             'id',
             'userId',
+            'student_id',
             'name',
             'student_name',
             'first_name',
@@ -51,6 +57,9 @@ class ProfileController extends Controller
             'course_name',
             'selected_session',
             'verification_date',
+            'ghcard_verified',
+            'ghcard_verification_status',
+            'ghcard_latest_attempt',
             'isAdmitted'
         ])->toArray();
 
@@ -67,28 +76,9 @@ class ProfileController extends Controller
         $user = $request->user();
         $validated = $request->validated();
 
-        // Always update the separate name fields
-        $user->fill($validated);
-
-        // Always sync the name field with the separate fields
-        $user->setNameFromFields();
-
-        // Handle previous name tracking
-        if ($user->isDirty('name') && !$user->previous_name) {
-            $user->previous_name = $user->getOriginal('name');
-        }
-
-        if (isset($validated['name']) && $validated['name'] == $user->previous_name) {
-            $user->previous_name = null;
-        }
-
-        $user->details_updated_at = now();
+        $user->network_type = $validated['network_type'];
+        $user->mobile_no = $validated['mobile_no'];
         $user->save();
-
-        // activity('student')
-        //     ->causedBy($user)
-        //     ->event('Profile Modified')
-        //     ->log("{$user->name} successfully modified their profile.");
 
         return Redirect::route('student.profile.edit');
     }

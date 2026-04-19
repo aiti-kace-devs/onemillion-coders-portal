@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
 import { Head, useForm, Link, usePage } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import RevokeOrDeclineAdmissionModal from "@/Components/RevokeOrDeclineAdmissionModal.vue";
 import LinkButton from "@/Components/LinkButton.vue";
 
@@ -10,9 +10,10 @@ const props = defineProps({
     user_exam: Object,
     user_admission: Object,
     user_assessment: Object,
+    verification_status: Object,
 });
 
-const collapse = ref([true, false, false, false, false]);
+const collapse = ref([true, false, false, false]);
 const showRevokeModal = ref(false);
 
 function toggleCollapse(idx) {
@@ -24,14 +25,20 @@ function toggleCollapse(idx) {
 function isStepReached(idx) {
     if (idx === 0) return true; // Step 1: Always reached
     if (idx === 1) return true; // Step 2: Assessment (Follows app submission)
-    if (idx === 2) return props.user_assessment?.completed; // Step 3: Choose Course
-    if (idx === 3) return props.user.registered_course; // Step 4: Shortlist
-    if (idx === 4) return props.user.shortlist; // Step 5: Admission
+    if (idx === 2) return props.user_assessment?.completed; // Step 3: Identity Verification
+    if (idx === 3) return verificationCompleted.value; // Step 4: Course Selection (includes booking)
     return false;
 }
 function closeRevokeModal() {
     showRevokeModal.value = false;
 }
+
+const courseSelectionCompleted = computed(
+    () => !!props.user_admission?.confirmed || !!props.user?.registered_course,
+);
+const assessmentCompleted = computed(() => !!props.user_assessment?.completed);
+const verificationCompleted = computed(() => !!props.verification_status?.verified);
+const verificationBlocked = computed(() => !!props.verification_status?.blocked);
 </script>
 
 <template>
@@ -66,6 +73,44 @@ function closeRevokeModal() {
                 </div>
 
                 <div class="p-6 bg-white sm:rounded-lg shadow">
+                    <p class="font-medium text-lg text-gray-900 mb-3">
+                        Expected Flow
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+                        <div
+                            class="rounded-lg border p-3"
+                            :class="{
+                                'border-green-200 bg-green-50': assessmentCompleted,
+                                'border-gray-200 bg-gray-50': !assessmentCompleted
+                            }"
+                        >
+                            <p class="text-xs uppercase text-gray-500">1</p>
+                            <p class="font-semibold text-sm">Assessment</p>
+                        </div>
+                        <div
+                            class="rounded-lg border p-3"
+                            :class="{
+                                'border-green-200 bg-green-50': verificationCompleted,
+                                'border-red-200 bg-red-50': !verificationCompleted && verificationBlocked,
+                                'border-gray-200 bg-gray-50': !verificationCompleted && !verificationBlocked
+                            }"
+                        >
+                            <p class="text-xs uppercase text-gray-500">2</p>
+                            <p class="font-semibold text-sm">Identity Verification</p>
+                        </div>
+                        <div
+                            class="rounded-lg border p-3"
+                            :class="{
+                                'border-green-200 bg-green-50': courseSelectionCompleted,
+                                'border-amber-200 bg-amber-50': !courseSelectionCompleted && verificationCompleted,
+                                'border-gray-200 bg-gray-50': !courseSelectionCompleted && !verificationCompleted
+                            }"
+                        >
+                            <p class="text-xs uppercase text-gray-500">3</p>
+                            <p class="font-semibold text-sm">Course Selection</p>
+                        </div>
+                    </div>
+
                     <p class="font-medium text-lg text-gray-900">
                         Application Status
                     </p>
@@ -208,13 +253,15 @@ function closeRevokeModal() {
                                 </div>
                             </li>
 
-                            <!-- Step 3: Choose Course -->
+                            <!-- Step 3: Identity Verification -->
                             <li class="mb-10 ml-6">
                                 <span
                                     :class="[
                                         'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
-                                        props.user.registered_course
+                                        verificationCompleted
                                             ? 'bg-green-500 text-white'
+                                            : verificationBlocked
+                                              ? 'bg-red-500 text-white'
                                             : 'bg-gray-200 text-gray-400',
                                     ]"
                                     >3</span
@@ -231,14 +278,14 @@ function closeRevokeModal() {
                                     <h3
                                         :class="[
                                             'font-bold text-lg',
-                                            props.user.registered_course
+                                            verificationCompleted
                                                 ? 'text-gray-800'
                                                 : isStepReached(2)
                                                   ? 'text-gray-700'
                                                   : 'text-gray-400',
                                         ]"
                                     >
-                                        Course Selection
+                                        Identity Verification
                                     </h3>
                                     <svg
                                         v-if="isStepReached(2)"
@@ -262,38 +309,33 @@ function closeRevokeModal() {
                                     v-if="collapse[2] && isStepReached(2)"
                                     class="mt-2 text-sm text-gray-700 pl-2"
                                 >
-                                    <template
-                                        v-if="props.user.registered_course"
-                                    >
-                                        You have successfully selected a course.
+                                    <template v-if="verificationCompleted">
+                                        Your Ghana Card verification is complete.
+                                        You can proceed to course selection.
+                                    </template>
+                                    <template v-else-if="verificationBlocked">
+                                        Verification attempts are blocked. Please
+                                        contact support for assistance.
                                     </template>
                                     <template v-else>
-                                        Now that your level is determined,
-                                        please select the course that best
-                                        aligns with your interests and career
-                                        goals.
+                                        Complete your Ghana Card verification
+                                        before selecting a course.
 
                                         <div class="mt-5">
-                                            <LinkButton
-                                                :href="
-                                                    route(
-                                                        'student.change-course',
-                                                    )
-                                                "
-                                            >
-                                                Choose a course
+                                            <LinkButton :href="route('student.verification.index')">
+                                                Verify now
                                             </LinkButton>
                                         </div>
                                     </template>
                                 </div>
                             </li>
 
-                            <!-- Step 4: Shortlisted -->
+                            <!-- Step 4: Course Selection (includes booking) -->
                             <li class="mb-10 ml-6">
                                 <span
                                     :class="[
                                         'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
-                                        props.user.shortlist
+                                        courseSelectionCompleted
                                             ? 'bg-green-500 text-white'
                                             : 'bg-gray-200 text-gray-400',
                                     ]"
@@ -311,14 +353,14 @@ function closeRevokeModal() {
                                     <h3
                                         :class="[
                                             'font-bold text-lg',
-                                            props.user.shortlist
+                                            courseSelectionCompleted
                                                 ? 'text-gray-800'
                                                 : isStepReached(3)
                                                   ? 'text-gray-700'
                                                   : 'text-gray-400',
                                         ]"
                                     >
-                                        Shortlisted
+                                        Course Selection
                                     </h3>
                                     <svg
                                         v-if="isStepReached(3)"
@@ -342,83 +384,8 @@ function closeRevokeModal() {
                                     v-if="collapse[3] && isStepReached(3)"
                                     class="mt-2 text-sm text-gray-700 pl-2"
                                 >
-                                    <template v-if="props.user.shortlist">
-                                        Congratulations! You have been
-                                        shortlisted for the next phase.
-                                    </template>
-                                    <template v-else>
-                                        Our admission team is reviewing your
-                                        profile. If shortlisted, you will see it
-                                        here.
-                                    </template>
-                                </div>
-                            </li>
-
-                            <!-- Step 5: Admission Confirmed -->
-                            <li class="ml-6">
-                                <span
-                                    :class="[
-                                        'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
-                                        props.user_admission?.confirmed
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-gray-200 text-gray-400',
-                                    ]"
-                                    >5</span
-                                >
-                                <div
-                                    class="flex items-center"
-                                    :class="
-                                        isStepReached(4)
-                                            ? 'cursor-pointer'
-                                            : 'cursor-not-allowed opacity-50'
-                                    "
-                                    @click="toggleCollapse(4)"
-                                >
-                                    <h3
-                                        :class="[
-                                            'font-bold text-lg',
-                                            props.user_admission?.confirmed
-                                                ? 'text-gray-800'
-                                                : isStepReached(4)
-                                                  ? 'text-gray-700'
-                                                  : 'text-gray-400',
-                                        ]"
-                                    >
-                                        Admission Confirmed
-                                    </h3>
-                                    <svg
-                                        v-if="isStepReached(4)"
-                                        :class="[
-                                            'ml-2 w-4 h-4 text-gray-800 transition-transform',
-                                            collapse[4] ? 'rotate-90' : '',
-                                        ]"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                </div>
-                                <div
-                                    v-if="collapse[4] && isStepReached(4)"
-                                    class="mt-2 text-sm text-gray-700 pl-2"
-                                >
-                                    <div
-                                        v-if="
-                                            props.user_admission &&
-                                            props.user_admission.confirmed
-                                        "
-                                    >
-                                        <div>
-                                            You have successfully confirmed your
-                                            admission.
-                                        </div>
-
+                                    <template v-if="props.user_admission?.confirmed">
+                                        You have successfully selected your course and completed booking.
                                         <div class="mt-5">
                                             <RevokeOrDeclineAdmissionModal
                                                 v-if="
@@ -429,35 +396,28 @@ function closeRevokeModal() {
                                                 :session="props.user_admission"
                                             />
                                         </div>
-                                    </div>
-                                    <div v-else-if="props.user.shortlist">
-                                        <p>
-                                            You have been shortlisted! Please
-                                            select a session to officially
-                                            confirm your admission.
-                                        </p>
-
+                                    </template>
+                                    <template v-else-if="props.user?.registered_course">
+                                        You selected a course. Complete session selection to finish your booking.
                                         <div class="mt-5">
-                                            <LinkButton
-                                                :href="
-                                                    route(
-                                                        'student.session.index',
-                                                    )
-                                                "
-                                            >
+                                            <LinkButton :href="route('student.session.index')">
                                                 Choose a session
                                             </LinkButton>
                                         </div>
-                                    </div>
-                                    <div v-else>
-                                        <p>
-                                            Admission will be granted once you
-                                            are shortlisted and have confirmed
-                                            your session.
-                                        </p>
-                                    </div>
+                                    </template>
+                                    <template v-else>
+                                        Now that your identity verification is complete,
+                                        please select the course that best
+                                        aligns with your interests and career goals. Session booking is part of this step.
+                                        <div class="mt-5">
+                                            <LinkButton :href="route('student.change-course')">
+                                                Choose a course
+                                            </LinkButton>
+                                        </div>
+                                    </template>
                                 </div>
                             </li>
+
                         </ol>
                     </div>
                 </div>

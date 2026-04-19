@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Events\AdmissionSlotFreed;
 use App\Helpers\SchoolDayCalculator;
+use App\Models\AdmissionWaitlist;
 use App\Models\AppConfig;
 use App\Models\Batch;
 use App\Models\Booking;
 use App\Models\Centre;
 use App\Models\Course;
+use App\Models\CourseSession;
 use App\Models\MasterSession;
 use App\Models\Programme;
 use App\Models\ProgrammeBatch;
@@ -25,13 +27,41 @@ class BookingService
     /**
      * Book a user into a programme batch for a specific course session.
      *
-     * Enforces per-session capacity via the daily_session_occupancy summary table
+     * For "In Person" courses: saves user & admission data without creating a Booking record.
+     * For other courses: enforces per-session capacity via daily_session_occupancy summary table
      * and respects the Intelligent Quota System (IQS).
      *
      * @throws Exception when capacity is exhausted or the session is incompatible.
      */
-    public function book(User $user, Course $course, ProgrammeBatch $batch, MasterSession $session): Booking
+    public function book(User $user, Course $course, ProgrammeBatch $batch, $session): ?Booking
     {
+        $programme = $course->programme;
+        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
+
+        // Handle In Person courses
+        if ($isInPerson) {
+            $user->registered_course = $course->id;
+            $user->shortlist = true;
+            $user->save();
+
+            $admission = UserAdmission::updateOrCreate(
+                ['user_id' => $user->userId],
+                [
+                    'course_id' => $course->id,
+                    'programme_batch_id' => $batch->id,
+                    'email_sent' => now(),
+                    'confirmed' => now(),
+                    'session' => $session->id,
+                ]
+            );
+
+            // Remove from waitlist if exists
+            AdmissionWaitlist::where('user_id', $user->userId)->delete();
+
+            return null;
+        }
+
+        // Handle regular (Master Session) courses
         $centreId = $course->centre_id;
         $lockKey = "booking_lock:{$centreId}:{$session->id}";
 
@@ -44,7 +74,6 @@ class BookingService
                 // Bypass the cache and compute remaining seats fresh inside the lock
                 $remaining = $this->computeRemainingSeats($centreId, $batch, $session);
 
-
                 if ($remaining <= 0) {
                     throw new Exception('Course session is full.');
                 }
@@ -53,7 +82,6 @@ class BookingService
                 $existing = Booking::where('user_id', $user->userId)
                     ->where('programme_batch_id', $batch->id)
                     ->first();
-
 
                 if ($existing) {
                     return $existing;
@@ -90,12 +118,17 @@ class BookingService
                     ]
                 );
 
+<<<<<<< HEAD
                 // Generate student ID for students who want support
                 $studentId = StudentIdGenerator::generate($user, $course);
                 if ($studentId) {
                     $user->student_id = $studentId;
                     $user->saveQuietly();
                 }
+=======
+                 // Remove from waitlist if exists
+                AdmissionWaitlist::where('user_id', $user->userId)->delete();
+>>>>>>> development
 
                 // Clear the cached seat count so the next read reflects this booking
                 Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$session->id}");
@@ -127,8 +160,9 @@ class BookingService
     public function cancel(Booking $booking): bool
     {
         $batch = $booking->programmeBatch;
-        if (!$batch) {
+        if (! $batch) {
             $booking->delete();
+
             return false;
         }
 
@@ -144,7 +178,7 @@ class BookingService
             );
 
             $slotRestored = true;
-            event(new AdmissionSlotFreed($batch, $booking));
+            event(new AdmissionSlotFreed($batch, $booking->userAdmission));
         }
 
         $booking->delete();
@@ -173,7 +207,7 @@ class BookingService
             $centre = Centre::find($centreId);
             $session = MasterSession::find($sessionId);
 
-            if (!$batch || !$centre || !$session) {
+            if (! $batch || ! $centre || ! $session) {
                 return 0;
             }
 
@@ -190,7 +224,7 @@ class BookingService
     protected function computeRemainingSeats(int $centreId, ProgrammeBatch $batch, MasterSession $session): int
     {
         $centre = Centre::find($centreId);
-        if (!$centre) {
+        if (! $centre) {
             return 0;
         }
 
@@ -272,7 +306,7 @@ class BookingService
             ->where('status', true)
             ->first();
 
-        if (!$admissionBatch || !$admissionBatch->end_date) {
+        if (! $admissionBatch || ! $admissionBatch->end_date) {
             return false;
         }
 
@@ -286,7 +320,7 @@ class BookingService
             ->whereNotNull('duration_in_days')
             ->min('duration_in_days');
 
-        if (!$smallestLongDuration) {
+        if (! $smallestLongDuration) {
             return false;
         }
 
@@ -299,9 +333,9 @@ class BookingService
      * This avoids N+1 query problems by loading all data in bulk and
      * computing seats with minimal database queries.
      *
-     * @param int $centreId The centre ID
-     * @param array $batchIds Array of programme batch IDs
-     * @param array $sessionIds Array of master session IDs
+     * @param  int  $centreId  The centre ID
+     * @param  array  $batchIds  Array of programme batch IDs
+     * @param  array  $sessionIds  Array of master session IDs
      * @return array Map of "batchId:sessionId" => remainingSeats
      */
     public function getRemainingSeatsBatch(int $centreId, array $batchIds, array $sessionIds): array
@@ -311,7 +345,7 @@ class BookingService
         }
 
         $centre = Centre::find($centreId);
-        if (!$centre) {
+        if (! $centre) {
             return [];
         }
 
@@ -332,14 +366,15 @@ class BookingService
 
         foreach ($batchIds as $batchId) {
             $batch = $batches->get($batchId);
-            if (!$batch) {
+            if (! $batch) {
                 continue;
             }
 
             foreach ($sessionIds as $sessionId) {
                 $session = $sessions->get($sessionId);
-                if (!$session) {
+                if (! $session) {
                     $results["{$batchId}:{$sessionId}"] = 0;
+
                     continue;
                 }
 
@@ -350,6 +385,7 @@ class BookingService
                 $cached = Cache::get($cacheKey);
                 if ($cached !== null) {
                     $results[$key] = (int) $cached;
+
                     continue;
                 }
 
@@ -360,6 +396,7 @@ class BookingService
                 if ($capacity === null || $capacity <= 0) {
                     $results[$key] = 0;
                     Cache::put($cacheKey, 0, now()->addHour());
+
                     continue;
                 }
 
@@ -368,6 +405,7 @@ class BookingService
                 $maxOccupied = $sessionOccupancy
                     ->filter(function ($row) use ($batch) {
                         $date = Carbon::parse($row->date);
+
                         return $date->between($batch->start_date, $batch->end_date);
                     })
                     ->max('occupied_count') ?? 0;

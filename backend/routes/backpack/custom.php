@@ -85,6 +85,7 @@ Route::group([
     // Manage Student actions (Per Student)
     Route::post('manage-student/{user}/change-admission', 'ManageStudentCrudController@changeAdmission')->name('manage-student.change-admission');
     Route::post('manage-student/{user}/choose-session', 'ManageStudentCrudController@chooseSession')->name('manage-student.choose-session');
+    Route::post('manage-student/{user}/add-verification-attempts', 'ManageStudentCrudController@addVerificationAttempts')->name('manage-student.add-verification-attempts');
     Route::delete('manage-student/delete-admission/{user_id}', 'ManageStudentCrudController@deleteAdmission')->name('manage-student.delete-admission');
 
     // AJAX routes for student metrics and dropdowns
@@ -150,6 +151,7 @@ Route::group([
     Route::crud('student-verification', 'StudentVerificationCrudController');
     Route::crud('ghana-card-verification', 'GhanaCardVerificationCrudController');
     Route::post('ghana-card-verification/reset-block/{user_id}', 'GhanaCardVerificationCrudController@resetBlock')->name('ghana-card.reset-block');
+    Route::post('ghana-card-verification/add-attempts/{user_id}', 'GhanaCardVerificationCrudController@addAttempts')->name('ghana-card.add-attempts');
     Route::crud('course-certification', 'CourseCertificationCrudController');
     Route::crud('course-match', 'CourseMatchCrudController');
     Route::post('course-match/{id}/toggle', 'CourseMatchCrudController@toggleStatus');

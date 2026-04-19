@@ -14,8 +14,11 @@ class Programme extends Model
     use HasFactory, LogsActivity;
 
     public const TIME_ALLOCATION_SHORT = 2;
+
     public const TIME_ALLOCATION_LONG = 4;
+
     public const COURSE_TYPE_SHORT = 'short';
+
     public const COURSE_TYPE_LONG = 'long';
 
     public function courseType(): string
@@ -31,7 +34,7 @@ class Programme extends Model
             ->logFillable()
             ->logOnlyDirty()
             ->useLogName('programme')
-            ->setDescriptionForEvent(fn(string $event) => "Programme {$event}");
+            ->setDescriptionForEvent(fn (string $event) => "Programme {$event}");
     }
 
     protected $fillable = [
@@ -52,12 +55,12 @@ class Programme extends Model
         'course_category_id',
         'status',
         'mode_of_delivery',
-        'provider'
+        'provider',
     ];
 
     protected $casts = [
         'status' => 'boolean',
-        'overview' => 'array'
+        'overview' => 'array',
     ];
 
     public function centre()
@@ -70,12 +73,20 @@ class Programme extends Model
         return $this->hasMany(Course::class);
     }
 
+    public function quotas()
+    {
+        return $this->hasMany(ProgrammeQuota::class, 'programme_id');
+    }
+
+    public function programmeBatches()
+    {
+        return $this->hasMany(ProgrammeBatch::class, 'programme_id');
+    }
 
     public function courseModules()
     {
         return $this->hasMany(CourseModule::class, 'programme_id');
     }
-
 
     public function courseCertification()
     {
@@ -108,9 +119,31 @@ class Programme extends Model
         return strtolower(trim((string) $this->mode_of_delivery)) === 'online';
     }
 
+    /**
+     * Normalize mode_of_delivery for comparison (letters only, lowercased).
+     */
+    public static function normalizedDeliveryLetters(?string $mode): string
+    {
+        $ascii = strtolower((string) $mode);
 
+        return preg_replace('/[^a-z]/', '', $ascii);
+    }
 
+    public function isInPerson(): bool
+    {
+        $n = self::normalizedDeliveryLetters($this->mode_of_delivery);
 
+        return in_array($n, [
+            'inperson',
+            'facetoface',
+            'face2face',
+            'physical',
+            'onsite',
+            'oncampus',
+            'classroom',
+            'atcampus',
+        ], true);
+    }
 
     protected static function booted()
     {
@@ -127,7 +160,7 @@ class Programme extends Model
 
             $programme->overview = [
                 'what_you_will_learn' => $whatYouWillLearn,
-                'why_choose_this_course' => $whyChoose
+                'why_choose_this_course' => $whyChoose,
             ];
 
             // Auto-compute duration_in_days and time_allocation from duration
@@ -151,7 +184,7 @@ class Programme extends Model
                     $programme->duration_in_days = 60;
                 }
 
-                $programme->duration = $hours . ' hours';
+                $programme->duration = $hours.' hours';
             }
         });
 

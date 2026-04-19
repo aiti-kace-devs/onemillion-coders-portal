@@ -1,14 +1,11 @@
 <?php
 
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\StudentOperation;
-use App\Http\Controllers\FormResponseController;
-use App\Http\Controllers\StatamicEntryApiController;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
 use App\Http\Controllers\Admin\BatchCrudController;
-use App\Http\Controllers\Admin\Api\CreateStudentAPIController;
+use App\Http\Controllers\StatamicEntryApiController;
+use App\Http\Controllers\StudentOperation;
+use Illuminate\Support\Facades\Route;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -27,22 +24,31 @@ Route::post('/recommend/courses', [CourseMatchAPIController::class, 'recommendCo
 // Availability endpoint
 Route::get('/availability', [\App\Http\Controllers\AvailabilityController::class, 'index'])->name('api.availability');
 
-Route::get('/availability/batches', [\App\Http\Controllers\AvailabilityController::class, 'batches'])->name('batches');
 // Availability endpoints — authenticated (iframed into student portal)
 Route::prefix('availability')->name('api.availability.')->middleware('user.token')->group(function () {
-    // Route::get('/batches', [\App\Http\Controllers\AvailabilityController::class, 'batches'])->name('batches');
+    Route::get('/batches', [\App\Http\Controllers\AvailabilityController::class, 'batches'])->name('batches');
+    Route::get('/in-person/batches', [\App\Http\Controllers\InPersonAvailabilityController::class, 'batches'])->name('in-person-batches');
     Route::get('/sibling-centres', [\App\Http\Controllers\AvailabilityController::class, 'siblingCentres'])->name('sibling-centres');
     Route::get('/sibling-courses', [App\Http\Controllers\Admin\Api\CourseMatchAPIController::class, 'siblingCourses'])->name('sibling-courses');
 });
 
+// Programme availability per centre — authenticated
+Route::get('/programmes/{programmeId}/availability-per-centre', [
+    App\Http\Controllers\Admin\Api\CourseProgrammeController::class, 'availabilityPerCentre'
+])->name('api.programmes.availability-per-centre');
+
 
 // Booking endpoints — student reserves/cancels a programme_batch slot
-Route::prefix('bookings')->name('api.bookings.')->middleware('user.token')->group(function () {
+Route::prefix('bookings')->name('api.bookings.')->middleware(['user.token', 'student.verification.flow'])->group(function () {
     Route::get('/mine', [\App\Http\Controllers\BookingController::class, 'mine'])->name('mine');
     Route::post('/', [\App\Http\Controllers\BookingController::class, 'store'])->name('store');
     Route::delete('/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('destroy');
 });
 
+// In-person enrollment (separate from online POST /api/bookings)
+Route::post('/in-person-enrollment', [\App\Http\Controllers\InPersonEnrollmentController::class, 'store'])
+    ->middleware(['user.token', 'student.verification.flow'])
+    ->name('api.in-person-enrollment.store');
 
 // Waitlist endpoints — authenticated
 Route::prefix('waitlist')->name('api.waitlist.')->middleware('user.token')->group(function () {
@@ -59,7 +65,6 @@ Route::get('/courses/{courseId}/slot-left', [CourseMatchAPIController::class, 'c
 // Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
 // Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
 
-
 // Route::middleware('auth:sanctum')->group(function () {
 //         Route::group(function () {
 
@@ -67,8 +72,10 @@ Route::get('/courses/{courseId}/slot-left', [CourseMatchAPIController::class, 'c
 //         return $request->user();
 //     });
 // });
-Route::post('/ghana-card/verify', [\App\Http\Controllers\Api\GhanaCardController::class, 'verify']);
-
+Route::prefix('ghana-card')->middleware('user.token')->group(function () {
+    Route::post('/verify', [\App\Http\Controllers\Api\GhanaCardController::class, 'verify']);
+    Route::get('/status', [\App\Http\Controllers\Api\GhanaCardController::class, 'status']);
+});
 
 // Route::middleware('apikey.check')->group(function () {
 //     Route::post('/student/register', [AdminController::class, 'add_new_students']);
@@ -78,7 +85,6 @@ Route::post('/ghana-card/verify', [\App\Http\Controllers\Api\GhanaCardController
 
 // Route::post('/api/add-student', [FormResponseController::class, 'store']);
 // Route::post('/api/add-student', [CreateStudentAPIController::class, 'store'])->middleware('api'); // This applies the api middleware group
-
 
 // Tiered Assessment endpoints (External API) — user resolved from JWT (Bearer, token, or user_id param)
 Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->middleware('user.token')->group(function () {
@@ -101,7 +107,6 @@ Route::get('/pages/{slug}', [StatamicEntryApiController::class, 'showPageBySlug'
 
 Route::get('/forms/{handle}', [StatamicEntryApiController::class, 'showFormByHandle']);
 Route::post('/forms/{handle}', [StatamicEntryApiController::class, 'saveFormByHandle']);
-
 
 Route::name('custom.')->group(function () {
     // Get all entries with optional filtering and related entries
