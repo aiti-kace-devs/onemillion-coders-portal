@@ -8,6 +8,7 @@ import { ref } from 'vue';
 
 const passwordInput = ref(null);
 const currentPasswordInput = ref(null);
+const successMessage = ref('');
 
 const form = useForm({
     current_password: '',
@@ -15,7 +16,9 @@ const form = useForm({
     password_confirmation: '',
 });
 
-const successMessage = ref('');
+const showCurrentPassword = ref(false);
+const showNewPassword = ref(false);
+const showConfirmPassword = ref(false);
 
 const updatePassword = () => {
     successMessage.value = '';
@@ -50,49 +53,85 @@ const updatePassword = () => {
             </p>
         </header>
 
-        <form @submit.prevent="updatePassword" class="mt-6 space-y-6">
+        <form @submit.prevent="updatePassword" class="mt-6 space-y-6 max-w-xl">
             <div>
                 <InputLabel for="current_password" value="Current Password" />
 
-                <TextInput
-                    id="current_password"
-                    ref="currentPasswordInput"
-                    v-model="form.current_password"
-                    type="password"
-                    class="block w-full"
-                    autocomplete="current-password"
-                />
+                <div class="relative mt-1">
+                    <TextInput
+                        id="current_password"
+                        ref="currentPasswordInput"
+                        v-model="form.current_password"
+                        :type="showCurrentPassword ? 'text' : 'password'"
+                        class="block w-full pr-10"
+                        @input="form.clearErrors('current_password')"
+                        autocomplete="current-password"
+                    />
+                    <button 
+                        type="button" 
+                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
+                        @click="showCurrentPassword = !showCurrentPassword"
+                    >
+                        <span class="material-symbols-outlined text-[20px]">
+                            {{ showCurrentPassword ? 'visibility_off' : 'visibility' }}
+                        </span>
+                    </button>
+                </div>
 
-                <InputError :message="form.errors.current_password" />
+                <InputError :message="form.errors.current_password" class="mt-2" />
             </div>
 
             <div>
                 <InputLabel for="password" value="New Password" />
 
-                <TextInput
-                    id="password"
-                    ref="passwordInput"
-                    v-model="form.password"
-                    type="password"
-                    class="block w-full"
-                    autocomplete="new-password"
-                />
+                <div class="relative mt-1">
+                    <TextInput
+                        id="password"
+                        ref="passwordInput"
+                        v-model="form.password"
+                        :type="showNewPassword ? 'text' : 'password'"
+                        class="block w-full pr-10"
+                        @input="form.clearErrors('password')"
+                        autocomplete="new-password"
+                    />
+                    <button 
+                        type="button" 
+                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
+                        @click="showNewPassword = !showNewPassword"
+                    >
+                        <span class="material-symbols-outlined text-[20px]">
+                            {{ showNewPassword ? 'visibility_off' : 'visibility' }}
+                        </span>
+                    </button>
+                </div>
 
-                <InputError :message="form.errors.password" />
+                <InputError :message="form.errors.password" class="mt-2" />
             </div>
 
             <div>
                 <InputLabel for="password_confirmation" value="Confirm Password" />
 
-                <TextInput
-                    id="password_confirmation"
-                    v-model="form.password_confirmation"
-                    type="password"
-                    class="block w-full"
-                    autocomplete="new-password"
-                />
+                <div class="relative mt-1">
+                    <TextInput
+                        id="password_confirmation"
+                        v-model="form.password_confirmation"
+                        :type="showConfirmPassword ? 'text' : 'password'"
+                        class="block w-full pr-10"
+                        @input="form.clearErrors('password_confirmation')"
+                        autocomplete="new-password"
+                    />
+                    <button 
+                        type="button" 
+                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
+                        @click="showConfirmPassword = !showConfirmPassword"
+                    >
+                        <span class="material-symbols-outlined text-[20px]">
+                            {{ showConfirmPassword ? 'visibility_off' : 'visibility' }}
+                        </span>
+                    </button>
+                </div>
 
-                <InputError :message="form.errors.password_confirmation" />
+                <InputError :message="form.errors.password_confirmation" class="mt-2" />
             </div>
 
             <div class="flex items-center gap-4">
