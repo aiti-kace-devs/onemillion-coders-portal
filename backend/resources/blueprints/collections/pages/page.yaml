@@ -5,27 +5,28 @@ tabs:
       -
         fields:
           -
+            handle: title
             field:
               type: text
               required: true
               validate:
                 - required
-            handle: title
           -
+            handle: steps
             field:
-              type: markdown
-              localizable: true
-              escape_markup: true
-            handle: content
-          -
-            field:
+              type: replicator
+              display: Steps
+              instructions: 'The blocks used for this page'
               sets:
                 new_set_group:
+                  display: 'New Set Group'
                   sets:
                     section:
+                      display: Section
                       icon: addon-boxes-stack
                       fields:
                         -
+                          handle: name
                           field:
                             type: text
                             display: Name
@@ -34,51 +35,41 @@ tabs:
                               - alpha_dash
                             placeholder: 'Block Name'
                             instructions: 'The block name'
-                          handle: name
                         -
+                          handle: caption
                           field:
                             type: text
                             display: Caption
-                          handle: caption
                         -
-                          field:
-                            type: text
-                            display: Description
                           handle: description
-                        -
                           field:
-                            type: entries
-                            display: 'Section Items'
-                            listable: true
-                            sortable: false
-                            validate:
-                              - required
-                            instructions: 'The collection items for this block'
-                          handle: section_items
-                      display: Section
-                  display: 'New Set Group'
-              type: replicator
-              display: Sections
-              instructions: 'The blocks used for this page'
-            handle: sections
+                            escape_markup: true
+                            type: markdown
+                            display: Description
+                        -
+                          handle: images
+                          field:
+                            container: google_cloud
+                            type: assets
+                            display: Images
   sidebar:
     display: Sidebar
     sections:
       -
         fields:
           -
+            handle: slug
             field:
               type: slug
-              validate: 'max:200'
               localizable: true
-            handle: slug
+              validate: 'max:200'
           -
+            handle: parent
             field:
               type: entries
-              listable: false
-              max_items: 1
               collections:
                 - pages
+              max_items: 1
+              listable: false
               localizable: true
-            handle: parent
 title: Page
