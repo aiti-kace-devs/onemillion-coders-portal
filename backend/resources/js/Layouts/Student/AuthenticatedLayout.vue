@@ -203,6 +203,7 @@ const user = computed(() => auth.value.user ?? {});
 
                     <template v-if="user.isAdmitted">
                         <SidebarNavLink
+                            v-if="!user.isOnlineCourse"
                             :active="route().current('student.attendance.show')"
                             :href="route('student.attendance.show')"
                             :label="'Attendance'"

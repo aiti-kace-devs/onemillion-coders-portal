@@ -40,7 +40,7 @@ class StudentOperation extends Controller
     public function dashboard()
     {
         $user = Auth::user();
-        $isOnWaitlist = ! $user->registered_course
+        $isOnWaitlist = !$user->registered_course
             && \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
                 ->whereIn('status', ['pending', 'notified'])
                 ->exists();
@@ -67,7 +67,7 @@ class StudentOperation extends Controller
         // Determine the course to display: registered course, or waitlisted course
         $courseId = $user->registered_course;
 
-        if (! $courseId && $isOnWaitlist) {
+        if (!$courseId && $isOnWaitlist) {
             $courseId = \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
                 ->whereIn('status', ['pending', 'notified'])
                 ->value('course_id');
@@ -80,7 +80,7 @@ class StudentOperation extends Controller
             if ($fullCourse) {
                 // For waitlisted students (not enrolled), show only the programme name
                 $courseName = $fullCourse->course_name;
-                if (! $isEnrolled && $isOnWaitlist && $fullCourse->programme) {
+                if (!$isEnrolled && $isOnWaitlist && $fullCourse->programme) {
                     $courseName = $fullCourse->programme->title;
                 }
 
@@ -150,7 +150,7 @@ class StudentOperation extends Controller
 
         // Get course details if available in user's record
         $course = null;
-        if (! empty($user->exam)) {
+        if (!empty($user->exam)) {
             // Assuming 'exam' field in users table holds the course_id
             $course = Course::find($user->registered_course);
         }
@@ -192,13 +192,13 @@ class StudentOperation extends Controller
         $verifyBaseUrl = rtrim((string) config('app.quiz_frontend_url', ''), '/');
         $parentOrigin = rtrim((string) config('app.url', ''), '/');
         $embedUrl = $verifyBaseUrl !== ''
-            ? "$verifyBaseUrl/verify-user?ghcard_number=".urlencode($user->ghcard).'&token='.urlencode($token).'&embed=1&parent_origin='.urlencode($parentOrigin)
+            ? "$verifyBaseUrl/verify-user?ghcard_number=" . urlencode($user->ghcard) . '&token=' . urlencode($token) . '&embed=1&parent_origin=' . urlencode($parentOrigin)
             : null;
 
         return Inertia::render('Student/Verification', [
             'verification_status' => $verificationStatus,
             'verification_embed_url' => $embedUrl,
-            'verification_embed_available' => ! empty($embedUrl),
+            'verification_embed_available' => !empty($embedUrl),
         ]);
     }
 
@@ -211,6 +211,34 @@ class StudentOperation extends Controller
             'success' => true,
             'data' => $status,
         ]);
+    }
+
+    public function verification_image()
+    {
+        $user = Auth::guard('web')->user();
+        $status = app(GhanaCardService::class)->buildStatus($user);
+
+        if (!data_get($status, 'image.available')) {
+            abort(404);
+        }
+
+        $disk = data_get($status, 'image.storage_disk');
+        $path = data_get($status, 'image.storage_path');
+
+        if (!Storage::disk($disk)->exists($path)) {
+            abort(404);
+        }
+
+        if (method_exists(Storage::disk($disk), 'temporaryUrl')) {
+            try {
+                return redirect(Storage::disk($disk)->temporaryUrl($path, now()->addMinutes(15)));
+            } catch (\Exception $e) {
+                Log::warning("Failed to generate temporary URL for verification image: " . $e->getMessage());
+            }
+        }
+
+        return response(Storage::disk($disk)->get($path))
+            ->header('Content-Type', Storage::disk($disk)->mimeType($path));
     }
 
     public function level_assessment()
@@ -241,7 +269,7 @@ class StudentOperation extends Controller
 
         $user = Auth::guard('web')->user();
         $eligibilityStatus = $user->examEligibilityStatus($id);
-        if (! $eligibilityStatus['status']) {
+        if (!$eligibilityStatus['status']) {
             return redirect(route('student.exam.index'))->with([
                 'flash' => $eligibilityStatus['message'],
                 'key' => 'error',
@@ -261,7 +289,7 @@ class StudentOperation extends Controller
         $user = Auth::guard('web')->user();
         $eligibilityStatus = $user->examEligibilityStatus($id);
 
-        if (! $eligibilityStatus['status']) {
+        if (!$eligibilityStatus['status']) {
             return response()->json([
                 'status' => 'false',
                 'message' => $eligibilityStatus['message'],
@@ -351,7 +379,7 @@ class StudentOperation extends Controller
             ]);
         }
 
-        if ($user_exam && ! $user_exam->started) {
+        if ($user_exam && !$user_exam->started) {
             $user_exam->update(['started' => Carbon::now()->toDateTimeString()]);
         }
         $data = ['status' => 'true', 'message' => 'started successfully'];
@@ -398,19 +426,19 @@ class StudentOperation extends Controller
         for ($i = 1; $i <= $request->index; $i++) {
             // set exam_set on first iteration
 
-            if (isset($data['question'.$i])) {
-                $q = OexQuestionMaster::where('id', $data['question'.$i])
+            if (isset($data['question' . $i])) {
+                $q = OexQuestionMaster::where('id', $data['question' . $i])
                     ->get()
                     ->first();
                 if ($i == 1) {
                     $exam_set_id = $q->exam_set_id;
                 }
 
-                if ($q->ans == $data['ans'.$i]) {
-                    $result[$data['question'.$i]] = 'YES';
+                if ($q->ans == $data['ans' . $i]) {
+                    $result[$data['question' . $i]] = 'YES';
                     $yes_ans++;
                 } else {
-                    $result[$data['question'.$i]] = 'NO';
+                    $result[$data['question' . $i]] = 'NO';
                     $no_ans++;
                 }
             }
@@ -481,14 +509,14 @@ class StudentOperation extends Controller
 
         $exam = Oex_exam_master::where('id', $id)->first();
 
-        if (! $exam) {
+        if (!$exam) {
             abort(404);
         }
 
         $exam->formatted_exam_date = Carbon::parse($exam->exam_date)->format(config('app.fulldate_format'));
 
         $showResultsToStudents = config(SHOW_RESULTS_TO_STUDENTS, false);
-        if (! $showResultsToStudents) {
+        if (!$showResultsToStudents) {
             return redirect()
                 ->route('student.results')
                 ->with([
@@ -502,7 +530,7 @@ class StudentOperation extends Controller
             ->latest()
             ->first();
 
-        if (! $result) {
+        if (!$result) {
             return redirect()
                 ->route('student.results')
                 ->with([
@@ -591,7 +619,7 @@ class StudentOperation extends Controller
             $admission = UserAdmission::where('user_id', $user->userId)->firstOrFail();
             $changingSession = $admission->confirmed && $admission->session;
 
-            if ($changingSession && ! config(ALLOW_SESSION_CHANGE, false)) {
+            if ($changingSession && !config(ALLOW_SESSION_CHANGE, false)) {
 
                 return redirect()->back()->with([
                     'flash' => 'Unable to change session at this time. Contact administrator',
@@ -601,7 +629,7 @@ class StudentOperation extends Controller
             $courseDetails = Course::find($admission->course_id);
             $session = CourseSession::where('course_id', $courseDetails->id)->where('id', $data['session_id'])->first();
 
-            if (! $session) {
+            if (!$session) {
                 return redirect()->back()->with([
                     'flash' => 'Unable to confirm session. Try again later',
                     'key' => 'error',
@@ -621,7 +649,7 @@ class StudentOperation extends Controller
             $admission->session = $session->id;
             $admission->save();
 
-            if (! $changingSession) {
+            if (!$changingSession) {
                 AdmitStudentJob::dispatch($admission);
                 activity('user_admission')
                     ->causedBy($user)
@@ -673,7 +701,7 @@ class StudentOperation extends Controller
                 ]);
         }
 
-        if (! $user->userAssessment?->completed) {
+        if (!$user->userAssessment?->completed) {
             return redirect()
                 ->route('student.application-status')
                 ->with([
@@ -696,7 +724,7 @@ class StudentOperation extends Controller
         $user = Auth::guard('web')->user();
 
         $branch = Branch::find($branch_id);
-        if (! $branch) {
+        if (!$branch) {
             return redirect()->back()->with('error', 'Branch not found');
         }
 
@@ -716,7 +744,7 @@ class StudentOperation extends Controller
         $branch = Branch::find($branchId);
         $centre = Centre::find($centreId);
 
-        if (! $branch || ! $centre) {
+        if (!$branch || !$centre) {
             return redirect()->back()->with('error', 'Invalid selection');
         }
 
@@ -735,7 +763,7 @@ class StudentOperation extends Controller
     // Update course selection
     public function update_course(Request $request)
     {
-        if (! config('ALLOW_COURSE_CHANGE', false)) {
+        if (!config('ALLOW_COURSE_CHANGE', false)) {
             return redirect()
                 ->back()
                 ->with([
@@ -746,7 +774,7 @@ class StudentOperation extends Controller
 
         $user = Auth::guard('web')->user();
 
-        if (! $user->userAssessment?->completed) {
+        if (!$user->userAssessment?->completed) {
             return redirect()
                 ->route('student.application-status')
                 ->with([
@@ -778,7 +806,7 @@ class StudentOperation extends Controller
         $oldCourse = Course::find($user->registered_course);
         $newCourse = Course::find($request->course_id);
 
-        if (! $newCourse) {
+        if (!$newCourse) {
             return redirect()
                 ->back()
                 ->with([
@@ -833,7 +861,7 @@ class StudentOperation extends Controller
             return response()->json(
                 [
                     'success' => false,
-                    'message' => 'Error: '.$e->getMessage(),
+                    'message' => 'Error: ' . $e->getMessage(),
                 ],
                 500,
             );
@@ -933,8 +961,8 @@ class StudentOperation extends Controller
 
             // Only prepend 'GHA-' if it's missing to avoid 'GHA-GHA-...'
             $ghValue = $request->input('ghcard');
-            if (! empty($ghValue) && ! str_starts_with($ghValue, 'GHA-')) {
-                $request->merge(['ghcard' => 'GHA-'.$ghValue]);
+            if (!empty($ghValue) && !str_starts_with($ghValue, 'GHA-')) {
+                $request->merge(['ghcard' => 'GHA-' . $ghValue]);
             }
         } else {
             $rules['ghcard'] = ['sometimes', 'string', 'max:20', Rule::unique('users', 'ghcard')->ignore($user->id)];
@@ -1018,7 +1046,7 @@ class StudentOperation extends Controller
     {
         $questionnaire = Questionnaire::where('code', $code)->first();
 
-        if (! $questionnaire) {
+        if (!$questionnaire) {
             return redirect(route('student.assessment.index'))->with(
                 [
                     'flash' => 'Questionnaire not found.',
@@ -1029,7 +1057,7 @@ class StudentOperation extends Controller
 
         $user = Auth::guard('web')->user();
 
-        if (! $user->isAdmitted() && ! $user->hasAttendance()) {
+        if (!$user->isAdmitted() && !$user->hasAttendance()) {
             return redirect(route('student.assessment.index'))->with(
                 [
                     'flash' => 'You are not allowed to access this form.',
@@ -1127,7 +1155,7 @@ class StudentOperation extends Controller
 
                 $attributes[$fieldKey] = Str::remove('_id', Str::remove('response_data.', $fieldKey, true));
 
-                if (! empty($field['validators']['required'])) {
+                if (!empty($field['validators']['required'])) {
                     $rules[] = 'required';
                     $customMessages["{$fieldKey}.required"] = 'This field is required.';
                 }
@@ -1156,8 +1184,8 @@ class StudentOperation extends Controller
                 }
 
                 $validationRules[$fieldKey] = implode('|', $rules);
-                $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|'.$field['rules'] ?? '' : '';
-                $validationRules[$fieldKey] = $validationRules[$fieldKey].$additionRules;
+                $additionRules = Str::length($field['rules'] ?? '') > 0 ? '|' . $field['rules'] ?? '' : '';
+                $validationRules[$fieldKey] = $validationRules[$fieldKey] . $additionRules;
             }
         }
 
@@ -1193,14 +1221,14 @@ class StudentOperation extends Controller
 
         // Check which instructors haven't been filled yet
         $yetToComplete = collect($existing['selected_instructors'] ?? [])->filter(function ($id) use ($existing) {
-            return ! in_array($id, $existing['completed_instructors'] ?? []);
+            return !in_array($id, $existing['completed_instructors'] ?? []);
         })->values()->all();
 
-        $hasNextInstructor = ($isInstructorQuestions || $isInstructorSelect) && ! empty($yetToComplete);
+        $hasNextInstructor = ($isInstructorQuestions || $isInstructorSelect) && !empty($yetToComplete);
 
         // remaining sections left to complete
         $remainingSections = collect($questionnaire->schema)->filter(function ($section) use ($existing) {
-            return ! isset($existing[$section['title']]);
+            return !isset($existing[$section['title']]);
         })->keys()->all();
 
         $isSubmitted = count($remainingSections) === 0 && count($yetToComplete) === 0;
@@ -1215,7 +1243,7 @@ class StudentOperation extends Controller
             'status' => true,
             'progress' => [
                 'is_submitted' => $isSubmitted,
-                'next_section' => ! $isSubmitted ? ($remainingSections[0] ?? null) : null,
+                'next_section' => !$isSubmitted ? ($remainingSections[0] ?? null) : null,
                 'next_instructor' => $hasNextInstructor ? $yetToComplete[0] : false,
                 'instructor_section' => $hasNextInstructor ? $sectionIndex : false,
                 'instructor_button_text' => ($sectionIndex >= $totalSections - 1 && count($yetToComplete) === 1) ? 'Submit' : 'Save & Next',
@@ -1326,7 +1354,7 @@ class StudentOperation extends Controller
             ->inRandomOrder()
             ->first();
 
-        if (! $question) {
+        if (!$question) {
             // complete assessment
             $this->completeAssessment($user, $assessment, false);
 
@@ -1366,7 +1394,7 @@ class StudentOperation extends Controller
             ->where('completed', false)
             ->first();
 
-        if (! $assessment) {
+        if (!$assessment) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'No active assessment found.',
@@ -1482,7 +1510,7 @@ class StudentOperation extends Controller
             ->where('completed', false)
             ->first();
 
-        if (! $assessment) {
+        if (!$assessment) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'No active assessment found.',

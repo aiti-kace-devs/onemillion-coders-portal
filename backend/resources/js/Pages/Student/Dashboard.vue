@@ -418,7 +418,7 @@ const tieredTestTaken = computed(() => {
                             </Link>
 
                             <Link
-                                v-if="user.isAdmitted"
+                                v-if="user.isAdmitted && !user.isOnlineCourse"
                                 :href="route('student.attendance.show')"
                                 class="block h-full"
                             >
