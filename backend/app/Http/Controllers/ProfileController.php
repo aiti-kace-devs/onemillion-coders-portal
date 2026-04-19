@@ -37,6 +37,7 @@ class ProfileController extends Controller
             'ghcard_verified' => (bool) data_get($verificationStatus, 'verified', false),
             'ghcard_verification_status' => data_get($verificationStatus, 'verified', false) ? 'verified' : 'pending',
             'ghcard_latest_attempt' => data_get($verificationStatus, 'latest_attempt'),
+            'ghcard_image_url' => data_get($verificationStatus, 'image.url'),
         ]);
 
         $userData = collect($userData)->only([
