@@ -94,16 +94,20 @@ const generateIDCard = () => {
   const canvas = idCardCanvas.value;
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  canvas.width = 340;
-  canvas.height = 214;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const scale = 3;
+  const w = 340;
+  const h = 214;
+  canvas.width = w * scale;
+  canvas.height = h * scale;
+  ctx.scale(scale, scale);
+  ctx.clearRect(0, 0, w, h);
 
   // Draw diagonal gradient background
-  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  const gradient = ctx.createLinearGradient(0, 0, w, h);
   gradient.addColorStop(0, "#fff");
   gradient.addColorStop(1, "#fafafa");
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, w, h);
 
   // Draw 6 semi-transparent watermark logos evenly distributed
   const watermark = new Image();
@@ -113,8 +117,8 @@ const generateIDCard = () => {
     const wmRows = 2;
     const wmCols = 3;
     const wmSize = 80;
-    const xSpacing = (canvas.width - wmCols * wmSize) / (wmCols + 1);
-    const ySpacing = (canvas.height - wmRows * wmSize) / (wmRows + 1);
+    const xSpacing = (w - wmCols * wmSize) / (wmCols + 1);
+    const ySpacing = (h - wmRows * wmSize) / (wmRows + 1);
     for (let row = 0; row < wmRows; row++) {
       for (let col = 0; col < wmCols; col++) {
         const x = xSpacing + col * (wmSize + xSpacing);
@@ -131,7 +135,7 @@ const generateIDCard = () => {
   function drawForeground() {
     // Draw header
     ctx.fillStyle = "#374151";
-    ctx.fillRect(0, 0, canvas.width, 60);
+    ctx.fillRect(0, 0, w, 60);
 
     // Draw logo image in the header
     const logo = new Image();
@@ -147,8 +151,8 @@ const generateIDCard = () => {
       diagImg.onload = () => {
         const diagWidth = 100;
         const diagHeight = 35;
-        const diagX = canvas.width - 115;
-        const diagY = canvas.height - diagHeight - 10;
+        const diagX = w - 115;
+        const diagY = h - diagHeight - 10;
         ctx.save();
         ctx.globalAlpha = 0.7;
         ctx.drawImage(diagImg, diagX, diagY, diagWidth, diagHeight);
@@ -166,7 +170,7 @@ const generateIDCard = () => {
     const img = new Image();
     img.onload = () => {
       const centerX = 50;
-      const centerY = canvas.height / 2;
+      const centerY = h / 2;
       const radius = 35;
       ctx.save();
       ctx.beginPath();
@@ -215,13 +219,14 @@ const generateIDCard = () => {
       ctx.font = "bold 10px Figtree";
       ctx.fillText("Index No.:", 15, 160);
       ctx.fillStyle = "#000";
-      ctx.font = "bold 10px Figtree";
-      ctx.fillText("2072245", 70, 160);
+      ctx.font = "bold 11px Figtree";
+      ctx.fillText(props.user.student_id || "N/A", 70, 160);
 
       ctx.fillStyle = "#374151";
-      ctx.font = "bold 10px Figtree";
-      ctx.fillText("Cohort:", 140, 160);
+      ctx.font = "11px Figtree";
+      ctx.fillText("Validity:", 15, 180);
       ctx.fillStyle = "#000";
+      ctx.font = "bold 7px Figtree";
       wrapText(
         ctx,
         (props.user.selected_session || "N/A").toUpperCase(),
@@ -245,14 +250,14 @@ const generateIDCard = () => {
       );
 
       ctx.fillStyle = "#374151";
-      ctx.fillRect(0, canvas.height - 8, canvas.width, 5);
+      ctx.fillRect(0, h - 8, w, 5);
 
       // Draw QR code (using QRCode library to canvas)
       const qrCanvas = document.createElement("canvas");
       new window.QRCode(qrCanvas, {
         text: props.user.userId || "0000000000",
-        width: 56,
-        height: 56,
+        width: 56 * scale,
+        height: 56 * scale,
         colorDark: "#000",
         colorLight: "#fff",
         correctLevel: window.QRCode.CorrectLevel.H,
@@ -361,7 +366,7 @@ const downloadIDCard = () => {
         <canvas
           ref="idCardCanvas"
           class="rounded shadow-sm"
-          style="width: 340px; height: 214px"
+          style="width: 510px; height: 321px; max-width: 100%"
         ></canvas>
       </div>
 

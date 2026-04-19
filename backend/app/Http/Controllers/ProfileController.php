@@ -40,6 +40,7 @@ class ProfileController extends Controller
         $userData = collect($userData)->only([
             'id',
             'userId',
+            'student_id',
             'name',
             'student_name',
             'first_name',
