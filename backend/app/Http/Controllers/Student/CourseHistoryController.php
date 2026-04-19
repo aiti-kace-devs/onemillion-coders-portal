@@ -177,7 +177,7 @@ class CourseHistoryController extends Controller
 
         foreach ($admissions as $admission) {
             $course = $admission->course_id ? Course::find($admission->course_id) : null;
-            $status = $admission->confirmed ? 'confirmed' : 'admitted';
+            $status = 'admitted';
             $startedAt = $admission->confirmed ?: $admission->created_at;
 
             $historyRow = OldAdmission::where('user_id', $admission->user_id)
@@ -199,15 +199,23 @@ class CourseHistoryController extends Controller
                 continue;
             }
 
-            OldAdmission::create([
-                'user_id'        => $admission->user_id,
-                'course_id'      => $admission->course_id,
-                'centre_id'      => $course?->centre_id,
-                'session'        => $admission->session,
-                'status'         => $status,
-                'support_status' => $admission->user?->support,
-                'started_at'     => $startedAt,
-            ]);
+            try {
+                OldAdmission::create([
+                    'user_id'        => $admission->user_id,
+                    'course_id'      => $admission->course_id,
+                    'centre_id'      => $course?->centre_id,
+                    'session'        => $admission->session,
+                    'status'         => $status,
+                    'support_status' => $admission->user?->support,
+                    'started_at'     => $startedAt,
+                ]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to sync course history row', [
+                    'user_id' => $admission->user_id,
+                    'course_id' => $admission->course_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 }
