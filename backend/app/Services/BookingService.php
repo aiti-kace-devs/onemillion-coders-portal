@@ -20,6 +20,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Log;
 
 class BookingService
 {
@@ -48,29 +49,6 @@ class BookingService
         $programme = $course->programme;
         $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
 
-        // Handle In Person courses
-        if ($isInPerson) {
-            $user->registered_course = $course->id;
-            $user->shortlist = true;
-            $user->save();
-
-            $admission = UserAdmission::updateOrCreate(
-                ['user_id' => $user->userId],
-                [
-                    'course_id' => $course->id,
-                    'programme_batch_id' => $batch->id,
-                    'email_sent' => now(),
-                    'confirmed' => now(),
-                    'session' => $session->id,
-                ]
-            );
-
-            // Remove from waitlist if exists
-            AdmissionWaitlist::where('user_id', $user->userId)->delete();
-
-            return null;
-        }
-
         // Handle regular (Master Session) courses
         $centreId = $course->centre_id;
         $lockKey = "booking_lock:{$centreId}:{$session->id}";
@@ -81,20 +59,21 @@ class BookingService
             return DB::transaction(function () use ($user, $course, $batch, $session, $centreId) {
                 $courseType = Booking::resolveCourseType($course->id);
 
-                // Bypass the cache and compute remaining seats fresh inside the lock
-                $remaining = $this->computeRemainingSeats($centreId, $batch, $session);
-
-                if ($remaining <= 0) {
-                    throw new Exception('Course session is full.');
-                }
-
-                // Check for existing booking in the same batch (idempotency)
+                // Check for existing booking in the same batch first (idempotency).
+                // If it already exists, return it and do not try to consume capacity again.
                 $existing = Booking::where('user_id', $user->userId)
                     ->where('programme_batch_id', $batch->id)
                     ->first();
 
                 if ($existing) {
                     return $existing;
+                }
+
+                // Bypass the cache and compute remaining seats fresh inside the lock
+                $remaining = $this->computeRemainingSeats($centreId, $batch, $session);
+
+                if ($remaining <= 0) {
+                    throw new Exception('Course session is full.');
                 }
 
                 // Cancel any previous booking for a different batch
@@ -116,7 +95,7 @@ class BookingService
                 $user->registered_course = $course->id;
                 $user->shortlist = true;
                 $user->save();
-
+                Log::info("OnlineBookingService: User {$user->userId} booked into course {$course->id} for batch {$batch->id} and session {$session->id}. Remaining seats after booking: " . ($remaining - 1));
                 $admission = UserAdmission::updateOrCreate(
                     ['user_id' => $user->userId],
                     [
@@ -124,6 +103,7 @@ class BookingService
                         'programme_batch_id' => $batch->id,
                         'email_sent' => now(),
                         'confirmed' => now(),
+                        'session' => $session->id,
                     ]
                 );
 
