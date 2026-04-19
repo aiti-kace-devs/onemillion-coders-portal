@@ -79,17 +79,18 @@ const submit = () => {
     </p>
 
     <div :class="showIntroText ? 'mt-6' : ''">
-        <DangerButton @click="showModal">
+        <button @click="showModal" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+           bg-red-50 text-red-700 border border-red-200
+           hover:bg-red-100 hover:border-red-300
+           transition-colors duration-150">
+            <span class="material-symbols-outlined text-sm leading-none">cancel</span>
             {{ (session?.id ?? false) ? "Revoke" : "Decline" }}
             Admission
-        </DangerButton>
+        </button>
     </div>
 
-    <Modal
-        :show="revokeOrDeclineModal"
-        :modalTitle="(session?.id ? 'Revoke' : 'Decline') + ' Admission'"
-        @close="closeModal"
-    >
+    <Modal :show="revokeOrDeclineModal" :modalTitle="(session?.id ? 'Revoke' : 'Decline') + ' Admission'"
+        @close="closeModal">
         <div class="p-6">
             <h2 class="text-lg text-center font-medium text-gray-900">
                 Are you sure you want to
@@ -103,24 +104,15 @@ const submit = () => {
 
             <div class="mt-6 text-left">
                 <InputLabel :value="confirmationLabel" />
-                <TextInput
-                    v-model="confirmationInput"
-                    type="text"
-                    class="mt-1 block w-full"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                />
+                <TextInput v-model="confirmationInput" type="text" class="mt-1 block w-full" autocomplete="off"
+                    autocapitalize="characters" />
             </div>
 
             <div class="mt-6 flex justify-center">
                 <SecondaryButton @click="closeModal">Cancel</SecondaryButton>
 
-                <DangerButton
-                    class="ms-3"
-                    :class="{ 'opacity-25': form.processing || !canConfirm }"
-                    :disabled="form.processing || !canConfirm"
-                    @click="submit"
-                >
+                <DangerButton class="ms-3" :class="{ 'opacity-25': form.processing || !canConfirm }"
+                    :disabled="form.processing || !canConfirm" @click="submit">
                     <template v-if="session?.id ?? false">Revoke</template>
                     <template v-else>Decline</template>
                 </DangerButton>
