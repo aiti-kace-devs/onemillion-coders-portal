@@ -18,7 +18,7 @@ class BookingObserver
     public function created(Booking $booking): void
     {
         $admission = UserAdmission::where('user_id', $booking->user_id)->first();
-        if (!$admission) {
+        if (! $admission) {
             return;
         }
 
@@ -30,9 +30,11 @@ class BookingObserver
         $booking->user_admission_id = $admission->id;
         $booking->saveQuietly();
 
-        // Sync occupancy for the new booking
-        $this->syncOccupancy($booking, 1);
-        $this->clearOccupancyCache($booking);
+        // Online bookings only: in-person rows have no master_session_id / occupancy.
+        if ($booking->master_session_id) {
+            $this->syncOccupancy($booking, 1);
+            $this->clearOccupancyCache($booking);
+        }
     }
 
     /**
@@ -40,8 +42,10 @@ class BookingObserver
      */
     public function deleted(Booking $booking): void
     {
-        $this->syncOccupancy($booking, -1);
-        $this->clearOccupancyCache($booking);
+        if ($booking->master_session_id) {
+            $this->syncOccupancy($booking, -1);
+            $this->clearOccupancyCache($booking);
+        }
     }
 
     /**
@@ -51,7 +55,7 @@ class BookingObserver
     protected function syncOccupancy(Booking $booking, int $change): void
     {
         $batch = $booking->programmeBatch;
-        if (!$batch || !$batch->start_date || !$batch->end_date) {
+        if (! $batch || ! $batch->start_date || ! $batch->end_date) {
             return;
         }
 
@@ -59,7 +63,7 @@ class BookingObserver
         $sessionId = $booking->master_session_id;
         $courseType = $booking->course_type;
 
-        if (!$centreId || !$sessionId || !$courseType) {
+        if (! $centreId || ! $sessionId || ! $courseType) {
             return;
         }
 

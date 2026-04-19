@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdmissionWaitlist;
 use App\Models\Course;
 use App\Models\Form;
 use App\Models\User;
@@ -242,6 +243,7 @@ class RegistrationFormAPIController extends Controller
         }
         if ($selfPaced) {
             $user->support = false;
+            $user->shortlist = true;
             $user->registered_course = $course->id;
             $user->save();
 
@@ -253,6 +255,9 @@ class RegistrationFormAPIController extends Controller
                     'confirmed' => now(),
                 ]
             );
+
+             // Remove from waitlist if exists
+            AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
             return response()->json([
                 'success' => true,

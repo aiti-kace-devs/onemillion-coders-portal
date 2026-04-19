@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   FiShield,
   FiCamera,
@@ -13,8 +14,13 @@ import {
   FiArrowRight,
   FiCreditCard,
 } from "react-icons/fi";
-import LivenessDetection from "../../components/verification/LivenessDetection";
 import { submitGhanaCardVerification } from "../../services/api";
+import { preloadLivenessAssets } from "../../lib/livenessPreload";
+
+const LivenessDetection = dynamic(
+  () => import("../../components/verification/LivenessDetection"),
+  { ssr: false },
+);
 
 const GHANA_CARD_PIN_REGEX = /^GHA-\d{9}-\d$/;
 
@@ -75,7 +81,10 @@ function VerifyUserContent() {
   const [submitError, setSubmitError] = useState(null);
 
   useEffect(() => {
-    if (typeof window === "undefined" || window.parent === window) return;
+    if (typeof window === "undefined" || window.parent === window) {
+      window.document.body.innerHTML = "<p>Please access this page from the student portal.</p>";
+      return;
+    };
 
     //get ghcard number from query param and fill the input
     const ghCardNumber = searchParams.get("ghcard_number");
@@ -121,6 +130,12 @@ function VerifyUserContent() {
       sendParentMessage("verification_failed", message);
     }
   }, [token, sendParentMessage]);
+
+  // Warm MediaPipe WASM + face-landmarker model while the user fills in the PIN,
+  // so the liveness step starts instantly.
+  useEffect(() => {
+    if (step === "pin") preloadLivenessAssets();
+  }, [step]);
 
   const currentStepIndex = STEPS.findIndex((s) => s.key === step);
 
@@ -238,8 +253,8 @@ function VerifyUserContent() {
               <React.Fragment key={s.key}>
                 <div className="flex items-center space-x-2">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${i < currentStepIndex ? "bg-green-500 text-white"
-                      : i === currentStepIndex ? "bg-yellow-400 text-gray-900"
-                        : "bg-gray-100 text-gray-400 "
+                    : i === currentStepIndex ? "bg-yellow-400 text-gray-900"
+                      : "bg-gray-100 text-gray-400 "
                     }`}>
                     {i < currentStepIndex ? (
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -250,8 +265,8 @@ function VerifyUserContent() {
                     )}
                   </div>
                   <span className={`text-xs font-medium hidden sm:block ${i === currentStepIndex ? "text-gray-900"
-                      : i < currentStepIndex ? "text-green-600"
-                        : "text-gray-400"
+                    : i < currentStepIndex ? "text-green-600"
+                      : "text-gray-400"
                     }`}>
                     {s.label}
                   </span>

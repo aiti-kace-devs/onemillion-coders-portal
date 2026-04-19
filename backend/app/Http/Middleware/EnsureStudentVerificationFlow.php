@@ -73,6 +73,7 @@ class EnsureStudentVerificationFlow
             'student.select-session',
             'student.delete-student-admission',
             'api.bookings.*',
+            'api.in-person-enrollment.*',
         ];
 
         foreach ($restrictedPatterns as $pattern) {
