@@ -169,12 +169,12 @@ const greeting = computed(() => {
 
                     <!-- Main Heading -->
                     <div class="flex flex-col">
-                        <h2 class="text-4xl md:text-5xl lg:text-6xl text-gray-900 tracking-tight leading-tight" style="font-family: 'Playfair Display', serif;">
+                        <h2 class="text-3xl md:text-4xl lg:text-4xl text-gray-900 tracking-tight leading-tight" style="font-family: 'Playfair Display', serif;">
                             <span class="font-light">{{ greeting }},</span>
                             <span class="relative inline-block ml-3 font-medium">
                                 {{ firstName }}
                                 <!-- Decorative Underline (Brush/Stroke style) -->
-                                <svg class="absolute -bottom-3 left-0 w-full h-4 text-amber-900/10 pointer-events-none" preserveAspectRatio="none" viewBox="0 0 300 20">
+                                <svg class="absolute -bottom-2 left-0 w-full h-3 text-amber-900/10 pointer-events-none" preserveAspectRatio="none" viewBox="0 0 300 20">
                                     <path d="M5 15 Q 150 5, 295 15" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" />
                                 </svg>
                             </span>
@@ -182,9 +182,8 @@ const greeting = computed(() => {
                     </div>
 
                     <!-- Subtext with accent line -->
-                    <div class="flex items-center gap-4 mt-6">
-                        <!-- <div class="h-[1px] w-8 bg-gray-300"></div> -->
-                        <p class="text-gray-500 font-medium text-lg italic opacity-80">
+                    <div class="flex items-center gap-4 mt-4">
+                        <p class="text-gray-500 font-medium text-base italic opacity-80">
                             It's great to see you again. Here's what's happening today.
                         </p>
                     </div>
