@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\UserAdmission;
-use App\Services\StudentIdGenerator;
 class RegistrationFormAPIController extends Controller
 {
     public function index(Request $request)
@@ -257,18 +256,8 @@ class RegistrationFormAPIController extends Controller
                 ]
             );
 
-<<<<<<< HEAD
-            // Generate student ID for self-paced students
-            $studentId = StudentIdGenerator::generate($user, $course);
-            if ($studentId) {
-                $user->student_id = $studentId;
-                $user->saveQuietly();
-            }
-=======
-             // Remove from waitlist if exists
+            // Remove from waitlist if exists
             AdmissionWaitlist::where('user_id', $user->userId)->delete();
->>>>>>> development
-
             return response()->json([
                 'success' => true,
                 'data' => [

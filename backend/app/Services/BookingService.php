@@ -16,7 +16,6 @@ use App\Models\Programme;
 use App\Models\ProgrammeBatch;
 use App\Models\User;
 use App\Models\UserAdmission;
-use App\Services\StudentIdGenerator;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Cache;
@@ -118,17 +117,8 @@ class BookingService
                     ]
                 );
 
-<<<<<<< HEAD
-                // Generate student ID for students who want support
-                $studentId = StudentIdGenerator::generate($user, $course);
-                if ($studentId) {
-                    $user->student_id = $studentId;
-                    $user->saveQuietly();
-                }
-=======
-                 // Remove from waitlist if exists
+                // Remove from waitlist if exists
                 AdmissionWaitlist::where('user_id', $user->userId)->delete();
->>>>>>> development
 
                 // Clear the cached seat count so the next read reflects this booking
                 Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$session->id}");
