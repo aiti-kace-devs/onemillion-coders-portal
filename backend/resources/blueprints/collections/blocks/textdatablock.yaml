@@ -2,57 +2,69 @@ tabs:
   main:
     display: Main
     sections:
-      -
-        fields:
-          -
-            field:
+      - fields:
+          - field:
               type: text
               required: true
               validate:
                 - required
             handle: title
-          -
-            import: details
+          - import: details
             prefix: text_data_
-          -
-            field:
+          - field:
               sets:
                 new_set_group:
                   sets:
                     metric:
                       fields:
-                        -
-                          field:
+                        - field:
                             type: icon
                             width: 33
                             display: Icon
                           handle: icon_field
-                        -
-                          field:
+                        - field:
                             type: text
                             width: 33
                             display: Number
                           handle: number
-                        -
-                          field:
+                        - field:
                             type: text
                             width: 33
                             display: Description
                           handle: description
                       display: Metric
-                  display: 'New Set Group'
+                  display: "New Set Group"
               type: replicator
               display: Metrics
             handle: metrics
+          - field:
+              type: text
+              display: "Users registered"
+              instructions: "Automated total from the database (scheduled job), shown as K/M when large. Read-only — use Metrics above for labels and presentation only."
+              read_only: true
+              localizable: false
+            handle: live_users_registered
+          - field:
+              type: integer
+              display: "Districts"
+              instructions: "Active districts count — maintained by the system."
+              read_only: true
+              localizable: false
+            handle: live_districts
+          - field:
+              type: text
+              display: "Students trained"
+              instructions: "Confirmed admissions count (K/M when large) — maintained by the system."
+              read_only: true
+              localizable: false
+            handle: live_students_trained
   sidebar:
     display: Sidebar
     sections:
-      -
-        fields:
-          -
-            field:
+      - fields:
+          - field:
               type: slug
-              validate: 'max:200'
+              validate: "max:200"
               localizable: true
             handle: slug
 title: Metrics
