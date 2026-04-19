@@ -233,6 +233,23 @@ class User extends Authenticatable
         return $sessionRecord?->course_time ?? $sessionRecord?->time ?? '';
     }
 
+    public function getSessionNameAttribute()
+    {
+        $admission = $this->admission;
+        if (!$admission)
+            return '';
+
+        $sessionRecord = $admission->courseSession;
+
+        // If no direct session record, check for a booking record
+        if (!$sessionRecord && $admission->booking) {
+            $sessionRecord = $admission->booking->session;
+        }
+
+        // Try 'name' (CourseSession), 'master_name' (MasterSession), 'session' (fallback) or 'title' (legacy)
+        return $sessionRecord?->name ?? $sessionRecord?->master_name ?? $sessionRecord?->session ?? $sessionRecord?->title ?? $admission->session ?? '';
+    }
+
     /**
      * Get the validity period for the ID card
      */

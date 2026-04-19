@@ -301,7 +301,9 @@ const downloadIDCard = () => {
                 {{ user.student_name }}
               </div>
               <div class="text-sm text-gray-500">{{ user.course_name }}</div>
-              <div class="text-sm text-gray-400">{{ user.selected_session }} Cohort</div>
+              <div class="text-sm text-gray-400">
+                {{ user.session_dates }} {{ user.session_name }} Session {{ user.session_time ? `(${user.session_time})` : '' }}
+              </div>
             </div>
             <div class="flex items-center gap-4">
               <button
