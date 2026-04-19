@@ -188,54 +188,61 @@ const generateIDCard = () => {
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
       ctx.save();
-      wrapText(ctx, "STUDENT ID CARD", 120, 25, 200, 18, "bold 14px Figtree");
+      wrapText(ctx, "STUDENT ID CARD", 145, 25, 200, 18, "bold 14px Figtree");
       ctx.restore();
 
       ctx.fillStyle = "#000";
-      ctx.font = "bold 12px Figtree";
+      ctx.font = "bold 15px Figtree";
       wrapText(
         ctx,
         (props.user.student_name || "N/A").toUpperCase(),
         105,
         70,
-        200,
+        220,
         18,
         "bold 15px Figtree"
       );
 
       ctx.fillStyle = "#000";
-      ctx.font = "bold 7px Figtree";
+      ctx.font = "bold 10px Figtree";
       wrapText(
         ctx,
         (props.user.course_name || "N/A").toUpperCase(),
         105,
-        110,
-        200,
+        105,
+        220,
         14,
         "bold 10px Figtree"
       );
 
+      // Row 1: Index No & Cohort
       ctx.fillStyle = "#374151";
-      ctx.font = "11px Figtree";
-      ctx.fillText("Index No.:", 15, 160);
+      ctx.font = "bold 9px Figtree";
+      ctx.fillText("Index No.:", 15, 145);
       ctx.fillStyle = "#000";
-      ctx.font = "bold 11px Figtree";
-      ctx.fillText(props.user.student_id || "N/A", 70, 160);
+      ctx.font = "bold 10px Figtree";
+      ctx.fillText(props.user.student_id || "N/A", 65, 145);
 
       ctx.fillStyle = "#374151";
-      ctx.font = "11px Figtree";
-      ctx.fillText("Validity:", 15, 180);
+      ctx.font = "bold 9px Figtree";
+      ctx.fillText("Cohort:", 145, 145);
       ctx.fillStyle = "#000";
-      ctx.font = "bold 7px Figtree";
-      wrapText(
-        ctx,
-        "July, 2025 - September, 2025".toUpperCase(),
-        70,
-        180,
-        200,
-        14,
-        "bold 10px Figtree"
-      );
+      ctx.font = "bold 9px Figtree";
+      // Dates part
+      ctx.fillText((props.user.session_dates || "N/A").toUpperCase(), 185, 145);
+      // Time part (slightly below)
+      if (props.user.session_time) {
+          ctx.font = "bold 8px Figtree";
+          ctx.fillText(`(${props.user.session_time.toUpperCase()})`, 185, 157);
+      }
+
+      // Row 2: Validity
+      ctx.fillStyle = "#374151";
+      ctx.font = "bold 9px Figtree";
+      ctx.fillText("Validity:", 15, 175);
+      ctx.fillStyle = "#000";
+      ctx.font = "bold 9px Figtree";
+      ctx.fillText((props.user.validity_period || "N/A").toUpperCase(), 65, 175);
 
       ctx.fillStyle = "#374151";
       ctx.fillRect(0, h - 8, w, 5);
@@ -254,7 +261,7 @@ const generateIDCard = () => {
         ctx.drawImage(qrCanvas, 250, 120, 56, 56);
       }, 100); // Wait for QR to render
     };
-    img.src = "/assets/images/Oval.png";
+    img.src = props.user.ghcard_image_url || "/assets/images/Oval.png";
   }
 };
 
@@ -284,7 +291,7 @@ const downloadIDCard = () => {
           <div class="flex flex-col md:flex-row items-center gap-6 relative">
             <div class="rounded-full shadow w-24 h-24 overflow-hidden">
               <img
-                :src="`/assets/images/Oval.png`"
+                :src="user.ghcard_image_url || `/assets/images/Oval.png`"
                 class="h-full w-full object-cover rounded-full"
                 alt="profile photo"
               />
@@ -294,7 +301,9 @@ const downloadIDCard = () => {
                 {{ user.student_name }}
               </div>
               <div class="text-sm text-gray-500">{{ user.course_name }}</div>
-              <div class="text-sm text-gray-400">{{ user.selected_session }} Session</div>
+              <div class="text-sm text-gray-400">
+                {{ user.session_dates }} {{ user.session_name }} Session {{ user.session_time ? `(${user.session_time})` : '' }}
+              </div>
             </div>
             <div class="flex items-center gap-4">
               <button

@@ -201,65 +201,8 @@ const illustratedFlowSteps = computed(() => {
                     </div>
                 </div>
 
-                <div class="p-4 sm:p-5 lg:p-6 bg-white sm:rounded-lg shadow w-full max-w-none">
-                    <p class="font-medium text-base sm:text-lg text-gray-900 mb-0.5">
-                        Expected Flow
-                    </p>
-                    <p class="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4 leading-snug">
-                        Same order and numbering as the steps below (step 1 is registration; you would not have this portal account without signing up).
-                        {{
-                            showConfirmationInFlow
-                                ? " This path includes confirmation after booking when an admission record exists."
-                                : " A confirmation step appears after your admission record is created, if applicable."
-                        }}
-                    </p>
-
-                    <div
-                        class="w-full min-w-0 mb-4 sm:mb-5 overflow-x-auto sm:overflow-x-visible -mx-1 px-1 sm:mx-0 sm:px-0"
-                    >
-                        <div
-                            class="grid w-full gap-1.5 sm:gap-2 md:gap-3"
-                            :class="
-                                showConfirmationInFlow
-                                    ? 'grid-cols-6 min-w-[360px] sm:min-w-[420px] md:min-w-0'
-                                    : 'grid-cols-5 min-w-[280px] sm:min-w-0'
-                            "
-                        >
-                        <div
-                            v-for="step in illustratedFlowSteps"
-                            :key="step.key"
-                            class="rounded-lg sm:rounded-xl border p-2 sm:p-3 md:p-4 flex flex-col items-center text-center transition-shadow shadow-sm hover:shadow-md min-h-[118px] sm:min-h-[132px] md:min-h-[148px]"
-                            :class="stepCardClass(step.key)"
-                        >
-                            <span
-                                :class="stepIconClass(step.key)"
-                                class="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full mb-1.5 sm:mb-2 md:mb-3 shrink-0"
-                            >
-                                <span
-                                    class="material-symbols-outlined text-[18px] sm:text-[20px] md:text-[22px] leading-none"
-                                    >{{ step.icon }}</span
-                                >
-                            </span>
-                            <p
-                                class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-gray-500 mb-0.5"
-                            >
-                                Step {{ step.n }}
-                            </p>
-                            <p
-                                class="font-semibold text-[11px] sm:text-xs md:text-sm text-gray-900 leading-tight"
-                            >
-                                {{ step.label }}
-                            </p>
-                            <p
-                                class="text-[10px] sm:text-xs text-gray-600 mt-1 leading-snug line-clamp-3 sm:line-clamp-none"
-                            >
-                                {{ step.hint }}
-                            </p>
-                        </div>
-                        </div>
-                    </div>
-
-                    <p class="font-medium text-base sm:text-lg text-gray-900 pt-1 border-t border-gray-100">
+                <div class="p-6 bg-white sm:rounded-lg shadow">
+                    <p class="font-medium text-lg text-gray-900">
                         Application Status
                     </p>
 

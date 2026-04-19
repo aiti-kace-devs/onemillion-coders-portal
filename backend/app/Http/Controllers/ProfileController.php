@@ -19,7 +19,7 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
-        $user = $request->user()->load(['admission.course', 'admission.courseSession']);
+        $user = $request->user()->load(['admission.course', 'admission.courseSession', 'admission.booking.session', 'admission.programmeBatch']);
         $verificationStatus = app(GhanaCardService::class)->buildStatus($user);
 
         $userData = array_merge($user->toArray(), [
@@ -27,10 +27,15 @@ class ProfileController extends Controller
             'student_name' => $user->student_name,
             'course_name' => $user->course_name,
             'selected_session' => $user->selected_session,
+            'session_dates' => $user->session_dates,
+            'session_time' => $user->session_time_value,
+            'session_name' => $user->session_name,
+            'validity_period' => $user->validity_period,
             'verification_date' => $user->verification_date,
             'ghcard_verified' => (bool) data_get($verificationStatus, 'verified', false),
             'ghcard_verification_status' => data_get($verificationStatus, 'verified', false) ? 'verified' : 'pending',
             'ghcard_latest_attempt' => data_get($verificationStatus, 'latest_attempt'),
+            'ghcard_image_url' => data_get($verificationStatus, 'image.url'),
         ]);
 
         $userData = collect($userData)->only([
@@ -54,11 +59,16 @@ class ProfileController extends Controller
             'registered_course',
             'course_name',
             'selected_session',
+            'session_dates',
+            'session_time',
+            'session_name',
+            'validity_period',
             'verification_date',
             'ghcard_verified',
             'ghcard_verification_status',
             'ghcard_latest_attempt',
-            'isAdmitted',
+            'ghcard_image_url',
+            'isAdmitted'
         ])->toArray();
 
         return Inertia::render('Student/Profile/Edit', [
