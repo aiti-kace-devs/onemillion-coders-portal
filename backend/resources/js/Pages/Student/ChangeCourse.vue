@@ -19,11 +19,28 @@ const pageTitle = computed(() => {
 });
 
 const courseSelectionUrl = computed(() => {
-    const baseUrl = quiz_frontend_url || '';
-    const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const baseUrl = quiz_frontend_url || "";
+    const base = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    if (!base) {
+        return "";
+    }
     const token = quiz_jwt_token;
     const path = `${base}/courses/${user.userId}`;
-    return token ? `${path}?token=${token}` : path;
+    try {
+        const u = new URL(path);
+        if (token) {
+            u.searchParams.set("token", token);
+        }
+        u.searchParams.set("embed", "true");
+        return u.toString();
+    } catch {
+        const qs = new URLSearchParams();
+        if (token) {
+            qs.set("token", token);
+        }
+        qs.set("embed", "true");
+        return `${path}?${qs.toString()}`;
+    }
 });
 
 const allowedCoursePickerOrigins = computed(() => {
@@ -39,7 +56,8 @@ const allowedCoursePickerOrigins = computed(() => {
 });
 
 function onCoursePickerMessage(event) {
-    if (event.data?.type !== "omcp-in-person-enrolled") {
+    const t = event.data?.type;
+    if (t !== "omcp-in-person-enrolled" && t !== "omcp-student-enrollment-complete") {
         return;
     }
     const redirectUrl = event.data.redirectUrl;
@@ -82,10 +100,9 @@ onUnmounted(() => {
       <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ pageTitle }}</h2>
     </template>
 
-    <div :class="isShortlisted ? 'py-12 px-4' : ''">
-      <div :class="isShortlisted ? 'max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6' : ''">
-        <!-- Case 1: Shortlisted - Show Read-Only -->
-        <div v-if="isShortlisted" class="bg-white shadow rounded-lg p-6">
+    <div v-if="isShortlisted" class="py-12 px-4">
+      <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="bg-white shadow rounded-lg p-6">
           <div class="max-w-xl">
             <h3 class="font-medium text-lg text-gray-900 border-b pb-2 mb-4">Registered Course</h3>
             <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded text-blue-700">
@@ -95,19 +112,25 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-
-        <!-- Case 2: Not Shortlisted - Show Iframe (for both Choose and Change) -->
-        <div v-else class="h-[calc(100vh-70px)] overflow-hidden relative">
-            <div class="-mt-[70px]">
-                <iframe
-                    :src="courseSelectionUrl"
-                    class="w-full h-[calc(100vh+6px)] border-0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen
-                ></iframe>
-            </div>
-        </div>
       </div>
+    </div>
+
+    <div v-else class="relative w-full flex-1 min-h-[38vh]">
+      <p
+        v-if="!courseSelectionUrl"
+        class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+      >
+        Course selection is not configured (missing quiz frontend URL). Set
+        <code class="rounded bg-white/80 px-1">QUIZ_FRONTEND_URL</code>
+        in the portal environment and reload.
+      </p>
+      <iframe
+        v-else
+        :src="courseSelectionUrl"
+        class="absolute inset-0 h-full w-full border-0 bg-gray-100"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+      ></iframe>
     </div>
   </AuthenticatedLayout>
 </template>

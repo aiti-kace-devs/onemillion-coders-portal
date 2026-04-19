@@ -87,5 +87,6 @@ class Kernel extends HttpKernel
         'is_not_admitted' => \App\Http\Middleware\CheckIfStudentNotIsAdmitted::class,
         'user.token' => \App\Http\Middleware\ResolveUserFromToken::class,
         'student.verification.flow' => \App\Http\Middleware\EnsureStudentVerificationFlow::class,
+        'student.onboarding' => \App\Http\Middleware\EnsureStudentOnboardingStep::class,
     ];
 }

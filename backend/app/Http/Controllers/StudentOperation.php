@@ -6,6 +6,7 @@ use App\Events\AdmissionDeleted;
 use App\Jobs\CreateStudentAdmissionJob;
 use App\Jobs\TestSubmittedJob;
 use App\Models\AdmissionRejection;
+use App\Models\AppConfig;
 use App\Models\Branch;
 use App\Models\Centre;
 use App\Models\Course;
@@ -169,7 +170,7 @@ class StudentOperation extends Controller
         $user_admission = UserAdmission::where('user_id', $user->userId)->first();
         $user_assessment = UserAssessment::where('user_id', $user->id)->first();
 
-        $userFields = ['id', 'name', 'registered_course', 'shortlist'];
+        $userFields = ['id', 'name', 'registered_course', 'shortlist', 'application_review_completed_at'];
         if (config(SHOW_STUDENT_LEVEL, false)) {
             $userFields[] = 'student_level';
         }
@@ -182,6 +183,64 @@ class StudentOperation extends Controller
             'user_assessment' => $user_assessment ? $user_assessment->only(['id', 'completed']) : null,
             'verification_status' => $verificationStatus,
         ]);
+    }
+
+    public function application_review()
+    {
+        $user = Auth::guard('web')->user();
+
+        $completed = $user->application_review_completed_at !== null;
+
+        $rawReview = trim((string) AppConfig::getValue(APPLICATION_REVIEW_IFRAME_URL, ''));
+        if ($rawReview === '') {
+            $rawReview = trim((string) config('app.application_review_embed_url', ''));
+        }
+
+        $reviewBase = $this->resolveApplicationReviewIframeBase($rawReview);
+
+        $parentOrigin = rtrim((string) config('app.url', ''), '/');
+
+        $embedUrl = null;
+        if ($reviewBase !== null && $reviewBase !== '') {
+            $token = app(JwtService::class)->generate($user->id);
+            $embedUrl = $reviewBase.(str_contains($reviewBase, '?') ? '&' : '?')
+                .http_build_query([
+                    'embed' => '1',
+                    'parent_origin' => $parentOrigin,
+                    'token' => $token,
+                ]);
+        }
+
+        return Inertia::render('Student/ApplicationReview', [
+            'application_review_embed_url' => $embedUrl,
+            'application_review_embed_available' => $embedUrl !== null,
+            'application_review_completed' => $completed,
+            'application_review_completed_at' => $user->application_review_completed_at?->toIso8601String(),
+        ]);
+    }
+
+    public function complete_application_review()
+    {
+        $user = Auth::guard('web')->user();
+
+        if ($user->application_review_completed_at) {
+            return redirect()->route('student.level-assessment');
+        }
+
+        activity('student')
+            ->causedBy($user)
+            ->event('Application review acknowledged')
+            ->log("{$user->name} acknowledged the application review step.");
+
+        $user->application_review_completed_at = now();
+        $user->save();
+
+        return redirect()
+            ->route('student.level-assessment')
+            ->with([
+                'flash' => 'Thank you. You can now continue with the level assessment.',
+                'key' => 'success',
+            ]);
     }
 
     public function verification()
@@ -1640,5 +1699,30 @@ class StudentOperation extends Controller
             'status' => 'success',
             'recommended_courses' => $recommendedCourses,
         ]);
+    }
+
+    /**
+     * Absolute http(s) or scheme-relative URLs are used as entered (trailing slash trimmed for query joining).
+     * Path-only values (e.g. "/application-review") are prefixed with {@see config('app.quiz_frontend_url')} (same base as verification iframe).
+     */
+    protected function resolveApplicationReviewIframeBase(string $raw): ?string
+    {
+        $raw = trim($raw);
+        if ($raw === '') {
+            return null;
+        }
+
+        if (preg_match('#^https?://#i', $raw) || str_starts_with($raw, '//')) {
+            return rtrim($raw, '/');
+        }
+
+        $websiteBase = rtrim((string) config('app.quiz_frontend_url', ''), '/');
+        if ($websiteBase === '') {
+            return null;
+        }
+
+        $path = str_starts_with($raw, '/') ? $raw : '/'.$raw;
+
+        return rtrim($websiteBase.$path, '/');
     }
 }

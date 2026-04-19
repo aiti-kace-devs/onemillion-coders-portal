@@ -3,15 +3,16 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\NotificationController;
 use App\Models\AdmissionWaitlist;
 use App\Models\Course;
 use App\Models\Form;
 use App\Models\User;
+use App\Models\UserAdmission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use App\Models\UserAdmission;
-use App\Http\Controllers\NotificationController;
+
 class RegistrationFormAPIController extends Controller
 {
     public function index(Request $request)
@@ -240,13 +241,14 @@ class RegistrationFormAPIController extends Controller
         $selfPaced = filter_var($request->query('self-paced', 'false'), FILTER_VALIDATE_BOOLEAN);
         $withSupport = filter_var($request->query('with-support', 'false'), FILTER_VALIDATE_BOOLEAN);
 
-        $course = Course::with('programme')
+        $course = Course::with(['programme', 'centre'])
             ->where('id', $data['course_id'])
+            ->where('centre_id', $data['centre_id'])
             ->first();
         if (! $course) {
             return response()->json([
                 'success' => false,
-                'message' => 'Course not found.',
+                'message' => 'Course not found for the selected centre.',
             ], 404);
         }
         if ($selfPaced) {
@@ -264,7 +266,7 @@ class RegistrationFormAPIController extends Controller
                 ]
             );
 
-             // Remove from waitlist if exists
+            // Remove from waitlist if exists
             AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
             NotificationController::notify(
@@ -276,6 +278,7 @@ class RegistrationFormAPIController extends Controller
 
             return response()->json([
                 'success' => true,
+                'redirect_url' => url('/student/dashboard'),
                 'data' => [
                     'message' => 'You have successfully switched to self-paced learning. Resource support has been removed from your registration.',
                 ],
@@ -283,13 +286,22 @@ class RegistrationFormAPIController extends Controller
         }
 
         if ($withSupport) {
-            $user->support = true;
-            $user->save();
+            $centreIsReady = (bool) ($course->centre?->is_ready);
+            if (! $centreIsReady) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Resource (internet & laptop) support is not available for the selected centre at this time. You can try again later',
+                ], 422);
+            }
+
+            // Do not set registered_course, shortlist, or UserAdmission here — that made the
+            // dashboard look "admitted" before the student confirmed cohort + session via POST /api/bookings.
+            // BookingService::book() persists registration and sets support = true after a successful booking.
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'message' => 'You have successfully enabled resource support for your registration.',
+                    'message' => 'Centre-based support is available. Continue to choose your cohort and session.',
                 ],
             ]);
         }
@@ -350,6 +362,7 @@ class RegistrationFormAPIController extends Controller
 
         return response()->json([
             'success' => true,
+            'redirect_url' => url('/student/dashboard'),
             'data' => [
                 'message' => 'Course registration confirmed successfully.',
             ],

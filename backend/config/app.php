@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Str;
 
-
 return [
 
     /*
@@ -249,5 +248,7 @@ return [
     'horizon_path' => env('HORI', 'horizon'),
     'jwt_token' => env('JWT_TOKEN', Str::random(60)),
     'quiz_frontend_url' => env('QUIZ_FRONTEND_URL', ''),
+    // Fallback when AppConfig APPLICATION_REVIEW_IFRAME_URL is empty (prefer Admin → App Config).
+    'application_review_embed_url' => env('APPLICATION_REVIEW_EMBED_URL', ''),
 
 ];
