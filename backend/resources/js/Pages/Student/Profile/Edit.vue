@@ -188,72 +188,70 @@ const generateIDCard = () => {
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
       ctx.save();
-      wrapText(ctx, "STUDENT ID CARD", 120, 25, 200, 18, "bold 14px Figtree");
+      wrapText(ctx, "STUDENT ID CARD", 145, 25, 200, 18, "bold 14px Figtree");
       ctx.restore();
 
       ctx.fillStyle = "#000";
-      ctx.font = "bold 12px Figtree";
+      ctx.font = "bold 15px Figtree";
       wrapText(
         ctx,
         (props.user.student_name || "N/A").toUpperCase(),
         105,
         70,
-        200,
+        220,
         18,
         "bold 15px Figtree"
       );
 
       ctx.fillStyle = "#000";
-      ctx.font = "bold 7px Figtree";
+      ctx.font = "bold 10px Figtree";
       wrapText(
         ctx,
         (props.user.course_name || "N/A").toUpperCase(),
         105,
-        110,
-        200,
+        105,
+        220,
         14,
         "bold 10px Figtree"
       );
 
+      // Row 1: Index No & Cohort
       ctx.fillStyle = "#374151";
-      ctx.font = "bold 10px Figtree";
-      ctx.fillText("Index No.:", 15, 160);
+      ctx.font = "bold 9px Figtree";
+      ctx.fillText("Index No.:", 15, 155);
       ctx.fillStyle = "#000";
       ctx.font = "bold 10px Figtree";
-      ctx.fillText("2072245", 70, 160);
+      ctx.fillText(props.user.student_id || "N/A", 65, 155);
 
       ctx.fillStyle = "#374151";
-      ctx.font = "bold 10px Figtree";
-      ctx.fillText("Cohort:", 140, 160);
+      ctx.font = "bold 9px Figtree";
+      ctx.fillText("Cohort:", 145, 155);
       ctx.fillStyle = "#000";
-      ctx.font = "bold 11px Figtree";
-      ctx.fillText(props.user.student_id || "N/A", 70, 160);
-
-      ctx.fillStyle = "#374151";
-      ctx.font = "11px Figtree";
-      ctx.fillText("Validity:", 15, 180);
-      ctx.fillStyle = "#000";
-      ctx.font = "bold 7px Figtree";
+      ctx.font = "bold 9px Figtree";
       wrapText(
         ctx,
         (props.user.selected_session || "N/A").toUpperCase(),
-        187,
-        160,
-        100,
-        12
+        185,
+        155,
+        120,
+        12,
+        "bold 9px Figtree"
       );
 
+      // Row 2: Validity
       ctx.fillStyle = "#374151";
-      ctx.font = "bold 10px Figtree";
+      ctx.font = "bold 9px Figtree";
       ctx.fillText("Validity:", 15, 180);
       ctx.fillStyle = "#000";
+      ctx.font = "bold 9px Figtree";
       wrapText(
         ctx,
         (props.user.validity_period || "N/A").toUpperCase(),
-        70,
+        65,
         180,
         200,
-        14
+        14,
+        "bold 9px Figtree"
       );
 
       ctx.fillStyle = "#374151";
