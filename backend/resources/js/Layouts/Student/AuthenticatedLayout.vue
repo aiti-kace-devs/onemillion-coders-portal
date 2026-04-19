@@ -6,6 +6,7 @@ import DropdownLink from "@/Components/DropdownLink.vue";
 import SidebarNavLink from "@/Components/SidebarNavLink.vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import SidebarSectionHeader from "@/Components/SidebarSectionHeader.vue";
+import OnboardingNextStrip from "@/Components/Student/OnboardingNextStrip.vue";
 
 const showingNavigationDropdown = ref(false);
 const isSidebarCollapsed = ref(true);
@@ -32,6 +33,11 @@ const props = defineProps({
         default: false,
     },
     hideGradient: {
+        type: Boolean,
+        default: false,
+    },
+    /** Tighter top padding under header/onboarding strip (e.g. Application Status page). */
+    compactContentTop: {
         type: Boolean,
         default: false,
     },
@@ -112,6 +118,20 @@ const user = computed(() => auth.value.user ?? {});
                         :label="'Dashboard'"
                     >
                         <span class="material-symbols-outlined">dashboard</span>
+                    </SidebarNavLink>
+
+                    <SidebarNavLink
+                        v-if="
+                            !user.isAdmitted &&
+                            !user.application_review_completed
+                        "
+                        :href="route('student.application-review.index')"
+                        :active="
+                            route().current('student.application-review.*')
+                        "
+                        :label="'Application review'"
+                    >
+                        <span class="material-symbols-outlined">menu_book</span>
                     </SidebarNavLink>
 
                     <!--           <SidebarNavLink
@@ -227,7 +247,7 @@ const user = computed(() => auth.value.user ?? {});
 
         <!-- Main Content -->
         <div
-            class="flex-1 flex flex-col md:ml-[70px] bg-[#f8f9fa] relative overflow-hidden"
+            class="flex-1 flex flex-col min-h-0 md:ml-[70px] bg-[#f8f9fa] relative overflow-hidden"
             @click="collapseSidebarOnContentInteraction"
         >
             <!-- Background Accents -->
@@ -303,8 +323,19 @@ const user = computed(() => auth.value.user ?? {});
                 v-if="!hideGradient"
                 class="h-1.5 w-full bg-gradient-to-r from-red-600 via-yellow-400 to-green-600 z-40 sticky top-16"
             ></div>
+
+            <OnboardingNextStrip />
+
             <!-- Page content -->
-            <main :class="props.fullHeight ? '' : 'py-8 px-4 lg:px-8 max-w-7xl mx-auto w-full'">
+            <main
+                :class="
+                    props.fullHeight
+                        ? 'flex-1 flex min-h-0 flex-col overflow-hidden'
+                        : props.compactContentTop
+                          ? 'pt-1.5 pb-6 px-4 lg:px-8'
+                          : 'py-6 px-4 lg:px-8'
+                "
+            >
                 <slot />
             </main>
         </div>

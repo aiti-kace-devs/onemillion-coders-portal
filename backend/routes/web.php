@@ -567,7 +567,10 @@ Route::prefix('admins')
 // Student section routes
 Route::prefix('student')->name('student.')->group(function () {
 
-    Route::middleware(['auth:web', 'student.verification.flow'])->group(function () {
+    Route::middleware(['auth:web', 'student.onboarding', 'student.verification.flow'])->group(function () {
+        Route::get('/application-review', [StudentOperation::class, 'application_review'])->name('application-review.index');
+        Route::post('/application-review/complete', [StudentOperation::class, 'complete_application_review'])->name('application-review.complete');
+
         // Dashboard route
         Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');
 
@@ -620,7 +623,7 @@ Route::prefix('student')->name('student.')->group(function () {
 
 
     // Session route
-    Route::middleware(['auth:web', 'is_admitted', 'student.verification.flow'])->prefix('session')->name('session.')->group(function () {
+    Route::middleware(['auth:web', 'is_admitted', 'student.onboarding', 'student.verification.flow'])->prefix('session')->name('session.')->group(function () {
         Route::get('/', [StudentOperation::class, 'select_session_view'])->name('index');
         Route::post('/', [StudentOperation::class, 'confirm_session'])->name('store');
         Route::delete('/{user}', [StudentOperation::class, 'delete_admission'])->name('destroy');
@@ -640,13 +643,13 @@ Route::prefix('student')
     ->middleware('theme:dashboard')
     ->name('student.')
     ->group(function () {
-        Route::get('/select-session/{user_id}', [StudentOperation::class, 'select_session_view'])->middleware(['auth', 'is_admitted', 'student.verification.flow']);
+        Route::get('/select-session/{user_id}', [StudentOperation::class, 'select_session_view'])->middleware(['auth', 'is_admitted', 'student.onboarding', 'student.verification.flow']);
         Route::post('/select-session/{user_id}', [StudentOperation::class, 'confirm_session'])
             ->name('select-session')
-            ->middleware(['auth', 'is_admitted', 'student.verification.flow']);
+            ->middleware(['auth', 'is_admitted', 'student.onboarding', 'student.verification.flow']);
         Route::delete('/delete-student-admission/{user_id}', [StudentOperation::class, 'delete_admission'])
             ->name('delete-student-admission')
-            ->middleware(['auth', 'is_admitted', 'student.verification.flow']);
+            ->middleware(['auth', 'is_admitted', 'student.onboarding', 'student.verification.flow']);
     });
 
 Route::middleware(['auth:web'])->group(function () {

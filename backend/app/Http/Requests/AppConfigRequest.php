@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class AppConfigRequest extends FormRequest
 {
@@ -24,14 +25,25 @@ class AppConfigRequest extends FormRequest
      */
     public function rules()
     {
+        $type = $this->input('type');
+        $type = is_string($type) && $type !== '' ? $type : 'string';
+
+        $valueRules = match ($type) {
+            'integer' => ['required', 'integer'],
+            'boolean' => ['required', Rule::in(['0', '1', 0, 1, true, false, 'true', 'false'])],
+            'json' => ['required', 'json'],
+            'array' => ['required', 'string'],
+            // String configs (e.g. APPLICATION_REVIEW_IFRAME_URL) may be left empty until ready.
+            default => ['nullable', 'string', 'max:65535'],
+        };
+
         return [
             'key' => 'required|string|min:3|max:255',
-            'value' => 'required|integer',
-            'type' => 'required|string|in:string,integer,boolean,array,json', // optionally restrict to known types
+            'type' => 'required|string|in:string,integer,boolean,array,json',
+            'value' => $valueRules,
             'is_cached' => 'nullable|boolean',
         ];
     }
-
 
     /**
      * Get the validation attributes that apply to the request.
@@ -41,7 +53,7 @@ class AppConfigRequest extends FormRequest
     public function attributes()
     {
         return [
-              'key' => 'configuration key',
+            'key' => 'configuration key',
             'type' => 'value type',
             'value' => 'configuration value',
             'is_cached' => 'cache setting',
@@ -56,7 +68,7 @@ class AppConfigRequest extends FormRequest
     public function messages()
     {
         return [
-             'key.required' => 'Configuration key is required.',
+            'key.required' => 'Configuration key is required.',
             'key.unique' => 'This configuration key already exists.',
             'key.max' => 'Configuration key cannot exceed 255 characters.',
             'type.required' => 'Value type is required.',

@@ -146,6 +146,9 @@
         @can('sms-template.read.all')
             <x-backpack::menu-dropdown-item title="SMS Templates" icon="la la-sms" :link="backpack_url('sms-template')" />
         @endcan
+
+        <x-backpack::menu-dropdown-item title="Notifications Campaign" icon="la la-question" :link="backpack_url('campaign')" />
+
     </x-backpack::menu-dropdown>
 @endif
 
