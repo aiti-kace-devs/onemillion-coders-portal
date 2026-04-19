@@ -23,7 +23,7 @@ export default function HowToRegisterPage() {
         </h1>
 
         <p className="text-gray-600 mb-8">
-          We're putting together a clear, step-by-step guide to help you
+          We&apos;re putting together a clear, step-by-step guide to help you
           register. Please check back soon.
         </p>
 
