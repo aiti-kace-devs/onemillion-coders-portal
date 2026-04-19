@@ -10,7 +10,10 @@ sections:
     caption: 'Steps for Registration'
     enabled: true
     section_items:
-      - 636fa9f3-d7c7-466a-93e9-d15f1309dda1
-updated_by: 11
-updated_at: 2025-08-26T18:50:04+00:00
+      - d70d9c69-2459-40a2-95c8-83b7e26ae016
+      - 0e299ac8-b160-4aed-bf8f-ad96ff70dcfa
+      - b9f83a4e-b850-4159-b172-b27b0ac29599
+      - 717abc83-af19-4920-9bb2-97aefa3b5c88
+updated_by: 9
+updated_at: 1776637962
 ---

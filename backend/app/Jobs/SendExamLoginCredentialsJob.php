@@ -46,6 +46,7 @@ class SendExamLoginCredentialsJob implements ShouldQueue
         );
 
         $fullName = preg_replace('/\s+/', ' ', $fullName);
+        $appName = config('app.name', 'One Million Coders');
 
         MailerHelper::sendTemplateEmail(
             AFTER_REGISTRATION_EMAIL,
@@ -57,7 +58,7 @@ class SendExamLoginCredentialsJob implements ShouldQueue
                 'email' => $this->std->email,
                 'examUrl' => url('/student/level-assessment'),
             ],
-            'One Million Coders Login Credentials'
+            "Welcome — {$appName}"
         );
     }
 
