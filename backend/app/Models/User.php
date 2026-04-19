@@ -126,7 +126,7 @@ class User extends Authenticatable
             // and this is not a system sync.
             if ($user->isVerifiedByGhanaCard() && !($user->is_nia_syncing ?? false)) {
                 $protectedFields = ['name', 'first_name', 'last_name'];
-                
+
                 foreach ($protectedFields as $field) {
                     if ($user->isDirty($field)) {
                         $user->{$field} = $user->getOriginal($field);
@@ -138,7 +138,7 @@ class User extends Authenticatable
                 if ($user->isDirty('data')) {
                     $originalData = $user->getOriginal('data');
                     $newData = $user->data;
-                    
+
                     if (isset($originalData['date_of_birth']) && isset($newData['date_of_birth'])) {
                         if ($originalData['date_of_birth'] !== $newData['date_of_birth']) {
                             $newData['date_of_birth'] = $originalData['date_of_birth'];
@@ -194,22 +194,43 @@ class User extends Authenticatable
 
     public function getSelectedSessionAttribute()
     {
+        $dates = $this->session_dates;
+        $time = $this->session_time_value;
+
+        return trim("{$dates} " . ($time ? "({$time})" : "")) ?: ($this->admission?->session ?? 'N/A');
+    }
+
+    public function getSessionDatesAttribute()
+    {
         $admission = $this->admission;
-        if (!$admission) return 'N/A';
+        if (!$admission)
+            return '';
+
+        $batch = $admission->programmeBatch;
+        if (!$batch)
+            return '';
+
+        $start = $batch->start_date?->format('jS M') ?? '';
+        $end = $batch->end_date?->format('jS M') ?? '';
+
+        return "{$start} - {$end}";
+    }
+
+    public function getSessionTimeValueAttribute()
+    {
+        $admission = $this->admission;
+        if (!$admission)
+            return '';
 
         $sessionRecord = $admission->courseSession;
-        $batch = $admission->programmeBatch;
 
-        $dates = "";
-        if ($batch) {
-            $start = $batch->start_date?->format('jS M') ?? '';
-            $end = $batch->end_date?->format('jS M') ?? '';
-            $dates = "{$start} - {$end}";
+        // If no direct session record, check for a booking record
+        if (!$sessionRecord && $admission->booking) {
+            $sessionRecord = $admission->booking->session;
         }
 
-        $sessionTime = $sessionRecord?->course_time ?? '';
-
-        return trim("{$dates} " . ($sessionTime ? "({$sessionTime})" : "")) ?: ($admission->session ?? 'N/A');
+        // Try 'course_time' (CourseSession) or 'time' (MasterSession)
+        return $sessionRecord?->course_time ?? $sessionRecord?->time ?? '';
     }
 
     /**
@@ -218,7 +239,8 @@ class User extends Authenticatable
     public function getValidityPeriodAttribute()
     {
         $admissionBatch = $this->admission?->programmeBatch?->admissionBatch;
-        if (!$admissionBatch) return 'N/A';
+        if (!$admissionBatch)
+            return 'N/A';
 
         $start = \Carbon\Carbon::parse($admissionBatch->start_date)->format('M, Y');
         $end = \Carbon\Carbon::parse($admissionBatch->end_date)->format('M, Y');
