@@ -5,14 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\User;
 use App\Services\GhanaCardService;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
@@ -38,6 +36,7 @@ class ProfileController extends Controller
         $userData = collect($userData)->only([
             'id',
             'userId',
+            'student_id',
             'name',
             'student_name',
             'first_name',
@@ -59,11 +58,11 @@ class ProfileController extends Controller
             'ghcard_verified',
             'ghcard_verification_status',
             'ghcard_latest_attempt',
-            'isAdmitted'
+            'isAdmitted',
         ])->toArray();
 
         return Inertia::render('Student/Profile/Edit', [
-            'user' => $userData
+            'user' => $userData,
         ]);
     }
 

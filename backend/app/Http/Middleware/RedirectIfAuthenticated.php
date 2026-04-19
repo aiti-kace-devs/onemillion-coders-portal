@@ -12,8 +12,6 @@ class RedirectIfAuthenticated
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
      * @param  string|null  ...$guards
      * @return mixed
      */
@@ -29,7 +27,12 @@ class RedirectIfAuthenticated
                     return redirect(RouteServiceProvider::ADMIN_HOME);
                 }
 
-                return redirect(RouteServiceProvider::HOME);
+                $user = Auth::guard($guard ?? 'web')->user();
+                $home = $user && $user->registered_course
+                    ? RouteServiceProvider::HOME
+                    : route('student.application-status');
+
+                return redirect($home);
             }
         }
 

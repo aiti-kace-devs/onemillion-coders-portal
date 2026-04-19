@@ -47,8 +47,11 @@ class AuthenticatedSessionController extends Controller
         $student = Auth::guard('web')->user();
         activity('student')->event('login')->by($student)->log("$student->name logged in at $student->last_login");
 
-        // Always land students on the dashboard; step gating happens when they click into actions.
-        return redirect(RouteServiceProvider::HOME);
+        $home = $student->registered_course
+            ? RouteServiceProvider::HOME
+            : route('student.application-status');
+
+        return redirect()->intended($home);
     }
 
     /**
