@@ -9,6 +9,7 @@ use App\Models\Centre;
 use App\Models\Constituency;
 use App\Models\Course;
 use App\Models\CourseCategory;
+use App\Models\CourseSession;
 use App\Models\District;
 use App\Models\MasterSession;
 use App\Models\Programme;
@@ -764,6 +765,7 @@ class CourseProgrammeController extends Controller
         $response = Cache::remember($cacheKey, 600, function () use ($programmeId, $districtId, $bookingService, $sort, $order, $filter, $minAvailability, $limit) {
             $programme = Programme::findOrFail($programmeId);
             $courseType = $programme->courseType();
+            $isInPerson = $programme->isInPerson();
 
             // Find the current active admission batch
             $today = Carbon::today();
@@ -794,18 +796,21 @@ class CourseProgrammeController extends Controller
                 ];
             }
 
-            // Get active master sessions for this course type
-            $sessions = MasterSession::where('course_type', $courseType)
-                ->where('status', true)
-                ->where('session_type', '!=', 'Online')
-                ->get();
-            $sessions = $this->sortMasterSessions($sessions);
+            // Get active master sessions for this course type for non in-person programmes
+            $sessions = collect();
+            if (! $isInPerson) {
+                $sessions = MasterSession::where('course_type', $courseType)
+                    ->where('status', true)
+                    ->where('session_type', '!=', 'Online')
+                    ->get();
+                $sessions = $this->sortMasterSessions($sessions);
 
-            if ($sessions->isEmpty()) {
-                return [
-                    'success' => true,
-                    'available_centres' => [],
-                ];
+                if ($sessions->isEmpty()) {
+                    return [
+                        'success' => true,
+                        'available_centres' => [],
+                    ];
+                }
             }
 
             // Get centres in the specified district that offer this programme
@@ -817,31 +822,65 @@ class CourseProgrammeController extends Controller
                         ->where('batch_id', $admissionBatch->id)
                         ->where('status', true);
                 })
-                ->with(['branch:id,title', 'districts:id,title'])
+                ->with([
+                    'branch:id,title',
+                    'districts:id,title',
+                    'courses' => function ($query) use ($programmeId, $admissionBatch) {
+                        $query->where('programme_id', $programmeId)
+                            ->where('batch_id', $admissionBatch->id)
+                            ->where('status', true)
+                            ->select(['id', 'centre_id', 'programme_id', 'batch_id']);
+                    },
+                ])
                 ->where('status', true)
                 ->get();
 
             $availableCentres = [];
 
             foreach ($centres as $centre) {
-                // Fetch remaining seats for this centre
-                $remainingSeats = $bookingService->getRemainingSeatsBatch(
-                    $centre->id,
-                    $batches->pluck('id')->toArray(),
-                    $sessions->pluck('id')->toArray()
-                );
+                $centreSessions = $sessions;
+                $remainingSeats = [];
+                $centreCapacity = $centre->slotCapacityFor($courseType);
+
+                if ($isInPerson) {
+                    $centreCourse = $centre->courses->first();
+
+                    if (! $centreCourse) {
+                        continue;
+                    }
+
+                    $centreSessions = CourseSession::where('course_id', $centreCourse->id)
+                        ->where('status', true)
+                        ->get();
+                    $centreSessions = $this->sortMasterSessions($centreSessions);
+
+                    if ($centreSessions->isEmpty()) {
+                        continue;
+                    }
+
+                    $centreCapacity = (int) $centreSessions->sum('limit');
+                } else {
+                    // Fetch remaining seats for this centre
+                    $remainingSeats = $bookingService->getRemainingSeatsBatch(
+                        $centre->id,
+                        $batches->pluck('id')->toArray(),
+                        $centreSessions->pluck('id')->toArray()
+                    );
+                }
 
                 $totalAvailable = 0;
 
-                $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats, &$totalAvailable) {
-                    $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, &$totalAvailable) {
+                $batchData = $batches->values()->map(function ($batch, $index) use ($centreSessions, $remainingSeats, $isInPerson, &$totalAvailable) {
+                    $sessionData = $centreSessions->map(function ($session) use ($batch, $remainingSeats, $isInPerson, &$totalAvailable) {
                         $key = "{$batch->id}:{$session->id}";
-                        $remaining = $remainingSeats[$key] ?? 0;
+                        $remaining = $isInPerson ? (int) ($session->limit ?? 0) : (int) ($remainingSeats[$key] ?? 0);
                         $totalAvailable += $remaining;
 
                         return [
-                            'session_name' => "{$session->session_type} Session",
-                            'time' => $session->time,
+                            'session_name' => $isInPerson
+                                ? ($session->session ?? 'Unknown')
+                                : "{$session->session_type} Session",
+                            'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time,
                             'remaining' => $remaining,
                         ];
                     })->values()->toArray();
@@ -862,7 +901,7 @@ class CourseProgrammeController extends Controller
                         'branch_name' => $centre->branch?->title,
                         'district_name' => $primaryDistrict?->title,
                         'centre_name' => $centre->title,
-                        'capacity' => $centre->slotCapacityFor($courseType),
+                        'capacity' => $centreCapacity,
                         'total_availability' => $totalAvailable,
                         'batches' => $batchData,
                     ];
@@ -925,10 +964,13 @@ class CourseProgrammeController extends Controller
     {
         return collect($sessions)
             ->sortBy(function ($session) {
+                $sessionType = $session->session_type ?? $session->session ?? optional($session->masterSession)->session_type ?? null;
+                $time = $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? null;
+
                 return [
-                    $this->sessionTypePriority($session->session_type ?? null),
-                    $this->sessionStartMinutes($session->time ?? null),
-                    strtolower(trim((string) ($session->time ?? ''))),
+                    $this->sessionTypePriority($sessionType),
+                    $this->sessionStartMinutes($time),
+                    strtolower(trim((string) ($time ?? ''))),
                     (int) ($session->id ?? 0),
                 ];
             }, SORT_REGULAR)
