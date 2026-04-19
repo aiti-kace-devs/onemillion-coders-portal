@@ -244,6 +244,35 @@ export const getProgrammeLocations = async (programmeId) => {
 };
 
 /**
+ * Fetch centres (with cohorts and sessions) offering a programme in a district
+ * @param {string|number} programmeId - Programme ID
+ * @param {string|number} districtId - District ID
+ * @param {{ page?: number, per_page?: number }} [options]
+ * @returns {Promise<Object>} - Availability-per-centre response
+ */
+export const getProgrammeAvailabilityPerCentre = async (
+  programmeId,
+  districtId,
+  { page, per_page } = {}
+) => {
+  try {
+    const params = new URLSearchParams({ district_id: String(districtId) });
+    if (page != null) params.set("page", String(page));
+    if (per_page != null) params.set("per_page", String(per_page));
+    const response = await apiRequest(
+      `/programmes/${programmeId}/availability-per-centre?${params.toString()}`
+    );
+    return response;
+  } catch (error) {
+    console.error(
+      `Error fetching availability for programme ${programmeId} / district ${districtId}:`,
+      error
+    );
+    throw error;
+  }
+};
+
+/**
  * Fetch registration form schema
  * @returns {Promise<Object>} - Form schema data
  */
