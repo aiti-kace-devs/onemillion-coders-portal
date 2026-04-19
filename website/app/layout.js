@@ -21,8 +21,8 @@ export const metadata = {
 
 export default async function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${lato.variable} antialiased`} suppressHydrationWarning>
+    <html lang="en" className="bg-white [color-scheme:light]" suppressHydrationWarning>
+      <body className={`${lato.variable} antialiased bg-white`} suppressHydrationWarning>
         <ClientWrapper>
           <Suspense>
             <LayoutShell>

@@ -233,13 +233,14 @@ class RegistrationFormAPIController extends Controller
         $selfPaced = filter_var($request->query('self-paced', 'false'), FILTER_VALIDATE_BOOLEAN);
         $withSupport = filter_var($request->query('with-support', 'false'), FILTER_VALIDATE_BOOLEAN);
 
-        $course = Course::with('programme')
+        $course = Course::with(['programme', 'centre'])
             ->where('id', $data['course_id'])
+            ->where('centre_id', $data['centre_id'])
             ->first();
         if (! $course) {
             return response()->json([
                 'success' => false,
-                'message' => 'Course not found.',
+                'message' => 'Course not found for the selected centre.',
             ], 404);
         }
         if ($selfPaced) {
@@ -270,7 +271,17 @@ class RegistrationFormAPIController extends Controller
         }
 
         if ($withSupport) {
+            $centreIsReady = (bool) ($course->centre?->is_ready);
+            if (! $centreIsReady) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Resource (internet & laptop) support is not available for the selected centre at this time. You can try again later',
+                ], 422);
+            }
+
+            $user->registered_course = $course->id;
             $user->support = true;
+            $user->shortlist = true;
             $user->save();
 
             return response()->json([

@@ -25,7 +25,7 @@ Route::post('/recommend/courses', [CourseMatchAPIController::class, 'recommendCo
 Route::get('/availability', [\App\Http\Controllers\AvailabilityController::class, 'index'])->name('api.availability');
 
 // Availability endpoints — authenticated (iframed into student portal)
-Route::prefix('availability')->name('api.availability.')->middleware('user.token')->group(function () {
+Route::prefix('availability')->name('api.availability.')->middleware(['user.token', 'student.onboarding', 'student.verification.flow'])->group(function () {
     Route::get('/batches', [\App\Http\Controllers\AvailabilityController::class, 'batches'])->name('batches');
     Route::get('/in-person/batches', [\App\Http\Controllers\InPersonAvailabilityController::class, 'batches'])->name('in-person-batches');
     Route::get('/sibling-centres', [\App\Http\Controllers\AvailabilityController::class, 'siblingCentres'])->name('sibling-centres');
@@ -39,7 +39,7 @@ Route::get('/programmes/{programmeId}/availability-per-centre', [
 
 
 // Booking endpoints — student reserves/cancels a programme_batch slot
-Route::prefix('bookings')->name('api.bookings.')->middleware(['user.token', 'student.verification.flow'])->group(function () {
+Route::prefix('bookings')->name('api.bookings.')->middleware(['user.token', 'student.onboarding', 'student.verification.flow'])->group(function () {
     Route::get('/mine', [\App\Http\Controllers\BookingController::class, 'mine'])->name('mine');
     Route::post('/', [\App\Http\Controllers\BookingController::class, 'store'])->name('store');
     Route::delete('/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('destroy');
@@ -47,11 +47,11 @@ Route::prefix('bookings')->name('api.bookings.')->middleware(['user.token', 'stu
 
 // In-person enrollment (separate from online POST /api/bookings)
 Route::post('/in-person-enrollment', [\App\Http\Controllers\InPersonEnrollmentController::class, 'store'])
-    ->middleware(['user.token', 'student.verification.flow'])
+    ->middleware(['user.token', 'student.onboarding', 'student.verification.flow'])
     ->name('api.in-person-enrollment.store');
 
 // Waitlist endpoints — authenticated
-Route::prefix('waitlist')->name('api.waitlist.')->middleware('user.token')->group(function () {
+Route::prefix('waitlist')->name('api.waitlist.')->middleware(['user.token', 'student.onboarding', 'student.verification.flow'])->group(function () {
     Route::get('/mine', [\App\Http\Controllers\AdmissionWaitlistController::class, 'index'])->name('mine');
     Route::post('/add', [\App\Http\Controllers\AdmissionWaitlistController::class, 'store'])->name('add');
     Route::post('/convert/{waitlistId}', [\App\Http\Controllers\AdmissionWaitlistController::class, 'convert'])->name('convert');
@@ -72,7 +72,7 @@ Route::get('/courses/{courseId}/slot-left', [CourseMatchAPIController::class, 'c
 //         return $request->user();
 //     });
 // });
-Route::prefix('ghana-card')->middleware('user.token')->group(function () {
+Route::prefix('ghana-card')->middleware(['user.token', 'student.onboarding'])->group(function () {
     Route::post('/verify', [\App\Http\Controllers\Api\GhanaCardController::class, 'verify']);
     Route::get('/status', [\App\Http\Controllers\Api\GhanaCardController::class, 'status']);
 });
@@ -87,7 +87,7 @@ Route::prefix('ghana-card')->middleware('user.token')->group(function () {
 // Route::post('/api/add-student', [CreateStudentAPIController::class, 'store'])->middleware('api'); // This applies the api middleware group
 
 // Tiered Assessment endpoints (External API) — user resolved from JWT (Bearer, token, or user_id param)
-Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->middleware('user.token')->group(function () {
+Route::prefix('tiered-assessment')->name('api.tiered-assessment.')->middleware(['user.token', 'student.onboarding'])->group(function () {
     Route::get('/fetch', [StudentOperation::class, 'fetch_assessment_question'])->name('fetch');
     Route::post('/submit', [StudentOperation::class, 'submit_assessment_answer'])->name('submit');
     Route::post('/record-violation', [StudentOperation::class, 'record_assessment_violation'])->name('record-violation');

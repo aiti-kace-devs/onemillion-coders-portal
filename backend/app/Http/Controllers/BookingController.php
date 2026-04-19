@@ -23,11 +23,9 @@ class BookingController extends Controller
         AvailabilityService $availabilityService,
         GhanaCardService $ghanaCardService
     ): JsonResponse {
-        // First validate the required fields without the session table dependency
         $validated = $request->validate([
             'programme_batch_id' => 'required|integer|exists:programme_batches,id',
             'course_id' => 'required|integer|exists:courses,id',
-            'session_id' => 'required|integer',
         ]);
 
         $batch = ProgrammeBatch::find($validated['programme_batch_id']);
@@ -58,8 +56,20 @@ class BookingController extends Controller
         }
 
         $course = Course::find($validated['course_id']);
+        if (! $course || ! $course->programme) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Course not found.',
+            ], 404);
+        }
+
         $programme = $course->programme;
-        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
+        $isInPerson = $programme->isInPerson();
+        $selfPace = ! $isInPerson && ($request->boolean('self_pace') || $request->boolean('self-pace'));
+
+        $validated = array_merge($validated, $request->validate([
+            'session_id' => $selfPace ? 'nullable|integer' : 'required|integer',
+        ]));
 
         if ($course->programme_id !== $batch->programme_id) {
             return response()->json([
@@ -79,7 +89,17 @@ class BookingController extends Controller
                 ], 422);
             }
         } else {
-            $session = MasterSession::find($validated['session_id']);
+            $sessionId = $validated['session_id'] ?? null;
+            if ($selfPace && ! $sessionId) {
+                $courseType = $programme->courseType();
+                $session = MasterSession::query()
+                    ->where('course_type', $courseType)
+                    ->where('status', true)
+                    ->orderBy('id')
+                    ->first();
+            } else {
+                $session = MasterSession::find($sessionId);
+            }
             if (! $session) {
                 return response()->json([
                     'status' => 'error',
@@ -90,7 +110,7 @@ class BookingController extends Controller
         }
 
         try {
-            $booking = $bookingService->book($user, $course, $batch, $session);
+            $booking = $bookingService->book($user, $course, $batch, $session, $selfPace);
         } catch (Exception $e) {
             $recommendations = $availabilityService->getAvailableSlots(
                 $course->centre_id,

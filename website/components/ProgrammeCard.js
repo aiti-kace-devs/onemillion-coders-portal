@@ -73,6 +73,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
 
   // Enrollment sub-flow state
   const [enrollmentStep, setEnrollmentStep] = useState(null);
+  const [studyModeChoice, setStudyModeChoice] = useState(null);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
   const [waitlistJoined, setWaitlistJoined] = useState(false);
@@ -165,6 +166,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
     setShowEnrollModal(true);
 
     if (inPerson) {
+      setStudyModeChoice(null);
       setEnrollmentStep("batch");
       setBatchesLoading(true);
       (async () => {
@@ -198,8 +200,85 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
         }
       })();
     } else {
-      setEnrollmentStep("support");
+      setStudyModeChoice(null);
+      setEnrollmentStep("studyMode");
     }
+  };
+
+  const beginOnlineCentreBatchEnrollment = async (options = {}) => {
+    const { skipLearningMode = false } = options;
+    const centreIdVal = enrollingCentreId || centreId;
+    const payload = { userId, course_id: enrollingCourseId, ...(centreIdVal && { centre_id: centreIdVal }) };
+    try {
+      setEnrollSubmitting(true);
+      setEnrollError(null);
+      if (!skipLearningMode) {
+        await setLearningMode(payload, false, token);
+      }
+      setNeedsSupport(true);
+      setEnrollSubmitting(false);
+      setBatchesLoading(true);
+      setEnrollmentStep("batch");
+      const batches = await fetchBatchesForCourse(enrollingCourseId);
+      const hasAvailable = batches.some((b) =>
+        b.sessions?.some((s) => Number(s.remaining) > 0),
+      );
+      if (!hasAvailable) {
+        await fetchAlternatives(enrollingCourseId, centreIdVal);
+        setCourseFullIssue(deriveAvailabilityIssueFromBatches(batches));
+        setEnrollmentStep("courseFull");
+      }
+    } catch (err) {
+      const apiErrors = err.response?.data?.errors;
+      const apiMessage = err.response?.data?.message;
+      setEnrollError(apiErrors ? Object.values(apiErrors).flat().join(". ") : (apiMessage || "Failed to continue. Please try again."));
+    } finally {
+      setEnrollSubmitting(false);
+      setBatchesLoading(false);
+    }
+  };
+
+  const chooseStudyAtCentre = () => {
+    if (!centreIsReady) {
+      setEnrollError(
+        "Centre-based study with support is not available at this centre yet. Try another centre.",
+      );
+      return;
+    }
+    setEnrollError(null);
+    setStudyModeChoice("centre");
+    void beginOnlineCentreBatchEnrollment();
+  };
+
+  const chooseStudyFromHome = async () => {
+    setEnrollError(null);
+    setStudyModeChoice("home");
+    setEnrollmentStep("selfPacedCohort");
+    setBatchesLoading(true);
+    try {
+      await fetchBatchesForCourse(enrollingCourseId);
+    } catch {
+      setAvailableBatches([]);
+    } finally {
+      setBatchesLoading(false);
+    }
+  };
+
+  const pickDefaultMasterSessionForBatch = (batch) => {
+    const sessions = batch?.sessions || [];
+    const withRoom = sessions.find((s) => Number(s.remaining) > 0);
+    return withRoom || sessions[0] || null;
+  };
+
+  const handleSelfPacedCohortSelect = (batch) => {
+    const session = pickDefaultMasterSessionForBatch(batch);
+    if (!session) {
+      setEnrollError("No cohort timetable reference is available. Please contact support.");
+      return;
+    }
+    setSelectedBatch(batch);
+    setSelectedSession(session);
+    setEnrollmentStep("selfPacedConfirm");
   };
 
   const handleSupportAnswer = async (needs) => {
@@ -218,18 +297,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
         );
         setEnrollSuccess(true);
       } else {
-        setEnrollSubmitting(false);
-        setBatchesLoading(true);
-        setEnrollmentStep("batch");
-        const batches = await fetchBatchesForCourse(enrollingCourseId);
-        const hasAvailable = batches.some((b) =>
-          b.sessions?.some((s) => Number(s.remaining) > 0),
-        );
-        if (!hasAvailable) {
-          await fetchAlternatives(enrollingCourseId, centreIdVal);
-          setCourseFullIssue(deriveAvailabilityIssueFromBatches(batches));
-          setEnrollmentStep("courseFull");
-        }
+        await beginOnlineCentreBatchEnrollment({ skipLearningMode: true });
       }
     } catch (err) {
       const apiErrors = err.response?.data?.errors;
@@ -266,7 +334,11 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
             },
             token,
           )
-        : await createBooking({ programme_batch_id: selectedBatch.id, course_id: enrollingCourseId, session_id: selectedSession.session_id }, token);
+        : await createBooking(
+            { programme_batch_id: selectedBatch.id, course_id: enrollingCourseId, session_id: selectedSession.session_id },
+            token,
+            { selfPace: studyModeChoice === "home" },
+          );
       if (result.conflict) {
         const batches = await fetchBatchesForCourse(enrollingCourseId);
         const hasAvailable = batches.some((b) =>
@@ -334,6 +406,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
     setInPersonMeta(null);
     setCourseFullIssue(null);
     setEnrollmentSuccessRedirectUrl(null);
+    setStudyModeChoice(null);
   };
 
   const centreTitle = enrollingCentreTitle || "your centre";
@@ -598,8 +671,16 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                   </p>
                   {selectedBatch && selectedSession && (
                     <p className="text-gray-400 text-xs sm:text-sm mb-6">
-                      {selectedBatch.batch || `Batch ${selectedBatch.id}`} · {selectedSession.session_name} (
-                      {selectedSession.time})
+                      {studyModeChoice === "home" ? (
+                        <>
+                          {selectedBatch.batch || `Batch ${selectedBatch.id}`} · Self-paced (study from home)
+                        </>
+                      ) : (
+                        <>
+                          {selectedBatch.batch || `Batch ${selectedBatch.id}`} · {selectedSession.session_name} (
+                          {selectedSession.time})
+                        </>
+                      )}
                     </p>
                   )}
                   <button
@@ -636,55 +717,308 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                 </div>
               )}
 
-              {/* Support Question */}
+              {/* Online: study at centre vs study from home */}
+              {!enrollSuccess && !waitlistJoined && enrollmentStep === "studyMode" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={closeEnrollmentModal}
+                    className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                  >
+                    <FiX className="w-4.5 h-4.5" />
+                  </button>
+                  <div className="flex justify-center mb-3 sm:hidden">
+                    <div className="w-8 h-1 bg-gray-200 rounded-full" />
+                  </div>
+                  <div className="text-center mb-5">
+                    <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">How would you like to study?</h2>
+                    <p className="text-gray-400 text-[11px] sm:text-sm line-clamp-2">
+                      Enrolling in <span className="text-gray-600">{enrolledCourseName}</span>
+                    </p>
+                    {!centreIsReady && (
+                      <p className="text-gray-500 text-[11px] sm:text-xs mt-2 leading-relaxed px-1">
+                        Centre-based study with on-site support isn&apos;t available at this location yet. You can still
+                        enrol and learn from home (self-paced).
+                      </p>
+                    )}
+                  </div>
+                  {enrollError && (
+                    <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl">
+                      <p className="text-red-700 text-sm">{enrollError}</p>
+                    </div>
+                  )}
+                  <div className="space-y-3">
+                    {centreIsReady && (
+                      <button
+                        type="button"
+                        onClick={chooseStudyAtCentre}
+                        className="w-full text-left p-4 rounded-2xl border-2 border-gray-200 bg-white hover:border-yellow-400 hover:shadow-md transition-all flex items-stretch gap-3 active:scale-[0.99]"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                          <FiMapPin className="w-5 h-5 text-yellow-800" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-gray-900 text-sm sm:text-base">Study at a Centre</div>
+                          <p className="text-[11px] sm:text-xs text-gray-600 mt-1 leading-snug">
+                            Laptop and internet access provided at our support centre, with staff on hand.
+                          </p>
+                        </div>
+                        <FiChevronRight className="w-5 h-5 text-gray-400 self-center flex-shrink-0" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void chooseStudyFromHome()}
+                      className="w-full text-left p-4 rounded-2xl border-2 border-gray-200 bg-white hover:border-sky-400 hover:shadow-md transition-all flex items-stretch gap-3 active:scale-[0.99]"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center flex-shrink-0">
+                        <FiMonitor className="w-5 h-5 text-sky-800" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-900 text-sm sm:text-base">Study from Home</div>
+                        <p className="text-[11px] sm:text-xs text-gray-600 mt-1 leading-snug">
+                          Complete your course entirely online using your own device, at your own pace.
+                        </p>
+                      </div>
+                      <FiChevronRight className="w-5 h-5 text-gray-400 self-center flex-shrink-0" />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeEnrollmentModal}
+                    className="w-full mt-5 py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+
+              {/* Study from home: cohort list */}
               {!enrollSuccess &&
                 !waitlistJoined &&
-                enrollmentStep === "support" && (
-                  <>
-                    <button
-                      onClick={closeEnrollmentModal}
-                      className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
-                    >
-                      <FiX className="w-4.5 h-4.5" />
-                    </button>
-                    <div className="flex justify-center mb-3 sm:hidden">
-                      <div className="w-8 h-1 bg-gray-200 rounded-full" />
-                    </div>
-                    <div className="text-center mb-5">
-                      <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
-                        One quick question
-                      </h2>
-                      <p className="text-gray-400 text-[11px] sm:text-sm line-clamp-1">
-                        Enrolling in{" "}
-                        <span className="text-gray-600">
-                          {enrolledCourseName}
-                        </span>
+                enrollmentStep === "selfPacedCohort" &&
+                (() => {
+                  const monthMap = {};
+                  availableBatches.forEach((b) => {
+                    const key = String(b.start_date ?? "").slice(0, 7);
+                    if (!key) return;
+                    if (!monthMap[key]) monthMap[key] = [];
+                    monthMap[key].push(b);
+                  });
+                  const months = Object.keys(monthMap).sort();
+                  const activeMonth = selectedBatchMonth || months[0];
+                  const filteredBatches = monthMap[activeMonth] || [];
+                  return (
+                    <>
+                      <button type="button" onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+                        <FiX className="w-4.5 h-4.5" />
+                      </button>
+                      <div className="flex justify-center mb-3 sm:hidden">
+                        <div className="w-8 h-1 bg-gray-200 rounded-full" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEnrollError(null);
+                          setEnrollmentStep("studyMode");
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 transition-colors mb-3"
+                      >
+                        <FiArrowLeft className="w-3 h-3" /> Back
+                      </button>
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Choose your cohort</h2>
+                      <p className="text-gray-600 text-xs sm:text-sm mb-3 leading-relaxed">
+                        Self-paced (study from home) for <span className="font-semibold text-gray-800">{enrolledCourseName}</span>.
+                        Pick a cohort for records only — seat counts do not apply.
                       </p>
-                    </div>
-                    {!centreIsReady ? (
-                      <>
-                        <p className="text-[13px] sm:text-sm text-gray-500 mb-4 text-center">Accessibility support is not yet available at this centre</p>
-                        {enrollError && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{enrollError}</p></div>}
-                        <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="w-full p-3.5 rounded-xl border-2 text-sm font-semibold transition-all active:scale-[0.97] bg-yellow-400 hover:bg-yellow-500 text-gray-900 flex items-center justify-center gap-2 mb-3">
-                          {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "Enroll as self-paced"}
-                        </button>
-                        <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
-                      </>
-                    ) : (
-                      <>
-                        <h3 className="text-[13px] sm:text-sm font-semibold text-gray-900 mb-3 text-center">Do you need any accessibility support?</h3>
-                        {enrollError && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl"><p className="text-red-700 text-sm">{enrollError}</p></div>}
-                        <div className="grid grid-cols-2 gap-2.5 mb-4">
-                          <button onClick={() => handleSupportAnswer(true)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700">Yes, I do</button>
-                          <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting} className="p-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.97] bg-white border-gray-200 hover:border-yellow-400 text-gray-700 flex items-center justify-center gap-2">
-                            {enrollSubmitting ? (<><FiLoader className="w-4 h-4 animate-spin" />Enrolling...</>) : "No, enroll me"}
-                          </button>
+                      {enrollError && (
+                        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl">
+                          <p className="text-red-700 text-sm">{enrollError}</p>
                         </div>
-                        <button onClick={closeEnrollmentModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors">Cancel</button>
-                      </>
-                    )}
-                  </>
-                )}
+                      )}
+                      {batchesLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <FiLoader className="w-5 h-5 text-yellow-500 animate-spin" />
+                        </div>
+                      ) : (
+                        <>
+                          {months.length > 1 && (
+                            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 mb-4 -mx-1 px-1">
+                              {months.map((m) => {
+                                const isActive = m === activeMonth;
+                                const label = new Date(m + "-01").toLocaleDateString("en-GB", { month: "short" });
+                                return (
+                                  <button
+                                    key={m}
+                                    type="button"
+                                    onClick={() => setSelectedBatchMonth(m)}
+                                    className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${isActive ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                                  >
+                                    {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <div className="space-y-2">
+                            {filteredBatches.map((batch) => {
+                              const startStr = new Date(batch.start_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+                              const endStr = new Date(batch.end_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+                              return (
+                                <button
+                                  key={batch.id}
+                                  type="button"
+                                  onClick={() => handleSelfPacedCohortSelect(batch)}
+                                  className="w-full text-left p-3 sm:p-4 rounded-xl border border-gray-200 bg-white hover:border-yellow-400 hover:shadow-md transition-all group active:scale-[0.99]"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 bg-gradient-to-br from-sky-50 to-blue-50 group-hover:from-sky-100 group-hover:to-blue-100 transition-colors">
+                                      <span className="text-[10px] font-medium leading-none text-sky-800">
+                                        {new Date(batch.start_date).toLocaleDateString("en-GB", { month: "short" })}
+                                      </span>
+                                      <span className="text-base font-bold leading-tight text-gray-900">
+                                        {new Date(batch.start_date).getDate()}
+                                      </span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm font-semibold text-gray-900 group-hover:text-sky-800 transition-colors">
+                                        {batch.batch || `Cohort ${batch.id}`}
+                                      </div>
+                                      <div className="text-[11px] sm:text-xs text-gray-500 mt-0.5">
+                                        {startStr} — {endStr}
+                                      </div>
+                                    </div>
+                                    <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-sky-600 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
+                                  </div>
+                                </button>
+                              );
+                            })}
+                            {filteredBatches.length === 0 && (
+                              <div className="text-center py-8 text-gray-400 text-sm">No cohorts in this period</div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+
+              {/* Study from home: confirm */}
+              {!enrollSuccess && !waitlistJoined && enrollmentStep === "selfPacedConfirm" && (
+                <>
+                  <button type="button" onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+                    <FiX className="w-4.5 h-4.5" />
+                  </button>
+                  <div className="flex justify-center mb-3 sm:hidden">
+                    <div className="w-8 h-1 bg-gray-200 rounded-full" />
+                  </div>
+                  <div className="flex items-center gap-1.5 mb-5">
+                    {["Cohort", "Confirm"].map((label, i) => (
+                      <React.Fragment key={label}>
+                        <div className="flex items-center gap-1">
+                          <div
+                            className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${i === 0 ? "bg-green-500 text-white" : "bg-yellow-400 text-gray-900"}`}
+                          >
+                            {i === 0 ? <FiCheckCircle className="w-3 h-3" /> : "2"}
+                          </div>
+                          <span className={`text-[11px] font-medium ${i === 0 ? "text-green-600" : "text-yellow-600"}`}>{label}</span>
+                        </div>
+                        {i < 1 && <div className="flex-1 h-px bg-green-300" />}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEnrollmentStep("selfPacedCohort")}
+                    className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 transition-colors mb-3"
+                  >
+                    <FiArrowLeft className="w-3 h-3" /> Back
+                  </button>
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Review and confirm</h2>
+                  <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-3 text-[11px] sm:text-xs text-sky-950 leading-relaxed">
+                    Self-paced from home. Your completion award can be verified and collected at the centre below — same place
+                    where in-person learners may attend for equipment or connectivity support.
+                  </div>
+                  {(() => {
+                    const regionName = (inPersonMeta?.region_name && String(inPersonMeta.region_name).trim()) || "";
+                    const districtName = (inPersonMeta?.district_name && String(inPersonMeta.district_name).trim()) || "";
+                    const regionDistrict = [regionName, districtName].filter(Boolean).join(" → ");
+                    const centreName =
+                      (inPersonMeta?.centre_title && String(inPersonMeta.centre_title).trim()) ||
+                      enrollingCentreTitle ||
+                      "";
+                    const awardTitle =
+                      (inPersonMeta?.certificate_title && String(inPersonMeta.certificate_title).trim()) ||
+                      programme?.course_certification?.[0]?.title ||
+                      programme?.courseCertification?.[0]?.title ||
+                      "";
+                    return (
+                      <div className="mb-5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 border border-gray-200 overflow-hidden">
+                        <div className="px-3 sm:px-4 py-3 border-b border-gray-200/60">
+                          <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Course</p>
+                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 break-words leading-snug">{enrolledCourseName}</h3>
+                        </div>
+                        <dl className="px-3 sm:px-4 py-3 space-y-3 text-sm sm:text-base">
+                          <div>
+                            <dt className="text-xs sm:text-sm font-medium text-gray-500">Region and district</dt>
+                            <dd className="mt-1 font-semibold text-gray-900 break-words leading-snug">{regionDistrict || "—"}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs sm:text-sm font-medium text-gray-500">Award / records centre</dt>
+                            <dd className="mt-1 font-semibold text-gray-900 break-words leading-snug">{centreName || "—"}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs sm:text-sm font-medium text-gray-500">Award on completion</dt>
+                            <dd className="mt-1 font-semibold text-gray-900 break-words leading-snug">{awardTitle || "—"}</dd>
+                          </div>
+                          <div className="pt-1 border-t border-gray-200/70">
+                            <dt className="text-xs sm:text-sm font-medium text-gray-500">Administrative cohort</dt>
+                            <dd className="mt-1 font-semibold text-gray-900 break-words">
+                              {selectedBatch?.batch || `Batch ${selectedBatch?.id}`}
+                              {selectedBatch?.start_date && (
+                                <>
+                                  {" "}
+                                  ·{" "}
+                                  {new Date(selectedBatch.start_date).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
+                                </>
+                              )}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs sm:text-sm font-medium text-gray-500">Learning mode</dt>
+                            <dd className="mt-1 font-semibold text-gray-900 break-words">Study from home (self-paced)</dd>
+                          </div>
+                        </dl>
+                      </div>
+                    );
+                  })()}
+                  {enrollError && (
+                    <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl">
+                      <p className="text-red-700 text-sm">{enrollError}</p>
+                    </div>
+                  )}
+                  <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <button type="button" onClick={closeEnrollmentModal} className="flex-1 py-3.5 sm:py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 font-semibold text-sm sm:text-base rounded-xl transition-colors">
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleEnrollSubmit}
+                      disabled={enrollSubmitting}
+                      className={`flex-1 py-3.5 sm:py-3 font-semibold text-sm sm:text-base rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.97] ${!enrollSubmitting ? "bg-yellow-400 hover:bg-yellow-500 text-gray-900 shadow-sm" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
+                    >
+                      {enrollSubmitting ? (
+                        <>
+                          <FiLoader className="w-4 h-4 animate-spin" />
+                          Confirming…
+                        </>
+                      ) : (
+                        "Confirm enrolment"
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
 
               {/* Batch Selection with Month Tabs */}
               {!enrollSuccess && !waitlistJoined && enrollmentStep === "batch" && (() => {
@@ -699,6 +1033,22 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                     <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"><FiX className="w-4.5 h-4.5" /></button>
                     <div className="flex justify-center mb-3 sm:hidden"><div className="w-8 h-1 bg-gray-200 rounded-full" /></div>
                     <StepIndicator current={0} />
+                    {!inPersonEnrollmentFlow && studyModeChoice === "centre" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEnrollError(null);
+                          setNeedsSupport(null);
+                          setSelectedBatch(null);
+                          setSelectedSession(null);
+                          setSelectedBatchMonth(null);
+                          setEnrollmentStep("studyMode");
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600 transition-colors mb-3"
+                      >
+                        <FiArrowLeft className="w-3 h-3" /> Back
+                      </button>
+                    )}
                     <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-0.5">When would you like to start?</h2>
                     <p className="text-gray-500 text-sm sm:text-base mb-4 line-clamp-2 leading-snug">{enrolledCourseName}</p>
                     {enrollError && (

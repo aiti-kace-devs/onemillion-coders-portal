@@ -60,7 +60,7 @@ class AvailabilityController extends Controller
         $centre = $course->centre;
         $programme = $course->programme;
         $courseType = $programme->courseType();
-        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
+        $isInPerson = $programme->isInPerson();
 
         $regionName = $centre->branch?->title;
         $districtName = $centre->districts->first()?->title;

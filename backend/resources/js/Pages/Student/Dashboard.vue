@@ -15,6 +15,7 @@ const props = defineProps({
 const { config } = usePage().props;
 const user = computed(() => usePage().props.auth?.user || {});
 const isOnWaitlist = computed(() => !!user.value?.on_waitlist);
+const onboardingStep = computed(() => user.value?.current_onboarding_step ?? null);
 
 const hasRegisteredCourse = computed(() => !!props.registeredCourse);
 
@@ -121,6 +122,10 @@ const hasMoreShortcuts = computed(() => {
         (tieredTestTaken.value && !u.isAdmitted && !u.shortlist)
     );
 });
+
+function quickAccessShowNextRibbon(stepKey) {
+    return onboardingStep.value === stepKey;
+}
 </script>
 
 <template>
@@ -244,41 +249,82 @@ const hasMoreShortcuts = computed(() => {
                 <div class="mt-6 space-y-10">
                     <div>
                         <p
-                            class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest"
+                            class="mb-1 text-xs font-bold text-gray-400 uppercase tracking-widest"
                         >
-                            Quick Access
+                            Quick access
+                        </p>
+                        <p class="mb-4 text-xs text-gray-500 max-w-2xl">
+                            Application status is your hub for progress and the expected flow; use the shortcuts below to complete each step.
                         </p>
 
-                        <!-- Before level assessment is done: guided vertical path (status → assessment → verification). -->
+                        <Link
+                            :href="route('student.application-status')"
+                            class="block w-full max-w-3xl mb-6"
+                        >
+                            <div
+                                class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-3 border border-gray-100/80 overflow-hidden"
+                            >
+                                <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                <span
+                                    class="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                >
+                                    <span class="material-symbols-outlined text-[22px] sm:text-[24px]">contract</span>
+                                </span>
+                                <div class="flex-1 text-left min-w-0">
+                                    <h3 class="text-base sm:text-lg font-bold text-gray-800">
+                                        Application status
+                                    </h3>
+                                    <p class="text-sm text-gray-600 mt-0.5">
+                                        View your timeline, expected flow, and what to do next.
+                                    </p>
+                                </div>
+                                <span class="material-symbols-outlined text-gray-400 shrink-0 hidden sm:inline" aria-hidden="true">chevron_right</span>
+                            </div>
+                        </Link>
+
+                        <!-- Before level assessment: review → assessment → verification. -->
                         <template v-if="showAssessmentQuickAccess">
                             <div class="flex flex-col gap-6 max-w-3xl mb-10">
-                                <Link
-                                    :href="route('student.application-status')"
-                                    class="block w-full"
-                                >
-                                    <div
-                                        class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                                <div v-if="!user.application_review_completed">
+                                    <p
+                                        class="mb-3 text-xs font-bold text-gray-400 uppercase tracking-widest"
                                     >
-                                        <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-                                        <div class="flex items-center gap-3 mb-2">
+                                        Application review
+                                    </p>
+                                    <Link
+                                        :href="route('student.application-review.index')"
+                                        class="block w-full"
+                                    >
+                                        <div
+                                            class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                                        >
+                                            <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                                             <span
-                                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                                v-if="quickAccessShowNextRibbon('application_review')"
+                                                class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800"
                                             >
-                                                <span class="material-symbols-outlined">contract</span>
+                                                Next step
                                             </span>
-                                            <div class="flex-1 text-left">
-                                                <h3 class="text-lg font-bold text-gray-800">
-                                                    Application Status
-                                                </h3>
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <span
+                                                    class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                                >
+                                                    <span class="material-symbols-outlined">menu_book</span>
+                                                </span>
+                                                <div class="flex-1 text-left">
+                                                    <h3 class="text-lg font-bold text-gray-800">
+                                                        Application review
+                                                    </h3>
+                                                </div>
+                                            </div>
+                                            <div class="mt-2 space-y-1 text-left">
+                                                <p class="text-sm">
+                                                    Read how enrollment works before you start the level assessment.
+                                                </p>
                                             </div>
                                         </div>
-                                        <div class="mt-2 space-y-1 text-left">
-                                            <p class="text-sm">
-                                                Discover your standing for the current application.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </Link>
+                                    </Link>
+                                </div>
 
                                 <div>
                                     <p
@@ -295,9 +341,10 @@ const hasMoreShortcuts = computed(() => {
                                         >
                                             <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                                             <span
+                                                v-if="quickAccessShowNextRibbon('assessment')"
                                                 class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800"
                                             >
-                                                Next
+                                                Next step
                                             </span>
                                             <div class="flex items-center gap-3 mb-2">
                                                 <span
@@ -334,6 +381,12 @@ const hasMoreShortcuts = computed(() => {
                                             class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                                         >
                                             <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                            <span
+                                                v-if="quickAccessShowNextRibbon('identity_verification')"
+                                                class="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 z-[1]"
+                                            >
+                                                Next step
+                                            </span>
                                             <span
                                                 class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
                                                 :class="
@@ -513,6 +566,12 @@ const hasMoreShortcuts = computed(() => {
                                 >
                                     <!-- Hover Accent Line -->
                                     <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <span
+                                        v-if="quickAccessShowNextRibbon('course_selection')"
+                                        class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 z-[1]"
+                                    >
+                                        Next step
+                                    </span>
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
@@ -552,39 +611,11 @@ const hasMoreShortcuts = computed(() => {
                             </template>
                         </template>
 
-                        <!-- After level assessment: original flat Quick Access grid (no stacked onboarding). -->
+                        <!-- After level assessment: shortcut grid (application status is above for everyone). -->
                         <div
                             v-else
                             class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
                         >
-                            <Link
-                                :href="route('student.application-status')"
-                                class="block h-full"
-                            >
-                                <div
-                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                                >
-                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
-                                        >
-                                            <span class="material-symbols-outlined">contract</span>
-                                        </span>
-                                        <div class="flex-1 text-left">
-                                            <h3 class="text-lg font-bold text-gray-800">
-                                                Application Status
-                                            </h3>
-                                        </div>
-                                    </div>
-                                    <div class="mt-2 space-y-1 text-left">
-                                        <p class="text-sm">
-                                            Discover your standing for the current application.
-                                        </p>
-                                    </div>
-                                </div>
-                            </Link>
-
                             <Link
                                 :href="route('student.verification.index')"
                                 class="block h-full"
@@ -593,6 +624,12 @@ const hasMoreShortcuts = computed(() => {
                                     class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                                 >
                                     <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <span
+                                        v-if="quickAccessShowNextRibbon('identity_verification')"
+                                        class="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 z-[1]"
+                                    >
+                                        Next step
+                                    </span>
                                     <span
                                         class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
                                         :class="
@@ -731,6 +768,12 @@ const hasMoreShortcuts = computed(() => {
                                     class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
                                 >
                                     <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <span
+                                        v-if="quickAccessShowNextRibbon('course_selection')"
+                                        class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 z-[1]"
+                                    >
+                                        Next step
+                                    </span>
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
                                             class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"

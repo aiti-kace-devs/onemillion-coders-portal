@@ -162,7 +162,7 @@ class StudentOperation extends Controller
         $user_admission = UserAdmission::where('user_id', $user->userId)->first();
         $user_assessment = UserAssessment::where('user_id', $user->id)->first();
 
-        $userFields = ['id', 'name', 'registered_course', 'shortlist'];
+        $userFields = ['id', 'name', 'registered_course', 'shortlist', 'application_review_completed_at'];
         if (config(SHOW_STUDENT_LEVEL, false)) {
             $userFields[] = 'student_level';
         }
@@ -175,6 +175,53 @@ class StudentOperation extends Controller
             'user_assessment' => $user_assessment ? $user_assessment->only(['id', 'completed']) : null,
             'verification_status' => $verificationStatus,
         ]);
+    }
+
+    public function application_review()
+    {
+        $user = Auth::guard('web')->user();
+
+        if ($user->application_review_completed_at) {
+            return redirect()->route('student.level-assessment');
+        }
+
+        $reviewBase = rtrim((string) config('app.application_review_embed_url', ''), '/');
+        $parentOrigin = rtrim((string) config('app.url', ''), '/');
+
+        $embedUrl = null;
+        if ($reviewBase !== '') {
+            $embedUrl = $reviewBase.(str_contains($reviewBase, '?') ? '&' : '?')
+                .http_build_query(['embed' => '1', 'parent_origin' => $parentOrigin]);
+        }
+
+        return Inertia::render('Student/ApplicationReview', [
+            'application_review_embed_url' => $embedUrl,
+            'application_review_embed_available' => $embedUrl !== null,
+        ]);
+    }
+
+    public function complete_application_review()
+    {
+        $user = Auth::guard('web')->user();
+
+        if ($user->application_review_completed_at) {
+            return redirect()->route('student.level-assessment');
+        }
+
+        activity('student')
+            ->causedBy($user)
+            ->event('Application review acknowledged')
+            ->log("{$user->name} acknowledged the application review step.");
+
+        $user->application_review_completed_at = now();
+        $user->save();
+
+        return redirect()
+            ->route('student.level-assessment')
+            ->with([
+                'flash' => 'Thank you. You can now continue with the level assessment.',
+                'key' => 'success',
+            ]);
     }
 
     public function verification()

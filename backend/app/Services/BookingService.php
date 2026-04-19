@@ -30,12 +30,14 @@ class BookingService
      * For other courses: enforces per-session capacity via daily_session_occupancy summary table
      * and respects the Intelligent Quota System (IQS).
      *
+     * @param  bool  $forSelfPacedCohortAttachment  When true (study-from-home cohort only): skip seat-capacity
+     *                                            checks and create the booking without occupancy observer side-effects.
      * @throws Exception when capacity is exhausted or the session is incompatible.
      */
-    public function book(User $user, Course $course, ProgrammeBatch $batch, $session): ?Booking
+    public function book(User $user, Course $course, ProgrammeBatch $batch, $session, bool $forSelfPacedCohortAttachment = false): ?Booking
     {
         $programme = $course->programme;
-        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
+        $isInPerson = $programme->isInPerson();
 
         // Handle In Person courses
         if ($isInPerson) {
@@ -66,15 +68,17 @@ class BookingService
 
         // Atomic lock ensures only one booking proceeds per centre+session at a time.
         // This prevents two requests from both reading "1 slot left" and both succeeding.
-        return Cache::lock($lockKey, 10)->block(5, function () use ($user, $course, $batch, $session, $centreId) {
-            return DB::transaction(function () use ($user, $course, $batch, $session, $centreId) {
+        return Cache::lock($lockKey, 10)->block(5, function () use ($user, $course, $batch, $session, $centreId, $forSelfPacedCohortAttachment) {
+            return DB::transaction(function () use ($user, $course, $batch, $session, $centreId, $forSelfPacedCohortAttachment) {
                 $courseType = Booking::resolveCourseType($course->id);
 
-                // Bypass the cache and compute remaining seats fresh inside the lock
-                $remaining = $this->computeRemainingSeats($centreId, $batch, $session);
+                if (! $forSelfPacedCohortAttachment) {
+                    // Bypass the cache and compute remaining seats fresh inside the lock
+                    $remaining = $this->computeRemainingSeats($centreId, $batch, $session);
 
-                if ($remaining <= 0) {
-                    throw new Exception('Course session is full.');
+                    if ($remaining <= 0) {
+                        throw new Exception('Course session is full.');
+                    }
                 }
 
                 // Check for existing booking in the same batch (idempotency)
@@ -122,7 +126,7 @@ class BookingService
                 // Clear the cached seat count so the next read reflects this booking
                 Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$session->id}");
 
-                return Booking::create([
+                $bookingPayload = [
                     'user_id' => $user->userId,
                     'programme_batch_id' => $batch->id,
                     'master_session_id' => $session->id,
@@ -132,7 +136,16 @@ class BookingService
                     'status' => true,
                     'booked_at' => now(),
                     'user_admission_id' => $admission->id,
-                ]);
+                ];
+
+                if ($forSelfPacedCohortAttachment) {
+                    // Cohort-for-records only: do not increment daily_session_occupancy (observer skipped).
+                    return Booking::withoutEvents(function () use ($bookingPayload) {
+                        return Booking::create($bookingPayload);
+                    });
+                }
+
+                return Booking::create($bookingPayload);
             });
         });
     }

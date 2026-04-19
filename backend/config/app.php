@@ -249,5 +249,6 @@ return [
     'horizon_path' => env('HORI', 'horizon'),
     'jwt_token' => env('JWT_TOKEN', Str::random(60)),
     'quiz_frontend_url' => env('QUIZ_FRONTEND_URL', ''),
+    'application_review_embed_url' => env('APPLICATION_REVIEW_EMBED_URL', ''),
 
 ];
