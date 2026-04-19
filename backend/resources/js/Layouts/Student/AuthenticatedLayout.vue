@@ -141,16 +141,6 @@ const user = computed(() => auth.value.user ?? {});
                         >
                     </SidebarNavLink>
 
-                    <SidebarNavLink
-                        v-if="user.hasAdmission"
-                        :href="route('student.session.index')"
-                        :active="route().current('student.session.*')"
-                        :label="'Session'"
-                    >
-                        <span class="material-symbols-outlined">
-                            calendar_clock
-                        </span>
-                    </SidebarNavLink>
 
                     <SidebarNavLink
                         v-if="
