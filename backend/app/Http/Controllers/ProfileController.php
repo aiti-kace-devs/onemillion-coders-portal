@@ -21,7 +21,7 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
-        $user = $request->user()->load(['admission.course', 'admission.courseSession']);
+        $user = $request->user()->load(['admission.course', 'admission.courseSession', 'admission.booking.session', 'admission.programmeBatch']);
         $verificationStatus = app(GhanaCardService::class)->buildStatus($user);
 
         $userData = array_merge($user->toArray(), [
@@ -29,6 +29,8 @@ class ProfileController extends Controller
             'student_name' => $user->student_name,
             'course_name' => $user->course_name,
             'selected_session' => $user->selected_session,
+            'session_dates' => $user->session_dates,
+            'session_time' => $user->session_time_value,
             'validity_period' => $user->validity_period,
             'verification_date' => $user->verification_date,
             'ghcard_verified' => (bool) data_get($verificationStatus, 'verified', false),
@@ -58,6 +60,8 @@ class ProfileController extends Controller
             'registered_course',
             'course_name',
             'selected_session',
+            'session_dates',
+            'session_time',
             'validity_period',
             'verification_date',
             'ghcard_verified',

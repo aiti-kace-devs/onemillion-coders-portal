@@ -218,41 +218,31 @@ const generateIDCard = () => {
       // Row 1: Index No & Cohort
       ctx.fillStyle = "#374151";
       ctx.font = "bold 9px Figtree";
-      ctx.fillText("Index No.:", 15, 155);
+      ctx.fillText("Index No.:", 15, 145);
       ctx.fillStyle = "#000";
       ctx.font = "bold 10px Figtree";
-      ctx.fillText(props.user.student_id || "N/A", 65, 155);
+      ctx.fillText(props.user.student_id || "N/A", 65, 145);
 
       ctx.fillStyle = "#374151";
       ctx.font = "bold 9px Figtree";
-      ctx.fillText("Cohort:", 145, 155);
+      ctx.fillText("Cohort:", 145, 145);
       ctx.fillStyle = "#000";
       ctx.font = "bold 9px Figtree";
-      wrapText(
-        ctx,
-        (props.user.selected_session || "N/A").toUpperCase(),
-        185,
-        155,
-        120,
-        12,
-        "bold 9px Figtree"
-      );
+      // Dates part
+      ctx.fillText((props.user.session_dates || "N/A").toUpperCase(), 185, 145);
+      // Time part (slightly below)
+      if (props.user.session_time) {
+          ctx.font = "bold 8px Figtree";
+          ctx.fillText(`(${props.user.session_time.toUpperCase()})`, 185, 157);
+      }
 
       // Row 2: Validity
       ctx.fillStyle = "#374151";
       ctx.font = "bold 9px Figtree";
-      ctx.fillText("Validity:", 15, 180);
+      ctx.fillText("Validity:", 15, 175);
       ctx.fillStyle = "#000";
       ctx.font = "bold 9px Figtree";
-      wrapText(
-        ctx,
-        (props.user.validity_period || "N/A").toUpperCase(),
-        65,
-        180,
-        200,
-        14,
-        "bold 9px Figtree"
-      );
+      ctx.fillText((props.user.validity_period || "N/A").toUpperCase(), 65, 175);
 
       ctx.fillStyle = "#374151";
       ctx.fillRect(0, h - 8, w, 5);

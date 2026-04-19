@@ -91,4 +91,9 @@ class UserAdmission extends Model
     {
         return $this->belongsTo(ProgrammeBatch::class, 'programme_batch_id');
     }
+
+    public function booking()
+    {
+        return $this->hasOne(Booking::class, 'user_admission_id');
+    }
 }
