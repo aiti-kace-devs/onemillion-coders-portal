@@ -12,7 +12,13 @@ class AttendanceController extends Controller
 {
     public function viewAttendance()
     {
-        $userId = Auth::guard('web')->user()->userId;
+        $user = Auth::guard('web')->user();
+        
+        if ($user->course?->isOnlineProgramme()) {
+            return redirect()->route('student.dashboard');
+        }
+
+        $userId = $user->userId;
         $attendances = Attendance::select('attendances.*', 'courses.created_at as course_created', 'courses.course_name')
             ->where('user_id', $userId)
             ->join('courses', 'courses.id', 'attendances.course_id')
