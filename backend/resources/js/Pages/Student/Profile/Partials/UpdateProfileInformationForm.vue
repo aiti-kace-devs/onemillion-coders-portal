@@ -156,6 +156,7 @@ const submit = () => {
           <InputLabel for="ghcard" value="Ghana Card Number" />
           <div class="flex">
             <span
+              v-if="!String(user.ghcard || '').startsWith('GHA-')"
               class="inline-flex items-center px-4 border border-r-0 text-gray-500 font-medium text-sm rounded-l-xl h-11 bg-gray-100 border-gray-200 cursor-not-allowed text-gray-400"
               id="ghcard-addon"
               :class="{
@@ -170,7 +171,7 @@ const submit = () => {
               :value="user.ghcard || ''"
               disabled
               :class="{
-                'border-l-0 rounded-l-none': true,
+                'border-l-0 rounded-l-none': !String(user.ghcard || '').startsWith('GHA-'),
                 'border-green-600': cardVerified,
               }"
               placeholder="123456789-1"
