@@ -845,7 +845,7 @@ export default function CoursesPage({ params }) {
           {
             programme_batch_id: selectedBatch.id,
             course_id: enrollingCourseId,
-            course_session_id: selectedSession.session_id,
+            session_id: selectedSession.session_id,
           },
           token,
         )

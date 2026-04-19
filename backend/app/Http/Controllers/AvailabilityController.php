@@ -115,6 +115,7 @@ class AvailabilityController extends Controller
         } else {
             $sessions = MasterSession::where('course_type', $courseType)
                 ->where('status', true)
+                ->where('session_type', '!=', 'Online')
                 ->get();
         }
         $sessions = $this->sortMasterSessions($sessions);

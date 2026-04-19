@@ -8,6 +8,8 @@ use App\Models\CourseSession;
 use App\Models\MasterSession;
 use App\Models\ProgrammeBatch;
 use App\Models\User;
+use App\Models\UserAdmission;
+use App\Models\AdmissionWaitlist;
 use App\Services\AvailabilityService;
 use App\Services\BookingService;
 use App\Services\GhanaCardService;
@@ -25,12 +27,17 @@ class BookingController extends Controller
         GhanaCardService $ghanaCardService
     ): JsonResponse
     {
-        // First validate the required fields without the session table dependency
-        $validated = $request->validate([
+        // Check if this is a self-paced enrollment (nullable query parameter)
+        $isSelfPaced = $request->query('self-paced') === 'true';
+
+        // Adjust validation based on self-paced flag
+        $validationRules = [
             'programme_batch_id' => 'required|integer|exists:programme_batches,id',
             'course_id' => 'required|integer|exists:courses,id',
-            'session_id' => 'required|integer',
-        ]);
+            'session_id' => $isSelfPaced ? 'nullable|integer' : 'required|integer',
+        ];
+
+        $validated = $request->validate($validationRules);
 
         $batch = ProgrammeBatch::find($validated['programme_batch_id']);
         if (!$batch->status) {
@@ -69,7 +76,32 @@ class BookingController extends Controller
             ], 422);
         }
 
-        // Fetch session based on delivery mode
+        // Handle self-paced enrollment (no session required)
+        if ($isSelfPaced) {
+            $user->registered_course = $course->id;
+            $user->shortlist = true;
+            $user->save();
+
+            UserAdmission::updateOrCreate(
+                ['user_id' => $user->userId],
+                [
+                    'programme_batch_id' => $batch->id,
+                    'email_sent' => now(),
+                    'confirmed' => now(),
+                    'course_id' => $course->id,
+                ]
+            );
+
+            // Remove from waitlist if exists
+            AdmissionWaitlist::where('user_id', $user->userId)->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Self-paced enrollment successful.',
+            ], 201);
+        }
+
+        // Fetch session for non-self-paced enrollments
         if ($isInPerson) {
             $session = CourseSession::find($validated['session_id']);
             if (!$session || $session->course_id !== $course->id) {
@@ -110,7 +142,6 @@ class BookingController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Booking successful.',
-            // 'data' => $booking->load('programmeBatch', 'courseSession', 'course'),
         ], 201);
     }
 

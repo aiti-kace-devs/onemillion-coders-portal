@@ -453,6 +453,8 @@ class CourseProgrammeController extends Controller
                         $payload['total_centres'] = (int) Centre::where('branch_id', $branch->id)
                             ->where('status', 1)
                             ->where('is_ready', 1)
+                            ->withCount('courses')
+                            ->having('courses_count', '>', 0)
                             ->count();
                     }
 
@@ -697,6 +699,8 @@ class CourseProgrammeController extends Controller
         $district = District::query()
             ->with(['centres' => function ($query) {
                 $query->where('status', 1)
+                    ->withCount('courses')
+                    ->having('courses_count', '>', 0)
                     ->orderBy('title');
             }])
             ->findOrFail($data['district_id']);
@@ -714,6 +718,8 @@ class CourseProgrammeController extends Controller
                         'is_pwd_friendly' => $centre->is_pwd_friendly,
                         'images' => $centre->images ?? [],
                         'video' => $centre->video,
+                        'has_courses' => $centre->courses_count > 0,
+                        'courses_count' => $centre->courses_count,
                     ];
                 })
                 ->values(),
@@ -736,12 +742,26 @@ class CourseProgrammeController extends Controller
     {
         $request->validate([
             'district_id' => 'required|integer|exists:districts,id',
+            'sort' => 'nullable|string|in:centre_name,capacity,availability',
+            'order' => 'nullable|string|in:asc,desc',
+            'filter' => 'nullable|string|in:has_availability',
+            'min_availability' => 'nullable|integer|min:0',
+            'limit' => 'nullable|integer|min:1',
         ]);
 
         $districtId = (int) $request->query('district_id');
-        $cacheKey = 'programme_availability:'.($programmeId ?? 'none').':district:'.($districtId ?? 'none');
+        $sort = $request->query('sort', 'centre_name');
+        $order = strtolower($request->query('order', 'asc'));
+        $filter = $request->query('filter');
+        $minAvailability = (int) ($request->query('min_availability', 0));
+        $limit = $request->query('limit') ? (int) $request->query('limit') : null;
 
-        $response = Cache::remember($cacheKey, 600, function () use ($programmeId, $districtId, $bookingService) {
+        $cacheKey = 'programme_availability:'.($programmeId ?? 'none').':district:'.($districtId ?? 'none')
+            .':sort:'.($sort ?? 'none').':order:'.($order ?? 'asc')
+            .':filter:'.($filter ?? 'none').':min_avail:'.($minAvailability ?? 'none')
+            .':limit:'.($limit ?? 'none');
+
+        $response = Cache::remember($cacheKey, 600, function () use ($programmeId, $districtId, $bookingService, $sort, $order, $filter, $minAvailability, $limit) {
             $programme = Programme::findOrFail($programmeId);
             $courseType = $programme->courseType();
 
@@ -777,6 +797,7 @@ class CourseProgrammeController extends Controller
             // Get active master sessions for this course type
             $sessions = MasterSession::where('course_type', $courseType)
                 ->where('status', true)
+                ->where('session_type', '!=', 'Online')
                 ->get();
             $sessions = $this->sortMasterSessions($sessions);
 
@@ -842,9 +863,53 @@ class CourseProgrammeController extends Controller
                         'district_name' => $primaryDistrict?->title,
                         'centre_name' => $centre->title,
                         'capacity' => $centre->slotCapacityFor($courseType),
+                        'total_availability' => $totalAvailable,
                         'batches' => $batchData,
                     ];
                 }
+            }
+
+            // Apply filtering
+            if ($filter === 'has_availability' || $minAvailability > 0) {
+                $availableCentres = array_filter($availableCentres, function ($centre) use ($minAvailability) {
+                    return $centre['total_availability'] >= $minAvailability;
+                });
+            }
+
+            // Apply sorting
+            usort($availableCentres, function ($a, $b) use ($sort, $order) {
+                $aVal = null;
+                $bVal = null;
+
+                switch ($sort) {
+                    case 'centre_name':
+                        $aVal = strtolower($a['centre_name']);
+                        $bVal = strtolower($b['centre_name']);
+                        break;
+                    case 'capacity':
+                        $aVal = (int) $a['capacity'];
+                        $bVal = (int) $b['capacity'];
+                        break;
+                    case 'availability':
+                        $aVal = (int) $a['total_availability'];
+                        $bVal = (int) $b['total_availability'];
+                        break;
+                    default:
+                        $aVal = strtolower($a['centre_name']);
+                        $bVal = strtolower($b['centre_name']);
+                }
+
+                if ($aVal === $bVal) {
+                    return 0;
+                }
+
+                $result = ($aVal < $bVal) ? -1 : 1;
+                return $order === 'desc' ? -$result : $result;
+            });
+
+            // Apply limit
+            if ($limit !== null && $limit > 0) {
+                $availableCentres = array_slice($availableCentres, 0, $limit);
             }
 
             return [

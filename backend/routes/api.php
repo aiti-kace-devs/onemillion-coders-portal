@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
 use App\Http\Controllers\Admin\BatchCrudController;
 use App\Http\Controllers\StatamicEntryApiController;
 use App\Http\Controllers\StudentOperation;
+use App\Http\Controllers\CampaignTargetingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,6 +21,15 @@ use Illuminate\Support\Facades\Route;
 Route::post('batch/add-courses/{batch}', [BatchCrudController::class, 'addCourses'])
     ->name('batch.add-courses');
 Route::post('/recommend/courses', [CourseMatchAPIController::class, 'recommendCourses']);
+
+// Campaign targeting endpoints
+Route::prefix('campaign-targeting')->name('api.campaign-targeting.')->group(function () {
+    Route::get('/branches', [CampaignTargetingController::class, 'getBranches'])->name('branches');
+    Route::post('/districts', [CampaignTargetingController::class, 'getDistrictsByBranches'])->name('districts');
+    Route::post('/centres', [CampaignTargetingController::class, 'getCentresByDistricts'])->name('centres');
+    Route::post('/courses', [CampaignTargetingController::class, 'getCoursesByCentres'])->name('courses');
+    Route::post('/sessions', [CampaignTargetingController::class, 'getSessionsByCourses'])->name('sessions');
+});
 
 // Availability endpoint
 Route::get('/availability', [\App\Http\Controllers\AvailabilityController::class, 'index'])->name('api.availability');

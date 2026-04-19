@@ -342,12 +342,12 @@ export const createBooking = async (data, token) => {
 
 /**
  * Confirm in-person enrollment (separate from online POST /bookings).
- * @param {{ programme_batch_id: number, course_id: number, course_session_id: number }} data
+ * @param {{ programme_batch_id: number, course_id: number, session_id: number }} data
  * @param {string} token
  */
 export const submitInPersonEnrollment = async (data, token) => {
   try {
-    const response = await apiRequest('in-person-enrollment', {
+    const response = await apiRequest('bookings', {
       method: 'POST',
       data,
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),
