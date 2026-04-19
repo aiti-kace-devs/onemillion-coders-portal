@@ -29,7 +29,12 @@ class RedirectIfAuthenticated
                     return redirect(RouteServiceProvider::ADMIN_HOME);
                 }
 
-                return redirect(RouteServiceProvider::HOME);
+                $user = Auth::guard($guard ?? 'web')->user();
+                $home = $user && $user->registered_course
+                    ? RouteServiceProvider::HOME
+                    : route('student.application-status');
+
+                return redirect($home);
             }
         }
 
