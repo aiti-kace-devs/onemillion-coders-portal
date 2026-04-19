@@ -53,7 +53,7 @@ class AuthenticatedSessionController extends Controller
 
         return redirect()->intended($home);
     }
-
+ 
     /**
      * Destroy an authenticated session.
      */
