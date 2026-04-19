@@ -111,6 +111,30 @@ class BookingController extends Controller
                     'errors' => ['session_id' => ['The selected session id is invalid.']],
                 ], 422);
             }
+            else {
+                        $user->registered_course = $course->id;
+                        $user->shortlist = true;
+                        $user->save();
+                        UserAdmission::updateOrCreate(
+                            ['user_id' => $user->userId],
+                            [
+                                'course_id' => $course->id,
+                                'programme_batch_id' => $batch->id,
+                                'email_sent' => now(),
+                                'confirmed' => now(),
+                                'session' => $session->id,
+                            ]
+                        );
+
+                        // Remove from waitlist if exists
+                        AdmissionWaitlist::where('user_id', $user->userId)->delete();
+
+                        return response()->json([
+                            'status' => 'success',
+                            'message' => 'Booking successful.',
+                        ], 201);
+
+            }
         } else {
             $session = MasterSession::find($validated['session_id']);
             if (!$session) {
@@ -123,7 +147,7 @@ class BookingController extends Controller
         }
 
         try {
-            $booking = $bookingService->book($user, $course, $batch, $session);
+            $bookingService->book($user, $course, $batch, $session);
         } catch (Exception $e) {
             $recommendations = $availabilityService->getAvailableSlots(
                 $course->centre_id,
@@ -148,7 +172,7 @@ class BookingController extends Controller
     public function destroy(Request $request, Booking $booking, BookingService $bookingService): JsonResponse
     {
         $user = $request->user();
-        if (!$user || $booking->user_id !== $user->userId) {
+        if (! $user || $booking->user_id !== $user->userId) {
             return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
         }
 
@@ -163,7 +187,7 @@ class BookingController extends Controller
     public function mine(Request $request): JsonResponse
     {
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
         }
 

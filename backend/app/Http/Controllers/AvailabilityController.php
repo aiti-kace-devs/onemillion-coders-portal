@@ -60,7 +60,7 @@ class AvailabilityController extends Controller
         $centre = $course->centre;
         $programme = $course->programme;
         $courseType = $programme->courseType();
-        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
+        $isInPerson = $programme->isInPerson();
 
         $regionName = $centre->branch?->title;
         $districtName = $centre->districts->first()?->title;
@@ -454,19 +454,10 @@ class AvailabilityController extends Controller
     {
         return collect($sessions)
             ->sortBy(function ($session) {
-                // MasterSession: session_type = "Morning", "Afternoon", "Evening"
-                // CourseSession: session_type = "course" or "centre", use session column directly
-                $sessionType = $session->session_type ?? '';
-
-                // For CourseSession, use the session column which stores the period name
-                if (strtolower(trim((string) $sessionType)) === 'course' || strtolower(trim((string) $sessionType)) === 'centre') {
-                    $sessionType = $session->session ?? '';
-                }
-
                 $time = $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? '';
 
+                // Chronological by wall-clock start of the time range (not Morning/Afternoon label).
                 return [
-                    $this->sessionTypePriority($sessionType),
                     $this->sessionStartMinutes($time),
                     strtolower(trim((string) $time)),
                     (int) ($session->id ?? 0),
@@ -475,21 +466,10 @@ class AvailabilityController extends Controller
             ->values();
     }
 
-    protected function sessionTypePriority(?string $sessionType): int
-    {
-        return match (strtolower(trim((string) $sessionType))) {
-            'morning' => 0,
-            'afternoon' => 1,
-            'evening' => 2,
-            'fullday' => 3,
-            'online' => 4,
-            default => 99,
-        };
-    }
-
     protected function sessionStartMinutes(?string $time): int
     {
-        $startTime = trim(explode('-', (string) $time, 2)[0] ?? '');
+        $raw = (string) $time;
+        $startTime = trim(preg_split('/\s*[–—\-]\s*/u', $raw, 2)[0] ?? '');
 
         if ($startTime === '') {
             return PHP_INT_MAX;

@@ -24,40 +24,112 @@ use Illuminate\Support\Facades\DB;
 class BookingService
 {
     /**
+     * When a centre has no slot/seat configuration, {@see resolveEffectiveCapacity} returns null.
+     * Treating that as zero seats makes every online cohort/session appear full in the UI and
+     * blocks bookings; use a high cap until admins configure real limits.
+     */
+    private const UNCONFIGURED_ONLINE_CAPACITY_FALLBACK = 999999;
+
+    /**
      * Book a user into a programme batch for a specific course session.
      *
-     * For "In Person" courses: saves user & admission data without creating a Booking record.
+     * When {@see Course::isInPersonProgramme} is true and self-paced cohort attachment is false: enforces
+     * per-{@see CourseSession} capacity and creates a {@see Booking} with {@see Booking::course_session_id}.
      * For other courses: enforces per-session capacity via daily_session_occupancy summary table
      * and respects the Intelligent Quota System (IQS).
      *
+     * @param  bool  $forSelfPacedCohortAttachment  When true (study-from-home cohort only): skip seat-capacity
+     *                                              checks and create the booking without occupancy observer side-effects.
+     *
      * @throws Exception when capacity is exhausted or the session is incompatible.
      */
-    public function book(User $user, Course $course, ProgrammeBatch $batch, $session): ?Booking
+    public function book(User $user, Course $course, ProgrammeBatch $batch, $session, bool $forSelfPacedCohortAttachment = false): ?Booking
     {
-        $programme = $course->programme;
-        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
+        $useCentreSessionPath = $course->isInPersonProgramme() && ! $forSelfPacedCohortAttachment;
 
-        // Handle In Person courses
-        if ($isInPerson) {
-            $user->registered_course = $course->id;
-            $user->shortlist = true;
-            $user->save();
+        if ($useCentreSessionPath) {
+            if (! $session instanceof CourseSession) {
+                throw new Exception('Invalid session for this course.');
+            }
 
-            $admission = UserAdmission::updateOrCreate(
-                ['user_id' => $user->userId],
-                [
-                    'course_id' => $course->id,
-                    'programme_batch_id' => $batch->id,
-                    'email_sent' => now(),
-                    'confirmed' => now(),
-                    'session' => $session->id,
-                ]
-            );
+            $centreSession = $session;
 
-            // Remove from waitlist if exists
-            AdmissionWaitlist::where('user_id', $user->userId)->delete();
+            if ($centreSession->session_type !== CourseSession::TYPE_CENTRE
+                || (int) $centreSession->course_id !== (int) $course->id
+                || (int) $centreSession->centre_id !== (int) $course->centre_id) {
+                throw new Exception('Invalid session for this course.');
+            }
 
-            return null;
+            if ((int) $course->programme_id !== (int) $batch->programme_id) {
+                throw new Exception('Course does not belong to this programme batch.');
+            }
+
+            $centreId = (int) $course->centre_id;
+            $lockKey = "in_person_enrollment:{$batch->id}:{$centreSession->id}";
+
+            return Cache::lock($lockKey, 10)->block(5, function () use ($user, $course, $batch, $centreSession, $centreId) {
+                return DB::transaction(function () use ($user, $course, $batch, $centreSession, $centreId) {
+                    $limit = $centreSession->limit;
+                    $hasLimit = $limit !== null && (int) $limit > 0;
+                    $enrolled = Booking::query()
+                        ->where('programme_batch_id', $batch->id)
+                        ->where('course_session_id', $centreSession->id)
+                        ->where('status', true)
+                        ->count();
+
+                    if ($hasLimit && $enrolled >= (int) $limit) {
+                        throw new Exception('Course session is full.');
+                    }
+
+                    $existing = Booking::where('user_id', $user->userId)
+                        ->where('programme_batch_id', $batch->id)
+                        ->first();
+
+                    if ($existing) {
+                        return $existing;
+                    }
+
+                    $previous = Booking::where('user_id', $user->userId)
+                        ->where('programme_batch_id', '!=', $batch->id)
+                        ->first();
+
+                    if ($previous) {
+                        $this->cancel($previous);
+                    }
+
+                    $courseType = Booking::resolveCourseType($course->id);
+
+                    $user->registered_course = $course->id;
+                    $user->shortlist = true;
+                    $user->save();
+
+                    $admission = UserAdmission::updateOrCreate(
+                        ['user_id' => $user->userId],
+                        [
+                            'course_id' => $course->id,
+                            'programme_batch_id' => $batch->id,
+                            'session' => $centreSession->id,
+                            'email_sent' => now(),
+                            'confirmed' => now(),
+                        ]
+                    );
+
+                    AdmissionWaitlist::where('user_id', $user->userId)->delete();
+
+                    return Booking::create([
+                        'user_id' => $user->userId,
+                        'programme_batch_id' => $batch->id,
+                        'course_session_id' => $centreSession->id,
+                        'master_session_id' => null,
+                        'centre_id' => $centreId,
+                        'course_id' => $course->id,
+                        'course_type' => $courseType,
+                        'status' => true,
+                        'booked_at' => now(),
+                        'user_admission_id' => $admission->id,
+                    ]);
+                });
+            });
         }
 
         // Handle regular (Master Session) courses
@@ -66,15 +138,17 @@ class BookingService
 
         // Atomic lock ensures only one booking proceeds per centre+session at a time.
         // This prevents two requests from both reading "1 slot left" and both succeeding.
-        return Cache::lock($lockKey, 10)->block(5, function () use ($user, $course, $batch, $session, $centreId) {
-            return DB::transaction(function () use ($user, $course, $batch, $session, $centreId) {
+        return Cache::lock($lockKey, 10)->block(5, function () use ($user, $course, $batch, $session, $centreId, $forSelfPacedCohortAttachment) {
+            return DB::transaction(function () use ($user, $course, $batch, $session, $centreId, $forSelfPacedCohortAttachment) {
                 $courseType = Booking::resolveCourseType($course->id);
 
-                // Bypass the cache and compute remaining seats fresh inside the lock
-                $remaining = $this->computeRemainingSeats($centreId, $batch, $session);
+                if (! $forSelfPacedCohortAttachment) {
+                    // Bypass the cache and compute remaining seats fresh inside the lock
+                    $remaining = $this->computeRemainingSeats($centreId, $batch, $session);
 
-                if ($remaining <= 0) {
-                    throw new Exception('Course session is full.');
+                    if ($remaining <= 0) {
+                        throw new Exception('Course session is full.');
+                    }
                 }
 
                 // Check for existing booking in the same batch (idempotency)
@@ -104,6 +178,7 @@ class BookingService
 
                 $user->registered_course = $course->id;
                 $user->shortlist = true;
+                $user->support = ! $forSelfPacedCohortAttachment;
                 $user->save();
 
                 $admission = UserAdmission::updateOrCreate(
@@ -116,13 +191,13 @@ class BookingService
                     ]
                 );
 
-                 // Remove from waitlist if exists
+                // Remove from waitlist if exists
                 AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
                 // Clear the cached seat count so the next read reflects this booking
                 Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$session->id}");
 
-                return Booking::create([
+                $bookingPayload = [
                     'user_id' => $user->userId,
                     'programme_batch_id' => $batch->id,
                     'master_session_id' => $session->id,
@@ -132,7 +207,16 @@ class BookingService
                     'status' => true,
                     'booked_at' => now(),
                     'user_admission_id' => $admission->id,
-                ]);
+                ];
+
+                if ($forSelfPacedCohortAttachment) {
+                    // Cohort-for-records only: do not increment daily_session_occupancy (observer skipped).
+                    return Booking::withoutEvents(function () use ($bookingPayload) {
+                        return Booking::create($bookingPayload);
+                    });
+                }
+
+                return Booking::create($bookingPayload);
             });
         });
     }
@@ -229,7 +313,9 @@ class BookingService
 
         $capacity = $this->resolveEffectiveCapacity($centre, $courseType, $batch);
 
-        if ($capacity === null || $capacity <= 0) {
+        if ($capacity === null) {
+            $capacity = self::UNCONFIGURED_ONLINE_CAPACITY_FALLBACK;
+        } elseif ($capacity <= 0) {
             return 0;
         }
 
@@ -378,11 +464,13 @@ class BookingService
                     continue;
                 }
 
-                // Compute and cache
+                // Compute and cache (align with computeSeatsFromOccupancy capacity rules)
                 $courseType = $session->course_type ?? Programme::COURSE_TYPE_SHORT;
                 $capacity = $this->resolveEffectiveCapacity($centre, $courseType, $batch);
 
-                if ($capacity === null || $capacity <= 0) {
+                if ($capacity === null) {
+                    $capacity = self::UNCONFIGURED_ONLINE_CAPACITY_FALLBACK;
+                } elseif ($capacity <= 0) {
                     $results[$key] = 0;
                     Cache::put($cacheKey, 0, now()->addHour());
 

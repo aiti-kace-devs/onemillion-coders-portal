@@ -11,6 +11,9 @@ export default function ClientWrapper({ children }) {
   const [showSplash, setShowSplash] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const isVerificationRoute = pathname?.startsWith("/verify-user");
+  /** Same routes as LayoutShell STANDALONE — almost always loaded in the Laravel portal iframe. */
+  const isPortalEmbedRoute =
+    pathname?.startsWith("/courses") || pathname?.startsWith("/quiz");
 
   useEffect(() => {
     // localStorage.clear()
@@ -18,10 +21,14 @@ export default function ClientWrapper({ children }) {
 
     // Check if user has opted out of seeing the splash screen
     const hasOptedOut = localStorage.getItem("splashScreenOptOut");
-    if (!isVerificationRoute && hasOptedOut !== "true") {
+    if (
+      !isVerificationRoute &&
+      !isPortalEmbedRoute &&
+      hasOptedOut !== "true"
+    ) {
       setShowSplash(true);
     }
-  }, [isVerificationRoute]);
+  }, [isVerificationRoute, isPortalEmbedRoute]);
 
   const handleSplashDismiss = () => {
     setShowSplash(false);

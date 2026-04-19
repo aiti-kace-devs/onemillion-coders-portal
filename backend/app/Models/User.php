@@ -57,7 +57,7 @@ class User extends Authenticatable
         'verification_block_message',
         'verification_attempts_reset_at',
         'is_nia_syncing',
-        'middle_name'
+        'application_review_completed_at',
     ];
 
     /**
@@ -85,6 +85,7 @@ class User extends Authenticatable
         'support' => 'boolean',
         'is_verification_blocked' => 'boolean',
         'verification_attempts_reset_at' => 'datetime',
+        'application_review_completed_at' => 'datetime',
     ];
 
     /**
