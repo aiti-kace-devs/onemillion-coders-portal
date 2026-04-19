@@ -114,6 +114,7 @@ const tieredTestTaken = computed(() => {
 </script>
 
 <template>
+
     <Head title="Dashboard" />
     <AuthenticatedLayout>
         <template #header>
@@ -128,16 +129,16 @@ const tieredTestTaken = computed(() => {
                     <h2 class="text-4xl font-black text-gray-900 tracking-tighter leading-tight">
                         Hi, {{ user.name }} !
                     </h2>
-                    <p class="text-gray-500 mt-1 font-medium text-lg">It's great to see you again. Here's what's happening today.</p>
+                    <p class="text-gray-500 mt-1 font-medium text-lg">It's great to see you again. Here's what's
+                        happening
+                        today.</p>
                 </div>
 
                 <!-- Waitlist Notice -->
-                <div
-                    v-if="isOnWaitlist"
-                    class="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-6"
-                >
+                <div v-if="isOnWaitlist" class="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-6">
                     <div class="flex items-start gap-4">
-                        <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 text-amber-600 shrink-0">
+                        <span
+                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 text-amber-600 shrink-0">
                             <span class="material-symbols-outlined">hourglass_top</span>
                         </span>
                         <div>
@@ -154,67 +155,57 @@ const tieredTestTaken = computed(() => {
                 </div>
 
                 <!-- Summary Section: Course + Centre on same row -->
-                <div
-                    v-if="hasRegisteredCourse"
-                    class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6"
-                >
+                <div v-if="hasRegisteredCourse" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Course Details card -->
-                    <div
-                        class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                        :class="{ 'md:col-span-2': !centre }"
-                    >
+                    <div class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                        :class="{ 'md:col-span-2': !centre }">
                         <div class="absolute top-0 left-0 h-full w-1 bg-[#f9a825]"></div>
-                        <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]">
-                                        <span class="material-symbols-outlined">school</span>
-                                    </span>
-                                    <div class="flex-1 text-left">
-                                        <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">
-                                            {{ isOnWaitlist ? 'Chosen Course' : 'Registered Course' }}
-                                        </p>
-                                        <h3 class="text-lg font-bold text-gray-800">
-                                            {{ registeredCourse.course_name }}
-                                        </h3>
-                                    </div>
-                                </div>
-                                <div v-if="cohort" class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left">
-                                    <span class="inline-flex items-center gap-1 text-[#f9a825]">
-                                        <span class="material-symbols-outlined text-base">groups</span>
-                                    </span>
-                                    <span class="font-medium">{{ cohortLabel }}</span>
-                                    <template v-for="(item, idx) in cohortDetailRow" :key="idx">
-                                        <span class="w-1 h-1 rounded-full bg-gray-300"></span>
-                                        <span>{{ item }}</span>
-                                    </template>
-                                </div>
+                        <div class="flex items-center gap-3 mb-2">
+                            <span
+                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]">
+                                <span class="material-symbols-outlined">school</span>
+                            </span>
+                            <div class="flex-1 text-left">
+                                <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">
+                                    {{ isOnWaitlist ? 'Chosen Course' : 'Registered Course' }}
+                                </p>
+                                <h3 class="text-lg font-bold text-gray-800">
+                                    {{ registeredCourse.course_name }}
+                                </h3>
                             </div>
-                            <div
-                                v-if="userAdmission?.confirmed && user?.id"
-                                class="w-full shrink-0 border-t border-gray-100 pt-6 lg:w-auto lg:max-w-sm lg:border-t-0 lg:pt-0 lg:pl-4 lg:[&>p]:text-right lg:[&>div.mt-6:first-of-type]:flex lg:[&>div.mt-6:first-of-type]:justify-end"
-                            >
-                                <RevokeOrDeclineAdmissionModal
-                                    :user="user"
-                                    :session="userAdmission"
-                                    :show-intro-text="false"
-                                />
-                            </div>
+                        </div>
+
+                        <div v-if="cohort"
+                            class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left">
+                            <span class="inline-flex items-center gap-1 text-[#f9a825]">
+                                <span class="material-symbols-outlined text-base">groups</span>
+                            </span>
+                            <span class="font-medium">{{ cohortLabel }}</span>
+                            <template v-for="(item, idx) in cohortDetailRow" :key="idx">
+                                <span class="w-1 h-1 rounded-full bg-gray-300"></span>
+                                <span>{{ item }}</span>
+                            </template>
+                        </div>
+
+                        <!-- Revoke button — moved to footer, redesigned as a quiet destructive action -->
+                        <div v-if="userAdmission?.confirmed && user?.id"
+                            class="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between">
+                            <span class="text-xs text-green-600 font-medium">Admission active</span>
+                            <RevokeOrDeclineAdmissionModal :user="user" :session="userAdmission"
+                                :show-intro-text="false" />
                         </div>
                     </div>
 
-                    <!-- Centre Details card (with directions) -->
-                    <div
-                        v-if="centre"
-                        class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                    >
+                    <!-- Centre Details card -->
+                    <div v-if="centre"
+                        class="relative bg-white rounded-2xl shadow-sm p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                         <div class="absolute top-0 left-0 h-full w-1 bg-[#f9a825]"></div>
-                        <span
-                            v-if="centre.is_pwd_friendly"
-                            class="absolute top-4 right-4 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700"
-                        >PWD Friendly</span>
+                        <span v-if="centre.is_pwd_friendly"
+                            class="absolute top-4 right-4 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700">PWD
+                            Friendly</span>
                         <div class="flex items-center gap-3 mb-2">
-                            <span class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]">
+                            <span
+                                class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825]">
                                 <span class="material-symbols-outlined">location_on</span>
                             </span>
                             <div class="flex-1 text-left">
@@ -222,62 +213,44 @@ const tieredTestTaken = computed(() => {
                                 <h3 class="text-lg font-bold text-gray-800">{{ centre.title }}</h3>
                             </div>
                         </div>
-                        <div
-                            v-if="centreDetailRow.length"
-                            class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left"
-                        >
+                        <div v-if="centreDetailRow.length"
+                            class="mt-2 text-sm text-gray-600 flex items-center gap-2 flex-wrap text-left">
                             <template v-for="(item, idx) in centreDetailRow" :key="idx">
                                 <span v-if="idx > 0" class="w-1 h-1 rounded-full bg-gray-300"></span>
                                 <span>{{ item }}</span>
                             </template>
                         </div>
-                        <!-- Directions link inside centre card -->
-                        <a
-                            v-if="directionsUrl"
-                            :href="directionsUrl"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[#f9a825] hover:text-amber-700 transition-colors"
-                        >
-                            <span class="material-symbols-outlined text-base">near_me</span>
-                            Get Directions
-                        </a>
+                        <div class="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between">
+                            <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener noreferrer"
+                                class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[#f9a825] hover:text-amber-700 transition-colors">
+                                <span class="material-symbols-outlined text-base">near_me</span>
+                                Get Directions
+                            </a>
+                        </div>
                     </div>
                 </div>
 
                 <div class="mt-6 space-y-10">
                     <div>
-                        <p
-                            class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest"
-                        >
+                        <p class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
                             Quick Access
                         </p>
-                        <div
-                            class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
-                        >
-                            <Link
-                                :href="route('student.application-status')"
-                                class="block h-full"
-                            >
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                            <Link :href="route('student.application-status')" class="block h-full">
                                 <div
-                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                                >
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                     <!-- Hover Accent Line -->
-                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <div
+                                        class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
+                                    </div>
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
-                                        >
-                                            <span
-                                                class="material-symbols-outlined"
-                                                >contract</span
-                                            >
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900">
+                                            <span class="material-symbols-outlined">contract</span>
                                         </span>
                                         <div class="flex-1 text-left">
-                                            <h3
-                                                class="text-lg font-bold text-gray-800"
-                                            >
+                                            <h3 class="text-lg font-bold text-gray-800">
                                                 Application Status
                                             </h3>
                                         </div>
@@ -293,36 +266,30 @@ const tieredTestTaken = computed(() => {
                                 </div>
                             </Link>
 
-                            <Link
-                                :href="route('student.verification.index')"
-                                class="block h-full"
-                            >
+                            <Link :href="route('student.verification.index')" class="block h-full">
                                 <div
-                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                                >
-                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-                                    <span
-                                        class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
-                                        :class="
-                                            user.verification_completed
-                                                ? 'bg-green-100 text-green-700'
-                                                : user.verification_blocked
-                                                  ? 'bg-red-100 text-red-700'
-                                                  : 'bg-yellow-100 text-yellow-700'
-                                        "
-                                    >
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
+                                    <div
+                                        class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
+                                    </div>
+                                    <span class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
+                                        :class="user.verification_completed
+                                            ? 'bg-green-100 text-green-700'
+                                            : user.verification_blocked
+                                                ? 'bg-red-100 text-red-700'
+                                                : 'bg-yellow-100 text-yellow-700'
+                                            ">
                                         {{
                                             user.verification_completed
                                                 ? "Verified"
                                                 : user.verification_blocked
-                                                  ? "Blocked"
-                                                  : "Pending"
+                                                    ? "Blocked"
+                                                    : "Pending"
                                         }}
                                     </span>
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
-                                        >
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900">
                                             <span class="material-symbols-outlined">verified_user</span>
                                         </span>
                                         <div class="flex-1 text-left">
@@ -339,30 +306,22 @@ const tieredTestTaken = computed(() => {
                                 </div>
                             </Link>
 
-                            <Link
-                                v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
-                                :href="route('student.results')"
-                                class="block h-full"
-                            >
+                            <Link v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
+                                :href="route('student.results')" class="block h-full">
                                 <div
-                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                                >
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                     <!-- Hover Accent Line -->
-                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <div
+                                        class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
+                                    </div>
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
-                                        >
-                                            <span
-                                                class="material-symbols-outlined"
-                                                >task</span
-                                            >
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900">
+                                            <span class="material-symbols-outlined">task</span>
                                         </span>
                                         <div class="flex-1 text-left">
-                                            <h3
-                                                class="text-lg font-bold text-gray-800"
-                                            >
+                                            <h3 class="text-lg font-bold text-gray-800">
                                                 Results
                                             </h3>
                                         </div>
@@ -378,30 +337,23 @@ const tieredTestTaken = computed(() => {
                                 </div>
                             </Link>
 
-                            <Link
-                                :href="route('student.assessment.index')"
+                            <Link :href="route('student.assessment.index')"
                                 v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
-                                class="block h-full"
-                            >
+                                class="block h-full">
                                 <div
-                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                                >
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                     <!-- Hover Accent Line -->
-                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <div
+                                        class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
+                                    </div>
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
-                                        >
-                                            <span
-                                                class="material-symbols-outlined"
-                                                >rate_review</span
-                                            >
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900">
+                                            <span class="material-symbols-outlined">rate_review</span>
                                         </span>
                                         <div class="flex-1 text-left">
-                                            <h3
-                                                class="text-lg font-bold text-gray-800"
-                                            >
+                                            <h3 class="text-lg font-bold text-gray-800">
                                                 Course Assessment
                                             </h3>
                                         </div>
@@ -417,30 +369,21 @@ const tieredTestTaken = computed(() => {
                                 </div>
                             </Link>
 
-                            <Link
-                                v-if="user.isAdmitted"
-                                :href="route('student.attendance.show')"
-                                class="block h-full"
-                            >
+                            <Link v-if="user.isAdmitted" :href="route('student.attendance.show')" class="block h-full">
                                 <div
-                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                                >
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                     <!-- Hover Accent Line -->
-                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <div
+                                        class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
+                                    </div>
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
-                                        >
-                                            <span
-                                                class="material-symbols-outlined"
-                                                >rule</span
-                                            >
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900">
+                                            <span class="material-symbols-outlined">rule</span>
                                         </span>
                                         <div class="flex-1 text-left">
-                                            <h3
-                                                class="text-lg font-bold text-gray-800"
-                                            >
+                                            <h3 class="text-lg font-bold text-gray-800">
                                                 Attendance
                                             </h3>
                                         </div>
@@ -455,34 +398,25 @@ const tieredTestTaken = computed(() => {
                                 </div>
                             </Link>
 
-                            <Link
-                                v-if="
-                                    tieredTestTaken &&
-                                    !user.isAdmitted &&
-                                    !user.shortlist
-                                "
-                                :href="route('student.change-course')"
-                                class="block h-full"
-                            >
+                            <Link v-if="
+                                tieredTestTaken &&
+                                !user.isAdmitted &&
+                                !user.shortlist
+                            " :href="route('student.change-course')" class="block h-full">
                                 <div
-                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                                >
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                     <!-- Hover Accent Line -->
-                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <div
+                                        class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
+                                    </div>
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
-                                        >
-                                            <span
-                                                class="material-symbols-outlined"
-                                                >swap_horiz</span
-                                            >
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900">
+                                            <span class="material-symbols-outlined">swap_horiz</span>
                                         </span>
                                         <div class="flex-1 text-left">
-                                            <h3
-                                                class="text-lg font-bold text-gray-800"
-                                            >
+                                            <h3 class="text-lg font-bold text-gray-800">
                                                 {{
                                                     user.registered_course
                                                         ? "Change Course"
@@ -507,53 +441,37 @@ const tieredTestTaken = computed(() => {
                         </div>
                     </div>
                     <div v-if="!tieredTestTaken">
-                        <p
-                            class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest"
-                        >
+                        <p class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
                             Assessment
                         </p>
-                        <div
-                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8"
-                        >
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
                             <ExamCard />
                         </div>
                     </div>
 
                     <div v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS">
-                        <p
-                            class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest"
-                        >
+                        <p class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
                             Course Assessment
                         </p>
-                        <div
-                            v-if="questionnaires.length > 0"
-                            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"
-                        >
-                            <Link
-                                v-for="(questionnaire, key) in questionnaires"
-                                :key="questionnaire.id"
-                                :href="
-                                    route(
-                                        'student.assessment.take-questionnaire',
-                                        questionnaire.code,
-                                    )
-                                "
-                                class="block h-full"
-                            >
+                        <div v-if="questionnaires.length > 0"
+                            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <Link v-for="(questionnaire, key) in questionnaires" :key="questionnaire.id" :href="route(
+                                'student.assessment.take-questionnaire',
+                                questionnaire.code,
+                            )
+                                " class="block h-full">
                                 <div
-                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
-                                >
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                     <!-- Hover Accent Line -->
-                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <div
+                                        class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
+                                    </div>
                                     <!-- Status badge -->
-                                    <span
-                                        class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
-                                        :class="
-                                            questionnaire.is_submitted
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-yellow-100 text-yellow-700'
-                                        "
-                                    >
+                                    <span class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
+                                        :class="questionnaire.is_submitted
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-yellow-100 text-yellow-700'
+                                            ">
                                         {{
                                             questionnaire.is_submitted
                                                 ? "Completed"
@@ -564,17 +482,11 @@ const tieredTestTaken = computed(() => {
                                     <!-- Icon and Title -->
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
-                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
-                                        >
-                                            <span
-                                                class="material-symbols-outlined"
-                                                >rate_review</span
-                                            >
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900">
+                                            <span class="material-symbols-outlined">rate_review</span>
                                         </span>
                                         <div class="flex-1 text-left">
-                                            <h3
-                                                class="text-lg font-bold text-gray-800"
-                                            >
+                                            <h3 class="text-lg font-bold text-gray-800">
                                                 {{ questionnaire.title }}
                                             </h3>
                                         </div>
@@ -582,10 +494,8 @@ const tieredTestTaken = computed(() => {
                                 </div>
                             </Link>
                         </div>
-                        <div
-                            v-else
-                            class="border border-gray-200 bg-white rounded-lg p-4 text-center h-64 flex justify-center items-center"
-                        >
+                        <div v-else
+                            class="border border-gray-200 bg-white rounded-lg p-4 text-center h-64 flex justify-center items-center">
                             <p class="text-gray-500 text-sm">
                                 No course assessment available.
                             </p>
@@ -599,14 +509,37 @@ const tieredTestTaken = computed(() => {
 
 <style scoped>
 @keyframes wave {
-    0% { transform: rotate(0deg); }
-    10% { transform: rotate(14deg); }
-    20% { transform: rotate(-8deg); }
-    30% { transform: rotate(14deg); }
-    40% { transform: rotate(-4deg); }
-    50% { transform: rotate(10deg); }
-    60% { transform: rotate(0deg); }
-    100% { transform: rotate(0deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    10% {
+        transform: rotate(14deg);
+    }
+
+    20% {
+        transform: rotate(-8deg);
+    }
+
+    30% {
+        transform: rotate(14deg);
+    }
+
+    40% {
+        transform: rotate(-4deg);
+    }
+
+    50% {
+        transform: rotate(10deg);
+    }
+
+    60% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(0deg);
+    }
 }
 
 .animate-wave {
