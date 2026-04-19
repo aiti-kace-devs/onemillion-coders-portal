@@ -23,8 +23,9 @@ const Accordion = ({ items, className = "" }) => {
         <motion.div
           key={item.id}
           initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: index * 0.1 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4, delay: Math.min(index, 6) * 0.05 }}
           className="border border-gray-200 rounded-2xl bg-white hover:shadow-lg transition-all duration-300"
         >
           <button

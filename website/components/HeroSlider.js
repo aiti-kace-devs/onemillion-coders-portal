@@ -165,10 +165,11 @@ const HeroSlider = ({ data }) => {
           <motion.div
             initial={{ scale: prefersReducedMotion ? 1 : (isMobile ? 1.02 : 1.1) }}
             animate={{ scale: 1 }}
-            transition={{ 
-              duration: prefersReducedMotion ? 0 : (isMobile ? 6 : 8), 
-              ease: "linear" 
+            transition={{
+              duration: prefersReducedMotion ? 0 : (isMobile ? 6 : 8),
+              ease: "linear"
             }}
+            style={{ willChange: "transform" }}
             className="absolute inset-0"
           >
             <Image

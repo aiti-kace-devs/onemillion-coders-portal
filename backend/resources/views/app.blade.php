@@ -22,33 +22,7 @@
     <!-- CSS -->
     {{-- <link rel="stylesheet" type="text/css" href="/DataTables-1.13.8/css/jquery.dataTables.css"> --}}
     <link rel="stylesheet" href="{{ url('/assets/plugins/toastr/toastr.min.css') }}">
-    @php
-        $manifest = json_decode(file_get_contents(public_path('build/manifest.json')), true);
-        $cssFiles = [];
-        $jsFile = null;
-        
-        foreach ($manifest as $key => $value) {
-            if (str_ends_with($key, 'app.js') && isset($value['file'])) {
-                $jsFile = $value['file'];
-            }
-            if (isset($value['css'])) {
-                foreach ($value['css'] as $css) {
-                    $cssFiles[] = $css;
-                }
-            }
-        }
-    @endphp
-    
-    @if($cssFiles)
-        @foreach($cssFiles as $css)
-            <link rel="stylesheet" href="{{ asset('build/' . $css) }}">
-        @endforeach
-    @endif
-    
-    @if($jsFile)
-        <script type="module" src="{{ asset('build/' . $jsFile) }}"></script>
-    @endif
-    
+    @include('vite-asset')
     @routes(nonce: csp_nonce())
     @inertiaHead
 </head>

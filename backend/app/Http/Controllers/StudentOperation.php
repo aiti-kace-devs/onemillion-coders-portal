@@ -129,12 +129,18 @@ class StudentOperation extends Controller
             }
         }
 
+        $userAdmission = UserAdmission::where('user_id', $user->userId)->first();
+
         return Inertia::render('Student/Dashboard', [
             'questionnaires' => $questionnaires,
             'registeredCourse' => $registeredCourse,
             'cohort' => $cohort,
             'centre' => $centre,
             'waitlistPosition' => $waitlistPosition,
+            'userAdmission' => $userAdmission ? [
+                'id' => $userAdmission->id,
+                'confirmed' => (bool) $userAdmission->confirmed,
+            ] : null,
         ]);
     }
 

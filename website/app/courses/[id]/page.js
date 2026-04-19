@@ -163,11 +163,16 @@ export default function CoursesPage({ params }) {
   // Sync step and selections to query params
   useEffect(() => {
     if (!userStatus || step <= 1) return;
+    const hasAnswers = Object.keys(answers).length > 0;
+    const hasQuizState = hasAnswers || currentQuestion > 0 || showResults;
     updateQueryParams({
       step,
       region: selectedRegion?.id || null,
       district: selectedDistrict?.id || null,
       centre: selectedCentre?.id || null,
+      q: step === 4 && hasQuizState ? currentQuestion : null,
+      a: step === 4 && hasAnswers ? JSON.stringify(answers) : null,
+      results: step === 4 && showResults ? "1" : null,
     });
   }, [
     step,
@@ -175,6 +180,9 @@ export default function CoursesPage({ params }) {
     selectedDistrict,
     selectedCentre,
     userStatus,
+    currentQuestion,
+    answers,
+    showResults,
     updateQueryParams,
   ]);
 
@@ -184,6 +192,9 @@ export default function CoursesPage({ params }) {
     const regionId = searchParams.get("region");
     const districtId = searchParams.get("district");
     const centreId = searchParams.get("centre");
+    const savedQuestion = parseInt(searchParams.get("q"));
+    const savedAnswersRaw = searchParams.get("a");
+    const savedResults = searchParams.get("results") === "1";
 
     if (!savedStep || savedStep <= 1 || !regionId) return;
 
@@ -224,6 +235,41 @@ export default function CoursesPage({ params }) {
 
             const data = await getCourseMatchQuestions("Choice", token);
             setQuestions(data || []);
+
+            // Restore quiz progress
+            let parsedAnswers = {};
+            if (savedAnswersRaw) {
+              try {
+                parsedAnswers = JSON.parse(savedAnswersRaw);
+                setAnswers(parsedAnswers);
+              } catch {
+                parsedAnswers = {};
+              }
+            }
+            if (!Number.isNaN(savedQuestion)) {
+              setCurrentQuestion(Math.max(0, savedQuestion));
+            }
+
+            // Restore results view — regenerate recommendations from stored answers
+            if (savedResults && Object.keys(parsedAnswers).length > 0) {
+              try {
+                setSubmitting(true);
+                const optionIds = Object.values(parsedAnswers).flat();
+                const recs = await getCourseRecommendations({
+                  optionIds,
+                  userId: id,
+                  regionId: region.id,
+                  centreId: centre.id,
+                  token,
+                });
+                setRecommendations(recs || []);
+                setShowResults(true);
+              } catch {
+                // If regenerate fails, fall back to quiz view
+              } finally {
+                setSubmitting(false);
+              }
+            }
           }
         }
       }
@@ -267,29 +313,29 @@ export default function CoursesPage({ params }) {
         }
         setUserStatus(data);
 
-        // Check for previous recommended courses
+        // URL state takes priority — an active session beats previously-saved recommendations
+        const hasProgress = searchParams.get("step");
+        if (hasProgress) {
+          setCheckingRecommendations(true);
+          try {
+            await restoreFromParams();
+          } finally {
+            setCheckingRecommendations(false);
+          }
+          return;
+        }
+
+        // No active session — check for previous recommended courses
         try {
           setCheckingRecommendations(true);
           const recData = await checkUserRecommendedCourses(id, token);
           if (recData?.success && recData?.matches?.length > 0) {
             setPreviousRecommendations(recData);
           } else {
-            // No previous recommendations — check for saved progress in query params
-            const hasProgress = searchParams.get("step");
-            if (hasProgress) {
-              await restoreFromParams();
-            } else {
-              fetchAllRegions();
-            }
-          }
-        } catch {
-          // If check fails, just start the normal flow
-          const hasProgress = searchParams.get("step");
-          if (hasProgress) {
-            await restoreFromParams();
-          } else {
             fetchAllRegions();
           }
+        } catch {
+          fetchAllRegions();
         } finally {
           setCheckingRecommendations(false);
         }
@@ -1473,8 +1519,8 @@ export default function CoursesPage({ params }) {
                             <motion.div key="centres-tab" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.2 }}>
                               <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-700 uppercase tracking-widest mb-3">Available nearby</h4>
                               <div className="space-y-2">
-                                {siblingCentres.map((alt, idx) => (
-                                  <motion.button key={alt.centre_id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, delay: idx * 0.05 }}
+                                {siblingCentres.map((alt) => (
+                                  <button key={alt.centre_id}
                                     onClick={() => { setSelectedCentre({ id: alt.centre_id, title: alt.centre_name }); setEnrollingCentreId(alt.centre_id); setEnrollingCourseId(alt.course_id || enrollingCourseId); setEnrollingCourseRecord((prev) => ({ ...(prev || {}), course_id: alt.course_id || enrollingCourseId, title: prev?.title || enrolledCourseName })); setSelectedBatch(null); setSelectedSession(null); setSelectedBatchMonth(null); setCourseFullTab("centres"); fetchBatchesForCourse(alt.course_id || enrollingCourseId).then(() => setEnrollmentStep("batch")); }}
                                     className="w-full text-left p-3 sm:p-4 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98]">
                                     <div className="flex items-center justify-between gap-3">
@@ -1484,7 +1530,7 @@ export default function CoursesPage({ params }) {
                                       </div>
                                       <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
                                     </div>
-                                  </motion.button>
+                                  </button>
                                 ))}
                               </div>
                             </motion.div>
@@ -1740,15 +1786,9 @@ export default function CoursesPage({ params }) {
           {/* Course cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             {previousRecommendations.matches.map((course, index) => (
-              <motion.div
+              <div
                 key={course.id}
                 className="rounded-lg bg-white border border-gray-200 overflow-hidden"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{
-                  duration: 0.2,
-                  delay: Math.min(index * 0.04, 0.2),
-                }}
               >
                 <div className="relative h-28 sm:h-32 bg-gray-100">
                   {course.image && !imageErrors[course.id] ? (
@@ -1846,7 +1886,7 @@ export default function CoursesPage({ params }) {
                     <FiChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
 
@@ -2088,22 +2128,16 @@ export default function CoursesPage({ params }) {
                           .toLowerCase()
                           .includes(searchQuery.toLowerCase()),
                       )
-                      .map((region, index) => (
-                        <motion.button
+                      .map((region) => (
+                        <button
                           key={region.id}
                           onClick={() => handleRegionSelect(region)}
                           className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{
-                            duration: 0.15,
-                            delay: Math.min(index * 0.02, 0.15),
-                          }}
                         >
                           <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
                             {region.title}
                           </h3>
-                        </motion.button>
+                        </button>
                       ))}
                     {allRegions.filter((region) =>
                       region.title
@@ -2200,22 +2234,16 @@ export default function CoursesPage({ params }) {
                           .toLowerCase()
                           .includes(searchQuery.toLowerCase()),
                       )
-                      .map((district, index) => (
-                        <motion.button
+                      .map((district) => (
+                        <button
                           key={district.id}
                           onClick={() => handleDistrictSelect(district)}
                           className="p-2.5 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.97] group"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{
-                            duration: 0.15,
-                            delay: Math.min(index * 0.02, 0.15),
-                          }}
                         >
                           <h3 className="text-xs sm:text-base font-semibold text-gray-900 group-hover:text-yellow-700 leading-tight">
                             {district.title}
                           </h3>
-                        </motion.button>
+                        </button>
                       ))}
                     {availableDistricts.districts.filter((district) =>
                       district.title
@@ -2349,16 +2377,10 @@ export default function CoursesPage({ params }) {
                           accessibilityFeatures.length > 0;
 
                         return (
-                          <motion.button
+                          <button
                             key={centre.id}
                             onClick={() => handleCentreSelect(centre)}
                             className="w-full p-3 sm:p-5 rounded-xl bg-white border border-gray-200 text-left transition-all duration-200 hover:border-yellow-400 hover:shadow-md active:scale-[0.99] group"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{
-                              duration: 0.15,
-                              delay: Math.min(index * 0.02, 0.15),
-                            }}
                           >
                             <div
                               className={`flex justify-between gap-2 ${hasExtras ? "items-start" : "items-center"}`}
@@ -2401,7 +2423,7 @@ export default function CoursesPage({ params }) {
                               </div>
                               <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />
                             </div>
-                          </motion.button>
+                          </button>
                         );
                       })}
                     {filterPwdFriendly &&
@@ -2574,14 +2596,8 @@ export default function CoursesPage({ params }) {
                               )
                               : answers[activeQuestion.id] === option.id;
                             return (
-                              <motion.button
+                              <button
                                 key={option.id}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{
-                                  duration: 0.15,
-                                  delay: Math.min(index * 0.03, 0.12),
-                                }}
                                 onClick={() =>
                                   handleAnswer(activeQuestion.id, option.id)
                                 }
@@ -2633,7 +2649,7 @@ export default function CoursesPage({ params }) {
                                     )}
                                   </div>
                                 </div>
-                              </motion.button>
+                              </button>
                             );
                           },
                         )}
@@ -2730,15 +2746,9 @@ export default function CoursesPage({ params }) {
               {recommendations.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                   {recommendations.map((course, index) => (
-                    <motion.div
+                    <div
                       key={course.id}
                       className="rounded-lg bg-white border border-gray-200 overflow-hidden"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{
-                        duration: 0.2,
-                        delay: Math.min(index * 0.04, 0.2),
-                      }}
                     >
                       <div className="relative h-28 sm:h-32 bg-gray-100">
                         {course.image && !imageErrors[course.id] ? (
@@ -2841,7 +2851,7 @@ export default function CoursesPage({ params }) {
                           <FiChevronRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               ) : (
