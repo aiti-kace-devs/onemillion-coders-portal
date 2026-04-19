@@ -246,8 +246,8 @@ class User extends Authenticatable
             $sessionRecord = $admission->booking->session;
         }
 
-        // Try 'name' (CourseSession), 'master_name' (MasterSession), 'session' (fallback) or 'title' (legacy)
-        return $sessionRecord?->name ?? $sessionRecord?->master_name ?? $sessionRecord?->session ?? $sessionRecord?->title ?? $admission->session ?? '';
+        // Try 'session_type' (MasterSession preference), 'name' (CourseSession), 'master_name', 'session' or fallback
+        return $sessionRecord?->session_type ?? $sessionRecord?->name ?? $sessionRecord?->master_name ?? $sessionRecord?->session ?? $sessionRecord?->title ?? $admission->session ?? '';
     }
 
     /**
