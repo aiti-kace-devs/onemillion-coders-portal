@@ -95,6 +95,13 @@ class BookingController extends Controller
             // Remove from waitlist if exists
             AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
+            NotificationController::notify(
+                $user->id,
+                'COURSE_SELECTION',
+                'Enrollment Confirmed',
+                'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong> (self-paced). You will be notified of next steps.'
+            );
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Self-paced enrollment successful.',
@@ -129,6 +136,13 @@ class BookingController extends Controller
                         // Remove from waitlist if exists
                         AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
+                        NotificationController::notify(
+                            $user->id,
+                            'COURSE_SELECTION',
+                            'Enrollment Confirmed',
+                            'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
+                        );
+
                         return response()->json([
                             'status' => 'success',
                             'message' => 'Booking successful.',
@@ -162,6 +176,7 @@ class BookingController extends Controller
                 'recommendations' => $recommendations['recommendations'] ?? [],
             ], 409);
         }
+
 
         return response()->json([
             'status' => 'success',

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\NotificationController;
 use App\Models\AdmissionWaitlist;
 use App\Models\Course;
 use App\Models\Form;
@@ -192,6 +193,13 @@ class RegistrationFormAPIController extends Controller
         $user->support = filter_var($data['support'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
         $user->save();
 
+        NotificationController::notify(
+            $user->id,
+            'COURSE_SELECTION',
+            'Course Selected',
+            'You have successfully selected <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
+        );
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -260,6 +268,13 @@ class RegistrationFormAPIController extends Controller
 
             // Remove from waitlist if exists
             AdmissionWaitlist::where('user_id', $user->userId)->delete();
+
+            NotificationController::notify(
+                $user->id,
+                'COURSE_SELECTION',
+                'Switched to Self-Paced Learning',
+                'You have successfully switched to self-paced learning for <strong>' . e($course->course_name) . '</strong>.'
+            );
 
             return response()->json([
                 'success' => true,
@@ -337,6 +352,13 @@ class RegistrationFormAPIController extends Controller
 
         $user->registered_course = $course->id;
         $user->save();
+
+        NotificationController::notify(
+            $user->id,
+            'COURSE_SELECTION',
+            'Course Selected',
+            'You have successfully selected <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
+        );
 
         return response()->json([
             'success' => true,

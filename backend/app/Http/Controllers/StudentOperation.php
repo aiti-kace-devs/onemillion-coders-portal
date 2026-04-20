@@ -888,6 +888,13 @@ class StudentOperation extends Controller
             ])
             ->log("{$user->name} changed their course from {$oldCourse?->course_name} to {$newCourse->course_name}");
 
+        NotificationController::notify(
+            $user->id,
+            'COURSE_SELECTION',
+            'Course Selected',
+            'You have successfully selected <strong>' . e($newCourse->course_name) . '</strong>. You will be notified of next steps.'
+        );
+
         return redirect()->route('student.application-status');
     }
 
@@ -1633,6 +1640,13 @@ class StudentOperation extends Controller
 
         $user->save();
         $assessment->save();
+
+        NotificationController::notify(
+            $user->id,
+            'ASSESSMENT',
+            'Assessment Completed',
+            'You have completed your level determination assessment. Your level has been set to <strong>' . e($user->student_level) . '</strong>.'
+        );
 
         activity('assessment')
             ->causedBy($user)
