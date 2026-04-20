@@ -128,27 +128,65 @@ const hasMoreShortcuts = computed(() => {
 function quickAccessShowNextRibbon(stepKey) {
     return onboardingStep.value === stepKey;
 }
+const firstName = computed(() => {
+    const name = user.value?.name?.split(" ")[0] || "";
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+});
+
+const greeting = computed(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+});
 </script>
 
 <template>
 
-    <Head title="Dashboard" />
+    <Head title="Dashboard">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+    </Head>
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Dashboard
-            </h2>
+            <div class="flex items-center gap-2">
+                <h2 class="font-black text-2xl text-gray-900 tracking-tight">
+                    Dashboard
+                </h2>
+            </div>
         </template>
 
         <div class="pt-3">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="mb-8">
-                    <h2 class="text-4xl font-black text-gray-900 tracking-tighter leading-tight">
-                        Hi, {{ user.name }} !
-                    </h2>
-                    <p class="text-gray-500 mt-1 font-medium text-lg">It's great to see you again. Here's what's
-                        happening
-                        today.</p>
+                <div class="mb-12 relative">
+                    <div class="absolute -top-20 -left-20 w-64 h-64 bg-orange-100/30 rounded-full blur-[100px] -z-10"></div>
+
+                    <!-- Label -->
+                    <!-- <div class="mb-2">
+                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em]">OMCP Portal</span>
+                    </div> -->
+
+                    <!-- Main Heading -->
+                    <div class="flex flex-col">
+                        <h2 class="text-3xl md:text-4xl lg:text-4xl text-gray-900 tracking-tight leading-tight" style="font-family: 'Playfair Display', serif;">
+                            <span class="font-light">{{ greeting }},</span>
+                            <span class="relative inline-block ml-3 font-medium">
+                                {{ firstName }}
+                                <!-- Decorative Underline (Brush/Stroke style) -->
+                                <svg class="absolute -bottom-2 left-0 w-full h-3 text-amber-900/10 pointer-events-none" preserveAspectRatio="none" viewBox="0 0 300 20">
+                                    <path d="M5 15 Q 150 5, 295 15" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" />
+                                </svg>
+                            </span>
+                        </h2>
+                    </div>
+
+                    <!-- Subtext with accent line -->
+                    <div class="flex items-center gap-4 mt-4">
+                        <p class="text-gray-500 font-medium text-base italic opacity-80">
+                            It's great to see you again. Here's what's happening today.
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Waitlist Notice -->
@@ -503,7 +541,7 @@ function quickAccessShowNextRibbon(stepKey) {
                                 </div>
                             </Link>
 
-                            <Link v-if="user.isAdmitted" :href="route('student.attendance.show')" class="block h-full">
+                            <Link v-if="user.isAdmitted && !user.isOnlineCourse" :href="route('student.attendance.show')" class="block h-full">
                                 <div
                                     class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                     <!-- Hover Accent Line -->
@@ -696,7 +734,7 @@ function quickAccessShowNextRibbon(stepKey) {
                             </Link>
 
                             <Link
-                                v-if="user.isAdmitted"
+                                v-if="user.isAdmitted && !user.isOnlineCourse"
                                 :href="route('student.attendance.show')"
                                 class="block h-full"
                             >
