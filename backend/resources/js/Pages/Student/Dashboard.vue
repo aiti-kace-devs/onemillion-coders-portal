@@ -428,21 +428,21 @@ const greeting = computed(() => {
                                             </span>
                                             <span
                                                 class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
-                                                :class="
-                                                    user.verification_completed
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : user.verification_blocked
-                                                          ? 'bg-red-100 text-red-700'
-                                                          : 'bg-yellow-100 text-yellow-700'
-                                                "
+                                                :class="{
+                                                    'bg-green-100 text-green-700': user.verification_status === 'verified',
+                                                    'bg-red-100 text-red-700': user.verification_status === 'blocked',
+                                                    'bg-orange-100 text-orange-700': user.verification_status === 'processing',
+                                                    'bg-red-100 text-red-700': user.verification_status === 'failed',
+                                                    'bg-orange-100 text-orange-700': user.verification_status === 'pending',
+                                                }"
                                             >
-                                                {{
-                                                    user.verification_completed
-                                                        ? "Verified"
-                                                        : user.verification_blocked
-                                                          ? "Blocked"
-                                                          : "Pending"
-                                                }}
+                                                {{ {
+                                                    verified: 'Verified',
+                                                    blocked: 'Blocked',
+                                                    processing: 'Processing',
+                                                    failed: 'Failed',
+                                                    pending: 'Pending',
+                                                }[user.verification_status] || 'Pending' }}
                                             </span>
                                             <div class="flex items-center gap-3 mb-2">
                                                 <span
@@ -639,21 +639,21 @@ const greeting = computed(() => {
                                     </span>
                                     <span
                                         class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
-                                        :class="
-                                            user.verification_completed
-                                                ? 'bg-green-100 text-green-700'
-                                                : user.verification_blocked
-                                                  ? 'bg-red-100 text-red-700'
-                                                  : 'bg-yellow-100 text-yellow-700'
-                                        "
+                                        :class="{
+                                            'bg-green-100 text-green-700': user.verification_status === 'verified',
+                                            'bg-red-100 text-red-700': user.verification_status === 'blocked',
+                                            'bg-orange-100 text-orange-700': user.verification_status === 'processing',
+                                            'bg-red-100 text-red-700': user.verification_status === 'failed',
+                                            'bg-orange-100 text-orange-700': user.verification_status === 'pending',
+                                        }"
                                     >
-                                        {{
-                                            user.verification_completed
-                                                ? "Verified"
-                                                : user.verification_blocked
-                                                  ? "Blocked"
-                                                  : "Pending"
-                                        }}
+                                        {{ {
+                                            verified: 'Verified',
+                                            blocked: 'Blocked',
+                                            processing: 'Processing',
+                                            failed: 'Failed',
+                                            pending: 'Pending',
+                                        }[user.verification_status] || 'Pending' }}
                                     </span>
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
