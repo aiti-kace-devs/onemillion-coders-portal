@@ -5,9 +5,10 @@ import Link from "next/link";
 import Button from "./Button";
 import ProgramsMenu from "./ProgramsMenu";
 import PathwayMenu from "./PathwayMenu";
+import ExploreProgrammesModal from "./ExploreProgrammesModal";
 import { GhanaGradientBar } from "@/components/GhanaGradients";
 import { FiArrowRight, FiMenu, FiX, FiChevronDown } from "react-icons/fi";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
 import { getCategoriesData } from "../services";
@@ -21,6 +22,33 @@ export default function Header() {
   const [isMobileCoursesOpen, setIsMobileCoursesOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
+  const [showExploreModal, setShowExploreModal] = useState(false);
+
+  // Show the "Have you explored our programmes?" nudge only on the first
+  // Register click. After that, go straight to /register on subsequent clicks.
+  const EXPLORE_SEEN_KEY = "exploreModalSeen";
+
+  const handleRegisterClick = useCallback(() => {
+    setIsMobileMenuOpen(false);
+    if (typeof window !== "undefined") {
+      const seen = window.localStorage.getItem(EXPLORE_SEEN_KEY) === "1";
+      if (seen) {
+        router.push("/register");
+        return;
+      }
+      window.localStorage.setItem(EXPLORE_SEEN_KEY, "1");
+    }
+    setShowExploreModal(true);
+  }, [router]);
+  const closeExploreModal = useCallback(() => setShowExploreModal(false), []);
+  const handleExploreYes = useCallback(() => {
+    setShowExploreModal(false);
+    router.push("/register");
+  }, [router]);
+  const handleExploreNo = useCallback(() => {
+    setShowExploreModal(false);
+    router.push("/programmes");
+  }, [router]);
 
   const programsRef = useRef(null);
   const pathwayRef = useRef(null);
@@ -239,7 +267,7 @@ export default function Header() {
             {/* CTA Button - Hidden on small mobile, visible sm+ */}
             <div className="hidden sm:block">
               <Button
-                onClick={() => router.push("/register")}
+                onClick={handleRegisterClick}
                 icon={FiArrowRight}
                 variant="primary"
                 size="medium"
@@ -423,7 +451,7 @@ export default function Header() {
                 {/* Mobile CTA Button */}
                 <div className="pt-4 border-t border-gray-100 mt-4">
                   <Button
-                    onClick={() => router.push("/register")}
+                    onClick={handleRegisterClick}
                     icon={FiArrowRight}
                     variant="primary"
                     size="large"
@@ -438,6 +466,13 @@ export default function Header() {
           )}
         </AnimatePresence>
       </div>
+
+      <ExploreProgrammesModal
+        isOpen={showExploreModal}
+        onClose={closeExploreModal}
+        onYes={handleExploreYes}
+        onNo={handleExploreNo}
+      />
     </header>
   );
 }
