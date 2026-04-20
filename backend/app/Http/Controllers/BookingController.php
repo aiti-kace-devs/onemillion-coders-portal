@@ -177,12 +177,6 @@ class BookingController extends Controller
             ], 409);
         }
 
-        NotificationController::notify(
-            $user->id,
-            'COURSE_SELECTION',
-            'Enrollment Confirmed',
-            'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
-        );
 
         return response()->json([
             'status' => 'success',

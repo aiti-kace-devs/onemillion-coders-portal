@@ -20,6 +20,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\NotificationController;
 
 class BookingService
 {
@@ -103,6 +104,13 @@ class BookingService
                         'confirmed' => now(),
                         'session' => $session->id,
                     ]
+                );
+
+                NotificationController::notify(
+                    $user->id,
+                    'COURSE_SELECTION',
+                    'Enrollment Confirmed',
+                    'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
                 );
 
                  // Remove from waitlist if exists
