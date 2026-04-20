@@ -58,7 +58,7 @@ class User extends Authenticatable
         'verification_block_message',
         'verification_attempts_reset_at',
         'is_nia_syncing',
-        'middle_name'
+        'application_review_completed_at',
     ];
 
     /**
@@ -86,6 +86,7 @@ class User extends Authenticatable
         'support' => 'boolean',
         'is_verification_blocked' => 'boolean',
         'verification_attempts_reset_at' => 'datetime',
+        'application_review_completed_at' => 'datetime',
     ];
 
     /**
@@ -136,7 +137,7 @@ class User extends Authenticatable
             // and this is not a system sync.
             if ($user->isVerifiedByGhanaCard() && !($user->is_nia_syncing ?? false)) {
                 $protectedFields = ['name', 'first_name', 'last_name'];
-                
+
                 foreach ($protectedFields as $field) {
                     if ($user->isDirty($field)) {
                         $user->{$field} = $user->getOriginal($field);
@@ -148,7 +149,7 @@ class User extends Authenticatable
                 if ($user->isDirty('data')) {
                     $originalData = $user->getOriginal('data');
                     $newData = $user->data;
-                    
+
                     if (isset($originalData['date_of_birth']) && isset($newData['date_of_birth'])) {
                         if ($originalData['date_of_birth'] !== $newData['date_of_birth']) {
                             $newData['date_of_birth'] = $originalData['date_of_birth'];
@@ -200,6 +201,79 @@ class User extends Authenticatable
     public function admissions()
     {
         return $this->hasMany(UserAdmission::class, 'user_id', 'userId');
+    }
+
+    public function getSelectedSessionAttribute()
+    {
+        $dates = $this->session_dates;
+        $time = $this->session_time_value;
+
+        return trim("{$dates} " . ($time ? "({$time})" : "")) ?: ($this->admission?->session ?? 'N/A');
+    }
+
+    public function getSessionDatesAttribute()
+    {
+        $admission = $this->admission;
+        if (!$admission)
+            return '';
+
+        $batch = $admission->programmeBatch;
+        if (!$batch)
+            return '';
+
+        $start = $batch->start_date?->format('jS M') ?? '';
+        $end = $batch->end_date?->format('jS M') ?? '';
+
+        return "{$start} - {$end}";
+    }
+
+    public function getSessionTimeValueAttribute()
+    {
+        $admission = $this->admission;
+        if (!$admission)
+            return '';
+
+        $sessionRecord = $admission->courseSession;
+
+        // If no direct session record, check for a booking record
+        if (!$sessionRecord && $admission->booking) {
+            $sessionRecord = $admission->booking->session;
+        }
+
+        // Try 'course_time' (CourseSession) or 'time' (MasterSession)
+        return $sessionRecord?->course_time ?? $sessionRecord?->time ?? '';
+    }
+
+    public function getSessionNameAttribute()
+    {
+        $admission = $this->admission;
+        if (!$admission)
+            return '';
+
+        $sessionRecord = $admission->courseSession;
+
+        // If no direct session record, check for a booking record
+        if (!$sessionRecord && $admission->booking) {
+            $sessionRecord = $admission->booking->session;
+        }
+
+        // Try 'session_type' (MasterSession preference), 'name' (CourseSession), 'master_name', 'session' or fallback
+        return $sessionRecord?->session_type ?? $sessionRecord?->name ?? $sessionRecord?->master_name ?? $sessionRecord?->session ?? $sessionRecord?->title ?? $admission->session ?? '';
+    }
+
+    /**
+     * Get the validity period for the ID card
+     */
+    public function getValidityPeriodAttribute()
+    {
+        $admissionBatch = $this->admission?->programmeBatch?->admissionBatch;
+        if (!$admissionBatch)
+            return 'N/A';
+
+        $start = \Carbon\Carbon::parse($admissionBatch->start_date)->format('M, Y');
+        $end = \Carbon\Carbon::parse($admissionBatch->end_date)->format('M, Y');
+
+        return trim("{$start} - {$end}") ?: 'N/A';
     }
 
 
@@ -392,13 +466,6 @@ class User extends Authenticatable
         return $this->admission?->course?->course_name;
     }
 
-    /**
-     * Get the session name (e.g., Morning, Evening)
-     */
-    public function getSelectedSessionAttribute()
-    {
-        return $this->admission?->courseSession?->session;
-    }
 
     /**
      * Get the date the admission was confirmed (used as verification date)

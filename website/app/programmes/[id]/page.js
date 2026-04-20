@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import {
   FiArrowLeft,
@@ -17,16 +17,27 @@ import {
   FiStar,
   FiLoader,
   FiMonitor,
-  FiMapPin
+  FiMapPin,
+  FiNavigation,
+  FiCalendar,
+  FiChevronDown,
+  FiX,
 } from 'react-icons/fi';
-import { getProgrammeData } from '../../../services/pages';
+import {
+  getProgrammeData,
+  getAllRegionsWithCentreCounts,
+  getDistrictsByBranch,
+  getProgrammeAvailabilityPerCentre,
+} from '../../../services/pages';
 import Button from '../../../components/Button';
 import ProgrammeDetailsSkeleton from '@/components/ProgrammeDetailsSkeleton';
 import RegistrationDialog from '@/components/RegistrationDialog';
+import SearchableSelect from '@/components/SearchableSelect';
 
 export default function CourseDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const userId = searchParams.get('user_id');
   const courseId = searchParams.get('course_id');
@@ -37,6 +48,33 @@ export default function CourseDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showRegistrationDialog, setShowRegistrationDialog] = useState(false);
+
+  // Centre availability state
+  const [regions, setRegions] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [selectedRegion, setSelectedRegion] = useState(null);
+  const [selectedDistrict, setSelectedDistrict] = useState(null);
+  const [loadingRegions, setLoadingRegions] = useState(true);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const [availabilityCentres, setAvailabilityCentres] = useState([]);
+  const [availabilityMeta, setAvailabilityMeta] = useState(null);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState(null);
+  const [expandedCentres, setExpandedCentres] = useState({});
+
+  // Tab bar horizontal scroll (mobile): center the active tab inside its
+  // container only when activeTab actually changes. Do NOT use scrollIntoView —
+  // that scrolls the whole page vertically as a side effect.
+  const tabNavRef = useRef(null);
+  const tabRefs = useRef({});
+  useEffect(() => {
+    const nav = tabNavRef.current;
+    const btn = tabRefs.current[activeTab];
+    if (!nav || !btn) return;
+    const target = btn.offsetLeft - (nav.clientWidth - btn.offsetWidth) / 2;
+    nav.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+  }, [activeTab]);
 
   // Fetch programme data from API
   useEffect(() => {
@@ -58,6 +96,160 @@ export default function CourseDetailsPage() {
       fetchProgrammeData();
     }
   }, [params.id]);
+
+  // Load regions for the availability section
+  useEffect(() => {
+    let cancelled = false;
+    const fetchRegions = async () => {
+      try {
+        setLoadingRegions(true);
+        const data = await getAllRegionsWithCentreCounts();
+        if (!cancelled) setRegions(data || []);
+      } catch (err) {
+        console.error('Error fetching regions:', err);
+      } finally {
+        if (!cancelled) setLoadingRegions(false);
+      }
+    };
+    fetchRegions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Sync selection to URL (preserves existing params).
+  // Use history.replaceState rather than router.replace to avoid Next.js app-router
+  // scroll-to-top behaviour and re-renders when only a query param changes.
+  const updateQuery = useCallback(
+    (updates) => {
+      if (typeof window === 'undefined') return;
+      const next = new URLSearchParams(window.location.search);
+      Object.entries(updates).forEach(([k, v]) => {
+        if (v == null || v === '') next.delete(k);
+        else next.set(k, String(v));
+      });
+      const qs = next.toString();
+      const url = qs ? `${pathname}?${qs}` : pathname;
+      window.history.replaceState(null, '', url);
+    },
+    [pathname]
+  );
+
+  const fetchAvailability = useCallback(
+    async (districtId, page = 1, append = false) => {
+      if (!params.id || !districtId) return;
+      try {
+        if (append) setLoadingMore(true);
+        else setLoadingAvailability(true);
+        setAvailabilityError(null);
+        const response = await getProgrammeAvailabilityPerCentre(
+          params.id,
+          districtId,
+          { page }
+        );
+        // Normalize response: supports { available_centres: [...] } (current API),
+        // { data: [...] }, or Laravel paginator { data: { data: [...], ...meta } }
+        const raw = response?.available_centres ?? response?.data;
+        const centres = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+          ? raw.data
+          : Array.isArray(response?.centres)
+          ? response.centres
+          : [];
+        const metaSource =
+          response?.meta ??
+          (!Array.isArray(raw) && raw && raw.current_page != null ? raw : null) ??
+          response?.pagination;
+        const meta = metaSource
+          ? {
+              current_page: metaSource.current_page ?? page,
+              last_page: metaSource.last_page ?? null,
+              per_page: metaSource.per_page ?? null,
+              total: metaSource.total ?? null,
+              next_page_url: metaSource.next_page_url ?? null,
+            }
+          : null;
+
+        setAvailabilityCentres((prev) => (append ? [...prev, ...centres] : centres));
+        setAvailabilityMeta(meta);
+      } catch (err) {
+        console.error('Error fetching availability:', err);
+        setAvailabilityError('Failed to load centres. Please try again.');
+      } finally {
+        setLoadingAvailability(false);
+        setLoadingMore(false);
+      }
+    },
+    [params.id]
+  );
+
+  const handleRegionSelect = useCallback(
+    async (region) => {
+      setSelectedRegion(region);
+      setSelectedDistrict(null);
+      setDistricts([]);
+      setAvailabilityCentres([]);
+      setAvailabilityMeta(null);
+      setExpandedCentres({});
+      updateQuery({ region_id: region?.id, district_id: null });
+
+      try {
+        setLoadingDistricts(true);
+        const data = await getDistrictsByBranch(region.id);
+        setDistricts(data?.districts || []);
+      } catch (err) {
+        console.error('Error fetching districts:', err);
+        setAvailabilityError('Failed to load districts. Please try again.');
+      } finally {
+        setLoadingDistricts(false);
+      }
+    },
+    [updateQuery]
+  );
+
+  const handleDistrictSelect = useCallback(
+    (district) => {
+      setSelectedDistrict(district);
+      setAvailabilityCentres([]);
+      setAvailabilityMeta(null);
+      setExpandedCentres({});
+      updateQuery({ district_id: district?.id });
+      fetchAvailability(district.id, 1, false);
+    },
+    [fetchAvailability, updateQuery]
+  );
+
+  const handleLoadMore = useCallback(() => {
+    if (!selectedDistrict || !availabilityMeta) return;
+    const nextPage = (availabilityMeta.current_page || 1) + 1;
+    fetchAvailability(selectedDistrict.id, nextPage, true);
+  }, [selectedDistrict, availabilityMeta, fetchAvailability]);
+
+  const handleResetLocation = useCallback(() => {
+    setSelectedRegion(null);
+    setSelectedDistrict(null);
+    setDistricts([]);
+    setAvailabilityCentres([]);
+    setAvailabilityMeta(null);
+    setExpandedCentres({});
+    updateQuery({ region_id: null, district_id: null });
+  }, [updateQuery]);
+
+  // Auto-select from query params on load
+  useEffect(() => {
+    const regionIdParam = searchParams.get('region_id');
+    if (!regionIdParam || regions.length === 0 || selectedRegion) return;
+    const match = regions.find((r) => String(r.id) === String(regionIdParam));
+    if (match) handleRegionSelect(match);
+  }, [regions, searchParams, selectedRegion, handleRegionSelect]);
+
+  useEffect(() => {
+    const districtIdParam = searchParams.get('district_id');
+    if (!districtIdParam || districts.length === 0 || selectedDistrict) return;
+    const match = districts.find((d) => String(d.id) === String(districtIdParam));
+    if (match) handleDistrictSelect(match);
+  }, [districts, searchParams, selectedDistrict, handleDistrictSelect]);
 
   const isAvailable = programme ? programme.status : false;
 
@@ -198,8 +390,8 @@ export default function CourseDetailsPage() {
                 )}
               </div>
 
-              {/* CTA Button */}
-              <div className="flex">
+              {/* CTA Buttons */}
+              <div className="flex flex-wrap gap-3">
                 <Button
                   onClick={() => {
                     if (userId) {
@@ -214,6 +406,19 @@ export default function CourseDetailsPage() {
                   className="!bg-white !text-gray-900 hover:!bg-gray-100"
                 >
                   {isAvailable ? (userId ? 'Enroll Now' : 'Get Started') : 'Notify When Available'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    document
+                      .getElementById('available-centres')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  variant="ghost"
+                  icon={FiMapPin}
+                  iconPosition="left"
+                  className="!bg-white/15 !backdrop-blur-sm !text-white !border !border-white/50 hover:!bg-white/25 hover:!border-white/70 !shadow-sm"
+                >
+                  View training centres
                 </Button>
               </div>
             </motion.div>
@@ -266,15 +471,13 @@ export default function CourseDetailsPage() {
           >
             <div className="border-b border-gray-200 overflow-hidden">
               {/* Mobile: Horizontal scroll, Desktop: Flex */}
-              <nav className="flex md:justify-start overflow-x-auto scrollbar-hide -mb-px">
+              <nav ref={tabNavRef} className="flex md:justify-start overflow-x-auto scrollbar-hide -mb-px">
                 <div className="flex space-x-1 md:space-x-8 px-4 md:px-0 min-w-max md:min-w-0">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
                       ref={(el) => {
-                        if (el && activeTab === tab.id) {
-                          el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                        }
+                        tabRefs.current[tab.id] = el;
                       }}
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center space-x-1.5 md:space-x-2 py-3 md:py-4 px-3 md:px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 whitespace-nowrap ${activeTab === tab.id
@@ -512,6 +715,111 @@ export default function CourseDetailsPage() {
         </div>
       </section>
 
+      {/* Available Centres Section */}
+      <section
+        id="available-centres"
+        className="pb-20 md:pb-24 bg-gray-50 border-t border-gray-100 scroll-mt-4"
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 md:pt-16">
+          <div className="mb-8 md:mb-10">
+            <p className="text-[11px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2">
+              Find a centre
+            </p>
+            <h2 className="text-[22px] sm:text-2xl md:text-[28px] font-semibold text-gray-900 tracking-tight">
+              Centres offering this programme
+            </h2>
+            <p className="text-sm text-gray-500 mt-1.5 max-w-2xl">
+              Choose your region and district to see centres, cohorts, and session schedules.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 sm:gap-3 items-center mb-6">
+            <SearchableSelect
+              options={regions}
+              value={selectedRegion?.id || ''}
+              onChange={handleRegionSelect}
+              placeholder={loadingRegions ? 'Loading regions…' : 'Region'}
+              disabled={loadingRegions}
+              icon={FiMapPin}
+            />
+            <SearchableSelect
+              options={districts}
+              value={selectedDistrict?.id || ''}
+              onChange={handleDistrictSelect}
+              placeholder={
+                !selectedRegion
+                  ? 'District'
+                  : loadingDistricts
+                  ? 'Loading…'
+                  : districts.length === 0
+                  ? 'No districts available'
+                  : 'District'
+              }
+              disabled={!selectedRegion || loadingDistricts}
+              icon={FiNavigation}
+              formatOption={(o) => o.title}
+            />
+            <button
+              onClick={handleResetLocation}
+              disabled={!selectedRegion}
+              className={`justify-self-start sm:justify-self-auto text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
+                selectedRegion
+                  ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                  : 'text-gray-300 cursor-default'
+              }`}
+            >
+              Reset
+            </button>
+          </div>
+
+          {availabilityError && (
+            <div className="mb-6 px-4 py-3 bg-red-50 border border-red-100 rounded-lg flex items-center justify-between">
+              <p className="text-red-700 text-sm">{availabilityError}</p>
+              <button
+                onClick={() => setAvailabilityError(null)}
+                className="text-red-400 hover:text-red-600"
+                aria-label="Dismiss"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {!selectedRegion && !loadingRegions && (
+            <p className="text-sm text-gray-400 py-10">
+              Choose a region to see available districts.
+            </p>
+          )}
+
+          {selectedRegion && !selectedDistrict && !loadingDistricts && (
+            <p className="text-sm text-gray-400 py-10">
+              Now pick a district in{' '}
+              <span className="text-gray-600">{selectedRegion.title}</span>.
+            </p>
+          )}
+
+          {(loadingDistricts || loadingAvailability) && (
+            <div className="flex items-center gap-2.5 text-sm text-gray-400 py-10">
+              <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-yellow-400 rounded-full animate-spin" />
+              {loadingDistricts ? 'Loading districts…' : 'Loading centres…'}
+            </div>
+          )}
+
+          {selectedDistrict && !loadingAvailability && (
+            <CentreAvailabilityList
+              centres={availabilityCentres}
+              meta={availabilityMeta}
+              loadingMore={loadingMore}
+              onLoadMore={handleLoadMore}
+              expanded={expandedCentres}
+              onToggleExpand={(id) =>
+                setExpandedCentres((prev) => ({ ...prev, [id]: !prev[id] }))
+              }
+            />
+          )}
+        </div>
+      </section>
+
       {/* Registration Dialog */}
       <RegistrationDialog
         isOpen={showRegistrationDialog}
@@ -523,4 +831,444 @@ export default function CourseDetailsPage() {
       />
     </div>
   );
-} 
+}
+
+// ──────────────────────────────────────────────
+// Centre availability helpers & components
+// ──────────────────────────────────────────────
+
+function formatDate(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function formatTime(value) {
+  if (!value) return null;
+  // Accepts "HH:MM" or "HH:MM:SS" or ISO strings; returns null if not parseable as a time
+  const timeMatch = /^(\d{2}):(\d{2})(?::\d{2})?$/.exec(String(value));
+  if (timeMatch) {
+    const [, hh, mm] = timeMatch;
+    const d = new Date();
+    d.setHours(Number(hh), Number(mm), 0, 0);
+    return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+  // Only try ISO parsing if the string looks like a full datetime; avoid turning
+  // already-formatted strings like "8AM - 9:45AM" into NaN/garbage
+  if (/\d{4}-\d{2}-\d{2}T/.test(String(value))) {
+    const d = new Date(value);
+    if (!Number.isNaN(d.getTime())) {
+      return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    }
+  }
+  return null;
+}
+
+function getCentreId(centre, index) {
+  return (
+    centre?.id ??
+    (centre?.centre_name ? `${centre.district_name ?? ''}:${centre.centre_name}` : null) ??
+    `idx-${index}`
+  );
+}
+
+function getCentreTitle(centre) {
+  return centre?.title || centre?.centre_name || centre?.name || 'Centre';
+}
+
+function getCohortLabel(cohort) {
+  return (
+    cohort?.title ||
+    cohort?.name ||
+    cohort?.cohort_name ||
+    cohort?.batch ||
+    'Cohort'
+  );
+}
+
+function getCohortSessions(cohort) {
+  return (
+    cohort?.sessions ||
+    cohort?.course_sessions ||
+    cohort?.schedule ||
+    []
+  );
+}
+
+function getSessionLabel(session) {
+  return (
+    session?.session_name ||
+    session?.day ||
+    session?.day_of_week ||
+    session?.weekday ||
+    session?.name ||
+    ''
+  );
+}
+
+function getSessionTimeLabel(session) {
+  // If API already provides a formatted range string, use it verbatim
+  if (session?.time && typeof session.time === 'string') return session.time;
+  const start = session?.start_time || session?.starts_at || session?.start;
+  const end = session?.end_time || session?.ends_at || session?.end;
+  const s = formatTime(start);
+  const e = formatTime(end);
+  if (s && e) return `${s} – ${e}`;
+  return s || e || '';
+}
+
+function getSessionRemaining(session) {
+  return session?.remaining ?? session?.available_seats ?? session?.seats_available ?? null;
+}
+
+function getCentreLocation(centre) {
+  const district =
+    centre?.district?.title || centre?.district || centre?.district_name;
+  const region =
+    centre?.region?.title ||
+    centre?.region ||
+    centre?.branch?.title ||
+    centre?.branch_name;
+  return [district, region].filter(Boolean).join(', ');
+}
+
+function getCentreCapacity(centre) {
+  return centre?.capacity ?? null;
+}
+
+function CentreAvailabilityList({
+  centres,
+  meta,
+  loadingMore,
+  onLoadMore,
+  expanded,
+  onToggleExpand,
+}) {
+  if (!centres || centres.length === 0) {
+    return (
+      <p className="text-sm text-gray-400 py-10">
+        No centres offer this programme here yet. Try a different district.
+      </p>
+    );
+  }
+
+  const hasMore =
+    meta?.next_page_url ||
+    (meta?.current_page != null &&
+      meta?.last_page != null &&
+      meta.current_page < meta.last_page);
+
+  const total = meta?.total ?? centres.length;
+
+  return (
+    <>
+      <div className="flex items-baseline justify-between mb-3">
+        <p className="text-xs text-gray-400 font-medium">
+          {total} {total === 1 ? 'centre' : 'centres'}
+        </p>
+      </div>
+
+      <div className="divide-y divide-gray-100 border-y border-gray-100 bg-white rounded-lg">
+        {centres.map((centre, index) => {
+          const cid = getCentreId(centre, index);
+          return (
+            <CentreAvailabilityRow
+              key={cid}
+              centre={centre}
+              expanded={!!expanded[cid]}
+              onToggle={() => onToggleExpand(cid)}
+            />
+          );
+        })}
+      </div>
+
+      {hasMore && (
+        <div className="mt-5 flex justify-center">
+          <button
+            onClick={onLoadMore}
+            disabled={loadingMore}
+            className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loadingMore ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-yellow-400 rounded-full animate-spin" />
+                Loading…
+              </>
+            ) : (
+              <>
+                Load more
+                <FiChevronDown className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+function formatDateRange(start, end) {
+  if (!start && !end) return null;
+  const s = start ? new Date(start) : null;
+  const e = end ? new Date(end) : null;
+  const valid = (d) => d && !Number.isNaN(d.getTime());
+  if (valid(s) && valid(e)) {
+    const sameYear = s.getFullYear() === e.getFullYear();
+    const sameMonth = sameYear && s.getMonth() === e.getMonth();
+    if (sameMonth) {
+      const month = s.toLocaleDateString(undefined, { month: 'short' });
+      return `${month} ${s.getDate()} – ${e.getDate()}, ${e.getFullYear()}`;
+    }
+    if (sameYear) {
+      const sm = s.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const em = e.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      return `${sm} – ${em}, ${e.getFullYear()}`;
+    }
+  }
+  return [formatDate(start), formatDate(end)].filter(Boolean).join(' – ');
+}
+
+function CentreAvailabilityRow({ centre, expanded, onToggle }) {
+  const location = getCentreLocation(centre);
+  const title = getCentreTitle(centre);
+  const capacity = getCentreCapacity(centre);
+
+  // Build unique session columns from the union of all cohort sessions
+  const { cohorts, groups, columnKeys } = useMemo(() => {
+    const list =
+      centre?.cohorts || centre?.programme_batches || centre?.batches || [];
+    const orderedKeys = [];
+    const seen = new Set();
+    const groupMap = new Map();
+
+    list.forEach((cohort) => {
+      getCohortSessions(cohort).forEach((s) => {
+        const label = getSessionLabel(s);
+        const time = getSessionTimeLabel(s);
+        const key = `${label}||${time}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          orderedKeys.push({ key, label, time });
+        }
+        if (!groupMap.has(label)) groupMap.set(label, []);
+        if (!groupMap.get(label).some((c) => c.key === key)) {
+          groupMap.get(label).push({ key, time });
+        }
+      });
+    });
+
+    return {
+      cohorts: list,
+      columnKeys: orderedKeys,
+      groups: Array.from(groupMap.entries()).map(([label, cols]) => ({ label, cols })),
+    };
+  }, [centre]);
+
+  return (
+    <div>
+      <button
+        onClick={onToggle}
+        className="w-full text-left flex items-center gap-4 px-4 sm:px-5 py-4 hover:bg-gray-50/70 transition-colors"
+      >
+        <div className="min-w-0 flex-1">
+          <h4 className="text-[15px] font-medium text-gray-900 leading-snug">
+            {title}
+          </h4>
+          {location && (
+            <p className="text-xs text-gray-500 mt-0.5 truncate">{location}</p>
+          )}
+        </div>
+
+        <div className="hidden sm:flex items-center gap-5 text-xs text-gray-500 flex-shrink-0">
+          <span>
+            <span className="font-medium text-gray-900">{cohorts.length}</span>{' '}
+            cohort{cohorts.length === 1 ? '' : 's'}
+          </span>
+          {capacity != null && (
+            <span>
+              cap.{' '}
+              <span className="font-medium text-gray-900">{capacity}</span>
+            </span>
+          )}
+        </div>
+
+        <FiChevronDown
+          className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${
+            expanded ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 sm:px-5 pb-5 pt-1">
+              {cohorts.length === 0 ? (
+                <p className="text-sm text-gray-400 py-3">
+                  No cohorts scheduled yet.
+                </p>
+              ) : columnKeys.length > 0 ? (
+                <ScheduleMatrix
+                  cohorts={cohorts}
+                  columnKeys={columnKeys}
+                  groups={groups}
+                />
+              ) : (
+                <CohortFallbackList cohorts={cohorts} />
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function ScheduleMatrix({ cohorts, columnKeys, groups }) {
+  return (
+    <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr>
+            <th className="sticky left-0 bg-white z-10 text-left text-[11px] uppercase tracking-wider text-gray-400 font-medium pb-2 pr-4 align-bottom">
+              Cohort
+            </th>
+            {groups.map((group, gi) => (
+              <th
+                key={group.label}
+                colSpan={group.cols.length}
+                className={`text-[11px] uppercase tracking-wider text-gray-400 font-medium pb-1 text-center ${
+                  gi > 0 ? 'border-l border-gray-100' : ''
+                }`}
+              >
+                {group.label}
+              </th>
+            ))}
+          </tr>
+          <tr className="border-b border-gray-100">
+            <th className="sticky left-0 bg-white z-10"></th>
+            {groups.map((group, gi) =>
+              group.cols.map((col, ci) => (
+                <th
+                  key={col.key}
+                  className={`text-[11px] font-medium text-gray-500 pb-2 px-2 text-center whitespace-nowrap ${
+                    gi > 0 && ci === 0 ? 'border-l border-gray-100' : ''
+                  }`}
+                >
+                  {col.time || '—'}
+                </th>
+              ))
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {cohorts.map((cohort, i) => {
+            const dates = formatDateRange(
+              cohort?.start_date || cohort?.starts_at,
+              cohort?.end_date || cohort?.ends_at
+            );
+            const sessionMap = new Map();
+            getCohortSessions(cohort).forEach((s) => {
+              const key = `${getSessionLabel(s)}||${getSessionTimeLabel(s)}`;
+              sessionMap.set(key, s);
+            });
+
+            return (
+              <tr
+                key={cohort.id ?? i}
+                className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50 transition-colors"
+              >
+                <td className="sticky left-0 bg-white group-hover:bg-gray-50/50 z-10 py-3 pr-4 align-top whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {getCohortLabel(cohort)}
+                  </div>
+                  {dates && (
+                    <div className="text-xs text-gray-500 mt-0.5">{dates}</div>
+                  )}
+                </td>
+                {groups.map((group, gi) =>
+                  group.cols.map((col, ci) => {
+                    const s = sessionMap.get(col.key);
+                    const remaining = s ? getSessionRemaining(s) : null;
+                    return (
+                      <td
+                        key={col.key}
+                        className={`py-3 px-2 text-center align-middle ${
+                          gi > 0 && ci === 0 ? 'border-l border-gray-100' : ''
+                        }`}
+                      >
+                        <SeatCell remaining={remaining} present={!!s} />
+                      </td>
+                    );
+                  })
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SeatCell({ remaining, present }) {
+  if (!present) {
+    return <span className="text-gray-300 text-sm">—</span>;
+  }
+  if (remaining == null) {
+    return <span className="text-gray-500 text-sm">·</span>;
+  }
+  if (remaining === 0) {
+    return (
+      <span className="inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded text-[11px] font-medium text-gray-400 bg-gray-50">
+        Full
+      </span>
+    );
+  }
+  const tone =
+    remaining <= 2
+      ? 'text-orange-700 bg-orange-50'
+      : 'text-green-700 bg-green-50';
+  return (
+    <span
+      className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded text-[12px] font-semibold tabular-nums ${tone}`}
+    >
+      {remaining}
+    </span>
+  );
+}
+
+function CohortFallbackList({ cohorts }) {
+  return (
+    <ul className="space-y-2 pt-1">
+      {cohorts.map((cohort, i) => {
+        const dates = formatDateRange(
+          cohort?.start_date || cohort?.starts_at,
+          cohort?.end_date || cohort?.ends_at
+        );
+        return (
+          <li
+            key={cohort.id ?? i}
+            className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
+          >
+            <span className="text-sm font-medium text-gray-900">
+              {getCohortLabel(cohort)}
+            </span>
+            {dates && <span className="text-xs text-gray-500">{dates}</span>}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}

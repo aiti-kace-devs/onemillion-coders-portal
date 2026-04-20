@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -151,6 +150,7 @@ class AppConfigSeeder extends Seeder
                 ['key' => LONG_SLOTS_PERCENTAGE, 'value' => 40, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
                 ['key' => WAITLIST_NOTIFY_LIMIT, 'value' => 5, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
                 ['key' => AVAILABILITY_CACHE_TTL, 'value' => 300, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['key' => APPLICATION_REVIEW_IFRAME_URL, 'value' => '', 'type' => 'string', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
 
                 // Session Reminder settings
                 ['key' => ONE_WEEK_REMINDER, 'value' => 1, 'type' => 'boolean', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],

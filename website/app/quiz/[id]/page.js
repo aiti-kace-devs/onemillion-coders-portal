@@ -684,17 +684,20 @@ export default function QuizPage({ params }) {
     return null;
   };
 
-  // Shared bg
+  // Shared bg — use absolute + z-0 inside each `relative min-h-screen` root (not fixed + negative z).
+  // Fixed + -z-10 often paints behind the document canvas in iframes / embedded views, so the image
+  // disappears and white "Level" copy reads as missing design.
   const BG = (
-    <div className="fixed inset-0 -z-10">
+    <div className="pointer-events-none absolute inset-0 z-0">
       <Image
         src="/images/level/level.jpg"
         alt=""
         fill
         className="object-cover"
+        sizes="100vw"
         priority
       />
-      <div className="absolute inset-0 bg-black/60" />
+      <div className="absolute inset-0 bg-black/60" aria-hidden />
     </div>
   );
 
@@ -703,7 +706,7 @@ export default function QuizPage({ params }) {
   // ═══════════════════════════════════════════════════════════
   if (!started) {
     return (
-      <div className="min-h-screen relative flex items-center justify-center">
+      <div className="min-h-screen relative flex items-center justify-center overflow-hidden">
         {BG}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -784,7 +787,7 @@ export default function QuizPage({ params }) {
   // ═══════════════════════════════════════════════════════════
   if (loading || (!question && !assessmentComplete)) {
     return (
-      <div className="min-h-screen relative flex items-center justify-center">
+      <div className="min-h-screen relative flex items-center justify-center overflow-hidden">
         {BG}
         <div className="text-center">
           <FiLoader className="w-10 h-10 text-[#f9a825] animate-spin mx-auto mb-4" />
@@ -806,7 +809,7 @@ export default function QuizPage({ params }) {
   const assessedLevel = getAssessedLevelLabel();
 
   return (
-    <div className="min-h-screen relative flex flex-col">
+    <div className="min-h-screen relative flex flex-col overflow-x-hidden">
       {BG}
 
       {/* ── Violation Warning Overlay ── */}

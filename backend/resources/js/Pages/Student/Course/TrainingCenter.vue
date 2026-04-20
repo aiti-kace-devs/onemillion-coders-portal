@@ -39,9 +39,11 @@ const steps = [
     <Head title="Select Training Center - Change Course" />
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Change Course
-            </h2>
+            <div class="flex items-center gap-2">
+                <h2 class="font-black text-2xl text-gray-900 tracking-tight">
+                    Change Course
+                </h2>
+            </div>
         </template>
 
         <div class="py-6 px-4 sm:px-6 lg:px-8">

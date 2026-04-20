@@ -167,7 +167,7 @@ export default function Header() {
                 className={`nav-pill flex items-center space-x-1 ${isActiveLink("/programmes") ? "active" : ""
                   }`}
               >
-                <span>Courses </span>
+                <span>Programmes </span>
                 <FiChevronDown
                   className={`w-3 h-3 transition-transform duration-200 ${isProgramsMenuOpen ? "rotate-180" : ""
                     }`}
@@ -200,10 +200,10 @@ export default function Header() {
               />
             </div> */}
             <Link
-              href="/pathway"
-              className={`nav-pill ${isActiveLink("/pathway") ? "active" : ""}`}
+              href="/how-to-register"
+              className={`nav-pill ${isActiveLink("/how-to-register") ? "active" : ""}`}
             >
-              Pathways
+              How to Register
             </Link>
             <Link
               href="/centers"
@@ -318,7 +318,7 @@ export default function Header() {
                       : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                   >
-                    <span>Courses</span>
+                    <span>Programmes</span>
                     <FiChevronDown
                       className={`w-4 h-4 transition-transform duration-200 ${isMobileCoursesOpen ? "rotate-180" : ""
                         }`}
@@ -369,14 +369,14 @@ export default function Header() {
                   </AnimatePresence>
                 </div>
                 <Link
-                  href="/pathway"
-                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${isActiveLink("/pathway")
+                  href="/how-to-register"
+                  className={`block px-4 py-3 rounded-lg transition-colors font-medium ${isActiveLink("/how-to-register")
                     ? "text-yellow-600 bg-yellow-50 font-semibold"
                     : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                     }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Pathways
+                  How to Register
                 </Link>
                 <Link
                   href="/centers"

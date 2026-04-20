@@ -3,8 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Models\AdmissionWaitlist;
-use App\Models\AppConfig;
 use App\Services\JwtService;
+use App\Services\StudentOnboardingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -22,7 +22,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * Determine the current asset version.
      */
-    public function version(Request $request): string|null
+    public function version(Request $request): ?string
     {
         return parent::version($request);
     }
@@ -41,8 +41,8 @@ class HandleInertiaRequests extends Middleware
             return [
                 ...parent::share($request),
                 'auth' => [
-                    'user' => $request->user()
-                ]
+                    'user' => $request->user(),
+                ],
             ];
         }
 
@@ -52,7 +52,7 @@ class HandleInertiaRequests extends Middleware
             SHOW_STUDENT_LEVEL,
             SHOW_COURSE_ASSESSMENT_TO_STUDENTS,
             ALLOW_COURSE_CHANGE,
-            ALLOW_SESSION_CHANGE
+            ALLOW_SESSION_CHANGE,
         ];
 
         $configs = [];
@@ -61,9 +61,11 @@ class HandleInertiaRequests extends Middleware
         }
 
         $quizJwtToken = null;
-        if ($user && in_array(Route::currentRouteName(), ['student.change-course', 'student.level-assessment'])) {
+        if ($user && in_array(Route::currentRouteName(), ['student.change-course', 'student.level-assessment', 'student.application-review.index'])) {
             $quizJwtToken = app(JwtService::class)->generate($user->id);
         }
+
+        $onboardingStep = $user ? app(StudentOnboardingService::class)->getBlockingStep($user) : null;
 
         $isOnWaitlist = $user && ! $user->registered_course
             ? AdmissionWaitlist::where('user_id', $user->userId)
@@ -89,6 +91,9 @@ class HandleInertiaRequests extends Middleware
                             'verification_completed' => $user?->isVerifiedByGhanaCard() ?? false,
                             'verification_blocked' => (bool) ($user?->is_verification_blocked ?? false),
                             'student_level' => config(SHOW_STUDENT_LEVEL, false) ? $user?->student_level : null,
+                            'application_review_completed' => $user?->application_review_completed_at !== null,
+                            'isOnlineCourse' => $user?->course?->isOnlineProgramme() ?? false,
+                            'current_onboarding_step' => $onboardingStep,
                         ]
                     )
                     : null,
@@ -98,8 +103,8 @@ class HandleInertiaRequests extends Middleware
             'quiz_frontend_url' => config('app.quiz_frontend_url'),
             'quiz_jwt_token' => $quizJwtToken,
             'flash' => [
-                'message' => fn() => $request->session()->get('flash'),
-                'key' => fn() => $request->session()->get('key'),
+                'message' => fn () => $request->session()->get('flash'),
+                'key' => fn () => $request->session()->get('key'),
             ],
             'recaptcha_site_key' => $user ? null : config('services.recaptcha.site_key'),
         ];

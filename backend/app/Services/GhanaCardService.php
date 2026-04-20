@@ -339,7 +339,7 @@ class GhanaCardService
         ];
     }
 
-    private function buildUserSafeStatusMessage(?string $code, string $rawStatusMessage): string
+    public function buildUserSafeStatusMessage(?string $code, string $rawStatusMessage): string
     {
         if ($code === '00') {
             return 'Verification successful.';
@@ -824,12 +824,19 @@ class GhanaCardService
             }
         }
 
-        if ($url === '' && $path !== '' && method_exists(Storage::disk($disk), 'url')) {
+        if ($url === '' && $path !== '') {
             try {
-                $url = (string) Storage::disk($disk)->url($path);
+                if (method_exists(Storage::disk($disk), 'url')) {
+                    $url = (string) Storage::disk($disk)->url($path);
+                }
             } catch (\Throwable) {
                 $url = '';
             }
+        }
+
+        // Use proxy route for private images to avoid CORS and connectivity issues in local
+        if ($path !== '' && (empty($url) || app()->environment('local'))) {
+            $url = route('student.verification.image');
         }
 
         return [

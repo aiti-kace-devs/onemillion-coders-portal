@@ -429,6 +429,7 @@ function RegisterForm() {
 
       await submitRegistration(payload);
       setStep("success");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       const responseData = err?.response?.data;
 
@@ -831,6 +832,29 @@ function RegisterForm() {
 
       {/* Main Content */}
       <div className="max-w-3xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+        {step === "form" && process.env.NEXT_PUBLIC_PORTAL_URL && (
+          <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-yellow-50/70 border border-yellow-100">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="hidden sm:flex w-8 h-8 rounded-full bg-yellow-100 items-center justify-center flex-shrink-0">
+                <FiUser className="w-4 h-4 text-yellow-700" />
+              </div>
+              <p className="text-sm text-gray-800 truncate">
+                <span className="font-semibold">Already have an account?</span>{" "}
+                <span className="hidden sm:inline text-gray-600">
+                  Log in to access your student portal.
+                </span>
+              </p>
+            </div>
+            <a
+              href={process.env.NEXT_PUBLIC_PORTAL_URL}
+              className="group inline-flex items-center gap-1.5 bg-transparent hover:bg-yellow-100 text-yellow-800 font-semibold text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-lg border border-yellow-400 transition-all duration-200 flex-shrink-0 active:scale-[0.97]"
+            >
+              Log in
+              <FiArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+            </a>
+          </div>
+        )}
+
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -1150,6 +1174,7 @@ function RegisterForm() {
                 </p>
               </div>
             )}
+
           </div>
         )}
 
@@ -1199,12 +1224,22 @@ function RegisterForm() {
                 >
                   Back to Home
                 </button>
-                <button
-                  onClick={() => router.push("/programmes")}
-                  className="px-5 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
-                >
-                  Browse More Courses
-                </button>
+                {process.env.NEXT_PUBLIC_PORTAL_URL ? (
+                  <a
+                    href={process.env.NEXT_PUBLIC_PORTAL_URL}
+                    className="group inline-flex items-center justify-center gap-2 px-5 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-yellow-400/20 active:scale-[0.97]"
+                  >
+                    Go to Portal
+                    <FiArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => router.push("/programmes")}
+                    className="px-5 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
+                  >
+                    Browse More Courses
+                  </button>
+                )}
               </motion.div>
             </div>
           </motion.div>

@@ -13,7 +13,7 @@ use App\Helpers\SchoolDayCalculator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-
+ 
 class AvailabilityService
 {
     /**

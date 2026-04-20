@@ -20,15 +20,27 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\NotificationController;
 
 class BookingService
 {
     /**
+     * When a centre has no slot/seat configuration, {@see resolveEffectiveCapacity} returns null.
+     * Treating that as zero seats makes every online cohort/session appear full in the UI and
+     * blocks bookings; use a high cap until admins configure real limits.
+     */
+    private const UNCONFIGURED_ONLINE_CAPACITY_FALLBACK = 999999;
+
+    /**
      * Book a user into a programme batch for a specific course session.
      *
-     * For "In Person" courses: saves user & admission data without creating a Booking record.
+     * When {@see Course::isInPersonProgramme} is true and self-paced cohort attachment is false: enforces
+     * per-{@see CourseSession} capacity and creates a {@see Booking} with {@see Booking::course_session_id}.
      * For other courses: enforces per-session capacity via daily_session_occupancy summary table
      * and respects the Intelligent Quota System (IQS).
+     *
+     * @param  bool  $forSelfPacedCohortAttachment  When true (study-from-home cohort only): skip seat-capacity
+     *                                              checks and create the booking without occupancy observer side-effects.
      *
      * @throws Exception when capacity is exhausted or the session is incompatible.
      */
@@ -36,29 +48,6 @@ class BookingService
     {
         $programme = $course->programme;
         $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
-
-        // Handle In Person courses
-        if ($isInPerson) {
-            $user->registered_course = $course->id;
-            $user->shortlist = true;
-            $user->save();
-
-            $admission = UserAdmission::updateOrCreate(
-                ['user_id' => $user->userId],
-                [
-                    'course_id' => $course->id,
-                    'programme_batch_id' => $batch->id,
-                    'email_sent' => now(),
-                    'confirmed' => now(),
-                    'session' => $session->id,
-                ]
-            );
-
-            // Remove from waitlist if exists
-            AdmissionWaitlist::where('user_id', $user->userId)->delete();
-
-            return null;
-        }
 
         // Handle regular (Master Session) courses
         $centreId = $course->centre_id;
@@ -70,20 +59,21 @@ class BookingService
             return DB::transaction(function () use ($user, $course, $batch, $session, $centreId) {
                 $courseType = Booking::resolveCourseType($course->id);
 
-                // Bypass the cache and compute remaining seats fresh inside the lock
-                $remaining = $this->computeRemainingSeats($centreId, $batch, $session);
-
-                if ($remaining <= 0) {
-                    throw new Exception('Course session is full.');
-                }
-
-                // Check for existing booking in the same batch (idempotency)
+                // Check for existing booking in the same batch first (idempotency).
+                // If it already exists, return it and do not try to consume capacity again.
                 $existing = Booking::where('user_id', $user->userId)
                     ->where('programme_batch_id', $batch->id)
                     ->first();
 
                 if ($existing) {
                     return $existing;
+                }
+
+                // Bypass the cache and compute remaining seats fresh inside the lock
+                $remaining = $this->computeRemainingSeats($centreId, $batch, $session);
+
+                if ($remaining <= 0) {
+                    throw new Exception('Course session is full.');
                 }
 
                 // Cancel any previous booking for a different batch
@@ -106,7 +96,6 @@ class BookingService
                 $user->registered_course = $course->id;
                 $user->shortlist = true;
                 $user->save();
-
                 $admission = UserAdmission::updateOrCreate(
                     ['user_id' => $user->userId],
                     [
@@ -114,7 +103,15 @@ class BookingService
                         'programme_batch_id' => $batch->id,
                         'email_sent' => now(),
                         'confirmed' => now(),
+                        'session' => $session->id,
                     ]
+                );
+
+                NotificationController::notify(
+                    $user->id,
+                    'COURSE_SELECTION',
+                    'Enrollment Confirmed',
+                    'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
                 );
 
                 // Remove from waitlist if exists
@@ -137,6 +134,7 @@ class BookingService
             });
         });
     }
+
 
     /**
      * Cancel a booking: hard-delete the row and fire AdmissionSlotFreed
@@ -230,7 +228,9 @@ class BookingService
 
         $capacity = $this->resolveEffectiveCapacity($centre, $courseType, $batch);
 
-        if ($capacity === null || $capacity <= 0) {
+        if ($capacity === null) {
+            $capacity = self::UNCONFIGURED_ONLINE_CAPACITY_FALLBACK;
+        } elseif ($capacity <= 0) {
             return 0;
         }
 
@@ -379,11 +379,13 @@ class BookingService
                     continue;
                 }
 
-                // Compute and cache
+                // Compute and cache (align with computeSeatsFromOccupancy capacity rules)
                 $courseType = $session->course_type ?? Programme::COURSE_TYPE_SHORT;
                 $capacity = $this->resolveEffectiveCapacity($centre, $courseType, $batch);
 
-                if ($capacity === null || $capacity <= 0) {
+                if ($capacity === null) {
+                    $capacity = self::UNCONFIGURED_ONLINE_CAPACITY_FALLBACK;
+                } elseif ($capacity <= 0) {
                     $results[$key] = 0;
                     Cache::put($cacheKey, 0, now()->addHour());
 

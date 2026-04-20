@@ -179,6 +179,8 @@ Route::group([
     Route::delete('district/{districtId}/remove-centre/{centreId}', [DistrictCrudController::class, 'removeCentre'])->name('district.remove-centre');
     Route::crud('district', 'DistrictCrudController');
     Route::crud('constituency', 'ConstituencyCrudController');
+    Route::post('campaign/{id}/send', 'CampaignCrudController@sendCampaign')->name('campaign.send');
+    Route::crud('campaign', 'CampaignCrudController');
 }); // this should be the absolute last line of this file
 
 /**

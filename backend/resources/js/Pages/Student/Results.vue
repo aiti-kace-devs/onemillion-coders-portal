@@ -46,7 +46,11 @@ const evaluation = computed(() => getEvaluation(score.value));
   <Head title="Results" />
   <AuthenticatedLayout>
     <template #header>
-      <h2 class="font-semibold text-xl text-gray-800 leading-tight">Results</h2>
+      <div class="flex items-center gap-2">
+        <h2 class="font-black text-2xl text-gray-900 tracking-tight">
+          Exam Results
+        </h2>
+      </div>
     </template>
 
     <div class="py-12">
