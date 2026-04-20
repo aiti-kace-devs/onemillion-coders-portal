@@ -35,7 +35,6 @@ const cohortDetailRow = computed(() => {
     if (props.cohort.batch_number && props.cohort.title) {
         items.push(`Cohort ${props.cohort.batch_number}`);
     }
-    if (props.cohort.year) items.push(String(props.cohort.year));
     if (props.cohort.start_date || props.cohort.end_date) {
         const start = formatDate(props.cohort.start_date);
         const end = formatDate(props.cohort.end_date);
@@ -224,7 +223,7 @@ const tieredTestTaken = computed(() => {
                             <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener noreferrer"
                                 class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-green-600 hover:text-green-700 transition-colors">
                                 <span class="material-symbols-outlined text-base">near_me</span>
-                                Click to get direction to your center
+                                Click here to get direction to your center
                             </a>
                         </div>
                     </div>
