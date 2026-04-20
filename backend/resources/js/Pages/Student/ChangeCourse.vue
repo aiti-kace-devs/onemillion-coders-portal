@@ -97,7 +97,11 @@ onUnmounted(() => {
   <Head :title="pageTitle" />
   <AuthenticatedLayout :fullHeight="!isShortlisted">
     <template #header>
-      <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ pageTitle }}</h2>
+      <div class="flex items-center gap-2">
+        <h2 class="font-black text-2xl text-gray-900 tracking-tight">
+          {{ pageTitle }}
+        </h2>
+      </div>
     </template>
 
     <div v-if="isShortlisted" class="py-12 px-4">
