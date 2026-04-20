@@ -1,7 +1,7 @@
 ---
 id: b9f83a4e-b850-4159-b172-b27b0ac29599
 blueprint: user_guide
-title: 'Verification & Password Setup (Step 2)'
+title: 'Verification & Password Setup (Step 3)'
 description: |-
   1. Enter your email address.
   2. Click on “Get OTP”.
@@ -14,10 +14,10 @@ description: |-
   	Must contain uppercase and lowercase letters
   	Must include at least one number
   	Must be at least 6 characters long
-  8. Click “Continue” to proceed.
-images:
-  - userguide/emailotp.png
-  - userguide/otpcode.png
+  8. Read and check the “Accept Terms and Conditions” box.
+  9. Complete the process by clicking the appropriate Submit/Finish button.
 updated_by: 9
-updated_at: 1776637660
+updated_at: 1776719408
+images:
+  - user-guide/otp-verification.png
 ---
