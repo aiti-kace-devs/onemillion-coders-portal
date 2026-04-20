@@ -13,7 +13,7 @@ import {
   FiCheckCircle,
   FiTarget,
   FiGlobe,
-  FiPlay,
+  FiArrowRight,
   FiStar,
   FiLoader,
   FiMonitor,
@@ -390,33 +390,19 @@ export default function CourseDetailsPage() {
                 )}
               </div>
 
-              {/* CTA Buttons */}
+              {/* The primary register CTA lives at the bottom of the page,
+                  after the curriculum and available centres, so users see everything first. */}
               <div className="flex flex-wrap gap-3">
-                <Button
-                  onClick={() => {
-                    if (userId) {
-                      isAvailable && setShowRegistrationDialog(true);
-                    } else {
-                      router.push('/register');
-                    }
-                  }}
-                  variant="primary"
-                  icon={FiPlay}
-                  disabled={!isAvailable}
-                  className="!bg-white !text-gray-900 hover:!bg-gray-100"
-                >
-                  {isAvailable ? (userId ? 'Enroll Now' : 'Get Started') : 'Notify When Available'}
-                </Button>
                 <Button
                   onClick={() => {
                     document
                       .getElementById('available-centres')
                       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }}
-                  variant="ghost"
+                  variant="primary"
                   icon={FiMapPin}
                   iconPosition="left"
-                  className="!bg-white/15 !backdrop-blur-sm !text-white !border !border-white/50 hover:!bg-white/25 hover:!border-white/70 !shadow-sm"
+                  className="!bg-white !text-gray-900 hover:!bg-gray-100"
                 >
                   View training centres
                 </Button>
@@ -817,6 +803,63 @@ export default function CourseDetailsPage() {
               }
             />
           )}
+        </div>
+      </section>
+
+      {/* Final Register CTA — placed here so users see the curriculum and
+          available centres before they can register. */}
+      <section className="bg-gradient-to-r from-yellow-400 to-yellow-500 py-14 sm:py-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-2xl sm:text-3xl md:text-[32px] font-bold text-gray-900 mb-3 tracking-tight">
+              {isAvailable
+                ? 'Ready to start this programme?'
+                : 'This programme is coming soon'}
+            </h2>
+            <p className="text-base sm:text-lg text-gray-800 mb-7 max-w-2xl mx-auto">
+              {isAvailable
+                ? "Now that you've seen the curriculum and the centres, take the next step and secure your spot."
+                : "We'll let you know when registration opens. In the meantime, explore our other programmes."}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+              <Button
+                onClick={() => {
+                  if (!isAvailable) return;
+                  if (userId) {
+                    setShowRegistrationDialog(true);
+                  } else {
+                    router.push('/register');
+                  }
+                }}
+                variant="outline"
+                size="large"
+                icon={FiArrowRight}
+                iconPosition="right"
+                disabled={!isAvailable}
+                className="!border-gray-900 !text-gray-900 hover:!bg-gray-900 hover:!text-white"
+              >
+                {isAvailable
+                  ? userId
+                    ? 'Enroll now'
+                    : 'Register now'
+                  : 'Notify me when available'}
+              </Button>
+              <Button
+                onClick={() => router.push('/programmes')}
+                variant="outline"
+                size="large"
+                icon={FiArrowRight}
+                className="!border-gray-900 !text-gray-900 hover:!bg-gray-900 hover:!text-white"
+              >
+                Browse other programmes
+              </Button>
+            </div>
+          </motion.div>
         </div>
       </section>
 
