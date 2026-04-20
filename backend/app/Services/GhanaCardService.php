@@ -339,7 +339,7 @@ class GhanaCardService
         ];
     }
 
-    private function buildUserSafeStatusMessage(?string $code, string $rawStatusMessage): string
+    public function buildUserSafeStatusMessage(?string $code, string $rawStatusMessage): string
     {
         if ($code === '00') {
             return 'Verification successful.';

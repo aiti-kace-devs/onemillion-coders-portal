@@ -844,12 +844,27 @@ class AdminController extends Controller
 
             // UpdateSheetWithGhanaCardDetails::dispatch($student);
 
+            NotificationController::notify(
+                $student->id,
+                'VERIFICATION',
+                'Verification Successful',
+                'Your identity has been verified successfully. Your Ghana Card details have been confirmed.'
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Verification successsful',
                 'student' => $student,
             ]);
         }
+
+        NotificationController::notify(
+            $student->id,
+            'VERIFICATION',
+            'Verification Unsuccessful',
+            'Your identity verification could not be completed. The card number format is incorrect. Please update your Ghana Card details and try again.'
+        );
+
         return response()->json([
             'success' => false,
             'message' => 'Unable to verify. Card Number format is wrong',

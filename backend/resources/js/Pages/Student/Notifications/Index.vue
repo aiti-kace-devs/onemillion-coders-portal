@@ -303,10 +303,6 @@ const selectedNotificationHtml = computed(() =>
               <span class="text-xs text-gray-400">
                 {{ timeAgo(notification.created_at) }}
               </span>
-              <span class="text-xs text-gray-300">&middot;</span>
-              <span class="text-xs text-gray-400 capitalize">
-                {{ notification.type }}
-              </span>
             </div>
           </div>
 
@@ -378,10 +374,6 @@ const selectedNotificationHtml = computed(() =>
                   <span class="text-xs text-gray-400">
                     {{ timeAgo(selectedNotification.created_at) }}
                   </span>
-                  <span class="text-xs text-gray-300">&middot;</span>
-                  <span class="text-xs text-gray-400 capitalize">
-                    {{ selectedNotification.type }}
-                  </span>
                   <span
                     v-if="selectedNotification.priority !== 'normal'"
                     class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium uppercase"
@@ -410,7 +402,7 @@ const selectedNotificationHtml = computed(() =>
           <div class="px-6 py-4 border-t border-gray-100 flex justify-end">
             <button
               @click="closeModal"
-              class="px-5 py-2 bg-gray-800 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+              class="px-5 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
             >
               OK
             </button>
