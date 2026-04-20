@@ -296,31 +296,6 @@ const greeting = computed(() => {
                             Application status is your hub for progress and the expected flow; use the shortcuts below to complete each step.
                         </p>
 
-                        <Link
-                            :href="route('student.application-status')"
-                            class="block w-full max-w-3xl mb-6"
-                        >
-                            <div
-                                class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-3 border border-gray-100/80 overflow-hidden"
-                            >
-                                <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-                                <span
-                                    class="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
-                                >
-                                    <span class="material-symbols-outlined text-[22px] sm:text-[24px]">contract</span>
-                                </span>
-                                <div class="flex-1 text-left min-w-0">
-                                    <h3 class="text-base sm:text-lg font-bold text-gray-800">
-                                        Application status
-                                    </h3>
-                                    <p class="text-sm text-gray-600 mt-0.5">
-                                        View your timeline, expected flow, and what to do next.
-                                    </p>
-                                </div>
-                                <span class="material-symbols-outlined text-gray-400 shrink-0 hidden sm:inline" aria-hidden="true">chevron_right</span>
-                            </div>
-                        </Link>
-
                         <!-- Before level assessment: review → assessment → verification. -->
                         <template v-if="showAssessmentQuickAccess">
                             <div class="flex flex-col gap-6 max-w-3xl mb-10">
@@ -428,21 +403,21 @@ const greeting = computed(() => {
                                             </span>
                                             <span
                                                 class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
-                                                :class="
-                                                    user.verification_completed
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : user.verification_blocked
-                                                          ? 'bg-red-100 text-red-700'
-                                                          : 'bg-yellow-100 text-yellow-700'
-                                                "
+                                                :class="{
+                                                    'bg-green-100 text-green-700': user.verification_status === 'verified',
+                                                    'bg-red-100 text-red-700': user.verification_status === 'blocked',
+                                                    'bg-orange-100 text-orange-700': user.verification_status === 'processing',
+                                                    'bg-red-100 text-red-700': user.verification_status === 'failed',
+                                                    'bg-orange-100 text-orange-700': user.verification_status === 'pending',
+                                                }"
                                             >
-                                                {{
-                                                    user.verification_completed
-                                                        ? "Verified"
-                                                        : user.verification_blocked
-                                                          ? "Blocked"
-                                                          : "Pending"
-                                                }}
+                                                {{ {
+                                                    verified: 'Verified',
+                                                    blocked: 'Blocked',
+                                                    processing: 'Processing',
+                                                    failed: 'Failed',
+                                                    pending: 'Pending',
+                                                }[user.verification_status] || 'Pending' }}
                                             </span>
                                             <div class="flex items-center gap-3 mb-2">
                                                 <span
@@ -473,7 +448,7 @@ const greeting = computed(() => {
                                 More shortcuts
                             </p>
                             <div
-                                class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
+                                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
                             >
                             <Link
                                 v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
@@ -621,8 +596,36 @@ const greeting = computed(() => {
                         <!-- After level assessment: shortcut grid (application status is above for everyone). -->
                         <div
                             v-else
-                            class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
+                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
                         >
+                            <Link
+                                :href="route('student.application-status')"
+                                class="block h-full"
+                            >
+                                <div
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden"
+                                >
+                                    <div class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900"
+                                        >
+                                            <span class="material-symbols-outlined">contract</span>
+                                        </span>
+                                        <div class="flex-1 text-left">
+                                            <h3 class="text-lg font-bold text-gray-800">
+                                                Application Status
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 space-y-1 text-left">
+                                        <p class="text-sm">
+                                            View your timeline, expected flow, and what to do next.
+                                        </p>
+                                    </div>
+                                </div>
+                            </Link>
+
                             <Link
                                 :href="route('student.verification.index')"
                                 class="block h-full"
@@ -639,21 +642,21 @@ const greeting = computed(() => {
                                     </span>
                                     <span
                                         class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
-                                        :class="
-                                            user.verification_completed
-                                                ? 'bg-green-100 text-green-700'
-                                                : user.verification_blocked
-                                                  ? 'bg-red-100 text-red-700'
-                                                  : 'bg-yellow-100 text-yellow-700'
-                                        "
+                                        :class="{
+                                            'bg-green-100 text-green-700': user.verification_status === 'verified',
+                                            'bg-red-100 text-red-700': user.verification_status === 'blocked',
+                                            'bg-orange-100 text-orange-700': user.verification_status === 'processing',
+                                            'bg-red-100 text-red-700': user.verification_status === 'failed',
+                                            'bg-orange-100 text-orange-700': user.verification_status === 'pending',
+                                        }"
                                     >
-                                        {{
-                                            user.verification_completed
-                                                ? "Verified"
-                                                : user.verification_blocked
-                                                  ? "Blocked"
-                                                  : "Pending"
-                                        }}
+                                        {{ {
+                                            verified: 'Verified',
+                                            blocked: 'Blocked',
+                                            processing: 'Processing',
+                                            failed: 'Failed',
+                                            pending: 'Pending',
+                                        }[user.verification_status] || 'Pending' }}
                                     </span>
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
