@@ -73,14 +73,10 @@ class GhanaCardService
 
         try {
             // 3. Call API
+
             $response = Http::timeout(30)->post($this->baseUrl, $payload);
             $data = $response->json();
-
-            Log::info('Ghana Card Verification Response', $data);
-
-            // 4. Update Verification Record
-            // Note: transactionGuid, success, and code are at the root. msg is also root.
-            // person is inside data.
+            // Log::info('Ghana Card Verification Response', $data);
             $verification->update([
                 'transaction_guid' => $data['data']['transactionGuid'] ?? $data['transactionGuid'] ?? null,
                 'response_timestamp' => now(),
@@ -89,7 +85,7 @@ class GhanaCardService
                 'code' => $data['code'] ?? '99', // Default to 99 if missing
                 'person_data' => $data['data']['person'] ?? null,
                 'status_message' => $this->normalizeStatusMessage(
-                    ($data['success'] ?? false) ? 'Success' : 'API Error: ' . ($data['msg'] ?? 'Unknown Error')
+                    ($data['success'] ?? false) ? 'Success' : 'NIA Error: ' . ($data['msg'] ?? 'Unknown Error')
                 ),
                 'pin_number' => $data['data']['person']['cardId'] ?? $data['data']['person']['nationalId'] ?? $verification->pin_number,
             ]);
@@ -119,6 +115,12 @@ class GhanaCardService
                     'exception' => get_class($writeException),
                 ]);
             }
+        } finally {
+            // remove the base64 image from the data
+            if (isset($verification->person_data['biometricFeed']['face']['data'])) {
+                unset($verification->person_data['biometricFeed']['face']['data']);
+                $verification->saveQuietly();
+            }
         }
 
         return $verification;
@@ -140,11 +142,6 @@ class GhanaCardService
         if ($img->width() > 640 || $img->height() > 480) {
             $img->fit(640, 480);
         }
-        // // reduce image size to 1MB or less
-        // $img->resize(function ($constraint) {
-        //     $constraint->aspectRatio();
-        //     $constraint->upsize();
-        // });
 
         // Encode as PNG
         return (string) $img->encode('png');
@@ -265,12 +262,6 @@ class GhanaCardService
                 $studentId = $user->student_id ?? $user->userId;
                 $storage = $this->storeVerifiedProfileImage($studentId, $imageData, 'png');
                 $this->persistImageMetadata($user, $storage);
-
-                Log::info('Stored NIA verified image for student', [
-                    'path' => $storage['path'],
-                    'disk' => $storage['disk'],
-                    'user_id' => $user->id
-                ]);
             }
         } catch (\Exception $e) {
             Log::error('Failed to store NIA face image', [
@@ -350,7 +341,7 @@ class GhanaCardService
         }
 
         if ($code === self::CODE_IDENTITY_MISMATCH) {
-            return 'Your verification details do not match your profile identity. Please contact support for redress.';
+            return $rawStatusMessage;
         }
 
         if ($code === self::CODE_NON_GHANAIAN) {
@@ -359,6 +350,10 @@ class GhanaCardService
 
         if ($code === '03') {
             return 'Your verification is currently blocked. Please contact support or the NIA office for assistance.';
+        }
+
+        if ($code === '01') {
+            return 'Verification failed. Make sure the image is clear and the PIN is correct.';
         }
 
         if (str_contains(strtolower($rawStatusMessage), 'maximum number of failed verification attempts')) {
@@ -519,12 +514,14 @@ class GhanaCardService
 
     private function evaluateEligibility(User $user, array $person): array
     {
-        $nameCheck = $this->isNameMatchAllowed((string) $user->name, $person);
+        $nameVerifier = app(NameVerifierService::class);
+        $nameCheck = $nameVerifier->diagnose(firstName: $user->first_name, lastName: $user->last_name, middleName: $user->middle_name, verifiedForenames: $person['forenames'], verifiedSurname: $person['surname']);
+        // Log::info('Name check result: ' . json_encode($nameCheck));
         $incomingGender = $this->normalizeGender((string) ($person['gender'] ?? ''));
         $currentGender = $this->normalizeGender((string) ($user->gender ?? ''));
         $genderMismatch = $incomingGender !== null && $currentGender !== null && $incomingGender !== $currentGender;
 
-        if (! $nameCheck && $genderMismatch) {
+        if (! $nameCheck['acceptable'] && $genderMismatch) {
             return [
                 'allow' => false,
                 'reason' => self::BLOCK_REASON_IDENTITY_MISMATCH,
@@ -533,12 +530,12 @@ class GhanaCardService
             ];
         }
 
-        if (! $nameCheck) {
+        if (! $nameCheck['acceptable']) {
             return [
                 'allow' => false,
-                'reason' => self::BLOCK_REASON_NAME_MISMATCH,
+                'reason' => $nameCheck['reason'],
                 'code' => self::CODE_NAME_MISMATCH,
-                'message' => 'The name on the submitted Ghana Card does not match your profile details. Please contact support for review.',
+                'message' => "The name on the submitted Ghana Card does not match your profile details. Please contact support for review.",
             ];
         }
 
@@ -558,98 +555,6 @@ class GhanaCardService
             'code' => null,
             'message' => null,
         ];
-    }
-
-    private function isNameMatchAllowed(string $currentName, array $person): bool
-    {
-        $incomingName = trim((string) ($person['fullName'] ?? ''));
-        if ($incomingName === '') {
-            $incomingName = trim(implode(' ', array_filter([
-                $person['firstName'] ?? null,
-                $person['middleName'] ?? null,
-                $person['surname'] ?? $person['lastName'] ?? null,
-                $person['forenames'] ?? null,
-            ])));
-        }
-
-        $sourceTokens = $this->normalizeNameTokens($currentName);
-        $incomingTokens = $this->normalizeNameTokens($incomingName);
-
-        if ($sourceTokens === [] || $incomingTokens === []) {
-            return false;
-        }
-
-        $sortedSource = $sourceTokens;
-        $sortedIncoming = $incomingTokens;
-        sort($sortedSource);
-        sort($sortedIncoming);
-        if ($sortedSource === $sortedIncoming) {
-            return true;
-        }
-
-        if (abs(count($sourceTokens) - count($incomingTokens)) > 1) {
-            return false;
-        }
-
-        $usedIncoming = [];
-        $unmatchedSource = 0;
-        foreach ($sourceTokens as $sourceToken) {
-            $bestIndex = null;
-            foreach ($incomingTokens as $index => $incomingToken) {
-                if (isset($usedIncoming[$index])) {
-                    continue;
-                }
-                if ($this->isMinorTokenVariation($sourceToken, $incomingToken)) {
-                    $bestIndex = $index;
-                    break;
-                }
-            }
-
-            if ($bestIndex === null) {
-                $unmatchedSource++;
-                continue;
-            }
-
-            $usedIncoming[$bestIndex] = true;
-        }
-
-        $unmatchedIncoming = count($incomingTokens) - count($usedIncoming);
-        return $unmatchedSource <= 1 && $unmatchedIncoming <= 1;
-    }
-
-    private function isMinorTokenVariation(string $a, string $b): bool
-    {
-        if ($a === $b) {
-            return true;
-        }
-
-        $maxLength = max(strlen($a), strlen($b));
-        $threshold = $maxLength <= 5 ? 1 : 2;
-        if (levenshtein($a, $b) <= $threshold) {
-            return true;
-        }
-
-        if ($maxLength >= 4 && metaphone($a) !== '' && metaphone($a) === metaphone($b)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private function normalizeNameTokens(string $name): array
-    {
-        $normalized = Str::of($name)
-            ->ascii()
-            ->lower()
-            ->replaceMatches('/[^a-z\s]/', ' ')
-            ->squish()
-            ->value();
-
-        if ($normalized === '') {
-            return [];
-        }
-
-        return array_values(array_filter(explode(' ', $normalized)));
     }
 
     private function normalizeGender(string $gender): ?string
@@ -697,8 +602,9 @@ class GhanaCardService
     private function extractNameParts(array $person, User $user): array
     {
         $previousName = trim((string) ($person['previousName'] ?? ''));
-        $firstName = trim((string) ($person['firstName'] ?? ''));
-        $middleName = trim((string) ($person['middleName'] ?? ''));
+        // split forenames by space [0] = firstname , [1] = middlename
+        $firstName = trim((string) (explode(' ', $person['forenames'])[0] ?? ''));
+        $middleName = trim((string) (explode(' ', $person['forenames'])[1] ?? ''));
         $lastName = trim((string) ($person['surname'] ?? $person['lastName'] ?? ''));
 
         if ($firstName === '' && $lastName === '') {

@@ -586,10 +586,10 @@ function RegisterForm() {
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 {field.type === "image"
-                  ? "PNG, JPG, GIF up to 5MB"
+                  ? "PNG, JPG, GIF up to 2MB"
                   : field.options
                     ? `${field.options.split(",").map((e) => e.trim().toUpperCase()).join(", ")} up to 10MB`
-                    : "PDF, DOC up to 10MB"}
+                    : "PDF, DOC up to 2MB"}
               </p>
             </>
           )}
@@ -693,11 +693,10 @@ function RegisterForm() {
               {checks.map((check, i) => (
                 <li key={i} className="flex items-center gap-2 text-xs sm:text-sm">
                   <span
-                    className={`inline-flex items-center justify-center w-4 h-4 shrink-0 rounded border transition-colors duration-200 ${
-                      check.met
+                    className={`inline-flex items-center justify-center w-4 h-4 shrink-0 rounded border transition-colors duration-200 ${check.met
                         ? "bg-green-500 border-green-500 text-white"
                         : "border-gray-300 bg-white"
-                    }`}
+                      }`}
                   >
                     {check.met && (
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>

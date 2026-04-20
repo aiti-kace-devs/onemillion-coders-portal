@@ -52,6 +52,7 @@ function VerifyUserContent() {
   const [authError, setAuthError] = useState(null);
 
   const sendParentMessage = useCallback((type, message, data = null) => {
+
     if (typeof window === "undefined" || window.parent === window) return;
 
     const targetOrigin =
@@ -85,12 +86,6 @@ function VerifyUserContent() {
       window.document.body.innerHTML = "<p>Please access this page from the student portal.</p>";
       return;
     };
-
-    //get ghcard number from query param and fill the input
-    const ghCardNumber = searchParams.get("ghcard_number");
-    if (ghCardNumber) {
-      setPin(formatGhanaCardPinInput(ghCardNumber));
-    }
 
     const emitHeight = () => {
       const doc = document.documentElement;
@@ -136,6 +131,14 @@ function VerifyUserContent() {
   useEffect(() => {
     if (step === "pin") preloadLivenessAssets();
   }, [step]);
+
+  // Handle initial PIN load from URL only once
+  useEffect(() => {
+    const ghCardNumber = searchParams.get("ghcard_number");
+    if (ghCardNumber) {
+      setPin(formatGhanaCardPinInput(ghCardNumber));
+    }
+  }, []);
 
   const currentStepIndex = STEPS.findIndex((s) => s.key === step);
 
@@ -227,6 +230,18 @@ function VerifyUserContent() {
           <p className="text-sm text-gray-500 max-w-sm mx-auto">
             Your Ghana Card verification has been queued. You will be notified once processed.
           </p>
+          {/* show a restart if verification failed */}
+          {submitError && (
+            <div className="mt-4">
+              <p className="text-sm text-red-500">{submitError}</p>
+              <button
+                onClick={handleStartOver}
+                className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg"
+              >
+                Restart
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
     );
@@ -316,7 +331,7 @@ function VerifyUserContent() {
 
                   <div className="bg-blue-50 rounded-lg p-3 mt-4">
                     <p className="text-xs text-blue-700">
-                      <strong>Format:</strong> GHA-XXXXXXXXX-X (where X is a digit)
+                      <strong>Format:</strong> GHA-XXXXXXXXX-X &nbsp; &nbsp; (where X is a digit)
                     </p>
                   </div>
                 </div>
