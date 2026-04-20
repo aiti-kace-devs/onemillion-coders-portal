@@ -149,13 +149,11 @@ async function handleIframePostMessage(event) {
     if (payload.type === "verification_submitted") {
         fallbackMessage.value = "Verification submitted. Refreshing your status...";
         await refreshStatus(true);
-        console.log(event);
         return;
     }
 
     if (payload.type === "verification_failed") {
         fallbackMessage.value = "Verification failed. Please correct the issue and try again.";
-        console.log(event);
         await refreshStatus(true);
         return;
     }
@@ -168,10 +166,8 @@ const reloadIframe = async () => {
         // Use the localEmbedUrl.value as the source
         const url = new URL(localEmbedUrl.value);
         url.searchParams.set('t', Date.now().toString());
-
         // Update the local reactive variable
         localEmbedUrl.value = url.toString();
-        console.log("Reloading iframe with URL:", localEmbedUrl.value);
     } else {
         console.error("Verification iframe ref is still null.");
     }
@@ -283,7 +279,7 @@ onUnmounted(() => {
                                 <li class="flex flex-col gap-1 text-sm pt-1">
                                     <span class="text-gray-500">Message</span>
                                     <span class="font-medium text-gray-800">{{ latestAttemptMessage || "No attempt yet."
-                                        }}</span>
+                                    }}</span>
                                 </li>
                             </ul>
                         </div>
@@ -304,13 +300,13 @@ onUnmounted(() => {
                                 <li class="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
                                     <span class="text-gray-500">Name</span>
                                     <span class="font-medium text-gray-800 truncate pl-4">{{ profile.name || "N/A"
-                                        }}</span>
+                                    }}</span>
                                 </li>
                                 <li class="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
                                     <span class="text-gray-500">Previous Name</span>
                                     <span class="font-medium text-gray-800 truncate pl-4">{{ profile.previous_name ||
                                         "N/A"
-                                        }}</span>
+                                    }}</span>
                                 </li>
                                 <li class="flex justify-between items-center text-sm">
                                     <span class="text-gray-500">Date of Birth</span>
@@ -356,7 +352,7 @@ onUnmounted(() => {
                                 <div class="bg-gray-50 rounded-lg p-3">
                                     <span class="block text-xs font-medium text-gray-500 mb-1">Full Name</span>
                                     <span class="block text-base font-semibold text-gray-900">{{ profile.name || "N/A"
-                                        }}</span>
+                                    }}</span>
                                 </div>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -364,19 +360,19 @@ onUnmounted(() => {
                                         <span class="block text-xs font-medium text-gray-500 mb-1">First Name</span>
                                         <span class="block text-sm font-semibold text-gray-800">{{ profile.first_name ||
                                             "N/A"
-                                            }}</span>
+                                        }}</span>
                                     </div>
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="block text-xs font-medium text-gray-500 mb-1">Last Name</span>
                                         <span class="block text-sm font-semibold text-gray-800">{{ profile.last_name ||
                                             "N/A"
-                                            }}</span>
+                                        }}</span>
                                     </div>
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="block text-xs font-medium text-gray-500 mb-1">Middle Name</span>
                                         <span class="block text-sm font-semibold text-gray-800">{{ profile.middle_name
                                             || "N/A"
-                                            }}</span>
+                                        }}</span>
                                     </div>
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="block text-xs font-medium text-gray-500 mb-1">Date of Birth</span>

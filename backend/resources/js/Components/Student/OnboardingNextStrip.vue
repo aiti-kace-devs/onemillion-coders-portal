@@ -41,7 +41,6 @@ const stepMeta = {
 
 const current = computed(() => {
     const key = user.value?.current_onboarding_step;
-    console.log(key);
     if (!key || !stepMeta[key]) return null;
     const meta = { key, ...stepMeta[key] };
     if (key === "course_selection") {
@@ -103,7 +102,7 @@ const showFlash = computed(() => !!flash.value?.message);
                             aria-hidden="true">
                             <span class="material-symbols-outlined text-[20px] sm:text-[22px]">{{
                                 current.icon
-                            }}</span>
+                                }}</span>
                         </span>
                         <div class="min-w-0 flex-1 pt-0.5">
                             <p class="text-[10px] font-bold uppercase tracking-wide text-amber-900/70 sm:text-[11px]">
