@@ -92,6 +92,7 @@ class HandleInertiaRequests extends Middleware
                             'verification_blocked' => (bool) ($user?->is_verification_blocked ?? false),
                             'student_level' => config(SHOW_STUDENT_LEVEL, false) ? $user?->student_level : null,
                             'application_review_completed' => $user?->application_review_completed_at !== null,
+                            'isOnlineCourse' => $user?->course?->isOnlineProgramme() ?? false,
                             'current_onboarding_step' => $onboardingStep,
                         ]
                     )

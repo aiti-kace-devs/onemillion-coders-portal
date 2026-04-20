@@ -1,28 +1,20 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
-import Dropdown from "@/Components/Dropdown.vue";
-import DropdownLink from "@/Components/DropdownLink.vue";
-import SidebarNavLink from "@/Components/SidebarNavLink.vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import SidebarSectionHeader from "@/Components/SidebarSectionHeader.vue";
 import OnboardingNextStrip from "@/Components/Student/OnboardingNextStrip.vue";
+import SidebarNavLink from "@/Components/SidebarNavLink.vue";
 
-const showingNavigationDropdown = ref(false);
-const isSidebarCollapsed = ref(true);
-const sidebarNavIcon = computed(() =>
-    isSidebarCollapsed.value
-        ? "block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 bg-gray-100 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out"
-        : "block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out",
-);
+const isSidebarOpen = ref(false); // Mobile sidebar state
+const isSidebarCollapsed = ref(true); // Desktop sidebar state
 
-const toggleSidebar = () => {
-    isSidebarCollapsed.value = !isSidebarCollapsed.value;
+const toggleMobileSidebar = () => {
+    isSidebarOpen.value = !isSidebarOpen.value;
 };
 
-const collapseSidebarOnContentInteraction = () => {
-    // For desktop and mobile, collapse sidebar when users interact with page body.
-    isSidebarCollapsed.value = true;
+const closeMobileSidebar = () => {
+    isSidebarOpen.value = false;
 };
 
 const page = usePage();
@@ -47,71 +39,87 @@ const auth = computed(() => page.props.auth ?? {});
 const config = computed(() => page.props.config ?? {});
 const user = computed(() => auth.value.user ?? {});
 
+// Handle window resize to reset states if needed
+const handleResize = () => {
+    if (window.innerWidth >= 1024) {
+        isSidebarOpen.value = false;
+    }
+};
+
+const collapseSidebarOnContentInteraction = () => {
+    if (window.innerWidth < 1024) {
+        isSidebarOpen.value = false;
+    }
+};
+
+onMounted(() => {
+    window.addEventListener('resize', handleResize);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('resize', handleResize);
+});
 </script>
 
 <template>
     <div
-        class="group/container min-h-screen flex gap-4"
-        :class="
-            isSidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-not-collapsed'
-        "
+        class="group/container min-h-screen flex bg-[#f8f9fa] relative overflow-x-hidden"
+        :class="[
+            isSidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-not-collapsed',
+            isSidebarOpen ? 'mobile-sidebar-open' : 'mobile-sidebar-closed'
+        ]"
     >
-        <!-- Sidebar -->
+        <!-- Mobile Backdrop -->
         <div
-            class="fixed z-[1002] h-full w-2/3 lg:w-64 border-gray-200 bg-white duration-300 transition-transform ease-in-out lg:translate-x-0 group-[.sidebar-collapsed]/container:w-[70px] border-r shadow-md"
-            :class="
-                isSidebarCollapsed
-                    ? '-translate-x-full max-lg:block'
-                    : 'translate-x-0 max-lg:block'
-            "
+            v-if="isSidebarOpen"
+            class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[1001] lg:hidden transition-opacity duration-300"
+            @click="closeMobileSidebar"
+        ></div>
+
+        <!-- Sidebar -->
+        <aside
+            id="mobile-sidebar"
+            class="fixed left-0 top-0 z-[1002] h-full bg-white border-r border-gray-200/80 shadow-xl lg:shadow-none transition-transform duration-300 ease-in-out
+                   w-[280px] lg:w-64"
+            :class="[
+                isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+                'lg:translate-x-0',
+                isSidebarCollapsed ? 'lg:w-[70px]' : 'lg:w-64'
+            ]"
             @mouseenter="isSidebarCollapsed = false"
             @mouseleave="isSidebarCollapsed = true"
-            @click.away="isSidebarCollapsed = true"
         >
-            <div
-                class="h-[calc(100vh-100px)] overflow-hidden group-[.sidebar-collapsed]/container:overflow-visible"
-            >
-                <div
-                    class="p-2 lg:py-2 lg:px-0 flex items-start justify-between lg:flex-none w-full"
-                >
+            <div class="h-full flex flex-col overflow-hidden">
+                <!-- Sidebar Header -->
+                <div class="h-16 flex items-center justify-between px-4 lg:group-[.sidebar-collapsed]/container:px-0 lg:group-[.sidebar-collapsed]/container:justify-center border-b border-gray-50 transition-all duration-300">
                     <Link
                         :href="route('student.dashboard')"
+                        class="flex items-center gap-2 transition-all duration-300"
                         aria-label="Dashboard Home"
                     >
                         <ApplicationLogo
                             :src="
-                                isSidebarCollapsed
+                                (isSidebarCollapsed && !isSidebarOpen)
                                     ? '/assets/images/logo-short.png'
                                     : '/assets/images/logo-bt.png'
                             "
-                            class="h-16 transition-all duration-300 mx-auto group-[.sidebar-not-collapsed]/container:ml-2"
+                            class="h-10 transition-all duration-300"
+                            :class="(isSidebarCollapsed && !isSidebarOpen) ? 'w-8' : 'w-auto'"
                         />
                     </Link>
-                    <!-- Close button for sidebar (visible on small screens) -->
+
+                    <!-- Close button for mobile -->
                     <button
-                        class="block cursor-pointer rounded-md p-1.5 text-gray-500 hover:bg-gray-100 focus:outline-none lg:hidden"
-                        @click="isSidebarCollapsed = true"
+                        class="lg:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                        @click="closeMobileSidebar"
                         aria-label="Close Sidebar"
-                        type="button"
                     >
-                        <svg
-                            class="h-6 w-6"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
-                        </svg>
+                        <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
 
-                <nav class="mt-3 grid w-full space-y-2">
+                <!-- Navigation Links -->
+                <nav class="flex-1 overflow-y-auto py-4 space-y-1 custom-scrollbar">
                     <SidebarNavLink
                         :active="route().current('student.dashboard')"
                         :href="route('student.dashboard')"
@@ -156,29 +164,16 @@ const user = computed(() => auth.value.user ?? {});
                         :href="route('student.profile.edit')"
                         :label="'Profile'"
                     >
-                        <span class="material-symbols-outlined"
-                            >user_attributes</span
-                        >
+                        <span class="material-symbols-outlined">user_attributes</span>
                     </SidebarNavLink>
 
-
                     <SidebarNavLink
-                        v-if="
-                            !user.isAdmitted &&
-                            !user.shortlist &&
-                            user.assessment_completed
-                        "
+                        v-if="!user.isAdmitted && !user.shortlist && user.assessment_completed"
                         :href="route('student.change-course')"
                         :active="route().current('student.change-course')"
-                        :label="
-                            user.registered_course
-                                ? 'Change Course'
-                                : 'Choose Course'
-                        "
+                        :label="user.registered_course ? 'Change Course' : 'Choose Course'"
                     >
-                        <span class="material-symbols-outlined">
-                            swap_horiz
-                        </span>
+                        <span class="material-symbols-outlined">swap_horiz</span>
                     </SidebarNavLink>
 
                     <SidebarNavLink
@@ -186,9 +181,7 @@ const user = computed(() => auth.value.user ?? {});
                         :active="route().current('student.application-status')"
                         :label="'Application status'"
                     >
-                        <span class="material-symbols-outlined">
-                            contract
-                        </span>
+                        <span class="material-symbols-outlined">contract</span>
                     </SidebarNavLink>
 
                     <SidebarNavLink
@@ -196,9 +189,7 @@ const user = computed(() => auth.value.user ?? {});
                         :active="route().current('student.verification.*')"
                         :label="'Verification'"
                     >
-                        <span class="material-symbols-outlined">
-                            verified_user
-                        </span>
+                        <span class="material-symbols-outlined">verified_user</span>
                     </SidebarNavLink>
 
                     <SidebarNavLink
@@ -206,9 +197,7 @@ const user = computed(() => auth.value.user ?? {});
                         :active="route().current('student.course-history')"
                         :label="'Course History'"
                     >
-                        <span class="material-symbols-outlined">
-                            history
-                        </span>
+                        <span class="material-symbols-outlined">history</span>
                     </SidebarNavLink>
 
                     <template v-if="user.isAdmitted">
@@ -227,23 +216,23 @@ const user = computed(() => auth.value.user ?? {});
                             :href="route('student.assessment.index')"
                             :label="'Course Assessment'"
                         >
-                            <span class="material-symbols-outlined"
-                                >rate_review</span
-                            >
+                            <span class="material-symbols-outlined">rate_review</span>
                         </SidebarNavLink>
                     </template>
 
-                    <SidebarNavLink
-                        :href="route('auth.logout')"
-                        :label="'Log Out'"
-                        :method="'post'"
-                        :as="'button'"
-                    >
-                        <span class="material-symbols-outlined">logout</span>
-                    </SidebarNavLink>
+                    <div class="pt-4 mt-4 border-t border-gray-100">
+                        <SidebarNavLink
+                            :href="route('auth.logout')"
+                            :label="'Log Out'"
+                            :method="'post'"
+                            :as="'button'"
+                        >
+                            <span class="material-symbols-outlined text-red-500">logout</span>
+                        </SidebarNavLink>
+                    </div>
                 </nav>
             </div>
-        </div>
+        </aside>
 
         <!-- Main Content -->
         <div
@@ -251,77 +240,52 @@ const user = computed(() => auth.value.user ?? {});
             @click="collapseSidebarOnContentInteraction"
         >
             <!-- Background Accents -->
-            <div
-                class="absolute top-0 right-0 w-[500px] h-[500px] bg-[#f9a825]/5 rounded-full blur-[100px] -mr-64 -mt-64 pointer-events-none"
-            ></div>
-            <div
-                class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#f9a825]/3 rounded-full blur-[80px] -ml-48 -mb-48 pointer-events-none"
-            ></div>
+            <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-[#f9a825]/5 rounded-full blur-[100px] -mr-64 -mt-64 pointer-events-none"></div>
+            <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#f9a825]/3 rounded-full blur-[80px] -ml-48 -mb-48 pointer-events-none"></div>
 
             <!-- Top Nav -->
             <header
-                class="sticky top-0 h-16 bg-white/90 backdrop-blur-lg flex items-center justify-between px-6 lg:px-8 border-b border-gray-200/80 z-50 transition-all duration-300 shadow-sm"
-                role="banner"
+                class="sticky top-0 h-16 bg-white/80 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 border-b border-gray-200/80 z-40 transition-all duration-300"
             >
-                <div class="flex items-center gap-x-4">
+                <div class="flex items-center gap-4 min-w-0">
                     <button
-                        class="block lg:hidden cursor-pointer rounded-lg p-2 hover:bg-gray-100 text-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        @click="isSidebarCollapsed = false"
-                        aria-label="Open Sidebar"
-                        :aria-expanded="!isSidebarCollapsed"
+                        class="lg:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 text-gray-600 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-100 transition-all active:scale-95 relative z-50"
+                        @click.stop="toggleMobileSidebar"
+                        :aria-expanded="isSidebarOpen"
+                        aria-controls="mobile-sidebar"
+                        aria-label="Toggle Navigation"
                     >
-                        <svg
-                            class="h-6 w-6"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M4 6h16M4 12h16M4 18h16"
-                            ></path>
-                        </svg>
+                        <span class="material-symbols-outlined">{{ isSidebarOpen ? 'menu_open' : 'menu' }}</span>
                     </button>
 
-                    <div
-                        v-if="$slots.header"
-                        class="overflow-hidden whitespace-nowrap text-ellipsis"
-                    >
-                        <!-- Give context to the slot title -->
-                        <div class="text-xl md:text-2xl font-bold tracking-tight text-gray-900 drop-shadow-sm">
+                    <div v-if="$slots.header" class="truncate">
+                        <div class="text-xl md:text-2xl font-bold tracking-tight text-gray-900 truncate">
                             <slot name="header" />
                         </div>
                     </div>
                 </div>
 
-                <!-- Notification Bell -->
-                <Link
-                    :href="route('student.notifications.index')"
-                    class="relative p-2.5 rounded-full text-gray-500 hover:text-amber-600 hover:bg-amber-50 bg-gray-50 border border-gray-200 transition-all duration-200 shadow-sm"
-                    aria-label="Notifications"
-                >
-                    <span class="material-symbols-outlined text-[20px] block"
-                        >notifications</span
+                <div class="flex items-center gap-3">
+                    <!-- Notification Bell -->
+                    <Link
+                        :href="route('student.notifications.index')"
+                        class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-gray-100 text-gray-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200 transition-all duration-200 shadow-sm group"
+                        aria-label="Notifications"
                     >
-                    <span
-                        v-if="auth?.unreadNotifications > 0"
-                        class="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-sm ring-2 ring-white"
-                    >
-                        {{
-                            auth.unreadNotifications > 99
-                                ? "99+"
-                                : auth.unreadNotifications
-                        }}
-                    </span>
-                </Link>
+                        <span class="material-symbols-outlined text-[22px] group-hover:scale-110 transition-transform">notifications</span>
+                        <span
+                            v-if="auth?.unreadNotifications > 0"
+                            class="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-sm ring-2 ring-white animate-pulse"
+                        >
+                            {{ auth.unreadNotifications > 99 ? "99+" : auth.unreadNotifications }}
+                        </span>
+                    </Link>
+                </div>
             </header>
 
             <div
                 v-if="!hideGradient"
-                class="h-1.5 w-full bg-gradient-to-r from-red-600 via-yellow-400 to-green-600 z-40 sticky top-16"
+                class="h-1 w-full bg-gradient-to-r from-red-600 via-yellow-400 to-green-600 z-30 sticky top-16"
             ></div>
 
             <OnboardingNextStrip />
@@ -341,3 +305,20 @@ const user = computed(() => auth.value.user ?? {});
         </div>
     </div>
 </template>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db;
+}
+</style>
+

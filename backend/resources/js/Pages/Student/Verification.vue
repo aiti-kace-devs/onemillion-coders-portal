@@ -28,6 +28,7 @@ const fallbackMessage = ref(
         : "Verification UI is currently unavailable. Please try again later.",
 );
 const canvasRef = ref(null);
+const verificationIframeRef = ref(null);
 const iframeHeight = ref(760);
 const autoRefreshTimer = ref(null);
 const submitSyncTimer = ref(null);
@@ -174,7 +175,6 @@ function startAutoRefresh() {
 onMounted(() => {
     updateUniformIframeHeight();
     window.addEventListener("resize", updateUniformIframeHeight);
-    drawVerifiedImageOnCanvas();
     window.addEventListener("message", handleIframePostMessage);
     refreshStatus();
     if (!isVerified.value) {
@@ -185,7 +185,6 @@ onMounted(() => {
 watch(
     () => status.value,
     () => {
-        drawVerifiedImageOnCanvas();
     },
     { deep: true },
 );
@@ -206,7 +205,11 @@ onUnmounted(() => {
     <Head title="Verification" />
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Verification</h2>
+            <div class="flex items-center gap-2">
+                <h2 class="font-black text-2xl text-gray-900 tracking-tight">
+                    Identity Verification
+                </h2>
+            </div>
         </template>
 
         <div class="py-6 space-y-6">

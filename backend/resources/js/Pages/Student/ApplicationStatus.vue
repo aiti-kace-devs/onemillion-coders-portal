@@ -13,30 +13,6 @@ const props = defineProps({
     verification_status: Object,
 });
 
-const collapse = ref([true, false, false, false, false]);
-const showRevokeModal = ref(false);
-
-function toggleCollapse(idx) {
-    if (isStepReached(idx)) {
-        collapse.value[idx] = !collapse.value[idx];
-    }
-}
-
-function isStepReached(idx) {
-    if (idx === 0) return true;
-    if (idx === 1) return true;
-    if (idx === 2) return reviewCompleted.value;
-    if (idx === 3) return assessmentCompleted.value;
-    if (idx === 4) return verificationCompleted.value;
-    return false;
-}
-function closeRevokeModal() {
-    showRevokeModal.value = false;
-}
-
-const courseSelectionCompleted = computed(
-    () => !!props.user_admission?.confirmed || !!props.user?.registered_course,
-);
 const reviewCompleted = computed(
     () => !!props.user?.application_review_completed_at,
 );
@@ -52,27 +28,25 @@ const courseChosen = computed(
         !!props.user?.registered_course || !!props.user_admission?.course_id,
 );
 
-/** Step 4 milestone: with a separate confirmation step, "course selection" ends at course/admission choice. */
-const courseSelectionMilestoneMet = computed(() => {
-    if (!showConfirmationInFlow.value) {
-        return courseSelectionCompleted.value;
-    }
-    return courseChosen.value;
-});
-
 const admissionConfirmationComplete = computed(
     () => !!props.user_admission?.confirmed,
 );
 
+function stepIcon(stepKey) {
+    const icons = {
+        submitted: "mark_email_read",
+        review: "menu_book",
+        assessment: "psychology",
+        verification: "verified_user",
+        course: "school",
+        confirm: "task_alt",
+    };
+    return icons[stepKey] || "fiber_manual_record";
+}
+
 function stepVisualStatus(stepKey) {
-    if (stepKey === "submitted") {
-        /* Signed-in students have already registered; aligns with timeline step 1. */
-        return "complete";
-    }
-    if (stepKey === "review") {
-        if (reviewCompleted.value) return "complete";
-        return "current";
-    }
+    if (stepKey === "submitted") return "complete";
+    if (stepKey === "review") return reviewCompleted.value ? "complete" : "current";
     if (stepKey === "assessment") {
         if (assessmentCompleted.value) return "complete";
         if (reviewCompleted.value) return "current";
@@ -85,7 +59,7 @@ function stepVisualStatus(stepKey) {
         return "upcoming";
     }
     if (stepKey === "course") {
-        if (courseSelectionMilestoneMet.value) return "complete";
+        if (courseChosen.value) return "complete";
         if (verificationCompleted.value) return "current";
         return "upcoming";
     }
@@ -97,77 +71,44 @@ function stepVisualStatus(stepKey) {
     return "upcoming";
 }
 
-function stepCardClass(stepKey) {
-    const s = stepVisualStatus(stepKey);
-    if (s === "complete") {
-        return "border-green-200 bg-green-50/90 ring-1 ring-green-100";
+// Initialize collapse state based on the current active step
+const initialCollapse = [true, false, false, false, false, false];
+const steps = ['submitted', 'review', 'assessment', 'verification', 'course', 'confirm'];
+let foundCurrent = false;
+
+// Expand the first 'current' step, or the last 'complete' step if all are complete
+for (let i = 0; i < steps.length; i++) {
+    const status = stepVisualStatus(steps[i]);
+    if (status === 'current') {
+        initialCollapse[i] = true;
+        foundCurrent = true;
+        break;
     }
-    if (s === "current") {
-        return "border-amber-300 bg-amber-50/90 ring-1 ring-amber-100";
-    }
-    if (s === "blocked") {
-        return "border-red-200 bg-red-50/90 ring-1 ring-red-100";
-    }
-    return "border-gray-200 bg-gray-50/80";
+}
+if (!foundCurrent) {
+    // If none are current, maybe they are all complete? Expand the last one.
+    initialCollapse[initialCollapse.length - 1] = true;
 }
 
-function stepIconClass(stepKey) {
-    const s = stepVisualStatus(stepKey);
-    if (s === "complete") return "bg-green-500 text-white";
-    if (s === "current") return "bg-amber-500 text-white";
-    if (s === "blocked") return "bg-red-500 text-white";
-    return "bg-gray-200 text-gray-500";
+const collapse = ref(initialCollapse);
+
+const showRevokeModal = ref(false);
+
+function toggleCollapse(idx) {
+    if (isStepReached(idx)) {
+        collapse.value[idx] = !collapse.value[idx];
+    }
 }
 
-const illustratedFlowSteps = computed(() => {
-    const base = [
-        {
-            key: "submitted",
-            n: 1,
-            label: "Application Submitted",
-            hint: "Registration — your student account is active.",
-            icon: "mark_email_read",
-        },
-        {
-            key: "review",
-            n: 2,
-            label: "Application Review",
-            hint: "Understand the enrollment steps and what comes next.",
-            icon: "menu_book",
-        },
-        {
-            key: "assessment",
-            n: 3,
-            label: "Assessment",
-            hint: "Level determination test.",
-            icon: "psychology",
-        },
-        {
-            key: "verification",
-            n: 4,
-            label: "Identity Verification",
-            hint: "Ghana Card check.",
-            icon: "verified_user",
-        },
-        {
-            key: "course",
-            n: 5,
-            label: "Course Selection",
-            hint: "Choose course & session.",
-            icon: "school",
-        },
-    ];
-    if (showConfirmationInFlow.value) {
-        base.push({
-            key: "confirm",
-            n: 6,
-            label: "Application Confirmation",
-            hint: "Finalize admission after booking.",
-            icon: "task_alt",
-        });
-    }
-    return base;
-});
+function isStepReached(idx) {
+    if (idx === 0) return true;
+    if (idx === 1) return true;
+    if (idx === 2) return reviewCompleted.value;
+    if (idx === 3) return assessmentCompleted.value;
+    if (idx === 4) return verificationCompleted.value;
+    if (idx === 5) return courseChosen.value;
+    return false;
+}
 </script>
 
 <template>
@@ -175,483 +116,259 @@ const illustratedFlowSteps = computed(() => {
 
     <AuthenticatedLayout compact-content-top>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Application Status
-            </h2>
+            <div class="flex items-center gap-2">
+                <h2 class="font-black text-2xl text-gray-900 tracking-tight">
+                    Application Status
+                </h2>
+            </div>
         </template>
 
-        <div class="pb-6 sm:pb-8">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-3 sm:space-y-4">
+        <div class="pb-12">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+                <!-- Admission Header -->
                 <div
-                    v-if="
-                        props.user_admission && props.user_admission.confirmed
-                    "
-                    class="p-6 bg-white shadow sm:rounded-lg"
+                    v-if="props.user_admission && props.user_admission.confirmed"
+                    class="relative overflow-hidden p-8 bg-white shadow-xl shadow-green-500/5 sm:rounded-3xl border border-green-100"
                 >
-                    <div
-                        class="inline-flex space-x-2 items-center text-green-600 font-semibold text-lg"
-                    >
-                        <span class="material-symbols-outlined">
-                            check_circle
-                        </span>
-                        <span class="font-semibold"
-                            >Congratulations, {{ user.name }}! You have been
-                            admitted.</span
-                        >
+                    <div class="absolute top-0 right-0 -tr-4 -mr-4 w-32 h-32 bg-green-50 rounded-full blur-3xl opacity-50"></div>
+                    <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div class="flex items-start gap-5">
+                            <div class="shrink-0 flex items-center justify-center w-16 h-16 bg-green-100 text-green-600 rounded-2xl shadow-inner">
+                                <span class="material-symbols-outlined text-4xl">celebration</span>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-black text-gray-900 leading-tight">Congratulations, {{ user.first_name || user.name }}!</h3>
+                                <p class="text-green-700 font-medium text-lg mt-1">You have been successfully admitted.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="px-4 py-2 bg-green-50 rounded-xl border border-green-100 flex items-center gap-2 text-green-700 font-bold">
+                                <span class="material-symbols-outlined text-[20px]">verified</span>
+                                Admission Confirmed
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="p-4 sm:p-5 lg:p-6 bg-white sm:rounded-lg shadow w-full max-w-none">
-                    <p class="font-medium text-base sm:text-lg text-gray-900 mb-0.5">
-                        Expected Flow
-                    </p>
-                    <p class="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4 leading-snug">
-                        Same order and numbering as the steps below (step 1 is registration; you would not have this portal account without signing up).
-                        {{
-                            showConfirmationInFlow
-                                ? " This path includes confirmation after booking when an admission record exists."
-                                : " A confirmation step appears after your admission record is created, if applicable."
-                        }}
-                    </p>
-
-                    <div
-                        class="w-full min-w-0 mb-4 sm:mb-5 overflow-x-auto sm:overflow-x-visible -mx-1 px-1 sm:mx-0 sm:px-0"
-                    >
-                        <div
-                            class="grid w-full gap-1.5 sm:gap-2 md:gap-3"
-                            :class="
-                                showConfirmationInFlow
-                                    ? 'grid-cols-6 min-w-[360px] sm:min-w-[420px] md:min-w-0'
-                                    : 'grid-cols-5 min-w-[280px] sm:min-w-0'
-                            "
-                        >
-                        <div
-                            v-for="step in illustratedFlowSteps"
-                            :key="step.key"
-                            class="rounded-lg sm:rounded-xl border p-2 sm:p-3 md:p-4 flex flex-col items-center text-center transition-shadow shadow-sm hover:shadow-md min-h-[118px] sm:min-h-[132px] md:min-h-[148px]"
-                            :class="stepCardClass(step.key)"
-                        >
-                            <span
-                                :class="stepIconClass(step.key)"
-                                class="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full mb-1.5 sm:mb-2 md:mb-3 shrink-0"
-                            >
-                                <span
-                                    class="material-symbols-outlined text-[18px] sm:text-[20px] md:text-[22px] leading-none"
-                                    >{{ step.icon }}</span
-                                >
-                            </span>
-                            <p
-                                class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-gray-500 mb-0.5"
-                            >
-                                Step {{ step.n }}
-                            </p>
-                            <p
-                                class="font-semibold text-[11px] sm:text-xs md:text-sm text-gray-900 leading-tight"
-                            >
-                                {{ step.label }}
-                            </p>
-                            <p
-                                class="text-[10px] sm:text-xs text-gray-600 mt-1 leading-snug line-clamp-3 sm:line-clamp-none"
-                            >
-                                {{ step.hint }}
-                            </p>
+                <!-- Main Journey Container -->
+                <div class="bg-white sm:rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-6 md:p-8">
+                        <div class="mb-8">
+                            <h3 class="text-xl font-black text-gray-900 tracking-tight">Your Enrollment Journey</h3>
+                            <p class="text-gray-500 mt-1 text-sm">Follow these steps to finalize your place in the program.</p>
                         </div>
+
+                        <div class="relative">
+                            <!-- Dynamic Progress Line -->
+                            <!-- We use bottom-12 to make the gray background line stop at the last step icon's center -->
+                            <div class="absolute left-5 top-5 bottom-5 w-0.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                    class="absolute top-0 left-0 w-full bg-green-500 transition-all duration-1000 ease-in-out"
+                                    :style="{ height: (Math.max(0, steps.filter(s => stepVisualStatus(s) === 'complete').length - 1) / (steps.length - 1)) * 100 + '%' }"
+                                ></div>
+                            </div>
+
+                            <div class="space-y-4 relative">
+                                <div
+                                    v-for="(stepKey, index) in steps"
+                                    :key="stepKey"
+                                    v-show="stepKey !== 'confirm' || showConfirmationInFlow"
+                                    class="relative pl-14 group"
+                                >
+                                    <!-- Step Icon/Indicator -->
+                                    <div
+                                        class="absolute left-0 top-0 mt-0.5 flex items-center justify-center w-10 h-10 rounded-xl shadow-md transition-all duration-500 ring-4 ring-white z-10"
+                                        :class="[
+                                            stepVisualStatus(stepKey) === 'complete' ? 'bg-green-500 text-white shadow-green-200' :
+                                            stepVisualStatus(stepKey) === 'current' ? 'bg-amber-500 text-white shadow-amber-200 scale-105 animate-pulse-subtle' :
+                                            stepVisualStatus(stepKey) === 'blocked' ? 'bg-red-500 text-white shadow-red-200' :
+                                            'bg-white text-gray-400 border border-gray-200 shadow-none'
+                                        ]"
+                                    >
+                                        <span class="material-symbols-outlined text-[20px]">
+                                            {{ stepVisualStatus(stepKey) === 'complete' ? 'check' : stepIcon(stepKey) }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Content Card -->
+                                    <div
+                                        class="p-4 transition-all duration-300 rounded-xl border"
+                                        :class="[
+                                            stepVisualStatus(stepKey) === 'current' ? 'bg-white border-amber-200 shadow-lg shadow-amber-500/5' :
+                                            stepVisualStatus(stepKey) === 'complete' ? 'bg-gray-50/50 border-gray-100 opacity-90' :
+                                            'bg-white border-gray-50 opacity-60 grayscale-[0.5]'
+                                        ]"
+                                    >
+                                        <div
+                                            class="flex items-center justify-between cursor-pointer"
+                                            @click="toggleCollapse(index)"
+                                        >
+                                            <div class="flex flex-col">
+                                                <span
+                                                    class="text-[10px] font-black uppercase tracking-widest mb-0.5"
+                                                    :class="[
+                                                        stepVisualStatus(stepKey) === 'complete' ? 'text-green-500' :
+                                                        stepVisualStatus(stepKey) === 'current' ? 'text-amber-600' : 'text-gray-400'
+                                                    ]"
+                                                >
+                                                    Step {{ index + 1 }} • {{ stepVisualStatus(stepKey).toUpperCase() }}
+                                                </span>
+                                                <h4
+                                                    class="text-base font-bold transition-colors"
+                                                    :class="stepVisualStatus(stepKey) === 'current' ? 'text-gray-900' : 'text-gray-700'"
+                                                >
+                                                    {{ stepKey === 'submitted' ? 'Application Submitted' :
+                                                       stepKey === 'review' ? 'Application Review' :
+                                                       stepKey === 'assessment' ? 'Level Determination Test' :
+                                                       stepKey === 'verification' ? 'Identity Verification' :
+                                                       stepKey === 'course' ? 'Course & Session Selection' : 'Admission Confirmation' }}
+                                                </h4>
+                                            </div>
+                                            <div
+                                                v-if="isStepReached(index)"
+                                                class="flex items-center justify-center w-6 h-6 rounded-full hover:bg-gray-100 transition-colors"
+                                            >
+                                                <span class="material-symbols-outlined text-gray-400 text-sm transition-transform" :class="collapse[index] ? 'rotate-180' : ''">expand_more</span>
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            v-if="collapse[index] && isStepReached(index)"
+                                            class="mt-4 pt-4 border-t border-gray-100/50 text-sm text-gray-600 leading-relaxed"
+                                        >
+                                            <!-- Step-specific content -->
+                                            <div v-if="stepKey === 'submitted'">
+                                                Your application was successfully received. We're excited to have you join our program!
+                                            </div>
+
+                                            <div v-if="stepKey === 'review'">
+                                                <template v-if="reviewCompleted">
+                                                    <p>You have reviewed the enrollment overview. You can still return to the overview if needed.</p>
+                                                    <div class="mt-3">
+                                                        <Link :href="route('student.application-review.index')" class="inline-flex items-center gap-2 text-green-600 font-bold hover:text-green-700 transition-colors">
+                                                            <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                                            View Enrollment Overview
+                                                        </Link>
+                                                    </div>
+                                                </template>
+                                                <template v-else>
+                                                    <p>Before you begin, please read through our detailed enrollment guide and program requirements.</p>
+                                                    <div class="mt-3">
+                                                        <LinkButton :href="route('student.application-review.index')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
+                                                            Start Review
+                                                        </LinkButton>
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <div v-if="stepKey === 'assessment'">
+                                                <template v-if="assessmentCompleted">
+                                                    <div class="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-100/50">
+                                                        <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-green-600 shadow-sm">
+                                                            <span class="material-symbols-outlined text-xl">trending_up</span>
+                                                        </div>
+                                                        <div>
+                                                            <p class="text-xs font-semibold text-green-800">Assessment Complete</p>
+                                                            <p v-if="usePage().props.config?.SHOW_STUDENT_LEVEL" class="text-base font-black text-green-900 uppercase">
+                                                                LEVEL: {{ props.user.student_level }}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template v-else>
+                                                    <p>This test helps us understand your current skills to place you in the right curriculum level.</p>
+                                                    <div class="mt-3">
+                                                        <LinkButton :href="route('student.level-assessment')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
+                                                            Take Assessment Now
+                                                        </LinkButton>
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <div v-if="stepKey === 'verification'">
+                                                <template v-if="verificationCompleted">
+                                                    <div class="flex items-center gap-2 text-green-700 font-semibold">
+                                                        <span class="material-symbols-outlined text-base">verified</span>
+                                                        Identity verified successfully with Ghana Card.
+                                                    </div>
+                                                </template>
+                                                <template v-else-if="verificationBlocked">
+                                                    <div class="p-3 bg-red-50 rounded-lg border border-red-100 flex items-start gap-2">
+                                                        <span class="material-symbols-outlined text-red-600 text-sm">error</span>
+                                                        <div>
+                                                            <p class="font-bold text-red-900 text-sm">Verification Blocked</p>
+                                                            <p class="text-xs text-red-700 mt-0.5">Please contact support for assistance in manually verifying your identity.</p>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template v-else>
+                                                    <p>We need to verify your identity to ensure a secure program environment.</p>
+                                                    <div class="mt-3">
+                                                        <LinkButton :href="route('student.verification.index')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
+                                                            Start Verification
+                                                        </LinkButton>
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <div v-if="stepKey === 'course'">
+                                                <template v-if="courseChosen">
+                                                    <div class="p-3 bg-white border border-gray-100 rounded-lg flex items-center justify-between">
+                                                        <p class="font-medium text-gray-900">You've selected your course preference.</p>
+                                                        <Link :href="route('student.change-course')" class="inline-flex items-center gap-1.5 text-amber-600 font-bold hover:text-amber-700 transition-colors">
+                                                            <span class="material-symbols-outlined text-[16px]">edit</span>
+                                                            Change Selection
+                                                        </Link>
+                                                    </div>
+                                                </template>
+                                                <template v-else>
+                                                    <p>Now choose from our available courses and training sessions that match your level.</p>
+                                                    <div class="mt-3">
+                                                        <LinkButton :href="route('student.change-course')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
+                                                            Choose Course
+                                                        </LinkButton>
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <div v-if="stepKey === 'confirm'">
+                                                <template v-if="admissionConfirmationComplete">
+                                                    <p class="font-medium">Your admission record is finalized. You're all set!</p>
+                                                    <div class="mt-4 pt-4 border-t border-gray-100">
+                                                        <RevokeOrDeclineAdmissionModal
+                                                            v-if="props.user && props.user_admission"
+                                                            :user="props.user"
+                                                            :session="props.user_admission"
+                                                        />
+                                                    </div>
+                                                </template>
+                                                <template v-else>
+                                                    <p>Finalize your admission by confirming your booking details.</p>
+                                                    <div class="mt-3">
+                                                        <LinkButton :href="route('student.session.index')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
+                                                            Confirm Booking
+                                                        </LinkButton>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-
-                    <p class="font-medium text-base sm:text-lg text-gray-900 pt-1 border-t border-gray-100">
-                        Application Status
-                    </p>
-
-                    <div class="mt-3 sm:mt-4 px-0 sm:px-2 max-w-3xl">
-                        <ol class="relative border-l border-green-500/30">
-                            <!-- Step 1: Application Submitted -->
-                            <li class="mb-10 ml-6">
-                                <span
-                                    class="absolute flex items-center justify-center w-8 h-8 bg-green-500 rounded-full -left-4 ring-4 ring-white text-white font-bold"
-                                    >1</span
-                                >
-                                <div
-                                    class="flex items-center cursor-pointer"
-                                    @click="toggleCollapse(0)"
-                                >
-                                    <h3 class="font-bold text-lg text-gray-800">
-                                        Application Submitted
-                                    </h3>
-                                    <svg
-                                        :class="[
-                                            'ml-2 w-4 h-4 text-gray-800 transition-transform',
-                                            collapse[0] ? 'rotate-90' : '',
-                                        ]"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                </div>
-                                <div
-                                    v-if="collapse[0]"
-                                    class="mt-2 text-sm text-gray-700 pl-2"
-                                >
-                                    We've received your application! Our team is
-                                    now ready to guide you through the following
-                                    steps of your journey.
-                                </div>
-                            </li>
-
-                            <!-- Step 2: Application review -->
-                            <li class="mb-10 ml-6">
-                                <span
-                                    :class="[
-                                        'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
-                                        reviewCompleted
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-gray-200 text-gray-400',
-                                    ]"
-                                    >2</span
-                                >
-                                <div
-                                    class="flex items-center cursor-pointer"
-                                    @click="toggleCollapse(1)"
-                                >
-                                    <h3
-                                        :class="[
-                                            'font-bold text-lg',
-                                            reviewCompleted
-                                                ? 'text-gray-800'
-                                                : 'text-gray-700',
-                                        ]"
-                                    >
-                                        Application review
-                                    </h3>
-                                    <svg
-                                        :class="[
-                                            'ml-2 w-4 h-4 text-gray-800 transition-transform',
-                                            collapse[1] ? 'rotate-90' : '',
-                                        ]"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                </div>
-                                <div
-                                    v-if="collapse[1] && isStepReached(1)"
-                                    class="mt-2 text-sm text-gray-700 pl-2"
-                                >
-                                    <template v-if="reviewCompleted">
-                                        <p>
-                                            You have reviewed the enrollment overview and confirmed you are ready to
-                                            continue. You can still open this step for reference (read-only).
-                                        </p>
-                                        <div class="mt-5">
-                                            <Link
-                                                :href="
-                                                    route(
-                                                        'student.application-review.index',
-                                                    )
-                                                "
-                                                class="inline-flex items-center px-6 py-2.5 rounded-xl font-semibold text-sm border border-gray-300 text-gray-800 bg-white hover:bg-gray-50 transition duration-150 shadow-sm"
-                                            >
-                                                View application review again
-                                            </Link>
-                                        </div>
-                                    </template>
-                                    <template v-else>
-                                        Read the overview of each enrollment step, then
-                                        continue to the assessment.
-                                        <div class="mt-5">
-                                            <LinkButton
-                                                :href="
-                                                    route(
-                                                        'student.application-review.index',
-                                                    )
-                                                "
-                                            >
-                                                Open application review
-                                            </LinkButton>
-                                        </div>
-                                    </template>
-                                </div>
-                            </li>
-
-                            <!-- Step 3: Level Determination Test -->
-                            <li class="mb-10 ml-6">
-                                <span
-                                    :class="[
-                                        'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
-                                        props.user_assessment?.completed
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-gray-200 text-gray-400',
-                                    ]"
-                                    >3</span
-                                >
-                                <div
-                                    class="flex items-center"
-                                    :class="
-                                        isStepReached(2)
-                                            ? 'cursor-pointer'
-                                            : 'cursor-not-allowed opacity-50'
-                                    "
-                                    @click="toggleCollapse(2)"
-                                >
-                                    <h3
-                                        :class="[
-                                            'font-bold text-lg',
-                                            props.user_assessment?.completed
-                                                ? 'text-gray-800'
-                                                : isStepReached(2)
-                                                  ? 'text-gray-700'
-                                                  : 'text-gray-400',
-                                        ]"
-                                    >
-                                        Level Determination Test
-                                    </h3>
-                                    <svg
-                                        v-if="isStepReached(2)"
-                                        :class="[
-                                            'ml-2 w-4 h-4 text-gray-800 transition-transform',
-                                            collapse[2] ? 'rotate-90' : '',
-                                        ]"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                </div>
-                                <div
-                                    v-if="collapse[2] && isStepReached(2)"
-                                    class="mt-2 text-sm text-gray-700 pl-2"
-                                >
-                                    <template
-                                        v-if="props.user_assessment?.completed"
-                                    >
-                                        Great job! Your assessment is complete
-                                        and we've determined your starting
-                                        level.
-                                        <span
-                                            v-if="
-                                                usePage().props.config
-                                                    ?.SHOW_STUDENT_LEVEL
-                                            "
-                                        >
-                                            Your current level is:
-                                            <span
-                                                class="font-bold uppercase text-indigo-600"
-                                                >{{
-                                                    props.user.student_level
-                                                }}</span
-                                            ></span
-                                        >
-                                    </template>
-                                    <template v-else>
-                                        This assessment helps us understand your
-                                        current skills so we can place you in
-                                        the right course level. Please complete
-                                        it to move forward.
-
-                                        <div class="mt-5">
-                                            <LinkButton
-                                                :href="
-                                                    route(
-                                                        'student.level-assessment',
-                                                    )
-                                                "
-                                            >
-                                                Take assessment now
-                                            </LinkButton>
-                                        </div>
-                                    </template>
-                                </div>
-                            </li>
-
-                            <!-- Step 4: Identity Verification -->
-                            <li class="mb-10 ml-6">
-                                <span
-                                    :class="[
-                                        'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
-                                        verificationCompleted
-                                            ? 'bg-green-500 text-white'
-                                            : verificationBlocked
-                                              ? 'bg-red-500 text-white'
-                                            : 'bg-gray-200 text-gray-400',
-                                    ]"
-                                    >4</span
-                                >
-                                <div
-                                    class="flex items-center"
-                                    :class="
-                                        isStepReached(3)
-                                            ? 'cursor-pointer'
-                                            : 'cursor-not-allowed opacity-50'
-                                    "
-                                    @click="toggleCollapse(3)"
-                                >
-                                    <h3
-                                        :class="[
-                                            'font-bold text-lg',
-                                            verificationCompleted
-                                                ? 'text-gray-800'
-                                                : isStepReached(3)
-                                                  ? 'text-gray-700'
-                                                  : 'text-gray-400',
-                                        ]"
-                                    >
-                                        Identity Verification
-                                    </h3>
-                                    <svg
-                                        v-if="isStepReached(3)"
-                                        :class="[
-                                            'ml-2 w-4 h-4 text-gray-800 transition-transform',
-                                            collapse[3] ? 'rotate-90' : '',
-                                        ]"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                </div>
-                                <div
-                                    v-if="collapse[3] && isStepReached(3)"
-                                    class="mt-2 text-sm text-gray-700 pl-2"
-                                >
-                                    <template v-if="verificationCompleted">
-                                        Your Ghana Card verification is complete.
-                                        You can proceed to course selection.
-                                    </template>
-                                    <template v-else-if="verificationBlocked">
-                                        Verification attempts are blocked. Please
-                                        contact support for assistance.
-                                    </template>
-                                    <template v-else>
-                                        Complete your Ghana Card verification
-                                        before selecting a course.
-
-                                        <div class="mt-5">
-                                            <LinkButton :href="route('student.verification.index')">
-                                                Verify now
-                                            </LinkButton>
-                                        </div>
-                                    </template>
-                                </div>
-                            </li>
-
-                            <!-- Step 5: Course Selection (includes booking) -->
-                            <li class="mb-10 ml-6">
-                                <span
-                                    :class="[
-                                        'absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white font-bold',
-                                        courseSelectionCompleted
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-gray-200 text-gray-400',
-                                    ]"
-                                    >5</span
-                                >
-                                <div
-                                    class="flex items-center"
-                                    :class="
-                                        isStepReached(4)
-                                            ? 'cursor-pointer'
-                                            : 'cursor-not-allowed opacity-50'
-                                    "
-                                    @click="toggleCollapse(4)"
-                                >
-                                    <h3
-                                        :class="[
-                                            'font-bold text-lg',
-                                            courseSelectionCompleted
-                                                ? 'text-gray-800'
-                                                : isStepReached(4)
-                                                  ? 'text-gray-700'
-                                                  : 'text-gray-400',
-                                        ]"
-                                    >
-                                        Course Selection
-                                    </h3>
-                                    <svg
-                                        v-if="isStepReached(4)"
-                                        :class="[
-                                            'ml-2 w-4 h-4 text-gray-800 transition-transform',
-                                            collapse[4] ? 'rotate-90' : '',
-                                        ]"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                </div>
-                                <div
-                                    v-if="collapse[4] && isStepReached(4)"
-                                    class="mt-2 text-sm text-gray-700 pl-2"
-                                >
-                                    <template v-if="props.user_admission?.confirmed">
-                                        You have successfully selected your course and completed booking.
-                                        <div class="mt-5">
-                                            <RevokeOrDeclineAdmissionModal
-                                                v-if="
-                                                    props.user &&
-                                                    props.user_admission
-                                                "
-                                                :user="props.user"
-                                                :session="props.user_admission"
-                                            />
-                                        </div>
-                                    </template>
-                                    <template v-else-if="props.user?.registered_course">
-                                        You selected a course. Complete session selection to finish your booking.
-                                        <div class="mt-5">
-                                            <LinkButton :href="route('student.session.index')">
-                                                Choose a session
-                                            </LinkButton>
-                                        </div>
-                                    </template>
-                                    <template v-else>
-                                        Now that your identity verification is complete,
-                                        please select the course that best
-                                        aligns with your interests and career goals. Session booking is part of this step.
-                                        <div class="mt-5">
-                                            <LinkButton :href="route('student.change-course')">
-                                                Choose a course
-                                            </LinkButton>
-                                        </div>
-                                    </template>
-                                </div>
-                            </li>
-
-                        </ol>
                     </div>
                 </div>
             </div>
         </div>
     </AuthenticatedLayout>
 </template>
+
+<style scoped>
+@keyframes pulse-subtle {
+    0%, 100% { opacity: 1; transform: scale(1.1); }
+    50% { opacity: 0.9; transform: scale(1.05); }
+}
+.animate-pulse-subtle {
+    animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+</style>

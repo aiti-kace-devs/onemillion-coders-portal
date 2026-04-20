@@ -78,7 +78,11 @@ function courseInitial(name) { return name ? name.charAt(0).toUpperCase() : "?";
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-900 leading-tight">My Learning History</h2>
+            <div class="flex items-center gap-2">
+                <h2 class="font-black text-2xl text-gray-900 tracking-tight">
+                    Course History
+                </h2>
+            </div>
         </template>
 
         <div class="w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-8 space-y-8">
