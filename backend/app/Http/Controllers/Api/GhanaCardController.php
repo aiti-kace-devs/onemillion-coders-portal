@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\VerifyGhanaCard;
 use App\Services\GhanaCardService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -20,7 +21,7 @@ class GhanaCardController extends Controller
     {
         $request->validate([
             'image' => 'required|image|max:10240', // 10MB max for upload, service will shrink it
-            'pin' => 'sometimes|string|max:17', // Ghana Card PIN is 9 or 10 characters
+            'pin' => 'sometimes|string|regex:/^GHA-\d{9}-\d$/|unique:users,ghcard,' . $request->user()->id,
         ]);
 
         $user = $request->user();
