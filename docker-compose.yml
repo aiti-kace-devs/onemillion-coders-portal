@@ -203,9 +203,12 @@ services:
       dockerfile: Dockerfile
       args:
         - ENVIRONMENT=.env
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+        - NEXT_PUBLIC_IMAGE_BASE_URL=${NEXT_PUBLIC_IMAGE_BASE_URL}
+        - NEXT_PUBLIC_PORTAL_URL=${NEXT_PUBLIC_PORTAL_URL}
+        - NEXT_PUBLIC_RECAPTCHA_SITE_KEY=${NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
     container_name: omcp_website
-    restart: unless-stopped
-    env_file: .env
+    restart: unless-stopped       
     # NOTE: No ports exposed - only accessible through Traefik gateway
     expose:
       - "3000" # Internal port only, not published to host
