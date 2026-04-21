@@ -115,8 +115,8 @@ export default function RegisterClient() {
         // Use grouped_schema if available, otherwise fall back to single group
         const groups = form.grouped_schema && form.grouped_schema.length > 0
           ? form.grouped_schema.filter(
-              (g) => g.fields.some((f) => f.field_name !== "course")
-            )
+            (g) => g.fields.some((f) => f.field_name !== "course")
+          )
           : [{ title: "Registration", fields: form.schema.filter((f) => f.field_name !== "course") }];
 
         setGroupedSchema(groups);
@@ -429,11 +429,10 @@ export default function RegisterClient() {
     const value = formData[field.field_name] || "";
     const hasError = formErrors[field.field_name];
 
-    const baseClasses = `w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 ${
-      hasError
+    const baseClasses = `w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 ${hasError
         ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
         : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
-    } focus:outline-none hover:border-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed`;
+      } focus:outline-none hover:border-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed`;
 
     // Handle radio fields
     if (field.type === "radio") {
@@ -448,11 +447,10 @@ export default function RegisterClient() {
                 key={index}
                 type="button"
                 onClick={() => handleFieldChange(field.field_name, trimmed)}
-                className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 ${
-                  isSelected
+                className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 ${isSelected
                     ? "border-yellow-400 bg-yellow-50 text-gray-900"
                     : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 {trimmed}
               </button>
@@ -488,13 +486,12 @@ export default function RegisterClient() {
     if (field.type === "file" || field.type === "image") {
       return (
         <div
-          className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 cursor-pointer ${
-            hasError
+          className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 cursor-pointer ${hasError
               ? "border-red-300 bg-red-50"
               : value
-              ? "border-green-300 bg-green-50"
-              : "border-gray-200 hover:border-yellow-400 hover:bg-yellow-50"
-          }`}
+                ? "border-green-300 bg-green-50"
+                : "border-gray-200 hover:border-yellow-400 hover:bg-yellow-50"
+            }`}
           onDragOver={(e) => {
             e.preventDefault();
             e.currentTarget.classList.add("border-yellow-400", "bg-yellow-50");
@@ -521,8 +518,8 @@ export default function RegisterClient() {
               field.type === "image"
                 ? "image/*"
                 : field.options
-                ? field.options.split(",").map((ext) => `.${ext.trim().toLowerCase()}`).join(",")
-                : undefined
+                  ? field.options.split(",").map((ext) => `.${ext.trim().toLowerCase()}`).join(",")
+                  : undefined
             }
             onChange={(e) => {
               const file = e.target.files[0];
@@ -541,10 +538,10 @@ export default function RegisterClient() {
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 {field.type === "image"
-                  ? "PNG, JPG, GIF up to 5MB"
+                  ? "PNG, JPG, GIF up to 2MB"
                   : field.options
-                  ? `${field.options.split(",").map((e) => e.trim().toUpperCase()).join(", ")} up to 10MB`
-                  : "PDF, DOC up to 10MB"}
+                    ? `${field.options.split(",").map((e) => e.trim().toUpperCase()).join(", ")} up to 2MB`
+                    : "PDF, DOC up to 2MB"}
               </p>
             </>
           )}
@@ -637,13 +634,12 @@ export default function RegisterClient() {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className={`w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 ${
-                confirmPassword && confirmPassword !== value && !value.startsWith(confirmPassword)
+              className={`w-full px-4 py-3 sm:py-3.5 border rounded-xl transition-all duration-200 text-sm sm:text-base bg-white placeholder:text-gray-400 ${confirmPassword && confirmPassword !== value && !value.startsWith(confirmPassword)
                   ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
                   : confirmPassword && confirmPassword === value
-                  ? "border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-200"
-                  : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
-              } focus:outline-none hover:border-gray-300`}
+                    ? "border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                    : "border-gray-200 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
+                } focus:outline-none hover:border-gray-300`}
               placeholder="Re-enter your password"
               autoComplete="new-password"
             />
@@ -659,11 +655,10 @@ export default function RegisterClient() {
               {checks.map((check, i) => (
                 <li key={i} className="flex items-center gap-2 text-xs sm:text-sm">
                   <span
-                    className={`inline-flex items-center justify-center w-4 h-4 shrink-0 rounded border transition-colors duration-200 ${
-                      check.met
+                    className={`inline-flex items-center justify-center w-4 h-4 shrink-0 rounded border transition-colors duration-200 ${check.met
                         ? "bg-green-500 border-green-500 text-white"
                         : "border-gray-300 bg-white"
-                    }`}
+                      }`}
                   >
                     {check.met && (
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -736,13 +731,12 @@ export default function RegisterClient() {
                       className="flex items-center gap-1 sm:gap-2 group flex-shrink-0"
                     >
                       <div
-                        className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${
-                          index < currentGroupIndex
+                        className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${index < currentGroupIndex
                             ? "bg-green-500 text-white cursor-pointer group-hover:bg-green-600"
                             : index === currentGroupIndex
-                            ? "bg-yellow-400 text-gray-900 ring-2 sm:ring-4 ring-yellow-100"
-                            : "bg-gray-200 text-gray-400"
-                        }`}
+                              ? "bg-yellow-400 text-gray-900 ring-2 sm:ring-4 ring-yellow-100"
+                              : "bg-gray-200 text-gray-400"
+                          }`}
                       >
                         {index < currentGroupIndex ? (
                           <FiCheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -751,18 +745,16 @@ export default function RegisterClient() {
                         )}
                       </div>
                       <span
-                        className={`hidden sm:inline text-xs font-medium transition-colors ${
-                          index <= currentGroupIndex ? "text-gray-700" : "text-gray-400"
-                        }`}
+                        className={`hidden sm:inline text-xs font-medium transition-colors ${index <= currentGroupIndex ? "text-gray-700" : "text-gray-400"
+                          }`}
                       >
                         {group.title}
                       </span>
                     </button>
                     {index < groupedSchema.length - 1 && (
                       <div
-                        className={`flex-1 h-0.5 rounded-full mx-1.5 sm:mx-3 transition-all duration-500 ${
-                          index < currentGroupIndex ? "bg-green-400" : "bg-gray-200"
-                        }`}
+                        className={`flex-1 h-0.5 rounded-full mx-1.5 sm:mx-3 transition-all duration-500 ${index < currentGroupIndex ? "bg-green-400" : "bg-gray-200"
+                          }`}
                       />
                     )}
                   </React.Fragment>
@@ -902,15 +894,14 @@ export default function RegisterClient() {
                               <motion.div
                                 initial={{ opacity: 0, y: -5 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className={`flex items-center gap-2 text-sm mt-1 ${
-                                  emailAvailability.status === "checking"
+                                className={`flex items-center gap-2 text-sm mt-1 ${emailAvailability.status === "checking"
                                     ? "text-gray-500"
                                     : emailAvailability.status === "available"
-                                    ? "text-green-600"
-                                    : emailAvailability.status === "otp_active"
-                                    ? "text-amber-600"
-                                    : "text-red-600"
-                                }`}
+                                      ? "text-green-600"
+                                      : emailAvailability.status === "otp_active"
+                                        ? "text-amber-600"
+                                        : "text-red-600"
+                                  }`}
                               >
                                 {emailAvailability.status === "checking" && (
                                   <FiLoader className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
@@ -924,8 +915,8 @@ export default function RegisterClient() {
                                 {(emailAvailability.status === "registered" ||
                                   emailAvailability.status === "used" ||
                                   emailAvailability.status === "error") && (
-                                  <FiAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                                )}
+                                    <FiAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                                  )}
                                 <span>{emailAvailability.message}</span>
                               </motion.div>
                             )}
@@ -934,19 +925,19 @@ export default function RegisterClient() {
                             {field.type?.toLowerCase() === "email" &&
                               emailAvailability.status !== "registered" &&
                               emailAvailability.status !== "used" && (
-                              <OtpVerification
-                                email={formData[field.field_name] || ""}
-                                phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
-                                formUuid={formSchema.uuid}
-                                onVerified={(verified) => {
-                                  setOtpVerified(verified);
-                                  if (verified && formErrors.otp) {
-                                    setFormErrors((prev) => ({ ...prev, otp: null }));
-                                  }
-                                }}
-                                emailStatus={emailAvailability.status}
-                              />
-                            )}
+                                <OtpVerification
+                                  email={formData[field.field_name] || ""}
+                                  phone={phoneFieldName ? (formData[phoneFieldName] || "") : ""}
+                                  formUuid={formSchema.uuid}
+                                  onVerified={(verified) => {
+                                    setOtpVerified(verified);
+                                    if (verified && formErrors.otp) {
+                                      setFormErrors((prev) => ({ ...prev, otp: null }));
+                                    }
+                                  }}
+                                  emailStatus={emailAvailability.status}
+                                />
+                              )}
                           </div>
                         ))}
 
@@ -987,14 +978,14 @@ export default function RegisterClient() {
                                 type="checkbox"
                                 checked={consentAccepted}
                                 onChange={(e) => {
-                                setConsentAccepted(e.target.checked);
-                                if (formErrors.consent) {
-                                  setFormErrors((prev) => ({ ...prev, consent: null }));
-                                }
-                                if (error) {
-                                  setError(null);
-                                }
-                              }}
+                                  setConsentAccepted(e.target.checked);
+                                  if (formErrors.consent) {
+                                    setFormErrors((prev) => ({ ...prev, consent: null }));
+                                  }
+                                  if (error) {
+                                    setError(null);
+                                  }
+                                }}
                                 className="mt-0.5 w-[18px] h-[18px] rounded border-gray-300 text-yellow-500 focus:ring-yellow-500 group-hover:border-yellow-400 transition-colors"
                               />
                               <span className="text-sm text-gray-700">

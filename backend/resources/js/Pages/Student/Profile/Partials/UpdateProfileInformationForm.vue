@@ -4,9 +4,9 @@ import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
 import TextInput from "@/Components/TextInput.vue";
+import PremiumSelect from "@/Components/PremiumSelect.vue";
 import { useForm } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
-import SelectInput from "@/Components/SelectInput.vue";
 import Modal from "@/Components/Modal.vue";
 
 const props = defineProps({
@@ -15,7 +15,23 @@ const props = defineProps({
   },
 });
 
+const genderOptions = [
+    { label: "Male", value: "male" },
+    { label: "Female", value: "female" },
+];
+
+const networkOptions = [
+    { label: "MTN", value: "mtn" },
+    { label: "Telecel (Vodafone)", value: "telecel" },
+    { label: "AirtelTigo", value: "airteltigo" },
+];
+
 const form = useForm({
+  first_name: props.user.first_name || "",
+  last_name: props.user.last_name || "",
+  middle_name: props.user.middle_name || "",
+  gender: props.user.gender || "",
+  ghcard: props.user.ghcard ? String(props.user.ghcard).replace(/^GHA-/, '') : "",
   network_type: props.user.network_type || "",
   mobile_no: props.user.mobile_no || "",
 });
@@ -91,10 +107,8 @@ const submit = () => {
   });
 };
 
-const isContactEditable = computed(() => {
-  // If either is missing, allow editing
-  return !props.user.network_type || !props.user.mobile_no;
-});
+const isContactEditable = true;
+const isIdentityEditable = computed(() => !cardVerified.value);
 
 watch(() => form.mobile_no, (newVal) => {
   if (newVal) {
@@ -120,7 +134,7 @@ const onlyNumbers = (e) => {
       <h2 class="text-lg font-medium text-gray-900">Profile Information</h2>
 
       <p class="mt-1 text-sm text-gray-600">
-        You can update your network type and phone number below.
+        You can update your personal and contact details below. Identification details are locked once you Ghana card has been verified.
       </p>
     </header>
 
@@ -137,78 +151,99 @@ const onlyNumbers = (e) => {
 
         <!-- Read-only fields -->
         <div class="space-y-1">
-          <InputLabel for="first_name" value="First Name" class="text-gray-500" />
+          <InputLabel for="first_name" value="First Name" :required="isIdentityEditable" :class="!isIdentityEditable ? 'text-gray-500' : ''" />
           <TextInput
             id="first_name"
             type="text"
-            class="block w-full bg-gray-50 border-gray-200 text-gray-500"
-            :value="user.first_name || ''"
-            disabled
+            class="block w-full border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+            :class="{
+                'bg-gray-50 border-gray-200 text-gray-500': !isIdentityEditable,
+                'border-red-600': form.errors.first_name
+            }"
+            v-model="form.first_name"
+            :disabled="!isIdentityEditable"
           />
+          <InputError v-if="isIdentityEditable" :message="form.errors.first_name" />
         </div>
 
         <div class="space-y-1">
-          <InputLabel for="last_name" value="Last Name" class="text-gray-500" />
+          <InputLabel for="last_name" value="Last Name" :required="isIdentityEditable" :class="!isIdentityEditable ? 'text-gray-500' : ''" />
           <TextInput
             id="last_name"
             type="text"
-            class="block w-full bg-gray-50 border-gray-200 text-gray-500"
-            :value="user.last_name || ''"
-            disabled
+            class="block w-full border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+            :class="{
+                'bg-gray-50 border-gray-200 text-gray-500': !isIdentityEditable,
+                'border-red-600': form.errors.last_name
+            }"
+            v-model="form.last_name"
+            :disabled="!isIdentityEditable"
           />
+          <InputError v-if="isIdentityEditable" :message="form.errors.last_name" />
         </div>
 
         <div class="space-y-1">
-          <InputLabel for="middle_name" value="Middle Name" class="text-gray-500" />
+          <InputLabel for="middle_name" value="Middle Name" :class="!isIdentityEditable ? 'text-gray-500' : ''" />
           <TextInput
             id="middle_name"
             type="text"
-            class="block w-full bg-gray-50 border-gray-200 text-gray-500"
-            :value="user.middle_name || ''"
-            disabled
+            class="block w-full border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+            :class="{
+                'bg-gray-50 border-gray-200 text-gray-500': !isIdentityEditable,
+                'border-red-600': form.errors.middle_name
+            }"
+            v-model="form.middle_name"
+            :disabled="!isIdentityEditable"
           />
+          <InputError v-if="isIdentityEditable" :message="form.errors.middle_name" />
         </div>
 
         <div class="space-y-1">
-          <InputLabel for="gender" value="Gender" class="text-gray-500" />
-          <SelectInput
+          <InputLabel for="gender" value="Gender" :required="isIdentityEditable" :class="!isIdentityEditable ? 'text-gray-500' : ''" />
+          <PremiumSelect
             id="gender"
-            :value="user.gender || ''"
-            disabled
-            class="block w-full bg-gray-50 border-gray-200 text-gray-500"
-          >
-            <option value="" disabled>-- Select Gender --</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </SelectInput>
+            v-model="form.gender"
+            :options="genderOptions"
+            :disabled="!isIdentityEditable"
+            :error="form.errors.gender"
+            placeholder="-- Select Gender --"
+          />
+          <InputError v-if="isIdentityEditable" :message="form.errors.gender" />
         </div>
 
         <div class="col-span-full mt-2">
-          <InputLabel for="ghcard" value="Ghana Card Number" class="text-gray-500" />
-          <div class="flex mt-1">
+          <InputLabel for="ghcard" value="Ghana Card Number" :required="isIdentityEditable" :class="!isIdentityEditable ? 'text-gray-500' : ''" />
+          <div
+            class="flex mt-1 rounded-xl shadow-sm border"
+            :class="[
+              form.errors.ghcard ? 'border-red-600' : 'border-gray-200',
+              isIdentityEditable ? 'focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 bg-white' : 'bg-gray-50'
+            ]"
+          >
             <span
-              v-if="!String(user.ghcard || '').startsWith('GHA-')"
-              class="inline-flex items-center px-4 border border-r-0 text-gray-400 font-medium text-sm rounded-l-xl h-11 bg-gray-50 border-gray-200 cursor-not-allowed"
+              class="inline-flex items-center px-4 border-r border-gray-200 text-gray-400 font-medium text-sm h-11 bg-gray-50 cursor-not-allowed rounded-l-xl"
               id="ghcard-addon"
               :class="{
-                'text-green-600 bg-green-50 border-gray-200': cardVerified,
+                'text-green-600 bg-green-50 border-gray-100': cardVerified,
               }"
               >GHA-</span
             >
-            <TextInput
+            <input
               id="ghcard"
               type="text"
-              class="block w-full bg-gray-50 border-gray-200 text-gray-500"
-              :value="user.ghcard || ''"
-              disabled
+              class="block w-full border-0 focus:ring-0 focus:outline-none h-11 rounded-r-xl px-3 text-sm"
               :class="{
-                'border-l-0 rounded-l-none': !String(user.ghcard || '').startsWith('GHA-'),
-                'bg-green-50 text-green-700 border-gray-200': cardVerified,
+                'bg-gray-50 text-gray-500 cursor-not-allowed': !isIdentityEditable,
+                'bg-green-50 text-green-700': cardVerified,
+                'bg-white': isIdentityEditable && !cardVerified
               }"
+              v-model="form.ghcard"
+              :disabled="!isIdentityEditable"
               placeholder="123456789-1"
               aria-describedby="ghcard-addon"
             />
           </div>
+          <InputError v-if="isIdentityEditable" :message="form.errors.ghcard" />
 
           <div
             class="mt-2 text-xs font-semibold uppercase tracking-wider inline-flex items-center"
@@ -230,24 +265,14 @@ const onlyNumbers = (e) => {
         <!-- Editable fields -->
         <div class="space-y-1">
           <InputLabel for="network_type" value="Network Type" :required="true" />
-          <SelectInput
+          <PremiumSelect
             id="network_type"
             v-model="form.network_type"
-            :required="isContactEditable"
-            :disabled="!isContactEditable"
-            @change="form.clearErrors('network_type')"
-            class="block w-full border-gray-300 focus:border-amber-500 focus:ring-amber-500"
-            :class="{
-              'border-red-600': form.errors.network_type,
-              'bg-gray-50 text-gray-500 cursor-not-allowed': !isContactEditable
-            }"
-          >
-            <option value="" disabled>-- Select Network --</option>
-            <option value="mtn">MTN</option>
-            <option value="telecel">Telecel</option>
-            <option value="airteltigo">AirtelTigo</option>
-          </SelectInput>
-          <InputError v-if="isContactEditable" :message="form.errors.network_type" />
+            :options="networkOptions"
+            :error="form.errors.network_type"
+            placeholder="-- Select Network --"
+          />
+          <InputError :message="form.errors.network_type" />
         </div>
 
         <div class="space-y-1">
@@ -282,7 +307,7 @@ const onlyNumbers = (e) => {
           />
         </div>
 
-        <div v-if="isContactEditable" class="col-span-full pt-4">
+        <div class="col-span-full pt-4">
           <PrimaryButton
             type="button"
             @click="showConfirmationModal"
@@ -312,7 +337,7 @@ const onlyNumbers = (e) => {
           </h2>
 
           <p class="text-sm text-gray-500 max-w-[240px] mx-auto text-balance">
-            Are you sure you want to update your contact information?
+            Are you sure you want to update your profile information?
           </p>
         </div>
 

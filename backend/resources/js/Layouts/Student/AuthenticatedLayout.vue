@@ -275,7 +275,7 @@ onUnmounted(() => {
                         <span class="material-symbols-outlined text-[22px] group-hover:scale-110 transition-transform">notifications</span>
                         <span
                             v-if="auth?.unreadNotifications > 0"
-                            class="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-sm ring-2 ring-white animate-pulse"
+                            class="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white shadow-sm ring-2 ring-white animate-pulse"
                         >
                             {{ auth.unreadNotifications > 99 ? "99+" : auth.unreadNotifications }}
                         </span>
