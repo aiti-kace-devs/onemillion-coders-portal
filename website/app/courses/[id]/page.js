@@ -758,6 +758,14 @@ export default function CoursesPage({ params }) {
     setSelectedBatchMonth(null);
     setCourseFullTab("centres");
 
+    // For users coming in via previously-recommended courses, selectedCentre
+    // is not populated by the region/district/centre picker flow. Hydrate it
+    // from the centre attached to this specific recommended course so the
+    // study-mode modal can read is_ready correctly.
+    if (course.centre) {
+      setSelectedCentre(course.centre);
+    }
+
     const inPerson = isInPersonDeliveryCourse(course);
     setInPersonEnrollmentFlow(inPerson);
     setEnrollingCourseRecord(course || null);
