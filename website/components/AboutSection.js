@@ -82,8 +82,8 @@ const AboutSection = ({ data }) => {
             <div className="relative group max-w-md mx-auto lg:max-w-none">
               {/* Ghana flag inspired border - pulsing glow effect */}
               <div
-                className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-red-600/40 via-yellow-400/40 to-green-600/40
-                             opacity-60 blur-md"
+                className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-red-600/20 via-yellow-400/20 to-green-600/20 
+                             opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"
               ></div>
 
               {/* Main image container with responsive aspect ratios */}

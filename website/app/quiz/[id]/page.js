@@ -30,8 +30,13 @@ const MAX_VIOLATIONS = 3;
 const LEVELS = [
   { key: "beginner", label: "Step 1", color: "#2e7d32" },
   { key: "intermediate", label: "Step 2", color: "#f9a825" },
-  { key: "expert", label: "Step 3", color: "#c62828" },
+  { key: "advanced", label: "Step 3", color: "#c62828" },
 ];
+
+// Backend returns level strings as "Beginner" / "Intermediate" / "Advanced".
+// Normalise to lowercase so they match the LEVELS keys above.
+const normaliseLevel = (value) =>
+  value == null ? value : String(value).toLowerCase();
 
 const ANSWER_COLORS = [
   { bg: "#a3151e" },
@@ -289,13 +294,14 @@ export default function QuizPage({ params }) {
 
       if (response?.status === "success" && response?.question) {
         const q = response.question;
+        const qLevel = normaliseLevel(q.level) || "beginner";
         setQuestion(q);
-        setCurrentLevel(q.level || "beginner");
+        setCurrentLevel(qLevel);
         setTimeLeft(q.time_remaining_seconds || 900);
         if (q.total_level_questions) {
           setLevelTotals((p) => ({
             ...p,
-            [q.level || "beginner"]: q.total_level_questions,
+            [qLevel]: q.total_level_questions,
           }));
         }
         if (typeof response?.violation_count === 'number') {
@@ -309,7 +315,7 @@ export default function QuizPage({ params }) {
       ) {
         setAssessmentComplete(true);
         setOverallLevel(
-          response?.user_overall_level || response?.user_level || null,
+          normaliseLevel(response?.user_overall_level || response?.user_level) || null,
         );
         setShowLevelEnd(true);
         return true;
@@ -408,7 +414,7 @@ export default function QuizPage({ params }) {
       recordViolation(id, count, token)
         .then((result) => {
           if (count >= MAX_VIOLATIONS) {
-            setOverallLevel(result?.user_overall_level || null);
+            setOverallLevel(normaliseLevel(result?.user_overall_level) || null);
           }
         })
         .catch(() => { });
@@ -577,7 +583,7 @@ export default function QuizPage({ params }) {
             // Entire assessment is done
             const finalScore = correct ? score + 1 : score;
             setLevelScores((p) => ({ ...p, [currentLevel]: finalScore }));
-            setOverallLevel(result?.user_overall_level || null);
+            setOverallLevel(normaliseLevel(result?.user_overall_level) || null);
             setAssessmentComplete(true);
             setShowLevelEnd(true);
             setSelected(null);
@@ -599,31 +605,33 @@ export default function QuizPage({ params }) {
             // Store next question for after the transition
             if (result?.next_question) {
               const nq = result.next_question;
-              setQuestion(nq);
-              if (nq.total_level_questions && nq.level) {
+              const nqLevel = normaliseLevel(nq.level);
+              setQuestion({ ...nq, level: nqLevel });
+              if (nq.total_level_questions && nqLevel) {
                 setLevelTotals((p) => ({
                   ...p,
-                  [nq.level]: nq.total_level_questions,
+                  [nqLevel]: nq.total_level_questions,
                 }));
               }
             }
           } else if (result?.next_question) {
             // Next question in the same level
             const nextQ = result.next_question;
+            const nextLevel = normaliseLevel(nextQ.level);
             setDir(correct ? 1 : -1);
-            setQuestion(nextQ);
+            setQuestion({ ...nextQ, level: nextLevel });
             if (nextQ.time_remaining_seconds) {
               setTimeLeft(nextQ.time_remaining_seconds);
             }
-            if (nextQ.total_level_questions && nextQ.level) {
+            if (nextQ.total_level_questions && nextLevel) {
               setLevelTotals((p) => ({
                 ...p,
-                [nextQ.level]: nextQ.total_level_questions,
+                [nextLevel]: nextQ.total_level_questions,
               }));
             }
             // Update level if it changed
-            if (nextQ.level && nextQ.level !== currentLevel) {
-              setCurrentLevel(nextQ.level);
+            if (nextLevel && nextLevel !== currentLevel) {
+              setCurrentLevel(nextLevel);
             }
             setSelected(null);
             setLastResult(null);
@@ -660,7 +668,8 @@ export default function QuizPage({ params }) {
   // Move to next level after transition
   const goNextLevel = useCallback(() => {
     if (question) {
-      const nextLevelKey = question.level || LEVELS[lvlIdx + 1]?.key;
+      const nextLevelKey =
+        normaliseLevel(question.level) || LEVELS[lvlIdx + 1]?.key;
       setCurrentLevel(nextLevelKey || "intermediate");
       setScore(0);
       setShowLevelEnd(false);
@@ -777,6 +786,13 @@ export default function QuizPage({ params }) {
               "Start Assessment"
             )}
           </motion.button>
+
+          <button
+            onClick={() => window.location.href = process.env.NEXT_PUBLIC_PORTAL_URL || '/'}
+            className="mt-5 text-sm text-white/40 hover:text-white/80 transition-colors"
+          >
+            <FiHome className="inline mr-1 -mt-0.5" size={14} /> Back to Home
+          </button>
         </motion.div>
       </div>
     );

@@ -11,3 +11,10 @@
         font-size: 18px;
     }
 }
+/* Hide the default reCAPTCHA widget */
+.grecaptcha-badge,
+iframe .grecaptcha-badge {
+   display: none !important;
+}
+
+
