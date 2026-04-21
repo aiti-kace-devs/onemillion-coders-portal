@@ -16,7 +16,7 @@ const user = computed(() => page.props.auth?.user ?? {});
 // ── Status config ────────────────────────────────────────────────────────────
 const STATUS = {
     admitted:  { badge: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",    dot: "bg-blue-500",    label: "Admitted"  },
-    confirmed: { badge: "bg-violet-50 text-violet-700 ring-1 ring-violet-200", dot: "bg-violet-500", label: "Enrolled" },
+    confirmed: { badge: "bg-violet-50 text-violet-700 ring-1 ring-violet-200", dot: "bg-violet-500", label: "Confirmed" },
     completed: { badge: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200", dot: "bg-emerald-500", label: "Completed" },
     revoked:   { badge: "bg-red-50 text-red-700 ring-1 ring-red-200",        dot: "bg-red-400",     label: "Revoked"   },
 };
@@ -28,7 +28,6 @@ function statusCfg(s) {
 const statusFilter = ref("all");
 const filterOptions = [
     { value: "all",       label: "All" },
-    { value: "confirmed", label: "Enrolled" },
     { value: "completed", label: "Completed" },
     { value: "admitted",  label: "Admitted" },
     { value: "revoked",   label: "Revoked" },

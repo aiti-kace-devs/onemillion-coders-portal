@@ -350,3 +350,8 @@ html {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Safari and Chrome */
 }
+
+.grecaptcha-badge {
+  display: none !important;
+  visibility: hidden !important;
+}
