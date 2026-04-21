@@ -197,7 +197,7 @@ class RegistrationFormAPIController extends Controller
             $user->id,
             'COURSE_SELECTION',
             'Course Selected',
-            'You have successfully selected <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
+            'You have successfully selected <strong>' . e($course->course_name) . '</strong>. Thank you for your selection.'
         );
 
         return response()->json([
@@ -357,7 +357,7 @@ class RegistrationFormAPIController extends Controller
             $user->id,
             'COURSE_SELECTION',
             'Course Selected',
-            'You have successfully selected <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
+            'You have successfully selected <strong>' . e($course->course_name) . '</strong>. Thank you for your selection.'
         );
 
         return response()->json([

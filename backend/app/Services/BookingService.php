@@ -124,7 +124,7 @@ public function book(
                 $user->id,
                 'COURSE_SELECTION',
                 'Enrollment Confirmed',
-                'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
+                'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. Thank you for enrolling.'
             );
 
             // Remove from waitlist if exists
