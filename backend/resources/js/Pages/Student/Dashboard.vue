@@ -1,8 +1,9 @@
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { Head, usePage, Link } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
 import RevokeOrDeclineAdmissionModal from "@/Components/RevokeOrDeclineAdmissionModal.vue";
+import Modal from "@/Components/Modal.vue";
 
 const props = defineProps({
     exams: Object,
@@ -18,6 +19,7 @@ const { config } = usePage().props;
 const user = computed(() => usePage().props.auth?.user || {});
 const isOnWaitlist = computed(() => !!user.value?.on_waitlist);
 const onboardingStep = computed(() => user.value?.current_onboarding_step ?? null);
+const showCourseModal = ref(onboardingStep.value === 'course_selection');
 
 const hasRegisteredCourse = computed(() => !!props.registeredCourse);
 
@@ -148,6 +150,33 @@ const greeting = computed(() => {
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
     </Head>
     <AuthenticatedLayout>
+        <Modal :show="showCourseModal" max-width="md" @close="showCourseModal = false">
+            <div class="text-center">
+                <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
+                    <span class="material-symbols-outlined text-3xl text-amber-700">menu_book</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">Choose a Course</h3>
+                <p class="mt-2 text-sm text-gray-600">
+                    You haven't selected a course yet. Please choose a course to continue your enrollment.
+                </p>
+                <div class="mt-6 flex items-center justify-center gap-3">
+                    <button
+                        type="button"
+                        class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                        @click="showCourseModal = false"
+                    >
+                        Close
+                    </button>
+                    <Link
+                        :href="route('student.change-course')"
+                        class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-gray-900 bg-[#f9a825] hover:bg-[#e09621] transition-colors"
+                    >
+                        Choose a Course
+                    </Link>
+                </div>
+            </div>
+        </Modal>
+
         <template #header>
             <div class="flex items-center gap-2">
                 <h2 class="font-black text-2xl text-gray-900 tracking-tight">
