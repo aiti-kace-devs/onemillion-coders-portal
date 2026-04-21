@@ -771,6 +771,18 @@ class StudentOperation extends Controller
                 ]);
         }
 
+        // Check admission revocation cooldown
+        if ($this->isInAdmissionCooldown($user)) {
+            $timeRemaining = $this->getAdmissionCooldownTimeRemaining($user);
+
+            return redirect()
+                ->route('student.dashboard')
+                ->with([
+                    'flash' => "You must wait {$timeRemaining} before selecting a new course.",
+                    'key' => 'info',
+                ]);
+        }
+
         $currentCourse = Course::find($user->registered_course);
 
         return Inertia::render('Student/ChangeCourse', [
@@ -850,6 +862,18 @@ class StudentOperation extends Controller
                 ->with([
                     'flash' => 'Unable to change course. Selection is locked.',
                     'key' => 'error',
+                ]);
+        }
+
+        // Check admission revocation cooldown (safety guard)
+        if ($this->isInAdmissionCooldown($user)) {
+            $timeRemaining = $this->getAdmissionCooldownTimeRemaining($user);
+
+            return redirect()
+                ->back()
+                ->with([
+                    'key' => 'error',
+                    'flash' => "You must wait {$timeRemaining} before selecting a new course.",
                 ]);
         }
 
@@ -1735,5 +1759,92 @@ class StudentOperation extends Controller
         $path = str_starts_with($raw, '/') ? $raw : '/'.$raw;
 
         return rtrim($websiteBase.$path, '/');
+    }
+
+    /**
+     * Check if a user is in the admission revocation cooldown period.
+     */
+    private function isInAdmissionCooldown(User $user): bool
+    {
+        $cooldownHours = (int) AppConfig::getValue('ADMISSION_REVOCATION_COOLDOWN_HOURS', 24);
+
+        // If cooldown is disabled (set to 0), return false
+        if ($cooldownHours <= 0) {
+            return false;
+        }
+
+        $latestRejection = AdmissionRejection::where('user_id', $user->userId)
+            ->orderBy('rejected_at', 'desc')
+            ->first();
+
+        if (!$latestRejection) {
+            return false;
+        }
+
+        $rejectedAt = $latestRejection->rejected_at instanceof \DateTime
+            ? $latestRejection->rejected_at
+            : Carbon::parse($latestRejection->rejected_at);
+
+        $cooldownEndTime = $rejectedAt->addHours($cooldownHours);
+
+        return now()->isBefore($cooldownEndTime);
+    }
+
+    /**
+     * Get the remaining cooldown time in human-readable format.
+     * Returns a string like "23 hours 45 minutes"
+     */
+    private function getAdmissionCooldownTimeRemaining(User $user): string
+    {
+        $cooldownHours = (int) AppConfig::getValue('ADMISSION_REVOCATION_COOLDOWN_HOURS', 24);
+
+        $latestRejection = AdmissionRejection::where('user_id', $user->userId)
+            ->orderBy('rejected_at', 'desc')
+            ->first();
+
+        if (!$latestRejection) {
+            return '';
+        }
+
+        $rejectedAt = $latestRejection->rejected_at instanceof \DateTime
+            ? $latestRejection->rejected_at
+            : Carbon::parse($latestRejection->rejected_at);
+
+        $cooldownEndTime = $rejectedAt->copy()->addHours($cooldownHours);
+        $now = now();
+
+        // If cooldown has already expired, return empty string
+        if ($now->isAfter($cooldownEndTime) || $now->isAfter($cooldownEndTime)) {
+            return '';
+        }
+
+        // Calculate remaining time - get absolute difference
+        $diffInSeconds = $cooldownEndTime->getTimestamp() - $now->getTimestamp();
+
+        // Safety check - if still negative or zero, cooldown is expired
+        if ($diffInSeconds <= 0) {
+            return '';
+        }
+
+        $hours = (int) floor($diffInSeconds / 3600);
+        $minutes = (int) floor(($diffInSeconds % 3600) / 60);
+
+        $parts = [];
+
+        if ($hours > 0) {
+            $parts[] = $hours . ' ' . ($hours === 1 ? 'hour' : 'hours');
+        }
+
+        if ($minutes > 0) {
+            $parts[] = $minutes . ' ' . ($minutes === 1 ? 'minute' : 'minutes');
+        }
+
+        if (empty($parts)) {
+            $seconds = $diffInSeconds % 60;
+
+            return $seconds . ' ' . ($seconds === 1 ? 'second' : 'seconds');
+        }
+
+        return implode(' and ', $parts);
     }
 }

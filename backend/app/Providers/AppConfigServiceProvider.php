@@ -62,6 +62,9 @@ class AppConfigServiceProvider extends ServiceProvider
         defined('ONE_WEEK_REMINDER') or define('ONE_WEEK_REMINDER', 'ONE_WEEK_REMINDER');
         defined('THREE_DAYS_REMINDER') or define('THREE_DAYS_REMINDER', 'THREE_DAYS_REMINDER');
         defined('ONE_DAY_REMINDER') or define('ONE_DAY_REMINDER', 'ONE_DAY_REMINDER');
+
+        // Admission Revocation Cooldown
+        defined('ADMISSION_REVOCATION_COOLDOWN_HOURS') or define('ADMISSION_REVOCATION_COOLDOWN_HOURS', 'ADMISSION_REVOCATION_COOLDOWN_HOURS');
     }
 
     /**

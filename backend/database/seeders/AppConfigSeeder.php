@@ -156,6 +156,9 @@ class AppConfigSeeder extends Seeder
                 ['key' => ONE_WEEK_REMINDER, 'value' => 1, 'type' => 'boolean', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
                 ['key' => THREE_DAYS_REMINDER, 'value' => 1, 'type' => 'boolean', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
                 ['key' => ONE_DAY_REMINDER, 'value' => 1, 'type' => 'boolean', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
+
+                // Admission Revocation Cooldown
+                ['key' => ADMISSION_REVOCATION_COOLDOWN_HOURS, 'value' => 24, 'type' => 'integer', 'is_cached' => true, 'created_at' => now(), 'updated_at' => now()],
             ]);
         } catch (\Exception $e) {
             echo $e->getMessage();
