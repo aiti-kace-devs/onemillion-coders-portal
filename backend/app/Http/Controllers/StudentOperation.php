@@ -36,6 +36,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use App\Http\Controllers\NotificationController;
 
 class StudentOperation extends Controller
 {
@@ -996,6 +997,19 @@ class StudentOperation extends Controller
                         'course_id' => $courseId,
                         'rejected_at' => now(),
                     ]);
+
+                    $course = \App\Models\Course::find($courseId);
+                    $cooldownHours = (int) \App\Models\AppConfig::getValue('ADMISSION_REVOCATION_COOLDOWN_HOURS', 24);
+                    $cooldownEndTime = now()->addHours($cooldownHours);
+
+                    NotificationController::notify(
+                        $user->id,
+                        'ADMISSION_REVOKED',
+                        'Admission Revoked',
+                        "You have revoked your admission for {$course->course_name}. "
+                        . "You must wait {$cooldownHours} hours before selecting a new course. "
+                        . "You can select a new course after " . $cooldownEndTime->format('l jS F, Y g:i A') . "."
+                    );
 
                     event(new AdmissionDeleted($courseId));
 
