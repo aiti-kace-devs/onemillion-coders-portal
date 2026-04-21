@@ -19,7 +19,9 @@ const props = defineProps({
     },
 });
 
-const form = useForm({});
+const form = useForm({
+    reason: "",
+});
 
 const revokeOrDeclineModal = ref(false);
 const confirmationInput = ref("");
@@ -36,9 +38,14 @@ const confirmationLabel = computed(
     () => `Type ${confirmationPhrase.value} to confirm`,
 );
 
+const canSubmit = computed(
+    () => canConfirm.value && form.reason.trim().length > 0,
+);
+
 watch(revokeOrDeclineModal, (open) => {
     if (open) {
         confirmationInput.value = "";
+        form.reason = "";
     }
 });
 
@@ -49,6 +56,7 @@ const showModal = () => {
 const closeModal = () => {
     revokeOrDeclineModal.value = false;
     confirmationInput.value = "";
+    form.reason = "";
 };
 
 const submit = () => {
@@ -103,6 +111,17 @@ const submit = () => {
             </p>
 
             <div class="mt-6 text-left">
+                <InputLabel value="Reason for revoking/declining *" />
+                <textarea
+                    v-model="form.reason"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                    rows="3"
+                    placeholder="Please provide a reason..."
+                ></textarea>
+                <p v-if="form.errors.reason" class="mt-1 text-sm text-red-600">{{ form.errors.reason }}</p>
+            </div>
+
+            <div class="mt-4 text-left">
                 <InputLabel :value="confirmationLabel" />
                 <TextInput v-model="confirmationInput" type="text" class="mt-1 block w-full" autocomplete="off"
                     autocapitalize="characters" />
@@ -111,8 +130,8 @@ const submit = () => {
             <div class="mt-6 flex justify-center">
                 <SecondaryButton @click="closeModal">Cancel</SecondaryButton>
 
-                <DangerButton class="ms-3" :class="{ 'opacity-25': form.processing || !canConfirm }"
-                    :disabled="form.processing || !canConfirm" @click="submit">
+                <DangerButton class="ms-3" :class="{ 'opacity-25': form.processing || !canSubmit }"
+                    :disabled="form.processing || !canSubmit" @click="submit">
                     <template v-if="session?.id ?? false">Revoke</template>
                     <template v-else>Decline</template>
                 </DangerButton>
