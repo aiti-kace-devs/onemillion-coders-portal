@@ -16,6 +16,7 @@ class AdmissionRejection extends Model
     protected $fillable = [
         'user_id',
         'course_id',
+        'reason',
         'rejected_at',
     ];
 

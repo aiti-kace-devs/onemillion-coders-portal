@@ -967,13 +967,17 @@ class StudentOperation extends Controller
         }
     }
 
-    public function delete_admission(User $user)
+    public function delete_admission(Request $request, User $user)
     {
+        $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+
         $delete_user_admission = UserAdmission::where('user_id', $user->userId)->first();
 
         if ($delete_user_admission) {
             try {
-                return DB::transaction(function () use ($delete_user_admission, $user) {
+                return DB::transaction(function () use ($delete_user_admission, $user, $request) {
                     $courseId = (int) $delete_user_admission->course_id;
 
                     activity()->withoutLogs(function () use ($delete_user_admission, $user) {
@@ -995,6 +999,7 @@ class StudentOperation extends Controller
                     AdmissionRejection::create([
                         'user_id' => $user->userId,
                         'course_id' => $courseId,
+                        'reason' => $request->input('reason'),
                         'rejected_at' => now(),
                     ]);
 
