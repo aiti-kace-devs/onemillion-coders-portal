@@ -86,7 +86,7 @@ export default {
 
 <style>
 .simplemde-container .EasyMDEContainer {
-    @apply rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500;
+    @apply rounded-md border-gray-300 shadow-sm focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500;
 }
 
 .simplemde-container .EasyMDEContainer .CodeMirror {

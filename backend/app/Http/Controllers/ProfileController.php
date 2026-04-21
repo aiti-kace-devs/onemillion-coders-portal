@@ -85,6 +85,29 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $validated = $request->validated();
+        
+        $ghanaCardService = app(GhanaCardService::class);
+        $isVerified = $ghanaCardService->isVerified($user);
+
+        // Identity fields only editable if not verified
+        if (!$isVerified) {
+            if (isset($validated['first_name'])) $user->first_name = $validated['first_name'];
+            if (isset($validated['last_name'])) $user->last_name = $validated['last_name'];
+            if (isset($validated['middle_name'])) $user->middle_name = $validated['middle_name'];
+            if (isset($validated['gender'])) $user->gender = $validated['gender'];
+            
+            if (isset($validated['ghcard'])) {
+                $ghcard = trim($validated['ghcard']);
+                // Ensure GHA- prefix if missing and it looks like a card number
+                if (!empty($ghcard) && !str_starts_with($ghcard, 'GHA-')) {
+                    $ghcard = 'GHA-' . $ghcard;
+                }
+                $user->ghcard = $ghcard;
+            }
+
+            // Update display name if any name parts changed
+            $user->name = trim(($user->first_name ?? '') . ' ' . ($user->middle_name ?? '') . ' ' . ($user->last_name ?? ''));
+        }
 
         $user->network_type = $validated['network_type'];
         $user->mobile_no = $validated['mobile_no'];

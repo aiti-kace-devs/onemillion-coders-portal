@@ -71,24 +71,9 @@ function stepVisualStatus(stepKey) {
     return "upcoming";
 }
 
-// Initialize collapse state based on the current active step
-const initialCollapse = [true, false, false, false, false, false];
+// By default, only Step 2 is always opened
+const initialCollapse = [false, true, false, false, false, false];
 const steps = ['submitted', 'review', 'assessment', 'verification', 'course', 'confirm'];
-let foundCurrent = false;
-
-// Expand the first 'current' step, or the last 'complete' step if all are complete
-for (let i = 0; i < steps.length; i++) {
-    const status = stepVisualStatus(steps[i]);
-    if (status === 'current') {
-        initialCollapse[i] = true;
-        foundCurrent = true;
-        break;
-    }
-}
-if (!foundCurrent) {
-    // If none are current, maybe they are all complete? Expand the last one.
-    initialCollapse[initialCollapse.length - 1] = true;
-}
 
 const collapse = ref(initialCollapse);
 
@@ -159,15 +144,6 @@ function isStepReached(idx) {
                         </div>
 
                         <div class="relative">
-                            <!-- Dynamic Progress Line -->
-                            <!-- We use bottom-12 to make the gray background line stop at the last step icon's center -->
-                            <div class="absolute left-5 top-5 bottom-5 w-0.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div
-                                    class="absolute top-0 left-0 w-full bg-green-500 transition-all duration-1000 ease-in-out"
-                                    :style="{ height: (Math.max(0, steps.filter(s => stepVisualStatus(s) === 'complete').length - 1) / (steps.length - 1)) * 100 + '%' }"
-                                ></div>
-                            </div>
-
                             <div class="space-y-4 relative">
                                 <div
                                     v-for="(stepKey, index) in steps"
@@ -175,6 +151,15 @@ function isStepReached(idx) {
                                     v-show="stepKey !== 'confirm' || showConfirmationInFlow"
                                     class="relative pl-14 group"
                                 >
+                                    <!-- Step Line Segment (Vertical) -->
+                                    <div
+                                        v-if="index < steps.length - 1"
+                                        class="absolute left-5 top-10 -bottom-4 w-0.5 transition-colors duration-700"
+                                        :class="[
+                                            (stepVisualStatus(steps[index+1]) === 'complete' || stepVisualStatus(steps[index+1]) === 'current')
+                                            ? 'bg-green-500' : 'bg-gray-100'
+                                        ]"
+                                    ></div>
                                     <!-- Step Icon/Indicator -->
                                     <div
                                         class="absolute left-0 top-0 mt-0.5 flex items-center justify-center w-10 h-10 rounded-xl shadow-md transition-all duration-500 ring-4 ring-white z-10"
@@ -219,137 +204,151 @@ function isStepReached(idx) {
                                                 >
                                                     {{ stepKey === 'submitted' ? 'Application Submitted' :
                                                        stepKey === 'review' ? 'Application Review' :
-                                                       stepKey === 'assessment' ? 'Level Determination Test' :
+                                                       stepKey === 'assessment' ? 'Level Determination Assessment' :
                                                        stepKey === 'verification' ? 'Identity Verification' :
                                                        stepKey === 'course' ? 'Course & Session Selection' : 'Admission Confirmation' }}
                                                 </h4>
                                             </div>
                                             <div
                                                 v-if="isStepReached(index)"
-                                                class="flex items-center justify-center w-6 h-6 rounded-full hover:bg-gray-100 transition-colors"
+                                                class="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100/50 group-hover:bg-amber-50 transition-colors border border-transparent group-hover:border-amber-100"
                                             >
-                                                <span class="material-symbols-outlined text-gray-400 text-sm transition-transform" :class="collapse[index] ? 'rotate-180' : ''">expand_more</span>
+                                                <span
+                                                    class="material-symbols-outlined text-gray-500 group-hover:text-amber-600 text-lg transition-transform duration-500"
+                                                    :class="collapse[index] ? 'rotate-180' : ''"
+                                                >
+                                                    expand_more
+                                                </span>
                                             </div>
                                         </div>
 
                                         <div
-                                            v-if="collapse[index] && isStepReached(index)"
-                                            class="mt-4 pt-4 border-t border-gray-100/50 text-sm text-gray-600 leading-relaxed"
+                                            class="grid transition-all duration-500 ease-in-out"
+                                            :class="collapse[index] && isStepReached(index) ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'"
                                         >
-                                            <!-- Step-specific content -->
-                                            <div v-if="stepKey === 'submitted'">
-                                                Your application was successfully received. We're excited to have you join our program!
-                                            </div>
+                                            <div class="overflow-hidden">
+                                                <div
+                                                    class="mt-4 pt-4 border-t border-gray-100/50 text-sm text-gray-600 leading-relaxed"
+                                                >
+                                                <!-- Step-specific content -->
+                                                <div v-if="stepKey === 'submitted'">
+                                                    Your application was successfully received. We're excited to have you join our program!
+                                                </div>
 
-                                            <div v-if="stepKey === 'review'">
-                                                <template v-if="reviewCompleted">
-                                                    <p>You have reviewed the enrollment overview. You can still return to the overview if needed.</p>
-                                                    <div class="mt-3">
-                                                        <Link :href="route('student.application-review.index')" class="inline-flex items-center gap-2 text-green-600 font-bold hover:text-green-700 transition-colors">
-                                                            <span class="material-symbols-outlined text-[16px]">visibility</span>
-                                                            View Enrollment Overview
-                                                        </Link>
-                                                    </div>
-                                                </template>
-                                                <template v-else>
-                                                    <p>Before you begin, please read through our detailed enrollment guide and program requirements.</p>
-                                                    <div class="mt-3">
-                                                        <LinkButton :href="route('student.application-review.index')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
-                                                            Start Review
-                                                        </LinkButton>
-                                                    </div>
-                                                </template>
-                                            </div>
-
-                                            <div v-if="stepKey === 'assessment'">
-                                                <template v-if="assessmentCompleted">
-                                                    <div class="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-100/50">
-                                                        <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-green-600 shadow-sm">
-                                                            <span class="material-symbols-outlined text-xl">trending_up</span>
+                                                <div v-if="stepKey === 'review'">
+                                                    <template v-if="reviewCompleted">
+                                                        <p>You have reviewed the enrollment overview. You can still return to the overview if needed.</p>
+                                                        <div class="mt-3">
+                                                            <LinkButton
+                                                                :href="route('student.application-review.index')"
+                                                                variant="green"
+                                                                class="shadow-lg shadow-green-500/20 px-4 py-2 text-sm"
+                                                            >
+                                                                View Enrollment Overview
+                                                            </LinkButton>
                                                         </div>
-                                                        <div>
-                                                            <p class="text-xs font-semibold text-green-800">Assessment Complete</p>
-                                                            <p v-if="usePage().props.config?.SHOW_STUDENT_LEVEL" class="text-base font-black text-green-900 uppercase">
-                                                                LEVEL: {{ props.user.student_level }}
-                                                            </p>
+                                                    </template>
+                                                    <template v-else>
+                                                        <p>Before you begin, please read through our detailed enrollment guide and program requirements.</p>
+                                                        <div class="mt-3">
+                                                            <LinkButton :href="route('student.application-review.index')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
+                                                                Start Review
+                                                            </LinkButton>
                                                         </div>
-                                                    </div>
-                                                </template>
-                                                <template v-else>
-                                                    <p>This test helps us understand your current skills to place you in the right curriculum level.</p>
-                                                    <div class="mt-3">
-                                                        <LinkButton :href="route('student.level-assessment')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
-                                                            Take Assessment Now
-                                                        </LinkButton>
-                                                    </div>
-                                                </template>
-                                            </div>
+                                                    </template>
+                                                </div>
 
-                                            <div v-if="stepKey === 'verification'">
-                                                <template v-if="verificationCompleted">
-                                                    <div class="flex items-center gap-2 text-green-700 font-semibold">
-                                                        <span class="material-symbols-outlined text-base">verified</span>
-                                                        Identity verified successfully with Ghana Card.
-                                                    </div>
-                                                </template>
-                                                <template v-else-if="verificationBlocked">
-                                                    <div class="p-3 bg-red-50 rounded-lg border border-red-100 flex items-start gap-2">
-                                                        <span class="material-symbols-outlined text-red-600 text-sm">error</span>
-                                                        <div>
-                                                            <p class="font-bold text-red-900 text-sm">Verification Blocked</p>
-                                                            <p class="text-xs text-red-700 mt-0.5">Please contact support for assistance in manually verifying your identity.</p>
+                                                <div v-if="stepKey === 'assessment'">
+                                                    <template v-if="assessmentCompleted">
+                                                        <div class="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-100/50">
+                                                            <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-green-600 shadow-sm">
+                                                                <span class="material-symbols-outlined text-xl">trending_up</span>
+                                                            </div>
+                                                            <div>
+                                                                <p class="text-xs font-semibold text-green-800">Assessment Complete</p>
+                                                                <p v-if="usePage().props.config?.SHOW_STUDENT_LEVEL" class="text-base font-black text-green-900 uppercase">
+                                                                    LEVEL: {{ props.user.student_level }}
+                                                                </p>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </template>
-                                                <template v-else>
-                                                    <p>We need to verify your identity to ensure a secure program environment.</p>
-                                                    <div class="mt-3">
-                                                        <LinkButton :href="route('student.verification.index')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
-                                                            Start Verification
-                                                        </LinkButton>
-                                                    </div>
-                                                </template>
-                                            </div>
+                                                    </template>
+                                                    <template v-else>
+                                                        <p>This test helps us understand your current skills to place you in the right curriculum level.</p>
+                                                        <div class="mt-3">
+                                                            <LinkButton :href="route('student.level-assessment')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
+                                                                Take Assessment Now
+                                                            </LinkButton>
+                                                        </div>
+                                                    </template>
+                                                </div>
 
-                                            <div v-if="stepKey === 'course'">
-                                                <template v-if="courseChosen">
-                                                    <div class="p-3 bg-white border border-gray-100 rounded-lg flex items-center justify-between">
-                                                        <p class="font-medium text-gray-900">You've selected your course preference.</p>
-                                                        <Link :href="route('student.change-course')" class="inline-flex items-center gap-1.5 text-amber-600 font-bold hover:text-amber-700 transition-colors">
-                                                            <span class="material-symbols-outlined text-[16px]">edit</span>
-                                                            Change Selection
-                                                        </Link>
-                                                    </div>
-                                                </template>
-                                                <template v-else>
-                                                    <p>Now choose from our available courses and training sessions that match your level.</p>
-                                                    <div class="mt-3">
-                                                        <LinkButton :href="route('student.change-course')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
-                                                            Choose Course
-                                                        </LinkButton>
-                                                    </div>
-                                                </template>
-                                            </div>
+                                                <div v-if="stepKey === 'verification'">
+                                                    <template v-if="verificationCompleted">
+                                                        <div class="flex items-center gap-2 text-green-700 font-semibold">
+                                                            <span class="material-symbols-outlined text-base">verified</span>
+                                                            Identity verified successfully with Ghana Card.
+                                                        </div>
+                                                    </template>
+                                                    <template v-else-if="verificationBlocked">
+                                                        <div class="p-3 bg-red-50 rounded-lg border border-red-100 flex items-start gap-2">
+                                                            <span class="material-symbols-outlined text-red-600 text-sm">error</span>
+                                                            <div>
+                                                                <p class="font-bold text-red-900 text-sm">Verification Blocked</p>
+                                                                <p class="text-xs text-red-700 mt-0.5">Please contact support for assistance in manually verifying your identity.</p>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                    <template v-else>
+                                                        <p>We need to verify your identity to ensure a secure program environment.</p>
+                                                        <div class="mt-3">
+                                                            <LinkButton :href="route('student.verification.index')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
+                                                                Start Verification
+                                                            </LinkButton>
+                                                        </div>
+                                                    </template>
+                                                </div>
 
-                                            <div v-if="stepKey === 'confirm'">
-                                                <template v-if="admissionConfirmationComplete">
-                                                    <p class="font-medium">Your admission record is finalized. You're all set!</p>
-                                                    <div class="mt-4 pt-4 border-t border-gray-100">
-                                                        <RevokeOrDeclineAdmissionModal
-                                                            v-if="props.user && props.user_admission"
-                                                            :user="props.user"
-                                                            :session="props.user_admission"
-                                                        />
-                                                    </div>
-                                                </template>
-                                                <template v-else>
-                                                    <p>Finalize your admission by confirming your booking details.</p>
-                                                    <div class="mt-3">
-                                                        <LinkButton :href="route('student.session.index')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
-                                                            Confirm Booking
-                                                        </LinkButton>
-                                                    </div>
-                                                </template>
+                                                <div v-if="stepKey === 'course'">
+                                                    <template v-if="courseChosen">
+                                                        <div class="p-3 bg-white border border-gray-100 rounded-lg flex items-center justify-between">
+                                                            <p class="font-medium text-gray-900">You've selected your course preference.</p>
+                                                            <Link :href="route('student.change-course')" class="inline-flex items-center gap-1.5 text-amber-600 font-bold hover:text-amber-700 transition-colors">
+                                                                <span class="material-symbols-outlined text-[16px]">edit</span>
+                                                                Change Selection
+                                                            </Link>
+                                                        </div>
+                                                    </template>
+                                                    <template v-else>
+                                                        <p>Now choose from our available courses and training sessions that match your level.</p>
+                                                        <div class="mt-3">
+                                                            <LinkButton :href="route('student.change-course')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
+                                                                Choose Course
+                                                            </LinkButton>
+                                                        </div>
+                                                    </template>
+                                                </div>
+
+                                                <div v-if="stepKey === 'confirm'">
+                                                    <template v-if="admissionConfirmationComplete">
+                                                        <p class="font-medium">Your admission record is finalized. You're all set!</p>
+                                                        <div class="mt-4 pt-4 border-t border-gray-100">
+                                                            <RevokeOrDeclineAdmissionModal
+                                                                v-if="props.user && props.user_admission"
+                                                                :user="props.user"
+                                                                :session="props.user_admission"
+                                                            />
+                                                        </div>
+                                                    </template>
+                                                    <template v-else>
+                                                        <p>Finalize your admission by confirming your booking details.</p>
+                                                        <div class="mt-3">
+                                                            <LinkButton :href="route('student.session.index')" class="shadow-lg shadow-amber-500/20 px-4 py-1.5 text-sm">
+                                                                Confirm Booking
+                                                            </LinkButton>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
