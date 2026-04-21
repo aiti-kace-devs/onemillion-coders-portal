@@ -84,11 +84,13 @@ class InPersonEnrollmentController extends Controller
         try {
             $enrollmentService->enroll($user, $course, $batch, $centreSession);
         } catch (Exception $e) {
+            $forProtocol = (bool) ($user->is_protocol ?? false);
             $recommendations = $availabilityService->getAvailableSlots(
                 $course->centre_id,
                 $course->id,
                 Carbon::parse($batch->start_date),
-                Carbon::parse($batch->end_date)
+                Carbon::parse($batch->end_date),
+                $forProtocol
             );
 
             return response()->json([

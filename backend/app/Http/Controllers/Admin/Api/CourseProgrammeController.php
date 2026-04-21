@@ -756,13 +756,11 @@ class CourseProgrammeController extends Controller
         $filter = $request->query('filter');
         $minAvailability = (int) ($request->query('min_availability', 0));
         $limit = $request->query('limit') ? (int) $request->query('limit') : null;
+        $forProtocol = $request->query('forProtocolBooking') !== null
+            ? filter_var($request->query('forProtocolBooking'), FILTER_VALIDATE_BOOLEAN)
+            : (bool) ($request->user()?->is_protocol ?? false);
 
-        $cacheKey = 'programme_availability:'.($programmeId ?? 'none').':district:'.($districtId ?? 'none')
-            .':sort:'.($sort ?? 'none').':order:'.($order ?? 'asc')
-            .':filter:'.($filter ?? 'none').':min_avail:'.($minAvailability ?? 'none')
-            .':limit:'.($limit ?? 'none');
-
-        $response = Cache::remember($cacheKey, 600, function () use ($programmeId, $districtId, $bookingService, $sort, $order, $filter, $minAvailability, $limit) {
+        $response = (function () use ($programmeId, $districtId, $bookingService, $sort, $order, $filter, $minAvailability, $limit, $forProtocol) {
             $programme = Programme::findOrFail($programmeId);
             $courseType = $programme->courseType();
             $isInPerson = $programme->isInPerson();
@@ -850,6 +848,8 @@ class CourseProgrammeController extends Controller
                     }
 
                     $centreSessions = CourseSession::where('course_id', $centreCourse->id)
+                        ->where('centre_id', $centre->id)
+                        ->where('session_type', CourseSession::TYPE_CENTRE)
                         ->where('status', true)
                         ->get();
                     $centreSessions = $this->sortMasterSessions($centreSessions);
@@ -858,30 +858,40 @@ class CourseProgrammeController extends Controller
                         continue;
                     }
 
-                    $centreCapacity = (int) $centreSessions->sum('limit');
+                    $configuredSessionCapacity = (int) $centreSessions->sum('limit');
+                    $centreCapacity = $configuredSessionCapacity > 0
+                        ? $configuredSessionCapacity
+                        : (int) ($centre->slotCapacityFor($courseType) ?? 0);
                 } else {
                     // Fetch remaining seats for this centre
                     $remainingSeats = $bookingService->getRemainingSeatsBatch(
                         $centre->id,
                         $batches->pluck('id')->toArray(),
-                        $centreSessions->pluck('id')->toArray()
+                        $centreSessions->pluck('id')->toArray(),
+                        $forProtocol
                     );
                 }
 
                 $totalAvailable = 0;
 
-                $batchData = $batches->values()->map(function ($batch, $index) use ($centreSessions, $remainingSeats, $isInPerson, &$totalAvailable) {
-                    $sessionData = $centreSessions->map(function ($session) use ($batch, $remainingSeats, $isInPerson, &$totalAvailable) {
+                $batchData = $batches->values()->map(function ($batch, $index) use ($centre, $centreSessions, $remainingSeats, $isInPerson, $bookingService, $forProtocol, &$totalAvailable) {
+                    $sessionData = $centreSessions->map(function ($session) use ($centre, $batch, $remainingSeats, $isInPerson, $bookingService, $forProtocol, &$totalAvailable) {
                         $key = "{$batch->id}:{$session->id}";
-                        $remaining = $isInPerson ? (int) ($session->limit ?? 0) : (int) ($remainingSeats[$key] ?? 0);
+                        $remaining = $isInPerson
+                            ? $bookingService->getRemainingSeatsForCourseSession($centre->id, $batch->id, $session->id, $forProtocol)
+                            : (int) ($remainingSeats[$key] ?? 0);
                         $totalAvailable += $remaining;
 
                         return [
+                            'session_id' => $session->id,
+                            'course_session_id' => $isInPerson ? $session->id : null,
                             'session_name' => $isInPerson
                                 ? ($session->session ?? 'Unknown')
                                 : "{$session->session_type} Session",
                             'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time,
                             'remaining' => $remaining,
+                            'show_seat_count' => $isInPerson ? ($session->limit !== null && (int) $session->limit > 0) : true,
+                            'limit' => $isInPerson && $session->limit !== null ? (int) $session->limit : null,
                         ];
                     })->values()->toArray();
 
@@ -955,7 +965,7 @@ class CourseProgrammeController extends Controller
                 'success' => true,
                 'available_centres' => $availableCentres,
             ];
-        });
+        })();
 
         return response()->json($response);
     }

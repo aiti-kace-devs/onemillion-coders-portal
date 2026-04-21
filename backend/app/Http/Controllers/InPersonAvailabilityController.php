@@ -6,15 +6,12 @@ use App\Models\Batch;
 use App\Models\Course;
 use App\Models\CourseSession;
 use App\Models\ProgrammeBatch;
-use App\Services\InPersonEnrollmentService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class InPersonAvailabilityController extends Controller
 {
-    private const REMAINING_UNLIMITED = 999999;
-
     /**
      * GET /api/availability/in-person/batches?course_id=
      *
@@ -27,7 +24,7 @@ class InPersonAvailabilityController extends Controller
      * Cohort order: start_date asc, then end_date desc when start matches (longer window first), then id.
      * Session order: course_time string (empty last), then id — client also re-sorts via normalizeInPersonBatches().
      */
-    public function batches(Request $request, InPersonEnrollmentService $enrollmentService): JsonResponse
+    public function batches(Request $request, \App\Services\BookingService $bookingService): JsonResponse
     {
         $request->validate([
             'course_id' => 'required|integer|exists:courses,id',
@@ -98,13 +95,22 @@ class InPersonAvailabilityController extends Controller
             ->orderBy('id')
             ->get();
 
-        $batchData = $batches->values()->map(function ($batch, $index) use ($centreSessions, $enrollmentService) {
-            $sessionData = $centreSessions->map(function (CourseSession $cs) use ($batch, $enrollmentService) {
-                $enrolled = $enrollmentService->enrolledCount($batch->id, $cs->id);
+        $forProtocolBooking = $request->query('forProtocolBooking') !== null
+            ? filter_var($request->query('forProtocolBooking'), FILTER_VALIDATE_BOOLEAN)
+            : (bool) ($request->user()?->is_protocol ?? false);
+
+        $batchData = $batches->values()->map(function ($batch, $index) use ($centreSessions, $bookingService, $centre, $forProtocolBooking) {
+            $sessionData = $centreSessions->map(function (CourseSession $cs) use ($batch, $bookingService, $centre, $forProtocolBooking) {
                 $limit = $cs->limit;
                 $hasLimit = $limit !== null && (int) $limit > 0;
                 $showSeatCount = $hasLimit;
-                $remaining = $hasLimit ? max(0, (int) $limit - $enrolled) : self::REMAINING_UNLIMITED;
+
+                $remaining = $bookingService->getRemainingSeatsForCourseSession(
+                    $centre->id,
+                    $batch->id,
+                    $cs->id,
+                    $forProtocolBooking
+                );
 
                 return [
                     'session_id' => $cs->id,

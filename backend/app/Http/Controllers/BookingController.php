@@ -27,8 +27,13 @@ class BookingController extends Controller
         GhanaCardService $ghanaCardService
     ): JsonResponse
     {
-        // Check if this is a self-paced enrollment (nullable query parameter)
-        $isSelfPaced = $request->query('self-paced') === 'true';
+        // Check if this is a self-paced enrollment. Accept the historical
+        // kebab-case flag and the snake/camel variants used by older clients.
+        $selfPacedFlag = $request->query(
+            'self-paced',
+            $request->query('self_pace', $request->query('selfPace', false))
+        );
+        $isSelfPaced = filter_var($selfPacedFlag, FILTER_VALIDATE_BOOLEAN);
 
         // Adjust validation based on self-paced flag
         $validationRules = [
@@ -77,10 +82,18 @@ class BookingController extends Controller
             ], 422);
         }
 
+        if ($isSelfPaced && $isInPerson) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'In-person programmes require centre session enrollment.',
+            ], 422);
+        }
+
         // Handle self-paced enrollment (no session required)
         if ($isSelfPaced) {
             $user->registered_course = $course->id;
             $user->shortlist = true;
+            $user->support = false;
             $user->save();
 
             UserAdmission::updateOrCreate(
@@ -112,7 +125,10 @@ class BookingController extends Controller
         // Fetch session for non-self-paced enrollments
         if ($isInPerson) {
             $session = CourseSession::find($validated['session_id']);
-            if (!$session || $session->course_id !== $course->id) {
+            if (! $session
+                || (int) $session->course_id !== (int) $course->id
+                || (int) $session->centre_id !== (int) $course->centre_id
+                || $session->session_type !== CourseSession::TYPE_CENTRE) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'The selected session id is invalid.',
@@ -130,12 +146,12 @@ class BookingController extends Controller
             }
         }
 
-        $isProtocolBooking = (bool) ($validated['is_protocol'] ?? false);
+        $isProtocolBooking = (bool) ($user->is_protocol ?? false);
 
         try {
             $bookingService->book($user, $course, $batch, $session, $isProtocolBooking);
         } catch (Exception $e) {
-            $forProtocol = (bool) ($user->is_protocol ?? false) || (bool) ($validated['is_protocol'] ?? false);
+            $forProtocol = (bool) ($user->is_protocol ?? false);
             $recommendations = $availabilityService->getAvailableSlots(
                 $course->centre_id,
                 $course->id,
@@ -149,6 +165,11 @@ class BookingController extends Controller
                 'message' => $e->getMessage(),
                 'recommendations' => $recommendations['recommendations'] ?? [],
             ], 409);
+        }
+
+        if (! $isInPerson) {
+            $user->support = true;
+            $user->save();
         }
 
         NotificationController::notify(

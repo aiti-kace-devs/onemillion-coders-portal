@@ -643,7 +643,9 @@ class StudentOperation extends Controller
         $user = Auth::guard('web')->user()->only(['id', 'name', 'userId']);
         $admission = UserAdmission::where('user_id', $user['userId'])->firstOrFail();
         $course = Course::find($admission->course_id);
-        $sessions = CourseSession::where('course_id', $course->id)->get();
+        $sessions = CourseSession::where('course_id', $course->id)
+            ->where('session_type', CourseSession::TYPE_COURSE)
+            ->get();
 
         $sessions = $sessions->map(function ($session) {
             $session->slotLeft = $session->slotLeft();
@@ -688,7 +690,10 @@ class StudentOperation extends Controller
                 ]);
             }
             $courseDetails = Course::find($admission->course_id);
-            $session = CourseSession::where('course_id', $courseDetails->id)->where('id', $data['session_id'])->first();
+            $session = CourseSession::where('course_id', $courseDetails->id)
+                ->where('session_type', CourseSession::TYPE_COURSE)
+                ->where('id', $data['session_id'])
+                ->first();
 
             if (!$session) {
                 return redirect()->back()->with([

@@ -114,6 +114,8 @@ class AvailabilityController extends Controller
         // Get active sessions for this course type or centre-specific for in-person
         if ($isInPerson) {
             $sessions = CourseSession::where('course_id', $courseId)
+                ->where('centre_id', $centre->id)
+                ->where('session_type', CourseSession::TYPE_CENTRE)
                 ->where('status', true)
                 ->get();
         } else {
@@ -144,15 +146,21 @@ class AvailabilityController extends Controller
             );
         }
 
-        $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats, $isInPerson) {
-            $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, $isInPerson) {
+        $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats, $isInPerson, $bookingService, $centre, $forProtocol) {
+            $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, $isInPerson, $bookingService, $centre, $forProtocol) {
                 $key = "{$batch->id}:{$session->id}";
+                $remaining = $isInPerson
+                    ? $bookingService->getRemainingSeatsForCourseSession($centre->id, $batch->id, $session->id, $forProtocol)
+                    : ($remainingSeats[$key] ?? 0);
 
                 return [
                     'session_id' => $session->id,
+                    'course_session_id' => $isInPerson ? $session->id : null,
                     'session_name' => $isInPerson ? ($session->session ?? 'Unknown') : ($session->session_type ?? $session->name ?? optional($session->masterSession)->session_type ?? 'Unknown Session'),
                     'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? 'Unknown',
-                    'remaining' => $isInPerson ? ($session->limit ?? 0) : ($remainingSeats[$key] ?? 0),
+                    'remaining' => $remaining,
+                    'show_seat_count' => $isInPerson ? ($session->limit !== null && (int) $session->limit > 0) : true,
+                    'limit' => $isInPerson && $session->limit !== null ? (int) $session->limit : null,
                 ];
             })->values()->toArray();
 
