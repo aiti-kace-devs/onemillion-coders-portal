@@ -1007,6 +1007,13 @@ export default function CoursesPage({ params }) {
     closeEnrollmentModal();
   };
 
+  // Waitlist close → send the user back to the Laravel student dashboard
+  // (iframe-aware), then reset modal state for the non-iframe case.
+  const handleWaitlistClose = () => {
+    redirectToStudentDashboard();
+    closeEnrollmentModal();
+  };
+
   const closeEnrollmentModal = () => {
     setEnrollmentStep(null);
     setEnrollingCourseId(null);
@@ -1207,10 +1214,10 @@ export default function CoursesPage({ params }) {
                             .
                           </p>
                           <button
-                            onClick={closeEnrollmentModal}
+                            onClick={handleWaitlistClose}
                             className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
                           >
-                            Close
+                            Go to my dashboard
                           </button>
                         </div>
                       )}
