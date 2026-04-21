@@ -28,6 +28,7 @@ use App\Services\JwtService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
@@ -940,35 +941,45 @@ class StudentOperation extends Controller
         $delete_user_admission = UserAdmission::where('user_id', $user->userId)->first();
 
         if ($delete_user_admission) {
-            $courseId = (int) $delete_user_admission->course_id;
+            try {
+                return DB::transaction(function () use ($delete_user_admission, $user) {
+                    $courseId = (int) $delete_user_admission->course_id;
 
-            activity()->withoutLogs(function () use ($delete_user_admission, $user) {
-                $delete_user_admission->delete();
-                $user->update([
-                    'shortlist' => 0,
-                    'registered_course' => null,
-                ]);
-            });
+                    activity()->withoutLogs(function () use ($delete_user_admission, $user) {
+                        $delete_user_admission->delete();
+                        $user->update([
+                            'shortlist' => 0,
+                            'registered_course' => null,
+                            'student_id' => null,
+                        ]);
+                    });
 
-            // Clean up any stale waitlist entries for this user
-            \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
-                ->whereIn('status', ['pending', 'notified'])
-                ->update(['status' => 'removed']);
+                    // Clean up any stale waitlist entries for this user
+                    \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
+                        ->delete();
 
-            AdmissionRejection::create([
-                'user_id' => $user->userId,
-                'course_id' => $courseId,
-                'rejected_at' => now(),
-            ]);
+                    \App\Models\Booking::where('user_id', $user->userId)->delete();
+                    \App\Models\UserCourseRecommendation::where('user_id', $user->userId)->delete();
 
-            event(new AdmissionDeleted($courseId));
+                    AdmissionRejection::create([
+                        'user_id' => $user->userId,
+                        'course_id' => $courseId,
+                        'rejected_at' => now(),
+                    ]);
 
-            activity('user_admission')
-                ->causedBy($user)
-                ->event('Admission Deleted')
-                ->log("$user->name deleted admission successfully!");
+                    event(new AdmissionDeleted($courseId));
 
-            return Redirect::route('student.application-status');
+                    activity('user_admission')
+                        ->causedBy($user)
+                        ->event('Admission Deleted')
+                        ->log("$user->name deleted admission successfully!");
+
+                    return Redirect::route('student.application-status');
+                });
+            } catch (\Exception $e) {
+                Log::error('Error deleting admission: ' . $e->getMessage(), ['user_id' => $user->userId]);
+                throw $e;
+            }
         } else {
             return response()->json(['message' => 'User admission not found.'], 404);
         }
