@@ -163,7 +163,7 @@ class BookingController extends Controller
             $user->id,
             'COURSE_SELECTION',
             'Enrollment Confirmed',
-            'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong> (self-paced). You will be notified of next steps.'
+            'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong> (self-paced). Thank you for enrolling.'
         );
 
         return response()->json([

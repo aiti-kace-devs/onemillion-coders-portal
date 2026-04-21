@@ -924,7 +924,7 @@ class StudentOperation extends Controller
             $user->id,
             'COURSE_SELECTION',
             'Course Selected',
-            'You have successfully selected <strong>' . e($newCourse->course_name) . '</strong>. You will be notified of next steps.'
+            'You have successfully selected <strong>' . e($newCourse->course_name) . '</strong>. Thank you for your selection.'
         );
 
         return redirect()->route('student.application-status');
@@ -1000,6 +1000,7 @@ class StudentOperation extends Controller
                         'user_id' => $user->userId,
                         'course_id' => $courseId,
                         'reason' => $request->input('reason'),
+                        'revoked_by' => 'self',
                         'rejected_at' => now(),
                     ]);
 
@@ -1383,7 +1384,7 @@ class StudentOperation extends Controller
     {
         $notifications = Notification::where('user_id', Auth::id())
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->paginate(10);
 
         return Inertia::render('Student/Notifications/Index', compact('notifications'));
     }
