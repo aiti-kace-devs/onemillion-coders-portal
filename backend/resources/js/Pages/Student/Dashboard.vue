@@ -23,10 +23,45 @@ const isOnWaitlist = computed(() => !!user.value?.on_waitlist);
 const onboardingStep = computed(
     () => user.value?.current_onboarding_step ?? null,
 );
-const showCourseModal = ref(
-    onboardingStep.value === "course_selection" && !props.isInAdmissionCooldown,
+const showOnboardingModal = ref(
+    !!onboardingStep.value && !props.isInAdmissionCooldown,
 );
 const showCooldownModal = ref(props.isInAdmissionCooldown);
+
+const onboardingModalConfig = computed(() => {
+    const step = onboardingStep.value;
+    const configs = {
+        application_review: {
+            icon: 'menu_book',
+            title: 'Review Your Application',
+            message: 'Before you begin, please take a few minutes to review the enrollment process and understand each step ahead.',
+            buttonText: 'Start Review',
+            route: 'student.application-review.index',
+        },
+        assessment: {
+            icon: 'psychology',
+            title: 'Complete Your Assessment',
+            message: 'You need to complete the level determination assessment. This short test helps us place you at the right starting level.',
+            buttonText: 'Take Assessment',
+            route: 'student.level-assessment',
+        },
+        identity_verification: {
+            icon: 'verified_user',
+            title: 'Verify Your Identity',
+            message: 'Please complete your Ghana Card identity verification to continue your enrollment.',
+            buttonText: 'Start Verification',
+            route: 'student.verification.index',
+        },
+        course_selection: {
+            icon: 'school',
+            title: 'Choose a Course',
+            message: "You haven't selected a course yet. Please choose a course to continue your enrollment.",
+            buttonText: 'Choose a Course',
+            route: 'student.change-course',
+        },
+    };
+    return configs[step] || null;
+});
 
 const hasRegisteredCourse = computed(() => !!props.registeredCourse);
 
@@ -204,40 +239,40 @@ const greeting = computed(() => {
             </div>
         </Modal>
 
+        <!-- Onboarding Step Modal (dynamic for all steps) -->
         <Modal
-            :show="showCourseModal"
+            :show="showOnboardingModal && !!onboardingModalConfig"
             max-width="md"
-            @close="showCourseModal = false"
+            @close="showOnboardingModal = false"
         >
-            <div class="text-center">
+            <div v-if="onboardingModalConfig" class="text-center">
                 <div
                     class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100"
                 >
                     <span
                         class="material-symbols-outlined text-3xl text-amber-700"
-                        >menu_book</span
+                        >{{ onboardingModalConfig.icon }}</span
                     >
                 </div>
                 <h3 class="text-lg font-semibold text-gray-900">
-                    Choose a Course
+                    {{ onboardingModalConfig.title }}
                 </h3>
                 <p class="mt-2 text-sm text-gray-600">
-                    You haven't selected a course yet. Please choose a course to
-                    continue your enrollment.
+                    {{ onboardingModalConfig.message }}
                 </p>
                 <div class="mt-6 flex items-center justify-center gap-3">
                     <button
                         type="button"
                         class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
-                        @click="showCourseModal = false"
+                        @click="showOnboardingModal = false"
                     >
                         Close
                     </button>
                     <Link
-                        :href="route('student.change-course')"
+                        :href="route(onboardingModalConfig.route)"
                         class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-gray-900 bg-[#f9a825] hover:bg-[#e09621] transition-colors"
                     >
-                        Choose a Course
+                        {{ onboardingModalConfig.buttonText }}
                     </Link>
                 </div>
             </div>
