@@ -326,11 +326,21 @@ export const getCentreProgrammes = async (centreId) => {
 /**
  * Fetch districts in a specific branch/region
  * @param {string|number} branchId - Branch/Region ID
+ * @param {string} [token] - Optional auth token
+ * @param {string|number} [programmeId] - Optional programme ID; when provided the
+ *   backend filters centre counts to centres with availability for that programme.
  * @returns {Promise<Object>} - Districts data
  */
-export const getDistrictsByBranch = async (branchId, token) => {
+export const getDistrictsByBranch = async (branchId, token, programmeId) => {
   try {
-    const response = await apiRequest(`/districts-by-branch?branch_id=${branchId}&add_centre_count=true`, {
+    const params = new URLSearchParams({
+      branch_id: String(branchId),
+      add_centre_count: "true",
+    });
+    if (programmeId != null && programmeId !== "") {
+      params.set("programme_id", String(programmeId));
+    }
+    const response = await apiRequest(`/districts-by-branch?${params.toString()}`, {
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     return response;
@@ -388,12 +398,18 @@ export const getTotalCentresCount = async () => {
 
 /**
  * Fetch all regions with their centre counts
- * @param {string|number} token - Optional auth token
+ * @param {string} [token] - Optional auth token
+ * @param {string|number} [programmeId] - Optional programme ID; when provided the
+ *   backend filters centre counts to centres with availability for that programme.
  * @returns {Promise<Array>} - Regions data with centre counts
  */
-export const getAllRegionsWithCentreCounts = async (token) => {
+export const getAllRegionsWithCentreCounts = async (token, programmeId) => {
   try {
-    const response = await apiRequest("/branches?add_centre_count=true", {
+    const params = new URLSearchParams({ add_centre_count: "true" });
+    if (programmeId != null && programmeId !== "") {
+      params.set("programme_id", String(programmeId));
+    }
+    const response = await apiRequest(`/branches?${params.toString()}`, {
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),
     });
     const filteredRegions = response?.data?.filter((item) => {
