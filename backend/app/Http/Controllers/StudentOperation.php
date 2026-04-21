@@ -48,6 +48,10 @@ class StudentOperation extends Controller
                 ->whereIn('status', ['pending', 'notified'])
                 ->exists();
 
+        // Check admission cooldown
+        $isInCooldown = $this->isInAdmissionCooldown($user);
+        $cooldownTimeRemaining = $isInCooldown ? $this->getAdmissionCooldownTimeRemaining($user) : null;
+
         $questionnaires = Questionnaire::where('active', true)
             ->latest()
             ->get(['id', 'title', 'code'])
@@ -143,6 +147,8 @@ class StudentOperation extends Controller
                 'id' => $userAdmission->id,
                 'confirmed' => (bool) $userAdmission->confirmed,
             ] : null,
+            'isInAdmissionCooldown' => $isInCooldown,
+            'admissionCooldownTimeRemaining' => $cooldownTimeRemaining,
         ]);
     }
 
