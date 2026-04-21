@@ -9,9 +9,11 @@ use App\Models\CourseSession;
 use App\Models\MasterSession;
 use App\Models\Programme;
 use App\Models\ProgrammeBatch;
+use App\Models\UserAdmission;
 use App\Services\AvailabilityService;
 use App\Services\BookingService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -43,128 +45,177 @@ class AvailabilityController extends Controller
      * GET /api/availability/batches?course_id=X&centre_id=Y
      * POST /api/availability/batches { "course_id": X, "centre_id": Y }
      */
-    public function batches(Request $request, BookingService $bookingService): JsonResponse
-    {
-        $request->validate([
-            'course_id' => 'required|integer|exists:courses,id',
-        ]);
+public function batches(Request $request, BookingService $bookingService): JsonResponse
+{
+    $request->validate([
+        'course_id' => 'required|integer|exists:courses,id',
+    ]);
 
-        $courseId = (int) $request->input('course_id');
+    $courseId = (int) $request->input('course_id');
 
-        $course = Course::with(['programme.courseCertification', 'centre.branch', 'centre.districts'])->find($courseId);
+    $course = Course::with(['programme.courseCertification', 'centre.branch', 'centre.districts'])->find($courseId);
 
-        if (! $course || ! $course->programme || ! $course->centre) {
-            return response()->json(['success' => false, 'message' => 'Course or centre not found.'], 404);
-        }
+    if (! $course || ! $course->programme || ! $course->centre) {
+        return response()->json(['success' => false, 'message' => 'Course or centre not found.'], 404);
+    }
 
-        $centre = $course->centre;
-        $programme = $course->programme;
-        $courseType = $programme->courseType();
-        $isInPerson = $programme->isInPerson();
+    $centre = $course->centre;
+    $programme = $course->programme;
+    $courseType = $programme->courseType();
+    $isInPerson = $programme->isInPerson();
 
-        $regionName = $centre->branch?->title;
-        $districtName = $centre->districts->first()?->title;
-        $certificateTitle = $programme->courseCertification->first()?->title;
+    $regionName = $centre->branch?->title;
+    $districtName = $centre->districts->first()?->title;
+    $certificateTitle = $programme->courseCertification->first()?->title;
 
-        // Find the current active admission batch
-        $today = Carbon::today();
-        $admissionBatch = Batch::where('start_date', '<=', $today)
-            ->where('end_date', '>=', $today)
-            ->where('status', true)
-            ->where('completed', false)
-            ->first();
+    // Find the current active admission batch
+    $today = Carbon::today();
+    $admissionBatch = Batch::where('start_date', '<=', $today)
+        ->where('end_date', '>=', $today)
+        ->where('status', true)
+        ->where('completed', false)
+        ->first();
 
-        if (! $admissionBatch) {
-            return response()->json([
-                'success' => true,
-                'centre' => ['id' => $centre->id, 'title' => $centre->title],
-                'course_type' => $courseType,
-                'capacity' => $isInPerson ? null : $centre->slotCapacityFor($courseType),
-                'region_name' => $regionName,
-                'district_name' => $districtName,
-                'certificate_title' => $certificateTitle,
-                'batches' => [],
-            ]);
-        }
-
-        // Find active programme batches with eager loading
-        $batches = ProgrammeBatch::where('admission_batch_id', $admissionBatch->id)
-            ->where('programme_id', $programme->id)
-            ->where('status', true)
-            ->orderBy('start_date')
-            ->get();
-
-        if ($batches->isEmpty()) {
-            return response()->json([
-                'success' => true,
-                'centre' => ['id' => $centre->id, 'title' => $centre->title],
-                'course_type' => $courseType,
-                'capacity' => $isInPerson ? null : $centre->slotCapacityFor($courseType),
-                'region_name' => $regionName,
-                'district_name' => $districtName,
-                'certificate_title' => $certificateTitle,
-                'batches' => [],
-            ]);
-        }
-
-        // Get active sessions for this course type or centre-specific for in-person
-        if ($isInPerson) {
-            $sessions = CourseSession::where('course_id', $courseId)
-                ->where('status', true)
-                ->get();
-        } else {
-            $sessions = MasterSession::where('course_type', $courseType)
-                ->where('status', true)
-                ->where('session_type', '!=', 'Online')
-                ->get();
-        }
-        $sessions = $this->sortMasterSessions($sessions);
-
-        // Calculate capacity
-        $capacity = $isInPerson ? $sessions->sum('limit') : $centre->slotCapacityFor($courseType);
-
-        // Batch fetch all remaining seats at once (only for master sessions)
-        $remainingSeats = [];
-        if (! $isInPerson) {
-            $remainingSeats = $bookingService->getRemainingSeatsBatch(
-                $centre->id,
-                $batches->pluck('id')->toArray(),
-                $sessions->pluck('id')->toArray()
-            );
-        }
-
-        $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats, $isInPerson) {
-            $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, $isInPerson) {
-                $key = "{$batch->id}:{$session->id}";
-
-                return [
-                    'session_id' => $session->id,
-                    'session_name' => $isInPerson ? ($session->session ?? 'Unknown') : ($session->session_type ?? $session->name ?? optional($session->masterSession)->session_type ?? 'Unknown Session'),
-                    'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? 'Unknown',
-                    'remaining' => $isInPerson ? ($session->limit ?? 0) : ($remainingSeats[$key] ?? 0),
-                ];
-            })->values()->toArray();
-
-            return [
-                'id' => $batch->id,
-                'batch' => 'Cohort '.($index + 1),
-                'start_date' => $batch->start_date->format('Y-m-d'),
-                'end_date' => $batch->end_date->format('Y-m-d'),
-                'sessions' => $sessionData,
-            ];
-        })->values()->toArray();
-
+    if (! $admissionBatch) {
         return response()->json([
             'success' => true,
             'centre' => ['id' => $centre->id, 'title' => $centre->title],
             'course_type' => $courseType,
-            'capacity' => $isInPerson ? null : $capacity,
+            'capacity' => $isInPerson ? null : $centre->slotCapacityFor($courseType),
             'region_name' => $regionName,
             'district_name' => $districtName,
             'certificate_title' => $certificateTitle,
-            'batches' => $batchData,
+            'batches' => [],
         ]);
     }
+
+    // Find active programme batches with eager loading
+    $batches = ProgrammeBatch::where('admission_batch_id', $admissionBatch->id)
+        ->where('programme_id', $programme->id)
+        ->where('status', true)
+        ->orderBy('start_date')
+        ->get();
+
+    if ($batches->isEmpty()) {
+        return response()->json([
+            'success' => true,
+            'centre' => ['id' => $centre->id, 'title' => $centre->title],
+            'course_type' => $courseType,
+            'capacity' => $isInPerson ? null : $centre->slotCapacityFor($courseType),
+            'region_name' => $regionName,
+            'district_name' => $districtName,
+            'certificate_title' => $certificateTitle,
+            'batches' => [],
+        ]);
+    }
+
+    // Get active sessions for this course type or centre-specific for in-person
+    if ($isInPerson) {
+        $sessions = CourseSession::where('course_id', $courseId)
+            ->where('status', true)
+            ->get();
+    } else {
+        $sessions = MasterSession::where('course_type', $courseType)
+            ->where('status', true)
+            ->where('session_type', '!=', 'Online')
+            ->get();
+    }
+    $sessions = $this->sortMasterSessions($sessions);
+
+    // Calculate capacity
+    $capacity = $isInPerson ? $sessions->sum('limit') : $centre->slotCapacityFor($courseType);
+
+    // Batch fetch all remaining seats at once (only for master sessions)
+    $remainingSeats = [];
+    if (! $isInPerson) {
+        $remainingSeats = $bookingService->getRemainingSeatsBatch(
+            $centre->id,
+            $batches->pluck('id')->toArray(),
+            $sessions->pluck('id')->toArray()
+        );
+    }
+
+    // ✅ Pre-fetch booked counts for in-person sessions (to avoid N+1 queries)
+    $inPersonBookedCounts = [];
+    if ($isInPerson && $sessions->isNotEmpty()) {
+        $sessionIds = $sessions->pluck('id')->toArray();
+        $batchIds = $batches->pluck('id')->toArray();
+        
+        // ✅ Count by programme_batch_id + session (composite key)
+        $booked = UserAdmission::select(
+                'programme_batch_id',
+                'session', 
+                DB::raw('COUNT(*) as count')
+            )
+            ->where('course_id', $courseId)
+            ->whereIn('session', $sessionIds)
+            ->whereIn('programme_batch_id', $batchIds)
+            ->groupBy('programme_batch_id', 'session')
+            ->get()
+            ->pluck('count', function ($row) {
+                return "{$row->programme_batch_id}:{$row->session}";  // Composite key
+            })
+            ->toArray();
+        
+        $inPersonBookedCounts = $booked;
+    }
+
+    $batchData = $batches->values()->map(function ($batch, $index) use (
+        $sessions, 
+        $remainingSeats, 
+        $isInPerson, 
+        $inPersonBookedCounts,
+        $courseId
+    ) {
+        $sessionData = $sessions->map(function ($session) use (
+            $batch, 
+            $remainingSeats, 
+            $isInPerson, 
+            $inPersonBookedCounts,
+            $courseId
+        ) {
+            $key = "{$batch->id}:{$session->id}";
+            
+            // ✅ Calculate remaining slots for in-person: limit - booked count
+            if ($isInPerson) {
+                $key = "{$batch->id}:{$session->id}";  // ✅ Composite key
+                $limit = $session->limit ?? 0;
+                $bookedCount = $inPersonBookedCounts[$key] ?? 0;  // ✅ Per-cohort count
+                $remaining = max(0, $limit - $bookedCount);
+            } else {
+                $remaining = $remainingSeats[$key] ?? 0;
+            }
+
+            return [
+                'session_id' => $session->id,
+                'session_name' => $isInPerson ? ($session->session ?? 'Unknown') : ($session->session_type ?? $session->name ?? optional($session->masterSession)->session_type ?? 'Unknown Session'),
+                'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? 'Unknown',
+                'remaining' => $remaining, // ✅ Now correctly calculated for in-person
+                'limit' => $isInPerson ? ($session->limit ?? 0) : null, // Optional: include limit for frontend display
+                'booked' => $isInPerson ? ($inPersonBookedCounts[$session->id] ?? 0) : null, // Optional: include booked count
+            ];
+        })->values()->toArray();
+
+        return [
+            'id' => $batch->id,
+            'batch' => 'Cohort '.($index + 1),
+            'start_date' => $batch->start_date->format('Y-m-d'),
+            'end_date' => $batch->end_date->format('Y-m-d'),
+            'sessions' => $sessionData,
+        ];
+    })->values()->toArray();
+
+    return response()->json([
+        'success' => true,
+        'centre' => ['id' => $centre->id, 'title' => $centre->title],
+        'course_type' => $courseType,
+        'capacity' => $isInPerson ? null : $capacity,
+        'region_name' => $regionName,
+        'district_name' => $districtName,
+        'certificate_title' => $certificateTitle,
+        'batches' => $batchData,
+    ]);
+}
 
     /**
      * Find other centres in the same branch that offer the same programme,
