@@ -158,11 +158,6 @@ services:
       - "traefik.http.routers.backend.rule=Host(`app.${APP_DOMAIN:-omcp.localhost}`)"
       - "traefik.http.routers.backend.entrypoints=web"
       - "traefik.http.services.backend.loadbalancer.server.port=8080"
-      # Buffering middleware for large headers
-      - "traefik.http.middlewares.buffer-limit.buffering.maxResponseBodyBytes=5000000"
-      - "traefik.http.middlewares.buffer-limit.buffering.memResponseBodyBytes=5000000"
-      - "traefik.http.middlewares.buffer-limit.buffering.maxRequestBodyBytes=5000000"
-      - "traefik.http.middlewares.buffer-limit.buffering.memRequestBodyBytes=5000000"
       # Apply multiple middlewares: CORS and security headers
       - "traefik.http.routers.backend.middlewares=cors,security-headers"
       # CORS middleware

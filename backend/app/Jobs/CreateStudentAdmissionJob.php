@@ -9,7 +9,6 @@ use App\Models\CourseSession;
 use App\Models\User;
 use App\Models\UserAdmission;
 use App\Models\ProgrammeBatch;
-use App\Services\StudentIdGenerator;
 use App\Services\BookingService;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
@@ -114,13 +113,6 @@ class CreateStudentAdmissionJob implements ShouldQueue
             $admission = $existingAdmission;
         } else {
             $admission = UserAdmission::create($admissionData);
-        }
-
-        // Generate a new student ID on every admission
-        $studentId = StudentIdGenerator::generate($this->student, $course);
-        if ($studentId) {
-            $this->student->student_id = $studentId;
-            $this->student->saveQuietly();
         }
 
         if ($this->session) {
