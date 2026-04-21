@@ -221,7 +221,7 @@ const greeting = computed(() => {
                                 <span class="material-symbols-outlined">school</span>
                             </span>
                             <div class="flex-1 text-left">
-                                <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">
+                                <p class="text-gray-500 text-sm font-medium uppercase tracking-wider">
                                     {{ isOnWaitlist ? 'Chosen Course' : 'Registered Course' }}
                                 </p>
                                 <h3 class="text-lg font-bold text-gray-800">
@@ -288,11 +288,11 @@ const greeting = computed(() => {
                 <div class="mt-6 space-y-10">
                     <div>
                         <p
-                            class="mb-1 text-xs font-bold text-gray-400 uppercase tracking-widest"
+                            class="mb-1 text-sm font-bold text-gray-400 uppercase tracking-widest"
                         >
                             Quick access
                         </p>
-                        <p class="mb-4 text-xs text-gray-500 max-w-2xl">
+                        <p class="mb-4 text-sm text-gray-500 max-w-2xl">
                             Application status is your hub for progress and the expected flow; use the shortcuts below to complete each step.
                         </p>
 
@@ -427,7 +427,7 @@ const greeting = computed(() => {
                                                 Next step
                                             </span>
                                             <span
-                                                class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
+                                                class="absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-semibold"
                                                 :class="
                                                     user.verification_completed
                                                         ? 'bg-green-100 text-green-700'
