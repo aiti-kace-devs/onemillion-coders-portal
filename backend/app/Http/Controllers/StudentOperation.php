@@ -44,8 +44,8 @@ class StudentOperation extends Controller
         $user = Auth::user();
         $isOnWaitlist = !$user->registered_course
             && \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
-                ->whereIn('status', ['pending', 'notified'])
-                ->exists();
+            ->whereIn('status', ['pending', 'notified'])
+            ->exists();
 
         $questionnaires = Questionnaire::where('active', true)
             ->latest()
@@ -89,6 +89,7 @@ class StudentOperation extends Controller
                 $registeredCourse = [
                     'id' => $fullCourse->id,
                     'course_name' => $courseName,
+                    'is_online' => strtolower($fullCourse->programme->mode_of_delivery) === 'online',
                 ];
 
                 if ($showPlacementDetails && $fullCourse->batch) {
@@ -131,6 +132,13 @@ class StudentOperation extends Controller
         }
 
         $userAdmission = UserAdmission::where('user_id', $user->userId)->first();
+        // Partner Integration specific data
+        $partnerAdmission = null;
+        if ($userAdmission && $fullCourse?->programme?->partner_id) {
+            $partnerAdmission = \App\Models\PartnerStudentAdmission::where('user_id', $user->userId)
+                ->where('programme_id', $fullCourse->programme->id)
+                ->first();
+        }
 
         return Inertia::render('Student/Dashboard', [
             'questionnaires' => $questionnaires,
@@ -142,6 +150,12 @@ class StudentOperation extends Controller
                 'id' => $userAdmission->id,
                 'confirmed' => (bool) $userAdmission->confirmed,
             ] : null,
+            'partnerAdmission' => $partnerAdmission ? [
+                'id' => $partnerAdmission->id,
+                'partner_name' => $fullCourse->programme->partner?->name,
+                'partner_slug' => $fullCourse->programme->partner?->slug,
+                'status' => $partnerAdmission->enrollment_status,
+            ] : null, // Added partnerAdmission
         ]);
     }
 
@@ -203,8 +217,8 @@ class StudentOperation extends Controller
         $embedUrl = null;
         if ($reviewBase !== null && $reviewBase !== '') {
             $token = app(JwtService::class)->generate($user->id);
-            $embedUrl = $reviewBase.(str_contains($reviewBase, '?') ? '&' : '?')
-                .http_build_query([
+            $embedUrl = $reviewBase . (str_contains($reviewBase, '?') ? '&' : '?')
+                . http_build_query([
                     'embed' => '1',
                     'parent_origin' => $parentOrigin,
                     'token' => $token,
@@ -304,6 +318,34 @@ class StudentOperation extends Controller
     public function level_assessment()
     {
         return Inertia::render('Student/LevelAssessment');
+    }
+
+    /**
+     * SSO Login for Partner Platforms.
+     */
+    public function partner_login($partnerSlug)
+    {
+        $user = Auth::guard('web')->user();
+        $partner = \App\Models\Partner::where('slug', $partnerSlug)->where('active', true)->firstOrFail();
+
+        try {
+            $integration = app(\App\Integrations\Partners\PartnerManager::class)->resolve($partner);
+            $redirectUrl = $integration->loginStudent($user);
+
+            activity('partner')
+                ->causedBy($user)
+                ->performedOn($partner)
+                ->event('Partner SSO Login')
+                ->log("Redirected to {$partner->name} SSO.");
+
+            return Redirect::away($redirectUrl);
+        } catch (\Exception $e) {
+            Log::error("Partner Login Failed: " . $e->getMessage());
+            return Redirect::back()->with([
+                'flash' => 'Could not connect to partner platform. Please try again later.',
+                'key' => 'error',
+            ]);
+        }
     }
 
     // Exam page
@@ -1721,8 +1763,8 @@ class StudentOperation extends Controller
             return null;
         }
 
-        $path = str_starts_with($raw, '/') ? $raw : '/'.$raw;
+        $path = str_starts_with($raw, '/') ? $raw : '/' . $raw;
 
-        return rtrim($websiteBase.$path, '/');
+        return rtrim($websiteBase . $path, '/');
     }
 }

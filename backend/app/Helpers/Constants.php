@@ -34,3 +34,5 @@ define('COURSE_ATTENDANCE_VIEW', 'v_daily_course_attendance');
 define('COURSE_SESSION_ATTENDANCE_VIEW', 'v_daily_course_session_attendance');
 
 define('CLOUD_STORAGE_ALIAS', 'cloud_storage_alias');
+
+define('AUTO_ADMIT', 'AUTO_ADMIT');

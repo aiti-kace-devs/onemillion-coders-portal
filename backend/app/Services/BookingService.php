@@ -113,13 +113,13 @@ class BookingService
                     'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
                 );
 
-                 // Remove from waitlist if exists
+                // Remove from waitlist if exists
                 AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
                 // Clear the cached seat count so the next read reflects this booking
                 Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$session->id}");
 
-                return Booking::create([
+                $booking = Booking::create([
                     'user_id' => $user->userId,
                     'programme_batch_id' => $batch->id,
                     'master_session_id' => $session->id,
@@ -130,6 +130,11 @@ class BookingService
                     'booked_at' => now(),
                     'user_admission_id' => $admission->id,
                 ]);
+
+                // Partner Integration
+                app(\App\Services\PartnerAdmissionService::class)->handleEnrollment($user, $course->programme, $booking);
+
+                return $booking;
             });
         });
     }
