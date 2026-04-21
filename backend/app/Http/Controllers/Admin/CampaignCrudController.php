@@ -12,6 +12,7 @@ use App\Models\Centre;
 use App\Models\ProgrammeBatch;
 use App\Models\MasterSession;
 use App\Models\CourseSession;
+use Request;
 
 /**
  * Class CampaignCrudController
@@ -254,4 +255,70 @@ class CampaignCrudController extends CrudController
         \Alert::success('Campaign sent successfully!')->flash();
         return redirect()->back();
     }
+
+
+
+
+
+
+
+
+    public function getBranches()
+    {
+        $branches = Branch::select('id', 'name as title')->get();
+        return response()->json($branches);
+    }
+
+    public function getDistricts(Request $request)
+    {
+        $branchIds = $request->input('branch_ids', []);
+        
+        $districts = District::whereIn('branch_id', $branchIds)
+            ->select('id', 'name as title')
+            ->get();
+        
+        return response()->json($districts);
+    }
+
+    public function getCentres(Request $request)
+    {
+        $districtIds = $request->input('district_ids', []);
+        
+        $centres = Centre::whereIn('district_id', $districtIds)
+            ->select('id', 'name as title')
+            ->get();
+        
+        return response()->json($centres);
+    }
+
+    public function getCourses(Request $request)
+    {
+        $centreIds = $request->input('centre_ids', []);
+        
+        $courses = Course::whereIn('centre_id', $centreIds)
+            ->select('id', 'name as title')
+            ->get();
+        
+        return response()->json($courses);
+    }
+
+    public function getSessions(Request $request)
+    {
+        $courseIds = $request->input('course_ids', []);
+        
+        $masterSessions = MasterSession::whereIn('course_id', $courseIds)
+            ->select('id', \DB::raw("CONCAT('Master - ', name) as title"))
+            ->get();
+        
+        $courseSessions = CourseSession::whereIn('course_id', $courseIds)
+            ->select('id', \DB::raw("CONCAT('Course - ', name) as title"))
+            ->get();
+        
+        $sessions = $masterSessions->merge($courseSessions);
+        
+        return response()->json($sessions);
+    }
+
+
+
 }

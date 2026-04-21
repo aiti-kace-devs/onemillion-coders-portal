@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\Api\CourseMatchAPIController;
 use App\Http\Controllers\Admin\BatchCrudController;
+use App\Http\Controllers\Admin\CampaignCrudController;
 use App\Http\Controllers\StatamicEntryApiController;
 use App\Http\Controllers\StudentOperation;
 use App\Http\Controllers\CampaignTargetingController;
@@ -30,7 +31,6 @@ Route::prefix('campaign-targeting')->name('api.campaign-targeting.')->group(func
     Route::post('/courses', [CampaignTargetingController::class, 'getCoursesByCentres'])->name('courses');
     Route::post('/sessions', [CampaignTargetingController::class, 'getSessionsByCourses'])->name('sessions');
 });
-
 // Availability endpoint
 Route::get('/availability', [\App\Http\Controllers\AvailabilityController::class, 'index'])->name('api.availability');
 

@@ -61,8 +61,8 @@
                                     <div class="row mb-3">
                                         <div class="col-md-6">
                                             <label class="form-label" for="branches"><strong>Branches</strong></label>
-                                            <select class="form-select form-select-targeting" id="branches" name="target_branches[]" multiple data-loaded="false">
-                                                <option value="">Loading branches...</option>
+                                            <select class="form-select form-select-targeting" id="branches" name="target_branches[]" multiple>
+                                                <option value="">Select branches...</option>
                                             </select>
                                             <small class="text-muted">Leave empty to include all branches</small>
                                         </div>
@@ -70,7 +70,7 @@
                                         <!-- Districts -->
                                         <div class="col-md-6">
                                             <label class="form-label" for="districts"><strong>Districts</strong></label>
-                                            <select class="form-select form-select-targeting" id="districts" name="target_districts[]" multiple disabled data-loaded="false">
+                                            <select class="form-select form-select-targeting" id="districts" name="target_districts[]" multiple disabled>
                                                 <option value="">Select branches first</option>
                                             </select>
                                             <small class="text-muted">Only shows districts from selected branches</small>
@@ -81,7 +81,7 @@
                                     <div class="row mb-3">
                                         <div class="col-md-6">
                                             <label class="form-label" for="centres"><strong>Centres</strong></label>
-                                            <select class="form-select form-select-targeting" id="centres" name="target_centres[]" multiple disabled data-loaded="false">
+                                            <select class="form-select form-select-targeting" id="centres" name="target_centres[]" multiple disabled>
                                                 <option value="">Select districts first</option>
                                             </select>
                                             <small class="text-muted">Only shows centres from selected districts</small>
@@ -90,7 +90,7 @@
                                         <!-- Courses -->
                                         <div class="col-md-6">
                                             <label class="form-label" for="courses"><strong>Courses</strong></label>
-                                            <select class="form-select form-select-targeting" id="courses" name="target_courses[]" multiple disabled data-loaded="false">
+                                            <select class="form-select form-select-targeting" id="courses" name="target_courses[]" multiple disabled>
                                                 <option value="">Select centres first</option>
                                             </select>
                                             <small class="text-muted">Only shows courses from selected centres</small>
@@ -101,7 +101,7 @@
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label class="form-label" for="sessions"><strong>Sessions</strong></label>
-                                            <select class="form-select form-select-targeting" id="sessions" name="target_course_sessions[]" multiple disabled data-loaded="false">
+                                            <select class="form-select form-select-targeting" id="sessions" name="target_course_sessions[]" multiple disabled>
                                                 <option value="">Select courses first</option>
                                             </select>
                                             <small class="text-muted">Only shows sessions from selected courses. Includes both Master and Course sessions.</small>
@@ -172,34 +172,31 @@
         padding-top: 20px;
         border-top: 1px solid #e9ecef;
     }
+    .select2-container--bootstrap-5 .select2-selection {
+        min-height: 38px;
+    }
 </style>
 
-<!-- Select2 CSS & JS -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-<!-- TinyMCE Open Source CDN (No API Key Required) -->
+
+
+<!-- Backpack Select2 Assets (use Backpack's bundled version) -->
+@if (backpack_theme_config('scripts') && array_key_exists('select2', backpack_theme_config('scripts')))
+    @foreach (backpack_theme_config('scripts')['select2'] as $path)
+        <script src="{{ asset($path) }}"></script>
+    @endforeach
+@endif
+
+@if (backpack_theme_config('styles') && array_key_exists('select2', backpack_theme_config('styles')))
+    @foreach (backpack_theme_config('styles')['select2'] as $path)
+        <link href="{{ asset($path) }}" rel="stylesheet" />
+    @endforeach
+@endif
+
+<!-- TinyMCE -->
 <script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js"></script>
 
 <script>
-// Performance optimization: Data cache to avoid re-fetching
-const dataCache = {
-    branches: null,
-    districts: {},
-    centres: {},
-    courses: {},
-    sessions: {}
-};
-
-const loadingState = {
-    branches: false,
-    districts: false,
-    centres: false,
-    courses: false,
-    sessions: false
-};
-
 // Initialize TinyMCE
 tinymce.init({
     selector: '.tinymce-editor',
@@ -210,9 +207,7 @@ tinymce.init({
     height: 300,
     paste_data_images: false,
     setup: function(ed) {
-        ed.on('change', function(e) {
-            ed.save();
-        });
+        ed.on('change', function(e) { ed.save(); });
     }
 });
 
@@ -226,70 +221,239 @@ function insertVariable(variable) {
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         const text = textarea.value;
-        const newText = text.substring(0, start) + variable + text.substring(end);
-        textarea.value = newText;
+        textarea.value = text.substring(0, start) + variable + text.substring(end);
         textarea.focus();
     }
 }
 
-// Initialize Select2 with optimizations
 document.addEventListener('DOMContentLoaded', function() {
     initializeSelect2();
+    loadBranches(); // Load immediately, not on open
     setupEventListeners();
-    updateTargetSummary();
 });
 
 function initializeSelect2() {
-    const selects = document.querySelectorAll('.form-select-targeting');
-    
-    selects.forEach(select => {
-        $(select).select2({
+    $('.form-select-targeting').each(function() {
+        const $el = $(this);
+        if ($el.data('select2')) $el.select2('destroy');
+        
+        $el.select2({
             theme: 'bootstrap-5',
             width: '100%',
-            placeholder: select.getAttribute('placeholder') || 'Select options...',
+            placeholder: $el.attr('placeholder') || 'Select options...',
             allowClear: true,
             minimumResultsForSearch: 5,
-            language: {
-                noResults: function() {
-                    return "No results found";
-                }
-            }
+            closeOnSelect: false // Keep dropdown open for multi-select
         });
     });
+}
 
-    // Lazy load branches on first open
-    $('#branches').on('select2:opening', async function() {
-        if (!dataCache.branches && !loadingState.branches) {
-            loadingState.branches = true;
-            await loadBranches();
-        }
-    });
+async function loadBranches() {
+    const $select = $('#branches');
+    $select.prop('disabled', true).html('<option>Loading branches...</option>');
+    
+    try {
+        const response = await fetch('/api/campaign-targeting/branches');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const branches = await response.json();
+        
+        $select.empty().append('<option value="">Select branches...</option>');
+        branches.forEach(b => {
+            $select.append(new Option(b.title, b.id, false, false));
+        });
+        
+        $select.prop('disabled', false).trigger('change');
+        
+    } catch (error) {
+        console.error('Error loading branches:', error);
+        $select.prop('disabled', false)
+               .empty()
+               .append('<option value="">Error loading branches</option>')
+               .trigger('change');
+    }
+}
 
-    // Lazy load districts on change
+async function loadDistricts() {
+    const branchIds = $('#branches').val() || [];
+    const $select = $('#districts');
+    
+    if (!branchIds.length) {
+        $select.prop('disabled', true).val(null).trigger('change')
+               .empty().append('<option value="">Select branches first</option>');
+        return;
+    }
+
+    $select.prop('disabled', true).html('<option>Loading districts...</option>');
+    
+    try {
+        const response = await fetch('/api/campaign-targeting/districts', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value 
+            },
+            body: JSON.stringify({ branch_ids: branchIds })
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const districts = await response.json();
+        
+        $select.empty().append('<option value="">Select districts...</option>');
+        districts.forEach(d => {
+            $select.append(new Option(d.title, d.id, false, false));
+        });
+        
+        $select.prop('disabled', false).trigger('change');
+        
+    } catch (error) {
+        console.error('Error loading districts:', error);
+        $select.prop('disabled', false)
+               .empty()
+               .append('<option value="">Error loading districts</option>')
+               .trigger('change');
+    }
+}
+
+async function loadCentres() {
+    const districtIds = $('#districts').val() || [];
+    const $select = $('#centres');
+    
+    if (!districtIds.length) {
+        $select.prop('disabled', true).val(null).trigger('change')
+               .empty().append('<option value="">Select districts first</option>');
+        return;
+    }
+
+    $select.prop('disabled', true).html('<option>Loading centres...</option>');
+    
+    try {
+        const response = await fetch('/api/campaign-targeting/centres', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value 
+            },
+            body: JSON.stringify({ district_ids: districtIds })
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const centres = await response.json();
+        
+        $select.empty().append('<option value="">Select centres...</option>');
+        centres.forEach(c => {
+            $select.append(new Option(c.title, c.id, false, false));
+        });
+        
+        $select.prop('disabled', false).trigger('change');
+        
+    } catch (error) {
+        console.error('Error loading centres:', error);
+        $select.prop('disabled', false)
+               .empty()
+               .append('<option value="">Error loading centres</option>')
+               .trigger('change');
+    }
+}
+
+async function loadCourses() {
+    const centreIds = $('#centres').val() || [];
+    const $select = $('#courses');
+    
+    if (!centreIds.length) {
+        $select.prop('disabled', true).val(null).trigger('change')
+               .empty().append('<option value="">Select centres first</option>');
+        return;
+    }
+
+    $select.prop('disabled', true).html('<option>Loading courses...</option>');
+    
+    try {
+        const response = await fetch('/api/campaign-targeting/courses', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value 
+            },
+            body: JSON.stringify({ centre_ids: centreIds })
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const courses = await response.json();
+        
+        $select.empty().append('<option value="">Select courses...</option>');
+        courses.forEach(c => {
+            $select.append(new Option(c.title, c.id, false, false));
+        });
+        
+        $select.prop('disabled', false).trigger('change');
+        
+    } catch (error) {
+        console.error('Error loading courses:', error);
+        $select.prop('disabled', false)
+               .empty()
+               .append('<option value="">Error loading courses</option>')
+               .trigger('change');
+    }
+}
+
+async function loadSessions() {
+    const courseIds = $('#courses').val() || [];
+    const $select = $('#sessions');
+    
+    if (!courseIds.length) {
+        $select.prop('disabled', true).val(null).trigger('change')
+               .empty().append('<option value="">Select courses first</option>');
+        return;
+    }
+
+    $select.prop('disabled', true).html('<option>Loading sessions...</option>');
+    
+    try {
+        const response = await fetch('/api/campaign-targeting/sessions', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value 
+            },
+            body: JSON.stringify({ course_ids: courseIds })
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const sessions = await response.json();
+        
+        $select.empty().append('<option value="">Select sessions...</option>');
+        sessions.forEach(s => {
+            $select.append(new Option(s.title, s.id, false, false));
+        });
+        
+        $select.prop('disabled', false).trigger('change');
+        
+    } catch (error) {
+        console.error('Error loading sessions:', error);
+        $select.prop('disabled', false)
+               .empty()
+               .append('<option value="">Error loading sessions</option>')
+               .trigger('change');
+    }
+}
+
+function setupEventListeners() {
     $('#branches').on('change', async function() {
         await loadDistricts();
-        $('#centres').val(null).trigger('change');
-        $('#courses').val(null).trigger('change');
-        $('#sessions').val(null).trigger('change');
-        $('#centres').prop('disabled', true);
-        $('#courses').prop('disabled', true);
-        $('#sessions').prop('disabled', true);
+        resetDependents(['centres', 'courses', 'sessions']);
         updateTargetSummary();
     });
 
     $('#districts').on('change', async function() {
         await loadCentres();
-        $('#courses').val(null).trigger('change');
-        $('#sessions').val(null).trigger('change');
-        $('#courses').prop('disabled', true);
-        $('#sessions').prop('disabled', true);
+        resetDependents(['courses', 'sessions']);
         updateTargetSummary();
     });
 
     $('#centres').on('change', async function() {
         await loadCourses();
-        $('#sessions').val(null).trigger('change');
-        $('#sessions').prop('disabled', true);
+        resetDependents(['sessions']);
         updateTargetSummary();
     });
 
@@ -301,209 +465,37 @@ function initializeSelect2() {
     $('#sessions').on('change', updateTargetSummary);
 }
 
-async function loadBranches() {
-    if (dataCache.branches) return;
-    
-    try {
-        const response = await fetch('/api/campaign-targeting/branches');
-        dataCache.branches = await response.json();
-        populateSelect('branches', dataCache.branches);
-    } catch (error) {
-        console.error('Error loading branches:', error);
-        loadingState.branches = false;
-    }
-}
-
-async function loadDistricts() {
-    const branchIds = $('#branches').val() || [];
-    
-    if (!branchIds || branchIds.length === 0) {
-        $('#districts').prop('disabled', true).val(null).trigger('change');
-        $('#districts').select2('data', []);
-        return;
-    }
-
-    $('#districts').prop('disabled', false);
-    const cacheKey = branchIds.join(',');
-    
-    if (dataCache.districts[cacheKey]) {
-        populateSelect('districts', dataCache.districts[cacheKey]);
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/campaign-targeting/districts', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value 
-            },
-            body: JSON.stringify({ branch_ids: branchIds })
-        });
-        const data = await response.json();
-        dataCache.districts[cacheKey] = data;
-        populateSelect('districts', data);
-    } catch (error) {
-        console.error('Error loading districts:', error);
-    }
-}
-
-async function loadCentres() {
-    const districtIds = $('#districts').val() || [];
-    
-    if (!districtIds || districtIds.length === 0) {
-        $('#centres').prop('disabled', true).val(null).trigger('change');
-        return;
-    }
-
-    $('#centres').prop('disabled', false);
-    const cacheKey = districtIds.join(',');
-    
-    if (dataCache.centres[cacheKey]) {
-        populateSelect('centres', dataCache.centres[cacheKey]);
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/campaign-targeting/centres', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value 
-            },
-            body: JSON.stringify({ district_ids: districtIds })
-        });
-        const data = await response.json();
-        dataCache.centres[cacheKey] = data;
-        populateSelect('centres', data);
-    } catch (error) {
-        console.error('Error loading centres:', error);
-    }
-}
-
-async function loadCourses() {
-    const centreIds = $('#centres').val() || [];
-    
-    if (!centreIds || centreIds.length === 0) {
-        $('#courses').prop('disabled', true).val(null).trigger('change');
-        return;
-    }
-
-    $('#courses').prop('disabled', false);
-    const cacheKey = centreIds.join(',');
-    
-    if (dataCache.courses[cacheKey]) {
-        populateSelect('courses', dataCache.courses[cacheKey]);
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/campaign-targeting/courses', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value 
-            },
-            body: JSON.stringify({ centre_ids: centreIds })
-        });
-        const data = await response.json();
-        dataCache.courses[cacheKey] = data;
-        populateSelect('courses', data);
-    } catch (error) {
-        console.error('Error loading courses:', error);
-    }
-}
-
-async function loadSessions() {
-    const courseIds = $('#courses').val() || [];
-    
-    if (!courseIds || courseIds.length === 0) {
-        $('#sessions').prop('disabled', true).val(null).trigger('change');
-        return;
-    }
-
-    $('#sessions').prop('disabled', false);
-    const cacheKey = courseIds.join(',');
-    
-    if (dataCache.sessions[cacheKey]) {
-        populateSelect('sessions', dataCache.sessions[cacheKey]);
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/campaign-targeting/sessions', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value 
-            },
-            body: JSON.stringify({ course_ids: courseIds })
-        });
-        const data = await response.json();
-        dataCache.sessions[cacheKey] = data;
-        populateSelect('sessions', data);
-    } catch (error) {
-        console.error('Error loading sessions:', error);
-    }
-}
-
-function populateSelect(selectId, options) {
-    const $select = $('#' + selectId);
-    const currentValues = $select.val() || [];
-    
-    const formattedOptions = options.map(opt => ({
-        id: opt.id,
-        text: opt.title || opt.text || opt.name
-    }));
-    
-    $select.select2({
-        data: formattedOptions,
-        theme: 'bootstrap-5'
+function resetDependents(selectIds) {
+    selectIds.forEach(id => {
+        $(`#${id}`).prop('disabled', true)
+                  .val(null)
+                  .trigger('change')
+                  .empty()
+                  .append(`<option value="">Select ${id.slice(0, -1)} first</option>`);
     });
-    
-    if (currentValues.length > 0) {
-        $select.val(currentValues).trigger('change');
-    }
-}
-
-function setupEventListeners() {
-    // Event listeners are set up in initializeSelect2
 }
 
 function updateTargetSummary() {
-    const branches = $('#branches').val() || [];
-    const districts = $('#districts').val() || [];
-    const centres = $('#centres').val() || [];
-    const courses = $('#courses').val() || [];
-    const sessions = $('#sessions').val() || [];
+    const counts = {
+        branches: $('#branches').val()?.length || 0,
+        districts: $('#districts').val()?.length || 0,
+        centres: $('#centres').val()?.length || 0,
+        courses: $('#courses').val()?.length || 0,
+        sessions: $('#sessions').val()?.length || 0
+    };
 
     let summary = 'Will send to admitted users in: ';
     
-    if (sessions.length > 0) {
-        summary += sessions.length + ' session(s)';
-    } else if (courses.length > 0) {
-        summary += courses.length + ' course(s)';
-    } else if (centres.length > 0) {
-        summary += centres.length + ' centre(s)';
-    } else if (districts.length > 0) {
-        summary += districts.length + ' district(s)';
-    } else if (branches.length > 0) {
-        summary += branches.length + ' branch(es)';
-    } else {
-        summary = 'Will send to all admitted users in all branches';
-    }
+    if (counts.sessions) summary += `${counts.sessions} session(s)`;
+    else if (counts.courses) summary += `${counts.courses} course(s)`;
+    else if (counts.centres) summary += `${counts.centres} centre(s)`;
+    else if (counts.districts) summary += `${counts.districts} district(s)`;
+    else if (counts.branches) summary += `${counts.branches} branch(es)`;
+    else summary = 'Will send to all admitted users in all branches';
 
-    const summaryEl = document.getElementById('targeting-summary');
-    const summaryText = document.getElementById('summary-text');
-    
-    if (branches.length > 0 || districts.length > 0 || centres.length > 0 || courses.length > 0 || sessions.length > 0) {
-        summaryText.textContent = summary;
-        summaryEl.style.display = 'block';
-    } else {
-        summaryEl.style.display = 'none';
-    }
+    const showSummary = Object.values(counts).some(v => v > 0);
+    document.getElementById('targeting-summary').style.display = showSummary ? 'block' : 'none';
+    document.getElementById('summary-text').textContent = summary;
 }
 </script>
-</script>
-
 @endsection
