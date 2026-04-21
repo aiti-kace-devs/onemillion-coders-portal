@@ -1,5 +1,5 @@
 title: 'Google Cloud'
-disk: private_cloud
+disk: s3
 allow_uploads: true
 allow_downloading: true
 allow_renaming: true
