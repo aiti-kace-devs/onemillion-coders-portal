@@ -20,12 +20,16 @@ class ProgrammeBatch extends Model
         'start_date',
         'end_date',
         'status',
+        'max_enrolments',
+        'available_slots',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
         'status' => 'boolean',
+        'max_enrolments' => 'integer',
+        'available_slots' => 'integer',
     ];
 
     public function admissionBatch()

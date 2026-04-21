@@ -166,6 +166,24 @@ class CentreCrudController extends CrudController
                 'view' => 'admin.status_toggle.status_column',
             ]);
         }
+
+        // Add reservation slots column
+        CRUD::addColumn([
+            'name' => 'protocol_reservations',
+            'label' => 'Protocol Reservations',
+            'type' => 'closure',
+            'function' => function ($entry) {
+                $shortReserved = $entry->protocolReservedSlotsFor(\App\Models\Programme::COURSE_TYPE_SHORT) ?? 0;
+                $longReserved = $entry->protocolReservedSlotsFor(\App\Models\Programme::COURSE_TYPE_LONG) ?? 0;
+                $shortCapacity = $entry->slotCapacityFor(\App\Models\Programme::COURSE_TYPE_SHORT) ?? 0;
+                $longCapacity = $entry->slotCapacityFor(\App\Models\Programme::COURSE_TYPE_LONG) ?? 0;
+
+                return "Short: {$shortReserved}/{$shortCapacity}<br>Long: {$longReserved}/{$longCapacity}";
+            },
+            'escaped' => false,
+            'searchLogic' => false,
+        ]);
+
         CRUD::column('created_at');
         if (! $this->isCentreManager()) {
             FilterHelper::addSelectFilter(
@@ -435,6 +453,29 @@ class CentreCrudController extends CrudController
             'hint' => 'Auto-derived from seat_count if not set (long courses: 4h/day)',
         ]);
 
+        // Protocol reservation fields
+        CRUD::addField([
+            'name' => 'protocol_reserved_short_slots',
+            'label' => 'Protocol Reserved Short Slots',
+            'type' => 'number',
+            'wrapper' => ['class' => 'form-group col-6'],
+            'hint' => 'Reserved slots for protocol participants (short courses). Cannot exceed short_slots_per_day.',
+            'attributes' => [
+                'min' => 0,
+            ],
+        ]);
+
+        CRUD::addField([
+            'name' => 'protocol_reserved_long_slots',
+            'label' => 'Protocol Reserved Long Slots',
+            'type' => 'number',
+            'wrapper' => ['class' => 'form-group col-6'],
+            'hint' => 'Reserved slots for protocol participants (long courses). Cannot exceed long_slots_per_day.',
+            'attributes' => [
+                'min' => 0,
+            ],
+        ]);
+
         $this->addIsActiveField([true => 'True', false => 'False'], 'Is PWD Friendly', 'is_pwd_friendly');
 
         $this->addIsActiveField([true => 'True', false => 'False'], 'Wheelchair Accessible', 'wheelchair_accessible');
@@ -469,6 +510,7 @@ class CentreCrudController extends CrudController
             'title', 'branch_id', 'constituency_id', 'constituency_dependency_script',
             'district_id', 'district_dependency_script', 'gps_address', 'pwd_notes', 'images', 'video',
             'seat_count', 'short_slots_per_day', 'long_slots_per_day',
+            'protocol_reserved_short_slots', 'protocol_reserved_long_slots',
         ]);
         $this->addFieldsToTab('PWD', true, ['is_pwd_friendly', 'wheelchair_accessible', 'has_access_ramp', 'has_accessible_toilet', 'has_elevator', 'supports_hearing_impaired', 'supports_visually_impaired', 'staff_trained_for_pwd', 'is_ready', 'status']);
         $this->addFieldsToTab('GPS Location', true, ['gps_location']);

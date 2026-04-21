@@ -31,7 +31,11 @@ class AvailabilityController extends Controller
         $from = Carbon::parse($request->query('from'));
         $to = Carbon::parse($request->query('to'));
 
-        $result = $availabilityService->getAvailableSlots($centreId, $courseId, $from, $to);
+        $forProtocol = $request->query('forProtocolBooking') !== null
+            ? filter_var($request->query('forProtocolBooking'), FILTER_VALIDATE_BOOLEAN)
+            : (bool) ($request->user()?->is_protocol ?? false);
+
+        $result = $availabilityService->getAvailableSlots($centreId, $courseId, $from, $to, $forProtocol);
 
         return response()->json($result);
     }
@@ -123,13 +127,20 @@ class AvailabilityController extends Controller
         // Calculate capacity
         $capacity = $isInPerson ? $sessions->sum('limit') : $centre->slotCapacityFor($courseType);
 
+        // Determine whether the requesting user is a protocol user; allow
+        // an explicit query override via `forProtocolBooking` for API callers.
+        $forProtocol = $request->query('forProtocolBooking') !== null
+            ? filter_var($request->query('forProtocolBooking'), FILTER_VALIDATE_BOOLEAN)
+            : (bool) ($request->user()?->is_protocol ?? false);
+
         // Batch fetch all remaining seats at once (only for master sessions)
         $remainingSeats = [];
         if (! $isInPerson) {
             $remainingSeats = $bookingService->getRemainingSeatsBatch(
                 $centre->id,
                 $batches->pluck('id')->toArray(),
-                $sessions->pluck('id')->toArray()
+                $sessions->pluck('id')->toArray(),
+                $forProtocol
             );
         }
 

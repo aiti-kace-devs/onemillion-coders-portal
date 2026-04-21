@@ -45,6 +45,8 @@ class Centre extends Model
         'seat_count',
         'short_slots_per_day',
         'long_slots_per_day',
+        'protocol_reserved_short_slots',
+        'protocol_reserved_long_slots',
     ];
 
     protected $casts = [
@@ -65,6 +67,11 @@ class Centre extends Model
         'images' => 'array',
         'video' => 'string',
         'gps_location' => 'array',
+        'seat_count' => 'integer',
+        'short_slots_per_day' => 'integer',
+        'long_slots_per_day' => 'integer',
+        'protocol_reserved_short_slots' => 'integer',
+        'protocol_reserved_long_slots' => 'integer',
     ];
 
     public function branch()
@@ -113,6 +120,22 @@ class Centre extends Model
         return $value !== null ? (int) $value : null;
     }
 
+    public function protocolReservedSlotsFor(string $courseType): ?int
+    {
+        $value = $courseType === Programme::COURSE_TYPE_LONG
+            ? $this->protocol_reserved_long_slots
+            : $this->protocol_reserved_short_slots;
+
+        // If centre hasn't set specific values, use global AppConfig defaults
+        if ($value === null) {
+            $value = $courseType === Programme::COURSE_TYPE_LONG
+                ? (int) \App\Models\AppConfig::getValue('DEFAULT_PROTOCOL_RESERVED_LONG_SLOTS', 1)
+                : (int) \App\Models\AppConfig::getValue('DEFAULT_PROTOCOL_RESERVED_SHORT_SLOTS', 2);
+        }
+
+        return $value !== null ? (int) $value : null;
+    }
+
     protected static function booted()
     {
         static::saved(function ($centre) {
@@ -124,7 +147,7 @@ class Centre extends Model
 
         static::saving(function ($centre) {
             // Auto-derive slot counts from seat_count using AppConfig percentages if not explicitly set
-            if ($centre->seat_count && (!$centre->short_slots_per_day || !$centre->long_slots_per_day)) {
+            if ($centre->seat_count && ($centre->short_slots_per_day === null || $centre->long_slots_per_day === null)) {
                 $shortPercent = (int) (\App\Models\AppConfig::getValue('SHORT_SLOTS_PERCENTAGE', 60));
                 $longPercent = (int) (\App\Models\AppConfig::getValue('LONG_SLOTS_PERCENTAGE', 40));
 

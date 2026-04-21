@@ -24,6 +24,7 @@ use App\Models\user_exam;
 use App\Models\UserAdmission;
 use App\Models\UserAssessment;
 use App\Services\GhanaCardService;
+use App\Services\AdmissionRevocationService;
 use App\Services\JwtService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -935,31 +936,21 @@ class StudentOperation extends Controller
         }
     }
 
-    public function delete_admission(User $user)
+    public function delete_admission(User $user, AdmissionRevocationService $revocationService)
     {
         $delete_user_admission = UserAdmission::where('user_id', $user->userId)->first();
 
         if ($delete_user_admission) {
             $courseId = (int) $delete_user_admission->course_id;
 
-            activity()->withoutLogs(function () use ($delete_user_admission, $user) {
-                $delete_user_admission->delete();
-                $user->update([
-                    'shortlist' => 0,
-                    'registered_course' => null,
-                ]);
+            activity()->withoutLogs(function () use ($delete_user_admission, $revocationService) {
+                $revocationService->revoke($delete_user_admission);
             });
 
             // Clean up any stale waitlist entries for this user
             \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
                 ->whereIn('status', ['pending', 'notified'])
                 ->update(['status' => 'removed']);
-
-            AdmissionRejection::create([
-                'user_id' => $user->userId,
-                'course_id' => $courseId,
-                'rejected_at' => now(),
-            ]);
 
             event(new AdmissionDeleted($courseId));
 

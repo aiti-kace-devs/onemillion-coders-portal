@@ -21,13 +21,14 @@ class AvailabilityService
      *
      * @return array{available: int, quota_source: string, recommendations: array}
      */
-    public function getAvailableSlots(int $centreId, int $courseId, Carbon $from, Carbon $to): array
+    public function getAvailableSlots(int $centreId, int $courseId, Carbon $from, Carbon $to, bool $forProtocolBooking = false): array
     {
-        $cacheKey = "availability:{$centreId}:{$courseId}:{$from->format('Y-m-d')}:{$to->format('Y-m-d')}";
+        $mode = $forProtocolBooking ? 'protocol' : 'standard';
+        $cacheKey = "availability:{$centreId}:{$courseId}:{$from->format('Y-m-d')}:{$to->format('Y-m-d')}:{$mode}";
         $ttl = (int) AppConfig::getValue('AVAILABILITY_CACHE_TTL', 300);
 
-        return Cache::remember($cacheKey, $ttl, function () use ($centreId, $courseId, $from, $to) {
-            return $this->computeAvailability($centreId, $courseId, $from, $to);
+        return Cache::remember($cacheKey, $ttl, function () use ($centreId, $courseId, $from, $to, $forProtocolBooking) {
+            return $this->computeAvailability($centreId, $courseId, $from, $to, $forProtocolBooking);
         });
     }
 
@@ -36,8 +37,9 @@ class AvailabilityService
      */
     public static function clearCache(int $centreId, int $courseId, Carbon $from, Carbon $to): void
     {
-        $cacheKey = "availability:{$centreId}:{$courseId}:{$from->format('Y-m-d')}:{$to->format('Y-m-d')}";
-        Cache::forget($cacheKey);
+        $base = "availability:{$centreId}:{$courseId}:{$from->format('Y-m-d')}:{$to->format('Y-m-d')}:";
+        Cache::forget($base.'standard');
+        Cache::forget($base.'protocol');
     }
 
     /**
@@ -103,7 +105,7 @@ class AvailabilityService
         ];
     }
 
-    private function computeAvailability(int $centreId, int $courseId, Carbon $from, Carbon $to): array
+    private function computeAvailability(int $centreId, int $courseId, Carbon $from, Carbon $to, bool $forProtocolBooking = false): array
     {
         $course = Course::find($courseId);
         if (!$course || !$course->programme) {
@@ -149,16 +151,18 @@ class AvailabilityService
 
         // Resolve quota source and capacity via IQS
         $quotaSource = 'standard';
-        $capacity = $this->resolveCapacityForCentre($centre, $courseType, $from, $to, $quotaSource);
+        $capacity = $this->resolveTotalCapacityForCentre($centre, $courseType, $from, $to, $quotaSource);
+        $reserved = $this->protocolReservedCapacity($centre, $courseType, $capacity);
 
         // Use occupancy table: find peak occupancy across ALL sessions for this course type
-        $maxOccupied = DB::table('daily_session_occupancy')
+        $occupancyRows = DB::table('daily_session_occupancy')
             ->where('centre_id', $centreId)
             ->where('course_type', $courseType)
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
-            ->max('occupied_count') ?? 0;
+            ->get(['occupied_count', 'protocol_occupied_count']);
 
-        $totalAvailable = max(0, $capacity - $maxOccupied);
+        $poolOccupancy = $this->poolOccupancyFromRows($occupancyRows, $reserved);
+        $totalAvailable = $this->remainingSeatsFromPoolOccupancy($capacity, $reserved, $poolOccupancy, $forProtocolBooking);
 
         if ($totalAvailable > 0) {
             return [
@@ -176,7 +180,7 @@ class AvailabilityService
         }
 
         // No availability — build recommendations
-        $recommendations = $this->buildRecommendations($centreId, $courseId, $from, $to, $admissionBatch, $centre);
+        $recommendations = $this->buildRecommendations($centreId, $courseId, $from, $to, $admissionBatch, $centre, $forProtocolBooking);
 
         return [
             'available' => 0,
@@ -192,30 +196,91 @@ class AvailabilityService
      *
      * @param  string  &$quotaSource  Updated by reference to reflect the source.
      */
-    private function resolveCapacityForCentre(Centre $centre, string $courseType, Carbon $from, Carbon $to, string &$quotaSource): int
+    private function resolveCapacityForCentre(Centre $centre, string $courseType, Carbon $from, Carbon $to, string &$quotaSource, bool $forProtocolBooking = false): int
+    {
+        $capacity = $this->resolveTotalCapacityForCentre($centre, $courseType, $from, $to, $quotaSource);
+        $reserved = $this->protocolReservedCapacity($centre, $courseType, $capacity);
+
+        return $forProtocolBooking
+            ? $capacity
+            : max(0, $capacity - $reserved);
+    }
+
+    private function resolveTotalCapacityForCentre(Centre $centre, string $courseType, Carbon $from, Carbon $to, string &$quotaSource): int
     {
         $isShort = $courseType === Programme::COURSE_TYPE_SHORT;
 
         // IQS check: is the remaining window too short for any long course?
         if ($isShort && $this->isIqsActive($from, $to)) {
             $quotaSource = 'reallocated';
-            return $centre->seat_count ? (int) $centre->seat_count : 0;
-        }
+            $capacity = $centre->seat_count ? (int) $centre->seat_count : 0;
+        } else {
+            // Standard capacity from centre config
+            $capacity = $centre->slotCapacityFor($courseType);
 
-        // Standard capacity from centre config
-        $capacity = $centre->slotCapacityFor($courseType);
+            // If centre hasn't configured slots, derive from global AppConfig
+            if ($capacity === null && $centre->seat_count) {
+                $shortPercent = (int) AppConfig::getValue('SHORT_SLOTS_PERCENTAGE', 60);
+                $longPercent = (int) AppConfig::getValue('LONG_SLOTS_PERCENTAGE', 40);
 
-        // If centre hasn't configured slots, derive from global AppConfig
-        if ($capacity === null && $centre->seat_count) {
-            $shortPercent = (int) AppConfig::getValue('SHORT_SLOTS_PERCENTAGE', 60);
-            $longPercent = (int) AppConfig::getValue('LONG_SLOTS_PERCENTAGE', 40);
-
-            $capacity = $isShort
-                ? (int) round($centre->seat_count * $shortPercent / 100)
-                : (int) round($centre->seat_count * $longPercent / 100);
+                $capacity = $isShort
+                    ? (int) round($centre->seat_count * $shortPercent / 100)
+                    : (int) round($centre->seat_count * $longPercent / 100);
+            }
         }
 
         return $capacity ?? 0;
+    }
+
+    private function protocolReservedCapacity(Centre $centre, string $courseType, int $capacity): int
+    {
+        $reserved = $centre->protocolReservedSlotsFor($courseType);
+
+        if ($reserved === null) {
+            return 0;
+        }
+
+        return min(max(0, (int) $reserved), max(0, $capacity));
+    }
+
+    /**
+     * @return array{protocol_peak: int, main_peak: int}
+     */
+    private function poolOccupancyFromRows($rows, int $reserved): array
+    {
+        $protocolPeak = 0;
+        $mainPeak = 0;
+
+        foreach ($rows as $row) {
+            $total = max(0, (int) ($row->occupied_count ?? 0));
+            $protocol = min(max(0, (int) ($row->protocol_occupied_count ?? 0)), $total);
+            $main = max(0, $total - min($protocol, $reserved));
+
+            $protocolPeak = max($protocolPeak, $protocol);
+            $mainPeak = max($mainPeak, $main);
+        }
+
+        return [
+            'protocol_peak' => $protocolPeak,
+            'main_peak' => $mainPeak,
+        ];
+    }
+
+    /**
+     * @param  array{protocol_peak: int, main_peak: int}  $poolOccupancy
+     */
+    private function remainingSeatsFromPoolOccupancy(int $capacity, int $reserved, array $poolOccupancy, bool $forProtocolBooking): int
+    {
+        $mainCapacity = max(0, $capacity - $reserved);
+        $mainRemaining = max(0, $mainCapacity - (int) $poolOccupancy['main_peak']);
+
+        if (! $forProtocolBooking) {
+            return $mainRemaining;
+        }
+
+        $reservedRemaining = max(0, $reserved - (int) $poolOccupancy['protocol_peak']);
+
+        return $reservedRemaining + $mainRemaining;
     }
 
     /**
@@ -254,7 +319,7 @@ class AvailabilityService
     /**
      * Build ordered recommendations when availability == 0.
      */
-    private function buildRecommendations(int $centreId, int $courseId, Carbon $from, Carbon $to, ?Batch $admissionBatch, Centre $centre): array
+    private function buildRecommendations(int $centreId, int $courseId, Carbon $from, Carbon $to, ?Batch $admissionBatch, Centre $centre, bool $forProtocolBooking = false): array
     {
         $recommendations = [];
         $course = Course::find($courseId);
@@ -270,7 +335,7 @@ class AvailabilityService
                 ->get();
 
             foreach ($siblingCentres as $siblingCentre) {
-                $avail = $this->getAvailableSlots($siblingCentre->id, $courseId, $from, $to);
+                $avail = $this->getAvailableSlots($siblingCentre->id, $courseId, $from, $to, $forProtocolBooking);
                 if ($avail['available'] > 0) {
                     $recommendations[] = [
                         'type' => 'same_branch_centre',
@@ -291,7 +356,7 @@ class AvailabilityService
             ->get();
 
         foreach ($altCourses as $altCourse) {
-            $avail = $this->getAvailableSlots($centreId, $altCourse->id, $from, $to);
+            $avail = $this->getAvailableSlots($centreId, $altCourse->id, $from, $to, $forProtocolBooking);
             if ($avail['available'] > 0) {
                 $recommendations[] = [
                     'type' => 'alternative_course',

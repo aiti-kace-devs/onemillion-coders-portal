@@ -49,6 +49,8 @@ class CentreRequest extends FormRequest
             'seat_count' => 'nullable|integer|min:1|max:255',
             'short_slots_per_day' => 'nullable|integer|min:0|max:255',
             'long_slots_per_day' => 'nullable|integer|min:0|max:255',
+            'protocol_reserved_short_slots' => 'nullable|integer|min:0|max:255',
+            'protocol_reserved_long_slots' => 'nullable|integer|min:0|max:255',
         ];
     }
 
@@ -65,6 +67,8 @@ class CentreRequest extends FormRequest
             'title' => 'Title',
             'constituency_id' => 'Constituency',
             'district_id' => 'District',
+            'protocol_reserved_short_slots' => 'Protocol Reserved Short Slots',
+            'protocol_reserved_long_slots' => 'Protocol Reserved Long Slots',
         ];
     }
 
@@ -95,6 +99,8 @@ class CentreRequest extends FormRequest
             $seatCount = $this->input('seat_count');
             $shortSlots = $this->input('short_slots_per_day');
             $longSlots = $this->input('long_slots_per_day');
+            $protocolShortReserved = $this->input('protocol_reserved_short_slots');
+            $protocolLongReserved = $this->input('protocol_reserved_long_slots');
 
             // Validate that short + long = seat_count when all three are provided
             if ($seatCount && $shortSlots !== null && $longSlots !== null) {
@@ -108,6 +114,21 @@ class CentreRequest extends FormRequest
                         'Short slots + Long slots must equal Seat Count.'
                     );
                 }
+            }
+
+            // Validate protocol reserved slots don't exceed capacity
+            if ($protocolShortReserved !== null && $shortSlots !== null && $protocolShortReserved > $shortSlots) {
+                $validator->errors()->add(
+                    'protocol_reserved_short_slots',
+                    'Protocol reserved short slots cannot exceed short slots per day.'
+                );
+            }
+
+            if ($protocolLongReserved !== null && $longSlots !== null && $protocolLongReserved > $longSlots) {
+                $validator->errors()->add(
+                    'protocol_reserved_long_slots',
+                    'Protocol reserved long slots cannot exceed long slots per day.'
+                );
             }
         });
     }

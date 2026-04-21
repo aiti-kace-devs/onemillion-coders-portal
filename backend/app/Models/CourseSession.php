@@ -31,6 +31,7 @@ class CourseSession extends Model
 
     protected $fillable = [
         'name',
+        'uuid',
         'master_session_id',
         'course_id',
         'centre_id',
@@ -67,8 +68,8 @@ class CourseSession extends Model
         parent::boot();
 
         static::creating(function ($model) {
-            if (empty($model->uuid)) {
-                $model->uuid = (string) Str::uuid();
+            if (! $model->getAttribute('uuid')) {
+                $model->setAttribute('uuid', (string) Str::uuid());
             }
 
             if (empty($model->session_type)) {

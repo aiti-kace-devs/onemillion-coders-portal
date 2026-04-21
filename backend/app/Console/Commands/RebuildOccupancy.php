@@ -22,6 +22,7 @@ class RebuildOccupancy extends Command
             ->whereNotNull('master_session_id')
             ->whereNotNull('centre_id')
             ->whereNotNull('course_type')
+            ->where('status', true)
             ->get();
 
         $this->info("Processing {$bookings->count()} bookings...");
@@ -50,10 +51,14 @@ class RebuildOccupancy extends Command
                         'master_session_id' => $booking->master_session_id,
                         'course_type' => $booking->course_type,
                         'occupied_count' => 0,
+                        'protocol_occupied_count' => 0,
                     ];
                 }
 
                 $insertBuffer[$key]['occupied_count']++;
+                if ($booking->is_protocol) {
+                    $insertBuffer[$key]['protocol_occupied_count']++;
+                }
             }
 
             $bar->advance();
@@ -70,11 +75,11 @@ class RebuildOccupancy extends Command
             DB::table('daily_session_occupancy')->upsert(
                 $chunk,
                 ['date', 'centre_id', 'master_session_id'],
-                ['course_type', 'occupied_count']
+                ['course_type', 'occupied_count', 'protocol_occupied_count']
             );
         }
 
-        $this->info('✅ Occupancy rebuild complete.');
+        $this->info('Occupancy rebuild complete.');
 
         return self::SUCCESS;
     }

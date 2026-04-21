@@ -35,6 +35,7 @@ class BookingController extends Controller
             'programme_batch_id' => 'required|integer|exists:programme_batches,id',
             'course_id' => 'required|integer|exists:courses,id',
             'session_id' => $isSelfPaced ? 'nullable|integer' : 'required|integer',
+            'is_protocol' => 'sometimes|boolean',
         ];
 
         $validated = $request->validate($validationRules);
@@ -118,37 +119,6 @@ class BookingController extends Controller
                     'errors' => ['session_id' => ['The selected session id is invalid.']],
                 ], 422);
             }
-            else {
-                        $user->registered_course = $course->id;
-                        $user->shortlist = true;
-                        $user->save();
-                        UserAdmission::updateOrCreate(
-                            ['user_id' => $user->userId],
-                            [
-                                'course_id' => $course->id,
-                                'programme_batch_id' => $batch->id,
-                                'email_sent' => now(),
-                                'confirmed' => now(),
-                                'session' => $session->id,
-                            ]
-                        );
-
-                        // Remove from waitlist if exists
-                        AdmissionWaitlist::where('user_id', $user->userId)->delete();
-
-                        NotificationController::notify(
-                            $user->id,
-                            'COURSE_SELECTION',
-                            'Enrollment Confirmed',
-                            'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
-                        );
-
-                        return response()->json([
-                            'status' => 'success',
-                            'message' => 'Booking successful.',
-                        ], 201);
-
-            }
         } else {
             $session = MasterSession::find($validated['session_id']);
             if (!$session) {
@@ -160,14 +130,18 @@ class BookingController extends Controller
             }
         }
 
+        $isProtocolBooking = (bool) ($validated['is_protocol'] ?? false);
+
         try {
-            $bookingService->book($user, $course, $batch, $session);
+            $bookingService->book($user, $course, $batch, $session, $isProtocolBooking);
         } catch (Exception $e) {
+            $forProtocol = (bool) ($user->is_protocol ?? false) || (bool) ($validated['is_protocol'] ?? false);
             $recommendations = $availabilityService->getAvailableSlots(
                 $course->centre_id,
                 $course->id,
                 Carbon::parse($batch->start_date),
-                Carbon::parse($batch->end_date)
+                Carbon::parse($batch->end_date),
+                $forProtocol
             );
 
             return response()->json([

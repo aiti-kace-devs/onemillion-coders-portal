@@ -79,7 +79,7 @@ class CreateStudentAdmissionJob implements ShouldQueue
 
             try {
                 $bookingService = app(BookingService::class);
-                $bookingService->book($this->student, $course, $programmeBatch, $this->session);
+                $bookingService->book($this->student, $course, $programmeBatch, $this->session, false);
                 $this->sendAdmissionEmail();
                 return;
             } catch (\Exception $e) {

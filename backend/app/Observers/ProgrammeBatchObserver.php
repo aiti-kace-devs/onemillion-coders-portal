@@ -26,7 +26,13 @@ class ProgrammeBatchObserver
             $sessionId = $booking->master_session_id;
 
             if ($centreId && $sessionId) {
-                Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$sessionId}");
+                Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$sessionId}:standard");
+                Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$sessionId}:protocol");
+            }
+
+            if ($centreId && $booking->course_session_id) {
+                Cache::forget("remaining_seats:course_session:{$centreId}:{$batch->id}:{$booking->course_session_id}:standard");
+                Cache::forget("remaining_seats:course_session:{$centreId}:{$batch->id}:{$booking->course_session_id}:protocol");
             }
         }
     }

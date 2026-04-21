@@ -15,13 +15,38 @@ class InPersonEnrollmentService
         private BookingService $bookingService
     ) {}
 
-    public function enrolledCount(int $programmeBatchId, int $courseSessionId): int
+    public function enrolledCount(int $programmeBatchId, int $courseSessionId, bool $forProtocolBooking = false): int
     {
-        return Booking::query()
+        $q = Booking::query()
             ->where('programme_batch_id', $programmeBatchId)
             ->where('course_session_id', $courseSessionId)
-            ->where('status', true)
-            ->count();
+            ->where('status', true);
+
+        if ($forProtocolBooking) {
+            $q->where('is_protocol', true);
+        }
+
+        return $q->count();
+    }
+
+    /**
+     * Return remaining seats for a given programme batch + course session.
+     * This is a thin wrapper over BookingService::getRemainingSeats that
+     * accepts CourseSession ids (centre sessions) and resolves the master
+     * session id used by the occupancy system.
+     */
+    public function remainingSeats(int $programmeBatchId, int $courseSessionId, bool $forProtocolBooking = false): int
+    {
+        $batch = ProgrammeBatch::find($programmeBatchId);
+        $cs = CourseSession::find($courseSessionId);
+
+        if (! $batch || ! $cs) {
+            return 0;
+        }
+
+        $centreId = $cs->centre_id;
+
+        return $this->bookingService->getRemainingSeatsForCourseSession((int) $centreId, $batch->id, $cs->id, $forProtocolBooking);
     }
 
     /**

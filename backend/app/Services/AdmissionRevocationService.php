@@ -46,7 +46,10 @@ class AdmissionRevocationService
                 'rejected_at' => now(),
             ]);
 
-            User::where('userId', $userId)->update(['shortlist' => 0]);
+            User::where('userId', $userId)->update([
+                'shortlist' => 0,
+                'registered_course' => null,
+            ]);
 
             return [
                 'slot_restored' => $slotRestored,

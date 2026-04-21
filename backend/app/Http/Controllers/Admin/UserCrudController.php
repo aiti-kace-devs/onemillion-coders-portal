@@ -16,6 +16,7 @@ use App\Models\CourseBatch;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
 use App\Helpers\FilterHelper;
+use App\Services\AdmissionRevocationService;
 use Illuminate\Support\Facades\View;
 use App\Http\Controllers\Traits\GetsFilteredQuery;
 use Illuminate\Support\Facades\Log;
@@ -351,15 +352,22 @@ class UserCrudController extends CrudController
         return response()->json(['count' => $count, 'custom_view' => $customView]);
     }
 
-    public function deleteAdmission($user_id)
+    public function deleteAdmission($user_id, AdmissionRevocationService $revocationService)
     {
         try {
             $user = User::findOrFail($user_id);
-            $user->admissions()->delete();
-            $user->shortlist = false;
-            $user->save();
+            $admission = UserAdmission::where('user_id', $user->userId)->first();
 
-            return response()->json(['message' => 'Admission deleted successfully.']);
+            if (! $admission) {
+                return response()->json(['message' => 'User admission not found.'], 404);
+            }
+
+            $result = $revocationService->revoke($admission);
+
+            return response()->json([
+                'message' => 'Admission deleted successfully.',
+                'slot_restored' => $result['slot_restored'],
+            ]);
         } catch (\Exception $e) {
             \Log::error('Error deleting admission:', ['user_id' => $user_id, 'error' => $e->getMessage()]);
             return response()->json(['message' => 'Failed to delete admission.'], 500);

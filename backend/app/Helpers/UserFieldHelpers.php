@@ -31,6 +31,7 @@ trait UserFieldHelpers
             $this->setPasswordField();
         }
         $this->setIsActiveField();
+        $this->setIsProtocolField();
         // $this->setIsVerifiedField();
         $this->setRolesField();
         $this->setPermissionsField();
@@ -63,6 +64,11 @@ trait UserFieldHelpers
         $this->addTitleColumn();
         $this->addGenderColumn();
         $this->addAgeColumn();
+        CRUD::addColumn([
+            'name' => 'is_protocol',
+            'label' => 'Protocol',
+            'type' => 'boolean',
+        ]);
         $this->addCourseField();
         $this->addConfirmedAdmissionColumn();
         FilterHelper::addBooleanColumn('shortlist', 'Shortlist');
@@ -335,6 +341,15 @@ trait UserFieldHelpers
             ->type('switch')
             ->label('Verify Email')
             ->tab($this->accountInfoTab);
+    }
+
+    public function setIsProtocolField(): void
+    {
+        CRUD::field('is_protocol')
+            ->type('switch')
+            ->label('Protocol User')
+            ->tab($this->accountInfoTab)
+            ->wrapper(['class' => 'form-group col-6']);
     }
 
     public function assignedCourses(): void

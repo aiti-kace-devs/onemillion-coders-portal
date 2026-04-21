@@ -198,7 +198,7 @@ class AdmissionWaitlistService
         }
 
         // Create booking
-        $booking = $bookingService->book($user, $course, $batch, $session);
+        $booking = $bookingService->book($user, $course, $batch, $session, false);
 
         // Mark waitlist as converted
         $waitlist->markAsConverted();

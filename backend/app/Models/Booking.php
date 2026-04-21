@@ -25,6 +25,7 @@ class Booking extends Model
         'centre_id',
         'course_id',
         'course_type',
+        'is_protocol',
         'status',
         'booked_at',
         'cancelled_at',
@@ -35,6 +36,7 @@ class Booking extends Model
         'booked_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'status' => 'boolean',
+        'is_protocol' => 'boolean',
     ];
 
     public function getActivitylogOptions(): LogOptions
