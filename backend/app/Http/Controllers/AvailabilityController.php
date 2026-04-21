@@ -125,24 +125,28 @@ public function batches(Request $request, BookingService $bookingService): JsonR
     // Calculate capacity
     $capacity = $isInPerson ? $sessions->sum('limit') : $centre->slotCapacityFor($courseType);
 
-    // Batch fetch all remaining seats at once (only for master sessions)
+    // ✅ Initialize remainingSeats array
     $remainingSeats = [];
-    if (! $isInPerson) {
-        $remainingSeats = $bookingService->getRemainingSeatsBatch(
-            $centre->id,
-            $batches->pluck('id')->toArray(),
-            $sessions->pluck('id')->toArray()
-        );
-    }
 
-    // ✅ Pre-fetch booked counts for in-person sessions (to avoid N+1 queries)
-    $inPersonBookedCounts = [];
-    if ($isInPerson && $sessions->isNotEmpty()) {
+    if (! $isInPerson) {
+        // ✅ ONLINE: Per-cohort, per-session capacity (NOT shared across cohorts)
+        // Determine capacity based on programme's time_allocation
+        $timeAllocation = $programme->time_allocation;
+        
+        if ($timeAllocation == Programme::TIME_ALLOCATION_SHORT) {
+            $programmeCapacity = (int) ($centre->short_slots_per_day ?? 0);
+        } elseif ($timeAllocation == Programme::TIME_ALLOCATION_LONG) {
+            $programmeCapacity = (int) ($centre->long_slots_per_day ?? 0);
+        } else {
+            // Fallback to slotCapacityFor if time_allocation is unexpected
+            $programmeCapacity = (int) ($centre->slotCapacityFor($courseType) ?? 0);
+        }
+
+        // ✅ Count UserAdmission grouped by programme_batch_id AND session
         $sessionIds = $sessions->pluck('id')->toArray();
         $batchIds = $batches->pluck('id')->toArray();
         
-        // ✅ Count by programme_batch_id + session (composite key)
-        $booked = UserAdmission::select(
+        $bookedPerBatchSession = \App\Models\UserAdmission::select(
                 'programme_batch_id',
                 'session', 
                 DB::raw('COUNT(*) as count')
@@ -153,7 +157,38 @@ public function batches(Request $request, BookingService $bookingService): JsonR
             ->groupBy('programme_batch_id', 'session')
             ->get()
             ->pluck('count', function ($row) {
-                return "{$row->programme_batch_id}:{$row->session}";  // Composite key
+                return (string) "{$row->programme_batch_id}:{$row->session}";
+            })
+            ->toArray();
+
+        // ✅ Calculate remaining for EACH cohort+session combination
+        foreach ($batches as $batch) {
+            foreach ($sessions as $session) {
+                $key = (string) "{$batch->id}:{$session->id}";
+                $bookedCount = $bookedPerBatchSession[$key] ?? 0;
+                $remainingSeats[$key] = max(0, $programmeCapacity - $bookedCount);
+            }
+        }
+    }
+
+    // ✅ Pre-fetch booked counts for in-person sessions (per-cohort)
+    $inPersonBookedCounts = [];
+    if ($isInPerson && $sessions->isNotEmpty()) {
+        $sessionIds = $sessions->pluck('id')->toArray();
+        $batchIds = $batches->pluck('id')->toArray();
+        
+        $booked = \App\Models\UserAdmission::select(
+                'programme_batch_id',
+                'session', 
+                DB::raw('COUNT(*) as count')
+            )
+            ->where('course_id', $courseId)
+            ->whereIn('session', $sessionIds)
+            ->whereIn('programme_batch_id', $batchIds)
+            ->groupBy('programme_batch_id', 'session')
+            ->get()
+            ->pluck('count', function ($row) {
+                return (string) "{$row->programme_batch_id}:{$row->session}";
             })
             ->toArray();
         
@@ -174,25 +209,29 @@ public function batches(Request $request, BookingService $bookingService): JsonR
             $inPersonBookedCounts,
             $courseId
         ) {
-            $key = "{$batch->id}:{$session->id}";
+            // ✅ Ensure key is string for consistent lookup
+            $key = (string) "{$batch->id}:{$session->id}";
             
-            // ✅ Calculate remaining slots for in-person: limit - booked count
             if ($isInPerson) {
-                $key = "{$batch->id}:{$session->id}";  // ✅ Composite key
+                // ✅ IN-PERSON: Per-cohort capacity (limit - booked for this cohort+session)
                 $limit = $session->limit ?? 0;
-                $bookedCount = $inPersonBookedCounts[$key] ?? 0;  // ✅ Per-cohort count
+                $bookedCount = $inPersonBookedCounts[$key] ?? 0;
                 $remaining = max(0, $limit - $bookedCount);
             } else {
+                // ✅ ONLINE: Per-cohort capacity (same logic as in-person)
                 $remaining = $remainingSeats[$key] ?? 0;
             }
 
             return [
                 'session_id' => $session->id,
-                'session_name' => $isInPerson ? ($session->session ?? 'Unknown') : ($session->session_type ?? $session->name ?? optional($session->masterSession)->session_type ?? 'Unknown Session'),
+                'session_name' => $isInPerson 
+                    ? ($session->session ?? 'Unknown') 
+                    : ($session->session_type ?? $session->name ?? optional($session->masterSession)->session_type ?? 'Unknown Session'),
                 'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? 'Unknown',
-                'remaining' => $remaining, // ✅ Now correctly calculated for in-person
-                'limit' => $isInPerson ? ($session->limit ?? 0) : null, // Optional: include limit for frontend display
-                'booked' => $isInPerson ? ($inPersonBookedCounts[$session->id] ?? 0) : null, // Optional: include booked count
+                'remaining' => $remaining,
+                'limit' => $isInPerson ? ($session->limit ?? 0) : null,
+                'booked' => $isInPerson ? ($inPersonBookedCounts[$key] ?? 0) : null,
+                'centre_capacity' => ! $isInPerson ? ($remainingSeats[$key] ?? 0) + ($inPersonBookedCounts[$key] ?? 0) : null,
             ];
         })->values()->toArray();
 

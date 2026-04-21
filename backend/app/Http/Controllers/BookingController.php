@@ -26,8 +26,8 @@ class BookingController extends Controller
         AvailabilityService $availabilityService,
         GhanaCardService $ghanaCardService
     ): JsonResponse {
-        // Check if this is a self-paced enrollment (nullable query parameter)
         $isSelfPaced = $request->query('self-paced') === 'true';
+        $withSupport = $request->query('with-support') === 'true';
 
         // Adjust validation based on self-paced flag
         $validationRules = [

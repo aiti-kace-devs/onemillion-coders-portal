@@ -43,17 +43,16 @@ public function book(
 ): ?Booking {
     $programme = $course->programme;
     $centreId = $isInPerson ? $course->centre_id : ($session->centre_id ?? $course->centre_id);
-    $sessionId = $session->id; // ✅ Defined here
+    $sessionId = $session->id;
     $sessionType = $isInPerson ? 'course_session' : 'master_session';
 
     $lockKey = "booking_lock:{$centreId}:{$sessionId}";
 
-    // ❌ FIX: Add $sessionId to the use() clause below
     return Cache::lock($lockKey, 10)->block(5, function () use (
-        $user, $course, $batch, $session, $centreId, $sessionId, $isInPerson, $sessionType // ✅ Added $sessionId
+        $user, $course, $batch, $session, $centreId, $sessionId, $isInPerson, $sessionType
     ) {
         return DB::transaction(function () use (
-            $user, $course, $batch, $session, $centreId, $sessionId, $isInPerson, $sessionType // ✅ Added $sessionId
+            $user, $course, $batch, $session, $centreId, $sessionId, $isInPerson, $sessionType
         ) {
             $courseType = Booking::resolveCourseType($course->id);
 
@@ -79,7 +78,7 @@ public function book(
                 Log::warning('Booking failed: session full', [
                     'centre_id' => $centreId,
                     'batch_id' => $batch->id,
-                    'session_id' => $sessionId, // ✅ Now accessible
+                    'session_id' => $sessionId, 
                     'session_type' => $sessionType,
                 ]);
                 throw new Exception('Course session is full.');
@@ -132,13 +131,13 @@ public function book(
             AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
             // Clear cached seat count for this specific combination
-            Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$sessionId}"); // ✅ Now accessible
+            Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$sessionId}"); 
 
             Log::info('Booking created successfully', [
                 'user_id' => $user->userId,
                 'course_id' => $course->id,
                 'batch_id' => $batch->id,
-                'session_id' => $sessionId, // ✅ Now accessible
+                'session_id' => $sessionId, 
                 'session_type' => $sessionType,
                 'centre_id' => $centreId,
             ]);
@@ -225,7 +224,7 @@ public function book(
  */
     protected function computeRemainingSeats(
         int $centreId,
-        ProgrammeBatch $batch,  // ✅ This is the specific cohort being booked
+        ProgrammeBatch $batch,
         CourseSession|MasterSession $session,
         bool $isInPerson = false
     ): int {
@@ -235,7 +234,6 @@ public function book(
         }
 
         if ($isInPerson && $session instanceof CourseSession) {
-            // ✅ IN-PERSON: Count admissions for THIS cohort + THIS session only
             $limit = $session->limit ?? $session->seat_count ?? 0;
             
             if ($limit <= 0) {
@@ -245,13 +243,13 @@ public function book(
             // Count ONLY admissions for this specific programme_batch_id + session + course
             $bookedCount = UserAdmission::where('course_id', $session->course_id)
                 ->where('session', $session->id)
-                ->where('programme_batch_id', $batch->id)  // ✅ Critical: filter by cohort
+                ->where('programme_batch_id', $batch->id)  // Critical: filter by cohort
                 ->count();
 
             return max(0, $limit - $bookedCount);
         }
 
-        // ✅ ONLINE: Keep existing IQS + occupancy logic
+        //  ONLINE: Keep existing IQS + occupancy logic
         if (! $session instanceof MasterSession) {
             return 0;
         }
