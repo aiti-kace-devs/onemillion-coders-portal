@@ -1311,6 +1311,9 @@ class CourseMatchAPIController extends Controller
         $courseId = $course->id ? (int) $course->id : null;
         $slotLeftResponse = $courseId ? $this->courseSlotLeft($request, $courseId) : null;
         $slotLeft = $slotLeftResponse ? $slotLeftResponse->getData(true)['slot_left'] : null;
+         $centre = $centreId 
+        ? Centre::find($centreId) 
+        : $course?->centre;
 
         return [
             'rank' => '#'.$rankValue,
@@ -1329,6 +1332,11 @@ class CourseMatchAPIController extends Controller
             'in_person_enrollment' => $course ? $course->isInPersonProgramme() : false,
             // 'slot_left' => $slotLeft,
             'centre_id' => $centreId ?? $course?->centre_id,
+            'centre' => $centre ? [
+                'id' => $centre->id,
+                'title' => $centre->title,
+                'is_ready' => $centre->is_ready,
+            ] : null,
         ];
     }
 
