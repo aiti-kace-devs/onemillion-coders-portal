@@ -92,6 +92,7 @@ class BookingService
                     $batch->end_date
                 );
 
+
                 $user->registered_course = $course->id;
                 $user->shortlist = true;
                 $user->save();
@@ -113,7 +114,7 @@ class BookingService
                     'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
                 );
 
-                 // Remove from waitlist if exists
+                // Remove from waitlist if exists
                 AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
                 // Clear the cached seat count so the next read reflects this booking

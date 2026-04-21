@@ -38,11 +38,6 @@ class ProgrammeBatch extends Model
         return $this->belongsTo(Programme::class, 'programme_id');
     }
 
-    public function centre()
-    {
-        return $this->belongsTo(Centre::class, 'centre_id');
-    }
-
     public function userAdmissions()
     {
         return $this->hasMany(UserAdmission::class, 'programme_batch_id');
