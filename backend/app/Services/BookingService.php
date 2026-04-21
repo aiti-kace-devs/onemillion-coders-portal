@@ -29,7 +29,7 @@ class BookingService
 
     /**
      * Book a user into a programme batch for a specific course session.
-     * 
+     *
      * @param CourseSession|MasterSession $session The session to book (polymorphic)
      * @param bool $isInPerson Whether this is an in-person course (determines capacity logic)
      * @throws Exception when capacity is exhausted or the session is incompatible.
@@ -62,6 +62,14 @@ public function book(
                 ->where('status', true)
                 ->first();
 
+            if ($existing) {
+                Log::info('Booking already exists', [
+                    'user_id' => $user->userId,
+                    'batch_id' => $batch->id,
+                    'booking_id' => $existing->id,
+                ]);
+                return $existing;
+            }
 
             // Compute remaining seats with correct logic for session type
             $remaining = $this->computeRemainingSeats($centreId, $batch, $session, $isInPerson);
@@ -117,7 +125,7 @@ public function book(
             AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
             // Clear cached seat count for this specific combination
-            Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$sessionId}"); 
+            Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$sessionId}");
 
             // Create booking record with correct session reference
             return Booking::create([
@@ -189,13 +197,13 @@ public function book(
 
     /**
      * Compute remaining seats directly from DB — no cache (used inside atomic lock)
-     * 
+     *
      * @param CourseSession|MasterSession $session
      * @param bool $isInPerson Whether this is an in-person course
      */
 /**
  * Compute remaining seats directly from DB — no cache (used inside atomic lock)
- * 
+ *
  * @param CourseSession|MasterSession $session
  * @param bool $isInPerson Whether this is an in-person course
  */
@@ -212,7 +220,7 @@ public function book(
 
         if ($isInPerson && $session instanceof CourseSession) {
             $limit = $session->limit ?? $session->seat_count ?? 0;
-            
+
             if ($limit <= 0) {
                 $limit = $centre->seat_count ?? 0;
             }
@@ -254,7 +262,7 @@ public function book(
 
     /**
      * Shared core: capacity minus current bookings
-     * 
+     *
      * For in-person (CourseSession): uses session's own capacity/seat_count
      * For online (MasterSession): uses daily_session_occupancy table + IQS logic
      */
@@ -267,7 +275,7 @@ public function book(
         if ($isInPerson && $session instanceof CourseSession) {
             // IN-PERSON LOGIC: Use CourseSession's own capacity
             $capacity = $session->capacity ?? $session->seat_count ?? 0;
-            
+
             if ($capacity <= 0) {
                 // Fallback to centre seat_count if session has no capacity defined
                 $capacity = $centre->seat_count ?? 0;
@@ -403,7 +411,7 @@ public function book(
                 $key = "{$batchId}:{$sessionId}";
                 $cacheKey = "remaining_seats:{$centreId}:{$batchId}:{$sessionId}";
                 $cached = Cache::get($cacheKey);
-                
+
                 if ($cached !== null) {
                     $results[$key] = (int) $cached;
                     continue;

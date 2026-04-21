@@ -67,8 +67,8 @@ const updatePassword = () => {
                         @input="form.clearErrors('current_password')"
                         autocomplete="current-password"
                     />
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
                         @click="showCurrentPassword = !showCurrentPassword"
                     >
@@ -94,8 +94,8 @@ const updatePassword = () => {
                         @input="form.clearErrors('password')"
                         autocomplete="new-password"
                     />
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
                         @click="showNewPassword = !showNewPassword"
                     >
@@ -120,8 +120,8 @@ const updatePassword = () => {
                         @input="form.clearErrors('password_confirmation')"
                         autocomplete="new-password"
                     />
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
                         @click="showConfirmPassword = !showConfirmPassword"
                     >
@@ -135,7 +135,7 @@ const updatePassword = () => {
             </div>
 
             <div class="flex items-center gap-4">
-                <PrimaryButton :disabled="form.processing">Save</PrimaryButton>
+                <PrimaryButton :disabled="form.processing">Update</PrimaryButton>
 
                 <Transition
                     enter-active-class="transition ease-in-out"
