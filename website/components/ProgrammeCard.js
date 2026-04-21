@@ -26,7 +26,14 @@ import {
   deriveAvailabilityIssueFromBatches,
 } from "../lib/enrollmentAvailability";
 // Normalizes API batch list (cohort + session order) for display; see website/lib/inPersonEnrollmentUi.js.
-import { normalizeInPersonBatches, redirectToStudentDashboard } from "../lib/inPersonEnrollmentUi";
+import {
+  availableSessionCount,
+  batchTotalRemaining,
+  hasBookableSession,
+  normalizeInPersonBatches,
+  redirectToStudentDashboard,
+  totalSessionCount,
+} from "../lib/inPersonEnrollmentUi";
 import { getAvailableBatches, getInPersonAvailableBatches, getSiblingCentres, getSiblingCourses, createBooking, setLearningMode, joinWaitlist } from "../services/api";
 
 const IN_PERSON_DELIVERY_KEYS = new Set([
@@ -181,7 +188,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
             centre_title: data?.centre?.title,
           });
           const hasAvailable = batches.some((b) =>
-            b.sessions?.some((s) => Number(s.remaining) > 0),
+            hasBookableSession(b),
           );
           if (!hasAvailable) {
             await fetchAlternatives(courseId, centreId);
@@ -221,7 +228,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
       setEnrollmentStep("batch");
       const batches = await fetchBatchesForCourse(enrollingCourseId);
       const hasAvailable = batches.some((b) =>
-        b.sessions?.some((s) => Number(s.remaining) > 0),
+        hasBookableSession(b),
       );
       if (!hasAvailable) {
         await fetchAlternatives(enrollingCourseId, centreIdVal);
@@ -265,7 +272,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
   };
 
   const pickDefaultMasterSessionForBatch = (batch) => {
-    const sessions = batch?.sessions || [];
+    const sessions = [...(batch?.sessions || []), ...(batch?.standard_sessions || [])];
     const withRoom = sessions.find((s) => Number(s.remaining) > 0);
     return withRoom || sessions[0] || null;
   };
@@ -309,14 +316,13 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
   };
 
   const handleBatchSelect = (batch) => {
-    const hasAvailableSession = batch.sessions?.some((s) => s.remaining > 0);
-    if (!hasAvailableSession) return;
+    if (!hasBookableSession(batch)) return;
     setSelectedBatch(batch);
     setEnrollmentStep("session");
   };
 
   const handleSessionSelect = (session) => {
-    if (session.remaining === 0) return;
+    if (Number(session.remaining) <= 0) return;
     setSelectedSession(session);
     setEnrollmentStep("confirm");
   };
@@ -330,6 +336,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
           programme_batch_id: selectedBatch.id,
           course_id: enrollingCourseId,
           session_id: selectedSession.session_id,
+          ...(selectedSession.capacity_pool && { capacity_pool: selectedSession.capacity_pool }),
         },
         token,
         { selfPace: !inPersonEnrollmentFlow && studyModeChoice === "home" },
@@ -337,7 +344,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
       if (result.conflict) {
         const batches = await fetchBatchesForCourse(enrollingCourseId);
         const hasAvailable = batches.some((b) =>
-          b.sessions?.some((s) => Number(s.remaining) > 0),
+          hasBookableSession(b),
         );
         if (hasAvailable) {
           setSelectedBatch(null);
@@ -1022,7 +1029,6 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                 const months = Object.keys(monthMap).sort();
                 const activeMonth = selectedBatchMonth || months[0];
                 const filteredBatches = monthMap[activeMonth] || [];
-                const batchTotalRemaining = (b) => (b.sessions || []).reduce((sum, s) => sum + s.remaining, 0);
                 return (
                   <>
                     <button onClick={closeEnrollmentModal} className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"><FiX className="w-4.5 h-4.5" /></button>
@@ -1090,7 +1096,7 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                                       {isFull && <span className="px-1.5 py-0.5 bg-red-50 text-red-500 text-[10px] font-medium rounded-full">Full</span>}
                                     </div>
                                     <div className={`text-[11px] sm:text-xs ${isFull ? "text-gray-300" : "text-gray-500"} mb-1`}>{startStr} — {endStr}</div>
-                                    <div className="text-[10px] text-gray-400">{(batch.sessions || []).filter((s) => s.remaining > 0).length} of {(batch.sessions || []).length} sessions available</div>
+                                    <div className="text-[10px] text-gray-400">{availableSessionCount(batch)} of {totalSessionCount(batch)} sessions available</div>
                                   </div>
                                   {!isFull && <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 flex-shrink-0 transition-all group-hover:translate-x-0.5" />}
                                 </div>
@@ -1137,10 +1143,11 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                     </div>
                     <div className="space-y-2">
                       {(selectedBatch?.sessions || []).map((session) => {
-                        const isSelected = selectedSession?.session_id === session.session_id;
+                        const sessionPool = session.capacity_pool || "reserved";
+                        const isSelected = selectedSession?.session_id === session.session_id && (selectedSession?.capacity_pool || "reserved") === sessionPool;
                         const isFull = session.remaining === 0;
                         return (
-                          <button key={session.session_id} onClick={() => handleSessionSelect(session)} disabled={isFull}
+                          <button key={`${sessionPool}-${session.session_id}`} onClick={() => handleSessionSelect(session)} disabled={isFull}
                             className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all duration-200 group active:scale-[0.99] ${isFull ? "bg-gray-50/80 border-gray-100 cursor-not-allowed opacity-50" : isSelected ? "bg-gray-900 text-white border-gray-900 shadow-lg" : "bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md"}`}>
                             <div className="flex items-center gap-3">
                               <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? "bg-yellow-400" : isFull ? "bg-gray-100" : "bg-gradient-to-br from-yellow-50 to-orange-50 group-hover:from-yellow-100 group-hover:to-orange-100"}`}>
@@ -1162,6 +1169,40 @@ const ProgrammeCard = ({ programme, userId, centreId, token, centreIsReady = tru
                           </button>
                         );
                       })}
+                      {(selectedBatch?.standard_sessions || []).length > 0 && (
+                        <div className="pt-3 mt-3 border-t border-gray-200">
+                          <div className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2">Standard Slots</div>
+                          <div className="space-y-2">
+                            {(selectedBatch?.standard_sessions || []).map((session) => {
+                              const sessionPool = session.capacity_pool || "standard";
+                              const isSelected = selectedSession?.session_id === session.session_id && (selectedSession?.capacity_pool || "reserved") === sessionPool;
+                              const isFull = session.remaining === 0;
+                              return (
+                                <button key={`${sessionPool}-${session.session_id}`} onClick={() => handleSessionSelect(session)} disabled={isFull}
+                                  className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all duration-200 group active:scale-[0.99] ${isFull ? "bg-gray-50/80 border-gray-100 cursor-not-allowed opacity-50" : isSelected ? "bg-gray-900 text-white border-gray-900 shadow-lg" : "bg-white border-gray-200 hover:border-yellow-400 hover:shadow-md"}`}>
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? "bg-yellow-400" : isFull ? "bg-gray-100" : "bg-gradient-to-br from-yellow-50 to-orange-50 group-hover:from-yellow-100 group-hover:to-orange-100"}`}>
+                                      <FiClock className={`w-4 h-4 ${isSelected ? "text-gray-900" : isFull ? "text-gray-400" : "text-yellow-600"}`} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm sm:text-base font-semibold break-words">{session.session_name}</div>
+                                      <div className={`text-xs sm:text-sm mt-0.5 ${isSelected ? "text-gray-300" : "text-gray-600"}`}>{session.time}</div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                                      {isFull ? (
+                                        <span className="text-[10px] text-red-500 font-medium">Full</span>
+                                      ) : session.show_seat_count ? (
+                                        <span className={`text-[10px] tabular-nums ${isSelected ? "text-yellow-400" : session.remaining <= 5 ? "text-orange-600 font-medium" : "text-gray-400"}`}>{session.remaining} left</span>
+                                      ) : null}
+                                      {!isFull && !isSelected && <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" />}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}

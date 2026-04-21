@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Batch;
+use App\Models\Booking;
 use App\Models\Branch;
 use App\Models\Centre;
 use App\Models\Constituency;
@@ -537,15 +538,15 @@ protected function courseHasAvailableSlots($course, $programmeId = null): bool
             return false;
         }
 
-        $sessions = $course->sessions()
-            ->where('centre_id', $centreId)
-            ->where('session_type', CourseSession::TYPE_CENTRE)
-            ->where('status', true)
-            ->get();
+        $sessions = $course->activeInPersonEnrollmentSessions();
 
         foreach ($programmeBatchIds as $batchId) {
             foreach ($sessions as $session) {
-                if ($bookingService->getRemainingSeatsForCourseSession($centreId, (int) $batchId, (int) $session->id, false) > 0) {
+                $remaining = $session instanceof CourseSession
+                    ? $bookingService->getRemainingSeatsForCourseSession($centreId, (int) $batchId, (int) $session->id, false)
+                    : $bookingService->getRemainingSeats($centreId, (int) $batchId, (int) $session->id, false);
+
+                if ($remaining > 0) {
                     return true;
                 }
             }
@@ -988,6 +989,7 @@ public function districtsByBranch(Request $request)
         foreach ($centres as $centre) {
             $centreSessions = $sessions;
             $remainingSeats = [];
+            $standardRemainingSeats = [];
             $centreCapacity = $centre->slotCapacityFor($courseType);
             $centreCourse = $centre->courses->first();
 
@@ -996,69 +998,108 @@ public function districtsByBranch(Request $request)
                     continue;
                 }
 
-                $centreSessions = CourseSession::where('course_id', $centreCourse->id)
-                    ->where('centre_id', $centre->id)
-                    ->where('session_type', CourseSession::TYPE_CENTRE)
-                    ->where('status', true)
-                    ->get();
+                $centreSessions = $centreCourse->activeInPersonEnrollmentSessions();
                 $centreSessions = $this->sortMasterSessions($centreSessions);
 
                 if ($centreSessions->isEmpty()) {
                     continue;
                 }
 
-                $configuredSessionCapacity = (int) $centreSessions->sum('limit');
+                $configuredSessionCapacity = (int) $centreSessions
+                    ->filter(fn ($session) => $session instanceof CourseSession)
+                    ->sum('limit');
                 $centreCapacity = $configuredSessionCapacity > 0
                     ? $configuredSessionCapacity
                     : (int) ($centre->slotCapacityFor($courseType) ?? 0);
             } else {
-                $remainingSeats = $bookingService->getRemainingSeatsBatch(
+                $standardRemainingSeats = $bookingService->getRemainingSeatsBatch(
                     $centre->id,
                     $batches->pluck('id')->toArray(),
                     $centreSessions->pluck('id')->toArray(),
-                    $forProtocol
+                    false
                 );
+                $remainingSeats = $forProtocol
+                    ? $bookingService->getRemainingSeatsBatch(
+                        $centre->id,
+                        $batches->pluck('id')->toArray(),
+                        $centreSessions->pluck('id')->toArray(),
+                        true
+                    )
+                    : $standardRemainingSeats;
             }
 
             $totalAvailable = 0;
 
-            $batchData = $batches->values()->map(function ($batch, $index) use ($centre, $centreSessions, $remainingSeats, $isInPerson, $bookingService, $forProtocol, $centreCapacity, &$totalAvailable) {
-                $sessionData = $centreSessions->map(function ($session) use ($centre, $batch, $remainingSeats, $isInPerson, $bookingService, $forProtocol, $centreCapacity, &$totalAvailable) {
+            $batchData = $batches->values()->map(function ($batch, $index) use ($centre, $centreSessions, $remainingSeats, $standardRemainingSeats, $isInPerson, $bookingService, $forProtocol, $centreCapacity, &$totalAvailable) {
+                $sessionData = $centreSessions->map(function ($session) use ($centre, $batch, $remainingSeats, $standardRemainingSeats, $isInPerson, $bookingService, $forProtocol, $centreCapacity, &$totalAvailable) {
                     $key = "{$batch->id}:{$session->id}";
-                    $remaining = $isInPerson
-                        ? $bookingService->getRemainingSeatsForCourseSession($centre->id, $batch->id, $session->id, $forProtocol)
-                        : (int) ($remainingSeats[$key] ?? 0);
+                    $isCourseSession = $session instanceof CourseSession;
+                    if ($isInPerson) {
+                        $breakdown = $bookingService->getRemainingSeatBreakdown($centre->id, $batch->id, $session->id, $isCourseSession, $courseType);
+                        $reservedRemaining = (int) $breakdown['reserved_remaining'];
+                        $standardRemaining = (int) $breakdown['standard_remaining'];
+                        $remaining = $forProtocol ? $reservedRemaining : $standardRemaining;
+                    } else {
+                        $reservedRemaining = $forProtocol ? (int) ($remainingSeats[$key] ?? 0) : 0;
+                        $standardRemaining = (int) ($standardRemainingSeats[$key] ?? 0);
+                        $remaining = $forProtocol ? $reservedRemaining : $standardRemaining;
+                    }
                     $totalAvailable += $remaining;
 
-                    $limit = $isInPerson && $session->limit !== null ? (int) $session->limit : null;
+                    $limit = $isInPerson && $isCourseSession && $session->limit !== null ? (int) $session->limit : null;
                     $booked = $isInPerson
-                        ? \App\Models\Booking::query()
+                        ? Booking::query()
                             ->where('programme_batch_id', $batch->id)
-                            ->where('course_session_id', $session->id)
+                            ->when($isCourseSession, fn ($query) => $query->where('course_session_id', $session->id))
+                            ->when(! $isCourseSession, fn ($query) => $query->where('master_session_id', $session->id))
                             ->where('status', true)
                             ->count()
                         : null;
 
                     return [
                         'session_id' => $session->id,
-                        'course_session_id' => $isInPerson ? $session->id : null,
+                        'course_session_id' => $isInPerson && $isCourseSession ? $session->id : null,
+                        'master_session_id' => $isInPerson && ! $isCourseSession ? $session->id : ($session->master_session_id ?? null),
                         'session_name' => $isInPerson
-                            ? ($session->session ?? 'Unknown')
+                            ? ($isCourseSession ? ($session->session ?? 'Unknown') : ($session->session_type ?? $session->master_name ?? 'Unknown'))
                             : "{$session->session_type} Session",
                         'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time,
                         'remaining' => $remaining,
+                        'reserved_remaining' => $reservedRemaining,
+                        'standard_remaining' => $standardRemaining,
+                        'capacity_pool' => $forProtocol ? Booking::CAPACITY_POOL_RESERVED : Booking::CAPACITY_POOL_STANDARD,
                         'show_seat_count' => $isInPerson ? ($limit !== null && $limit > 0) : true,
                         'limit' => $limit,
                         'booked' => $booked,
                         'centre_capacity' => ! $isInPerson ? $centreCapacity : null,
                     ];
-                })->values()->toArray();
+                })->values();
+
+                $reservedPoolHasRoom = $forProtocol
+                    ? $sessionData->contains(fn ($session) => (int) ($session['remaining'] ?? 0) > 0)
+                    : false;
+                $standardSessionData = $forProtocol && ! $reservedPoolHasRoom
+                    ? $sessionData
+                        ->map(function ($session) {
+                            $session['remaining'] = (int) ($session['standard_remaining'] ?? 0);
+                            $session['capacity_pool'] = Booking::CAPACITY_POOL_STANDARD;
+
+                            return $session;
+                        })
+                        ->filter(fn ($session) => (int) ($session['remaining'] ?? 0) > 0)
+                        ->values()
+                    : collect();
+
+                if ($forProtocol && ! $reservedPoolHasRoom) {
+                    $totalAvailable += $standardSessionData->sum(fn ($session) => (int) ($session['remaining'] ?? 0));
+                }
 
                 return [
                     'batch' => 'Cohort '.($index + 1),
                     'start_date' => $batch->start_date->format('Y-m-d'),
                     'end_date' => $batch->end_date->format('Y-m-d'),
-                    'sessions' => $sessionData,
+                    'sessions' => $sessionData->values()->toArray(),
+                    'standard_sessions' => $standardSessionData->toArray(),
                 ];
             })->values()->toArray();
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\CourseSession;
+use App\Models\MasterSession;
 use App\Models\ProgrammeBatch;
 use App\Services\AvailabilityService;
 use App\Services\GhanaCardService;
@@ -27,8 +28,19 @@ class InPersonEnrollmentController extends Controller
         $validated = $request->validate([
             'programme_batch_id' => 'required|integer|exists:programme_batches,id',
             'course_id' => 'required|integer|exists:courses,id',
-            'course_session_id' => 'required|integer|exists:course_sessions,id',
+            'course_session_id' => 'nullable|integer',
+            'session_id' => 'nullable|integer',
+            'capacity_pool' => 'nullable|string|in:reserved,standard',
         ]);
+
+        $sessionId = (int) ($validated['course_session_id'] ?? $validated['session_id'] ?? 0);
+        if ($sessionId < 1) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'The selected session id is invalid.',
+                'errors' => ['session_id' => ['The selected session id is invalid.']],
+            ], 422);
+        }
 
         $batch = ProgrammeBatch::find($validated['programme_batch_id']);
         if (! $batch) {
@@ -65,12 +77,12 @@ class InPersonEnrollmentController extends Controller
         }
 
         $course = Course::with('programme')->find($validated['course_id']);
-        $centreSession = CourseSession::find($validated['course_session_id']);
+        $centreSession = CourseSession::find($sessionId);
 
-        if (! $course || ! $centreSession) {
+        if (! $course) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Course or session not found.',
+                'message' => 'Course not found.',
             ], 404);
         }
 
@@ -81,8 +93,26 @@ class InPersonEnrollmentController extends Controller
             ], 422);
         }
 
+        if (! $centreSession
+            || (int) $centreSession->centre_id !== (int) $course->centre_id
+            || $centreSession->session_type !== CourseSession::TYPE_CENTRE
+            || ($centreSession->course_id !== null && (int) $centreSession->course_id !== (int) $course->id)) {
+            $centreSession = MasterSession::where('id', $sessionId)
+                ->where('status', true)
+                ->where('course_type', $course->programme?->courseType())
+                ->where('session_type', '!=', 'Online')
+                ->first();
+        }
+
+        if (! $centreSession) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Course or session not found.',
+            ], 404);
+        }
+
         try {
-            $enrollmentService->enroll($user, $course, $batch, $centreSession);
+            $enrollmentService->enroll($user, $course, $batch, $centreSession, $validated['capacity_pool'] ?? null);
         } catch (Exception $e) {
             $forProtocol = (bool) ($user->is_protocol ?? false);
             $recommendations = $availabilityService->getAvailableSlots(

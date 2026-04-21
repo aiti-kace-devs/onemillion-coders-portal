@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\Centre;
 use App\Models\Course;
 use App\Models\CourseSession;
+use App\Models\MasterSession;
 use App\Models\Programme;
 use App\Models\ProgrammeBatch;
 use App\Models\User;
@@ -121,6 +122,29 @@ class InPersonEnrollmentTest extends TestCase
     }
 
     /** @test */
+    public function in_person_availability_falls_back_to_master_sessions_when_centre_rows_are_missing(): void
+    {
+        $f = $this->makeInPersonFixture();
+        $f['session']->delete();
+
+        $master = MasterSession::create([
+            'master_name' => 'Short Morning',
+            'session_type' => 'Morning',
+            'time' => '8AM - 9:45AM',
+            'course_type' => Programme::COURSE_TYPE_SHORT,
+            'status' => true,
+        ]);
+
+        $res = $this->withHeader('Authorization', 'Bearer '.$f['token'])
+            ->getJson('/api/availability/batches?course_id='.$f['course']->id);
+
+        $res->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonFragment(['session_id' => $master->id])
+            ->assertJsonFragment(['master_session_id' => $master->id]);
+    }
+
+    /** @test */
     public function in_person_availability_returns_422_for_online_programme(): void
     {
         $f = $this->makeInPersonFixture();
@@ -158,6 +182,39 @@ class InPersonEnrollmentTest extends TestCase
         $booking = Booking::where('user_id', $f['user']->userId)->first();
         $this->assertNotNull($booking);
         $this->assertNull($booking->master_session_id);
+    }
+
+    /** @test */
+    public function post_in_person_booking_accepts_master_session_fallback(): void
+    {
+        $f = $this->makeInPersonFixture(5);
+        $f['session']->delete();
+
+        $master = MasterSession::create([
+            'master_name' => 'Short Morning',
+            'session_type' => 'Morning',
+            'time' => '8AM - 9:45AM',
+            'course_type' => Programme::COURSE_TYPE_SHORT,
+            'status' => true,
+        ]);
+
+        $res = $this->withHeader('Authorization', 'Bearer '.$f['token'])
+            ->postJson('/api/bookings', [
+                'programme_batch_id' => $f['pb']->id,
+                'course_id' => $f['course']->id,
+                'session_id' => $master->id,
+            ]);
+
+        $res->assertStatus(201)
+            ->assertJsonPath('status', 'success');
+
+        $this->assertDatabaseHas('bookings', [
+            'user_id' => $f['user']->userId,
+            'programme_batch_id' => $f['pb']->id,
+            'course_id' => $f['course']->id,
+            'course_session_id' => null,
+            'master_session_id' => $master->id,
+        ]);
     }
 
     /** @test */

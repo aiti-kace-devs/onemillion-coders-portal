@@ -15,6 +15,9 @@ class Booking extends Model
     use HasFactory;
     use LogsActivity;
 
+    public const CAPACITY_POOL_RESERVED = 'reserved';
+    public const CAPACITY_POOL_STANDARD = 'standard';
+
     protected $table = 'bookings';
 
     protected $fillable = [
@@ -26,6 +29,7 @@ class Booking extends Model
         'course_id',
         'course_type',
         'is_protocol',
+        'capacity_pool',
         'status',
         'booked_at',
         'cancelled_at',
@@ -62,8 +66,9 @@ class Booking extends Model
     public static function resolveCourseType(int $courseId): string
     {
         $course = Course::with('programme:id,time_allocation')->find($courseId);
+
         return $course?->programme?->courseType()
-            ?? ($course->programme->time_allocation == 2 ? Programme::COURSE_TYPE_SHORT : Programme::COURSE_TYPE_LONG);
+            ?? Programme::COURSE_TYPE_SHORT;
     }
 
     public function programmeBatch(): BelongsTo

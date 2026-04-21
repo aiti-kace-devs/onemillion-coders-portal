@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Batch;
+use App\Models\Booking;
 use App\Models\Course;
 use App\Models\CourseSession;
 use App\Models\ProgrammeBatch;
@@ -85,50 +86,69 @@ class InPersonAvailabilityController extends Controller
             ->orderBy('id')
             ->get();
 
-        $centreSessions = CourseSession::query()
-            ->where('course_id', $course->id)
-            ->where('centre_id', $course->centre_id)
-            ->where('session_type', CourseSession::TYPE_CENTRE)
-            ->where('status', true)
-            // Lexicographic time string is imperfect but stable; JS re-sorts by parsed clock time.
-            ->orderByRaw("COALESCE(NULLIF(TRIM(course_time), ''), 'ZZZ')")
-            ->orderBy('id')
-            ->get();
+        $centreSessions = $course->activeInPersonEnrollmentSessions()
+            ->sortBy(function ($session) {
+                return [
+                    $this->sessionStartMinutes($session->time ?? $session->course_time ?? ''),
+                    (int) ($session->id ?? 0),
+                ];
+            }, SORT_REGULAR)
+            ->values();
 
         $forProtocolBooking = $request->query('forProtocolBooking') !== null
             ? filter_var($request->query('forProtocolBooking'), FILTER_VALIDATE_BOOLEAN)
             : (bool) ($request->user()?->is_protocol ?? false);
 
-        $batchData = $batches->values()->map(function ($batch, $index) use ($centreSessions, $bookingService, $centre, $forProtocolBooking) {
-            $sessionData = $centreSessions->map(function (CourseSession $cs) use ($batch, $bookingService, $centre, $forProtocolBooking) {
-                $limit = $cs->limit;
+        $batchData = $batches->values()->map(function ($batch, $index) use ($centreSessions, $bookingService, $centre, $forProtocolBooking, $courseType) {
+            $sessionData = $centreSessions->map(function ($cs) use ($batch, $bookingService, $centre, $forProtocolBooking, $courseType) {
+                $isCourseSession = $cs instanceof CourseSession;
+                $limit = $isCourseSession ? $cs->limit : null;
                 $hasLimit = $limit !== null && (int) $limit > 0;
-                $showSeatCount = $hasLimit;
 
-                $remaining = $bookingService->getRemainingSeatsForCourseSession(
-                    $centre->id,
-                    $batch->id,
-                    $cs->id,
-                    $forProtocolBooking
-                );
+                $breakdown = $bookingService->getRemainingSeatBreakdown($centre->id, $batch->id, $cs->id, $isCourseSession, $courseType);
+                $reservedRemaining = (int) $breakdown['reserved_remaining'];
+                $standardRemaining = (int) $breakdown['standard_remaining'];
+                $remaining = $forProtocolBooking ? $reservedRemaining : $standardRemaining;
 
                 return [
                     'session_id' => $cs->id,
-                    'course_session_id' => $cs->id,
-                    'session_name' => $cs->name ?: ($cs->session ? "{$cs->session} Session" : 'Session'),
-                    'time' => $cs->course_time ?: '',
+                    'course_session_id' => $isCourseSession ? $cs->id : null,
+                    'master_session_id' => $isCourseSession ? ($cs->master_session_id ?? null) : $cs->id,
+                    'session_name' => $isCourseSession
+                        ? ($cs->name ?: ($cs->session ? "{$cs->session} Session" : 'Session'))
+                        : ($cs->master_name ?: "{$cs->session_type} Session"),
+                    'time' => $cs->course_time ?? $cs->time ?? '',
                     'remaining' => $remaining,
-                    'show_seat_count' => $showSeatCount,
+                    'reserved_remaining' => $reservedRemaining,
+                    'standard_remaining' => $standardRemaining,
+                    'capacity_pool' => $forProtocolBooking ? Booking::CAPACITY_POOL_RESERVED : Booking::CAPACITY_POOL_STANDARD,
+                    'show_seat_count' => $hasLimit,
                     'limit' => $hasLimit ? (int) $limit : null,
                 ];
-            })->values()->toArray();
+            })->values();
+
+            $reservedPoolHasRoom = $forProtocolBooking
+                ? $sessionData->contains(fn ($session) => (int) ($session['remaining'] ?? 0) > 0)
+                : false;
+            $standardSessionData = $forProtocolBooking && ! $reservedPoolHasRoom
+                ? $sessionData
+                    ->map(function ($session) {
+                        $session['remaining'] = (int) ($session['standard_remaining'] ?? 0);
+                        $session['capacity_pool'] = Booking::CAPACITY_POOL_STANDARD;
+
+                        return $session;
+                    })
+                    ->filter(fn ($session) => (int) ($session['remaining'] ?? 0) > 0)
+                    ->values()
+                : collect();
 
             return [
                 'id' => $batch->id,
                 'batch' => 'Cohort '.($index + 1),
                 'start_date' => $batch->start_date->format('Y-m-d'),
                 'end_date' => $batch->end_date->format('Y-m-d'),
-                'sessions' => $sessionData,
+                'sessions' => $sessionData->values()->toArray(),
+                'standard_sessions' => $standardSessionData->toArray(),
             ];
         })->values()->all();
 
@@ -142,5 +162,19 @@ class InPersonAvailabilityController extends Controller
             'certificate_title' => $certificateTitle,
             'batches' => $batchData,
         ]);
+    }
+
+    private function sessionStartMinutes(?string $time): int
+    {
+        $startTime = trim(preg_split('/\s*-\s*/', (string) $time, 2)[0] ?? '');
+        if ($startTime === '') {
+            return PHP_INT_MAX;
+        }
+
+        $timestamp = strtotime($startTime);
+
+        return $timestamp === false
+            ? PHP_INT_MAX
+            : ((int) date('G', $timestamp) * 60) + (int) date('i', $timestamp);
     }
 }
