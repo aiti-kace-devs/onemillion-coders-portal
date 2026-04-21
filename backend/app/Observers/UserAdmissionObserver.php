@@ -48,7 +48,6 @@ class UserAdmissionObserver
         if ($admission->wasChanged('confirmed') && $admission->confirmed) {
             $row = $this->findOpenRow($admission->user_id, $admission->course_id);
             $row?->update([
-                'status' => 'confirmed',
                 'started_at' => $admission->confirmed,
             ]);
         }

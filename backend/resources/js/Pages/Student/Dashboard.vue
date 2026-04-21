@@ -36,7 +36,6 @@ const cohortDetailRow = computed(() => {
     if (props.cohort.batch_number && props.cohort.title) {
         items.push(`Cohort ${props.cohort.batch_number}`);
     }
-    if (props.cohort.year) items.push(String(props.cohort.year));
     if (props.cohort.start_date || props.cohort.end_date) {
         const start = formatDate(props.cohort.start_date);
         const end = formatDate(props.cohort.end_date);
@@ -232,7 +231,7 @@ const greeting = computed(() => {
                                 <span class="material-symbols-outlined">school</span>
                             </span>
                             <div class="flex-1 text-left">
-                                <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">
+                                <p class="text-gray-500 text-sm font-medium uppercase tracking-wider">
                                     {{ isOnWaitlist ? 'Chosen Course' : 'Registered Course' }}
                                 </p>
                                 <h3 class="text-lg font-bold text-gray-800">
@@ -299,9 +298,9 @@ const greeting = computed(() => {
                         </div>
                         <div class="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between">
                             <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener noreferrer"
-                                class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[#f9a825] hover:text-amber-700 transition-colors">
+                                class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-green-600 hover:text-green-700 transition-colors">
                                 <span class="material-symbols-outlined text-base">near_me</span>
-                                Get Directions
+                                Click here to get direction to your center
                             </a>
                         </div>
                     </div>
@@ -309,10 +308,10 @@ const greeting = computed(() => {
 
                 <div class="mt-6 space-y-10">
                     <div>
-                        <p class="mb-1 text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        <p class="mb-1 text-sm font-bold text-gray-400 uppercase tracking-widest">
                             Quick access
                         </p>
-                        <p class="mb-4 text-xs text-gray-500 max-w-2xl">
+                        <p class="mb-4 text-sm text-gray-500 max-w-2xl">
                             Application status is your hub for progress and the expected flow; use the shortcuts below
                             to
                             complete each step.
@@ -429,19 +428,20 @@ const greeting = computed(() => {
                                             </span>
                                             <span
                                                 class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
-                                                :class="user.verification_completed
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : user.verification_blocked
-                                                        ? 'bg-red-100 text-red-700'
-                                                        : 'bg-yellow-100 text-yellow-700'
-                                                    ">
-                                                {{
-                                                    user.verification_completed
-                                                        ? "Verified"
-                                                        : user.verification_blocked
-                                                            ? "Blocked"
-                                                            : "Pending"
-                                                }}
+                                                :class="{
+                                                    'bg-green-100 text-green-700': user.verification_status === 'verified',
+                                                    'bg-red-100 text-red-700': user.verification_status === 'blocked',
+                                                    'bg-orange-100 text-orange-700': user.verification_status === 'processing',
+                                                    'bg-red-100 text-red-700': user.verification_status === 'failed',
+                                                    'bg-orange-100 text-orange-700': user.verification_status === 'pending',
+                                                }">
+                                                {{ {
+                                                    verified: 'Verified',
+                                                    blocked: 'Blocked',
+                                                    processing: 'Processing',
+                                                    failed: 'Failed',
+                                                    pending: 'Pending',
+                                                }[user.verification_status] || 'Pending' }}
                                             </span>
                                             <div class="flex items-center gap-3 mb-2">
                                                 <span
@@ -469,7 +469,7 @@ const greeting = computed(() => {
                                 <p class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
                                     More shortcuts
                                 </p>
-                                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                     <Link v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
                                         :href="route('student.results')" class="block h-full">
                                         <div
@@ -612,7 +612,32 @@ const greeting = computed(() => {
                         </template>
 
                         <!-- After level assessment: shortcut grid (application status is above for everyone). -->
-                        <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            <Link :href="route('student.application-status')" class="block h-full">
+                                <div
+                                    class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
+                                    <div
+                                        class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
+                                    </div>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span
+                                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#f9a825]/10 text-[#f9a825] transition-colors duration-300 group-hover:bg-[#f9a825] group-hover:text-gray-900">
+                                            <span class="material-symbols-outlined">contract</span>
+                                        </span>
+                                        <div class="flex-1 text-left">
+                                            <h3 class="text-lg font-bold text-gray-800">
+                                                Application Status
+                                            </h3>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 space-y-1 text-left">
+                                        <p class="text-sm">
+                                            View your timeline, expected flow, and what to do next.
+                                        </p>
+                                    </div>
+                                </div>
+                            </Link>
+
                             <Link :href="route('student.verification.index')" class="block h-full">
                                 <div
                                     class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
@@ -624,19 +649,20 @@ const greeting = computed(() => {
                                         Next step
                                     </span>
                                     <span class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
-                                        :class="user.verification_completed
-                                            ? 'bg-green-100 text-green-700'
-                                            : user.verification_blocked
-                                                ? 'bg-red-100 text-red-700'
-                                                : 'bg-yellow-100 text-yellow-700'
-                                            ">
-                                        {{
-                                            user.verification_completed
-                                                ? "Verified"
-                                                : user.verification_blocked
-                                                    ? "Blocked"
-                                                    : "Pending"
-                                        }}
+                                        :class="{
+                                            'bg-green-100 text-green-700': user.verification_status === 'verified',
+                                            'bg-red-100 text-red-700': user.verification_status === 'blocked',
+                                            'bg-orange-100 text-orange-700': user.verification_status === 'processing',
+                                            'bg-red-100 text-red-700': user.verification_status === 'failed',
+                                            'bg-orange-100 text-orange-700': user.verification_status === 'pending',
+                                        }">
+                                        {{ {
+                                            verified: 'Verified',
+                                            blocked: 'Blocked',
+                                            processing: 'Processing',
+                                            failed: 'Failed',
+                                            pending: 'Pending',
+                                        }[user.verification_status] || 'Pending' }}
                                     </span>
                                     <div class="flex items-center gap-3 mb-2">
                                         <span

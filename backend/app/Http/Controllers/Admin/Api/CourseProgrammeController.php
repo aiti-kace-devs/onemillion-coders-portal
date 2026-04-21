@@ -16,6 +16,7 @@ use App\Models\Programme;
 use App\Models\ProgrammeBatch;
 use App\Models\UserAdmission;
 use App\Services\BookingService;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -434,41 +435,164 @@ class CourseProgrammeController extends Controller
         ]);
     }
 
+
+
+
     public function getBranch(Request $request)
-    {
-        $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
-        $cacheKey = 'branches:'.($addCentreCount ? 'with_centres' : 'basic');
+{
+    $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
+    $programmeId = $request->query('programme_id') ? (int) $request->query('programme_id') : null;
 
-        $branch = Cache::remember($cacheKey, 600, function () use ($addCentreCount) {
-            $branchQuery = Branch::where('status', 1)->orderBy('title');
+    $cacheKey = 'branches:'
+        .($addCentreCount ? 'with_centres' : 'basic')
+        .($programmeId ? ':programme_'.$programmeId : '');
 
-            return $branchQuery->get(['id', 'title', 'status'])
-                ->map(function ($branch) use ($addCentreCount) {
-                    $payload = [
-                        'id' => $branch->id,
-                        'title' => $branch->title,
-                        'status' => $branch->status,
-                    ];
+    $branch = Cache::remember($cacheKey, 600, function () use ($addCentreCount, $programmeId) {
+        $branches = Branch::where('status', 1)->orderBy('title')->get(['id', 'title', 'status']);
 
-                    if ($addCentreCount) {
-                        $payload['total_centres'] = (int) Centre::where('branch_id', $branch->id)
-                            ->where('status', 1)
-                            ->where('is_ready', 1)
-                            ->withCount('courses')
-                            ->having('courses_count', '>', 0)
-                            ->count();
+        return $branches->map(function ($branch) use ($addCentreCount, $programmeId) {
+            $payload = [
+                'id' => $branch->id,
+                'title' => $branch->title,
+                'status' => $branch->status,
+            ];
+
+            if ($addCentreCount) {
+                // Get all ready centres for this branch
+                $centres = Centre::where('branch_id', $branch->id)
+                    ->where('status', 1)
+                    ->where('is_ready', 1)
+                    ->with(['courses' => function ($query) use ($programmeId) {
+                        $query->where('status', true);
+                        if ($programmeId) {
+                            $query->where('programme_id', $programmeId);
+                        }
+                    }])
+                    ->get();
+
+                // Count centres with at least one course that has available slots
+                $count = 0;
+                
+                foreach ($centres as $centre) {
+                    foreach ($centre->courses as $course) {
+                        if ($this->courseHasAvailableSlots($course, $programmeId)) {
+                            $count++;
+                            break; // Count centre only once
+                        }
                     }
+                }
+                
+                $payload['total_centres'] = $count;
+            }
 
-                    return $payload;
-                })
-                ->values();
-        });
+            return $payload;
+        })->values();
+    });
 
-        return response()->json([
-            'success' => true,
-            'data' => $branch,
-        ]);
+    return response()->json([
+        'success' => true,
+        'data' => $branch,
+    ]);
+}
+
+/**
+ * Check if a course has at least one session with available slots
+ */
+protected function courseHasAvailableSlots($course, $programmeId = null): bool
+{
+    if (!$programmeId) {
+        // No programme filter: just check if course has any sessions
+        return $course->sessions()->where('status', true)->exists()
+            || $course->programme?->isInPerson() === false; // Online courses assumed available
     }
+
+    $programme = $course->programme;
+    if (!$programme || $programme->id != $programmeId) {
+        return false;
+    }
+
+    $isInPerson = $programme->isInPerson();
+    
+    // Find active admission batch
+    $today = \Carbon\Carbon::today();
+    $admissionBatch = Batch::where('start_date', '<=', $today)
+        ->where('end_date', '>=', $today)
+        ->where('status', true)
+        ->where('completed', false)
+        ->first();
+
+    if (!$admissionBatch) {
+        return false;
+    }
+
+    // Get programme batches
+    $programmeBatches = ProgrammeBatch::where('admission_batch_id', $admissionBatch->id)
+        ->where('programme_id', $programmeId)
+        ->where('status', true)
+        ->pluck('id')
+        ->toArray();
+
+    if (empty($programmeBatches)) {
+        return false;
+    }
+
+    if ($isInPerson) {
+        // IN-PERSON: Check sessions
+        $sessions = $course->sessions()->where('status', true)->get();
+        
+        foreach ($sessions as $session) {
+            $limit = $session->limit ?? 0;
+            if ($limit <= 0) continue;
+
+            // Count bookings for this session across all batches
+            $booked = UserAdmission::where('course_id', $course->id)
+                ->where('session', $session->id)
+                ->whereIn('programme_batch_id', $programmeBatches)
+                ->count();
+
+            if ($booked < $limit) {
+                return true; // Found an available slot
+            }
+        }
+        return false;
+    } else {
+        // ONLINE: Check centre capacity vs bookings
+        $centre = $course->centre;
+        if (!$centre) return false;
+
+        $timeAllocation = $programme->time_allocation;
+        $capacity = 0;
+
+        if ($timeAllocation == Programme::TIME_ALLOCATION_SHORT) {
+            $capacity = (int) ($centre->short_slots_per_day ?? 0);
+        } elseif ($timeAllocation == Programme::TIME_ALLOCATION_LONG) {
+            $capacity = (int) ($centre->long_slots_per_day ?? 0);
+        }
+
+        if ($capacity <= 0) {
+            return false;
+        }
+
+        // Count total bookings for this programme at this centre
+        $booked = UserAdmission::whereHas('programmeBatch', function ($q) use ($programmeId) {
+                $q->where('programme_id', $programmeId);
+            })
+            ->whereIn('programme_batch_id', $programmeBatches)
+            ->whereHas('course', function ($q) use ($centre) {
+                $q->where('centre_id', $centre->id);
+            })
+            ->count();
+
+        return $booked < $capacity;
+    }
+}
+
+
+
+
+
+
+
 
     public function getBranchSummary()
     {
@@ -601,51 +725,97 @@ class CourseProgrammeController extends Controller
         ]);
     }
 
-    public function districtsByBranch(Request $request)
-    {
-        $data = $request->validate([
-            'branch_id' => 'required|integer|exists:branches,id',
-        ]);
+public function districtsByBranch(Request $request)
+{
+    $data = $request->validate([
+        'branch_id' => 'required|integer|exists:branches,id',
+        'programme_id' => 'nullable|integer|exists:programmes,id',
+    ]);
 
-        $branch = Branch::query()->findOrFail($data['branch_id']);
+    $branch = Branch::query()->findOrFail($data['branch_id']);
+    $programmeId = $data['programme_id'] ?? null;
 
-        $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
-        $cacheKey = 'districts_by_branch:'.$branch->id.':'.($addCentreCount ? 'with_centres' : 'basic').':has_centres';
+    $addCentreCount = filter_var($request->query('add_centre_count', false), FILTER_VALIDATE_BOOLEAN);
+    
+    // Build cache key based on parameters
+    $cacheKey = 'districts_by_branch:'.$branch->id
+        .':'.($addCentreCount ? 'with_centres' : 'basic')
+        .':has_centres'
+        .($programmeId ? ':programme_'.$programmeId : '');
 
-        $districts = Cache::flexible($cacheKey, \cache_flexible_ttl(), function () use ($branch, $addCentreCount) {
-            $districtQuery = District::query()
-                ->where('branch_id', $branch->id)
-                ->where('status', 1)
-                ->whereHas('centres')
-                ->orderBy('title');
+    $districts = Cache::flexible($cacheKey, cache_flexible_ttl(), function () use ($branch, $addCentreCount, $programmeId) {
+        $districtQuery = District::query()
+            ->where('branch_id', $branch->id)
+            ->where('status', 1)
+            ->whereHas('centres')
+            ->orderBy('title');
 
-            if ($addCentreCount) {
-                $districtQuery->withCount('centres');
-            }
+        if ($addCentreCount) {
+            $districtQuery->withCount('centres');
+        }
 
-            return $districtQuery->get(['id', 'title'])
-                ->map(function ($district) use ($addCentreCount) {
-                    $payload = [
-                        'id' => $district->id,
-                        'title' => $district->title,
-                    ];
+        return $districtQuery->get(['id', 'title'])
+            ->map(function ($district) use ($addCentreCount, $programmeId) {
+                $payload = [
+                    'id' => $district->id,
+                    'title' => $district->title,
+                ];
 
-                    if ($addCentreCount) {
-                        $payload['total_centres'] = (int) $district->centres_count;
+                if ($addCentreCount) {
+                    // Get all ready centres for this district
+                    $centres = $district->centres()
+                        ->where('status', 1)
+                        ->where('is_ready', 1)
+                        ->with(['courses' => function ($query) use ($programmeId) {
+                            $query->where('status', true);
+                            if ($programmeId) {
+                                $query->where('programme_id', $programmeId);
+                            }
+                        }])
+                        ->get();
+
+                    // Count centres with at least one course that has available slots
+                    $count = 0;
+                    
+                    foreach ($centres as $centre) {
+                        foreach ($centre->courses as $course) {
+                            if ($this->courseHasAvailableSlots($course, $programmeId)) {
+                                $count++;
+                                break; // Count centre only once
+                            }
+                        }
                     }
+                    
+                    $payload['total_centres'] = $count;
+                } else {
+                    // When not adding centre count, default to 0 for filtering
+                    $payload['total_centres'] = 0;
+                }
 
-                    return $payload;
-                })
-                ->values();
-        });
+                return $payload;
+            })
+            // FILTER: Only keep districts with at least one available centre
+            ->filter(function ($district) use ($addCentreCount) {
+                if (!$addCentreCount) {
+                    // If not counting centres, return all districts (original behavior)
+                    return true;
+                }
+                // Only include districts with at least one available centre
+                return ($district['total_centres'] ?? 0) > 0;
+            })
+            ->values(); // Re-index array after filtering
+    });
 
-        return response()->json([
-            'success' => true,
-            'branch_id' => $branch->id,
-            'branch' => $branch->title,
-            'districts' => $districts,
-        ]);
-    }
+    return response()->json([
+        'success' => true,
+        'branch_id' => $branch->id,
+        'branch' => $branch->title,
+        'districts' => $districts,
+    ]);
+}
+
+
+    
 
     public function constituencyByRegion(Request $request)
     {
@@ -739,226 +909,309 @@ class CourseProgrammeController extends Controller
         ]);
     }
 
-    public function availabilityPerCentre($programmeId, Request $request, BookingService $bookingService)
-    {
-        $request->validate([
-            'district_id' => 'required|integer|exists:districts,id',
-            'sort' => 'nullable|string|in:centre_name,capacity,availability',
-            'order' => 'nullable|string|in:asc,desc',
-            'filter' => 'nullable|string|in:has_availability',
-            'min_availability' => 'nullable|integer|min:0',
-            'limit' => 'nullable|integer|min:1',
-        ]);
 
-        $districtId = (int) $request->query('district_id');
-        $sort = $request->query('sort', 'centre_name');
-        $order = strtolower($request->query('order', 'asc'));
-        $filter = $request->query('filter');
-        $minAvailability = (int) ($request->query('min_availability', 0));
-        $limit = $request->query('limit') ? (int) $request->query('limit') : null;
 
-        $cacheKey = 'programme_availability:'.($programmeId ?? 'none').':district:'.($districtId ?? 'none')
-            .':sort:'.($sort ?? 'none').':order:'.($order ?? 'asc')
-            .':filter:'.($filter ?? 'none').':min_avail:'.($minAvailability ?? 'none')
-            .':limit:'.($limit ?? 'none');
 
-        $response = Cache::remember($cacheKey, 600, function () use ($programmeId, $districtId, $bookingService, $sort, $order, $filter, $minAvailability, $limit) {
-            $programme = Programme::findOrFail($programmeId);
-            $courseType = $programme->courseType();
-            $isInPerson = $programme->isInPerson();
+    
+public function availabilityPerCentre($programmeId, Request $request, BookingService $bookingService)
+{
+    $request->validate([
+        'district_id' => 'required|integer|exists:districts,id',
+        'sort' => 'nullable|string|in:centre_name,capacity,availability',
+        'order' => 'nullable|string|in:asc,desc',
+        'filter' => 'nullable|string|in:has_availability',
+        'min_availability' => 'nullable|integer|min:0',
+        'limit' => 'nullable|integer|min:1',
+    ]);
 
-            // Find the current active admission batch
-            $today = Carbon::today();
-            $admissionBatch = Batch::where('start_date', '<=', $today)
-                ->where('end_date', '>=', $today)
+    $districtId = (int) $request->query('district_id');
+    $sort = $request->query('sort', 'centre_name');
+    $order = strtolower($request->query('order', 'asc'));
+    $filter = $request->query('filter');
+    $minAvailability = (int) ($request->query('min_availability', 0));
+    $limit = $request->query('limit') ? (int) $request->query('limit') : null;
+
+    $cacheKey = 'programme_availability:'.($programmeId ?? 'none').':district:'.($districtId ?? 'none')
+        .':sort:'.($sort ?? 'none').':order:'.($order ?? 'asc')
+        .':filter:'.($filter ?? 'none').':min_avail:'.($minAvailability ?? 'none')
+        .':limit:'.($limit ?? 'none');
+
+    $response = Cache::remember($cacheKey, 600, function () use ($programmeId, $districtId, $bookingService, $sort, $order, $filter, $minAvailability, $limit) {
+        $programme = Programme::findOrFail($programmeId);
+        $courseType = $programme->courseType();
+        $isInPerson = $programme->isInPerson();
+
+        // Find the current active admission batch
+        $today = Carbon::today();
+        $admissionBatch = Batch::where('start_date', '<=', $today)
+            ->where('end_date', '>=', $today)
+            ->where('status', true)
+            ->where('completed', false)
+            ->first();
+
+        if (!$admissionBatch) {
+            return ['success' => true, 'available_centres' => []];
+        }
+
+        // Get programme batches for this programme
+        $batches = ProgrammeBatch::where('admission_batch_id', $admissionBatch->id)
+            ->where('programme_id', $programmeId)
+            ->where('status', true)
+            ->orderBy('start_date')
+            ->get();
+
+        if ($batches->isEmpty()) {
+            return ['success' => true, 'available_centres' => []];
+        }
+
+        // Get active master sessions for this course type for non in-person programmes
+        $sessions = collect();
+        if (! $isInPerson) {
+            $sessions = MasterSession::where('course_type', $courseType)
                 ->where('status', true)
-                ->where('completed', false)
-                ->first();
-
-            if (!$admissionBatch) {
-                return [
-                    'success' => true,
-                    'available_centres' => [],
-                ];
-            }
-
-            // Get programme batches for this programme
-            $batches = ProgrammeBatch::where('admission_batch_id', $admissionBatch->id)
-                ->where('programme_id', $programmeId)
-                ->where('status', true)
-                ->orderBy('start_date')
+                ->where('session_type', '!=', 'Online')
                 ->get();
+            $sessions = $this->sortMasterSessions($sessions);
 
-            if ($batches->isEmpty()) {
-                return [
-                    'success' => true,
-                    'available_centres' => [],
-                ];
+            if ($sessions->isEmpty()) {
+                return ['success' => true, 'available_centres' => []];
             }
+        }
 
-            // Get active master sessions for this course type for non in-person programmes
-            $sessions = collect();
-            if (! $isInPerson) {
-                $sessions = MasterSession::where('course_type', $courseType)
-                    ->where('status', true)
-                    ->where('session_type', '!=', 'Online')
-                    ->get();
-                $sessions = $this->sortMasterSessions($sessions);
-
-                if ($sessions->isEmpty()) {
-                    return [
-                        'success' => true,
-                        'available_centres' => [],
-                    ];
-                }
-            }
-
-            // Get centres in the specified district that offer this programme
-            $centres = Centre::whereHas('districts', function ($query) use ($districtId) {
-                $query->where('district_id', $districtId);
+        // Get centres in the specified district that offer this programme
+        $centres = Centre::whereHas('districts', function ($query) use ($districtId) {
+            $query->where('district_id', $districtId);
+        })
+            ->whereHas('courses', function ($query) use ($programmeId, $admissionBatch) {
+                $query->where('programme_id', $programmeId)
+                    ->where('batch_id', $admissionBatch->id)
+                    ->where('status', true);
             })
-                ->whereHas('courses', function ($query) use ($programmeId, $admissionBatch) {
+            ->with([
+                'branch:id,title',
+                'districts:id,title',
+                'courses' => function ($query) use ($programmeId, $admissionBatch) {
                     $query->where('programme_id', $programmeId)
                         ->where('batch_id', $admissionBatch->id)
-                        ->where('status', true);
-                })
-                ->with([
-                    'branch:id,title',
-                    'districts:id,title',
-                    'courses' => function ($query) use ($programmeId, $admissionBatch) {
-                        $query->where('programme_id', $programmeId)
-                            ->where('batch_id', $admissionBatch->id)
-                            ->where('status', true)
-                            ->select(['id', 'centre_id', 'programme_id', 'batch_id']);
-                    },
-                ])
-                ->where('status', true)
-                ->get();
-
-            $availableCentres = [];
-
-            foreach ($centres as $centre) {
-                $centreSessions = $sessions;
-                $remainingSeats = [];
-                $centreCapacity = $centre->slotCapacityFor($courseType);
-
-                if ($isInPerson) {
-                    $centreCourse = $centre->courses->first();
-
-                    if (! $centreCourse) {
-                        continue;
-                    }
-
-                    $centreSessions = CourseSession::where('course_id', $centreCourse->id)
                         ->where('status', true)
-                        ->get();
-                    $centreSessions = $this->sortMasterSessions($centreSessions);
+                        ->select(['id', 'centre_id', 'programme_id', 'batch_id']);
+                },
+            ])
+            ->where('status', true)
+            ->get();
 
-                    if ($centreSessions->isEmpty()) {
-                        continue;
-                    }
+        $availableCentres = [];
 
-                    $centreCapacity = (int) $centreSessions->sum('limit');
-                } else {
-                    // Fetch remaining seats for this centre
-                    $remainingSeats = $bookingService->getRemainingSeatsBatch(
-                        $centre->id,
-                        $batches->pluck('id')->toArray(),
-                        $centreSessions->pluck('id')->toArray()
-                    );
+        foreach ($centres as $centre) {
+            $centreSessions = $sessions;
+            $remainingSeats = [];
+            $centreCapacity = $centre->slotCapacityFor($courseType);
+
+            if ($isInPerson) {
+                // IN-PERSON: Per-cohort, per-session capacity
+                $centreCourse = $centre->courses->first();
+                if (! $centreCourse) {
+                    continue;
                 }
 
-                $totalAvailable = 0;
+                $centreSessions = CourseSession::where('course_id', $centreCourse->id)
+                    ->where('status', true)
+                    ->get();
+                $centreSessions = $this->sortMasterSessions($centreSessions);
+                if ($centreSessions->isEmpty()) {
+                    continue;
+                }
 
-                $batchData = $batches->values()->map(function ($batch, $index) use ($centreSessions, $remainingSeats, $isInPerson, &$totalAvailable) {
-                    $sessionData = $centreSessions->map(function ($session) use ($batch, $remainingSeats, $isInPerson, &$totalAvailable) {
-                        $key = "{$batch->id}:{$session->id}";
-                        $remaining = $isInPerson ? (int) ($session->limit ?? 0) : (int) ($remainingSeats[$key] ?? 0);
-                        $totalAvailable += $remaining;
+                $centreCapacity = (int) $centreSessions->sum('limit');
+            } else {
+                // ONLINE: Per-cohort capacity (NOT shared across cohorts)
+                // Determine capacity based on programme's time_allocation
+                $timeAllocation = $programme->time_allocation;
+                
+                if ($timeAllocation == Programme::TIME_ALLOCATION_SHORT) {
+                    $centreCapacity = (int) ($centre->short_slots_per_day ?? 0);
+                } elseif ($timeAllocation == Programme::TIME_ALLOCATION_LONG) {
+                    $centreCapacity = (int) ($centre->long_slots_per_day ?? 0);
+                } else {
+                    // Fallback to slotCapacityFor if time_allocation is unexpected
+                    $centreCapacity = (int) ($centre->slotCapacityFor($courseType) ?? 0);
+                }
 
-                        return [
-                            'session_name' => $isInPerson
-                                ? ($session->session ?? 'Unknown')
-                                : "{$session->session_type} Session",
-                            'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time,
-                            'remaining' => $remaining,
-                        ];
-                    })->values()->toArray();
+                //  Calculate remaining per cohort per session (INDEPENDENT for each cohort)
+                $batchIds = $batches->pluck('id')->toArray();
+                $sessionIds = $centreSessions->pluck('id')->toArray();
+                
+                // Count UserAdmission grouped by programme_batch_id AND session
+                $bookedPerBatchSession = UserAdmission::select(
+                        'programme_batch_id',
+                        'session', 
+                        DB::raw('COUNT(*) as count')
+                    )
+                    ->whereHas('programmeBatch', function ($query) use ($programmeId) {
+                        $query->where('programme_id', $programmeId);
+                    })
+                    ->whereIn('programme_batch_id', $batchIds)
+                    ->whereHas('course', function ($query) use ($centre) {
+                        $query->where('centre_id', $centre->id);
+                    })
+                    ->whereIn('session', $sessionIds)
+                    ->groupBy('programme_batch_id', 'session')
+                    ->get()
+                    ->pluck('count', function ($row) {
+                        return (string) "{$row->programme_batch_id}:{$row->session}";
+                    })
+                    ->toArray();
+
+                // Calculate remaining for EACH cohort+session combination
+                foreach ($batches as $batch) {
+                    foreach ($centreSessions as $session) {
+                        $key = (string) "{$batch->id}:{$session->id}";
+                        $bookedCount = $bookedPerBatchSession[$key] ?? 0;
+                        $remainingSeats[$key] = max(0, $centreCapacity - $bookedCount);
+                    }
+                }
+            }
+
+            // Pre-fetch booked counts for in-person sessions (per-cohort)
+            $inPersonBookedCounts = [];
+            if ($isInPerson && $centreSessions->isNotEmpty()) {
+                $centreCourse = $centre->courses->first();
+                if ($centreCourse) {
+                    $sessionIds = $centreSessions->pluck('id')->toArray();
+                    $batchIds = $batches->pluck('id')->toArray();
+                    
+                    $booked = UserAdmission::select(
+                            'programme_batch_id', 
+                            'session', 
+                            DB::raw('COUNT(*) as count')
+                        )
+                        ->where('course_id', $centreCourse->id)
+                        ->whereIn('session', $sessionIds)
+                        ->whereIn('programme_batch_id', $batchIds)
+                        ->groupBy('programme_batch_id', 'session')
+                        ->get()
+                        ->pluck('count', function ($row) {
+                            return (string) "{$row->programme_batch_id}:{$row->session}";
+                        })
+                        ->toArray();
+                    
+                    $inPersonBookedCounts = $booked;
+                }
+            }
+
+            $totalAvailable = 0;
+
+            $batchData = $batches->values()->map(function ($batch, $index) use (
+                $centreSessions, 
+                $remainingSeats, 
+                $isInPerson, 
+                $inPersonBookedCounts,
+                $centreCapacity,
+                &$totalAvailable
+            ) {
+                $sessionData = $centreSessions->map(function ($session) use (
+                    $batch, 
+                    $remainingSeats, 
+                    $isInPerson, 
+                    $inPersonBookedCounts,
+                    $centreCapacity,
+                    &$totalAvailable
+                ) {
+                    $key = (string) "{$batch->id}:{$session->id}";
+                    
+                    if ($isInPerson) {
+                        //  IN-PERSON: Per-cohort capacity (limit - booked for this cohort+session)
+                        $limit = $session->limit ?? 0;
+                        $bookedCount = $inPersonBookedCounts[$key] ?? 0;
+                        $remaining = max(0, $limit - $bookedCount);
+                    } else {
+                        //  ONLINE: Per-cohort capacity (same as in-person logic)
+                        $remaining = $remainingSeats[$key] ?? 0;
+                    }
+                    
+                    $totalAvailable += $remaining;
 
                     return [
-                        'batch' => 'Cohort ' . ($index + 1),
-                        'start_date' => $batch->start_date->format('Y-m-d'),
-                        'end_date' => $batch->end_date->format('Y-m-d'),
-                        'sessions' => $sessionData,
+                        'session_name' => $isInPerson
+                            ? ($session->session ?? 'Unknown')
+                            : "{$session->session_type} Session",
+                        'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time,
+                        'remaining' => $remaining,
+                        'limit' => $isInPerson ? ($session->limit ?? 0) : null,
+                        'booked' => $isInPerson ? ($inPersonBookedCounts[$key] ?? 0) : null,
+                        'centre_capacity' => ! $isInPerson ? $centreCapacity : null,
                     ];
                 })->values()->toArray();
 
-                // Only include centres with available seats
-                if ($totalAvailable > 0) {
-                    $primaryDistrict = $centre->districts->first();
+                return [
+                    'batch' => 'Cohort ' . ($index + 1),
+                    'start_date' => $batch->start_date->format('Y-m-d'),
+                    'end_date' => $batch->end_date->format('Y-m-d'),
+                    'sessions' => $sessionData,
+                ];
+            })->values()->toArray();
 
-                    $availableCentres[] = [
-                        'branch_name' => $centre->branch?->title,
-                        'district_name' => $primaryDistrict?->title,
-                        'centre_name' => $centre->title,
-                        'capacity' => $centreCapacity,
-                        'total_availability' => $totalAvailable,
-                        'batches' => $batchData,
-                    ];
-                }
+            // Only include centres with available seats
+            if ($totalAvailable > 0) {
+                $primaryDistrict = $centre->districts->first();
+                $availableCentres[] = [
+                    'branch_name' => $centre->branch?->title,
+                    'district_name' => $primaryDistrict?->title,
+                    'centre_name' => $centre->title,
+                    'capacity' => $centreCapacity,
+                    'total_availability' => $totalAvailable,
+                    'batches' => $batchData,
+                ];
             }
+        }
 
-            // Apply filtering
-            if ($filter === 'has_availability' || $minAvailability > 0) {
-                $availableCentres = array_filter($availableCentres, function ($centre) use ($minAvailability) {
-                    return $centre['total_availability'] >= $minAvailability;
-                });
-            }
-
-            // Apply sorting
-            usort($availableCentres, function ($a, $b) use ($sort, $order) {
-                $aVal = null;
-                $bVal = null;
-
-                switch ($sort) {
-                    case 'centre_name':
-                        $aVal = strtolower($a['centre_name']);
-                        $bVal = strtolower($b['centre_name']);
-                        break;
-                    case 'capacity':
-                        $aVal = (int) $a['capacity'];
-                        $bVal = (int) $b['capacity'];
-                        break;
-                    case 'availability':
-                        $aVal = (int) $a['total_availability'];
-                        $bVal = (int) $b['total_availability'];
-                        break;
-                    default:
-                        $aVal = strtolower($a['centre_name']);
-                        $bVal = strtolower($b['centre_name']);
-                }
-
-                if ($aVal === $bVal) {
-                    return 0;
-                }
-
-                $result = ($aVal < $bVal) ? -1 : 1;
-                return $order === 'desc' ? -$result : $result;
+        // Apply filtering
+        if ($filter === 'has_availability' || $minAvailability > 0) {
+            $availableCentres = array_filter($availableCentres, function ($centre) use ($minAvailability) {
+                return $centre['total_availability'] >= $minAvailability;
             });
+        }
 
-            // Apply limit
-            if ($limit !== null && $limit > 0) {
-                $availableCentres = array_slice($availableCentres, 0, $limit);
+        // Apply sorting
+        usort($availableCentres, function ($a, $b) use ($sort, $order) {
+            $aVal = $bVal = null;
+            switch ($sort) {
+                case 'centre_name':
+                    $aVal = strtolower($a['centre_name']);
+                    $bVal = strtolower($b['centre_name']);
+                    break;
+                case 'capacity':
+                    $aVal = (int) $a['capacity'];
+                    $bVal = (int) $b['capacity'];
+                    break;
+                case 'availability':
+                    $aVal = (int) $a['total_availability'];
+                    $bVal = (int) $b['total_availability'];
+                    break;
+                default:
+                    $aVal = strtolower($a['centre_name']);
+                    $bVal = strtolower($b['centre_name']);
             }
-
-            return [
-                'success' => true,
-                'available_centres' => $availableCentres,
-            ];
+            if ($aVal === $bVal) {
+                return 0;
+            }
+            $result = ($aVal < $bVal) ? -1 : 1;
+            return $order === 'desc' ? -$result : $result;
         });
 
-        return response()->json($response);
-    }
+        // Apply limit
+        if ($limit !== null && $limit > 0) {
+            $availableCentres = array_slice($availableCentres, 0, $limit);
+        }
+
+        return ['success' => true, 'available_centres' => $availableCentres];
+    });
+
+    return response()->json($response);
+}
+
+
+
 
     protected function sortMasterSessions($sessions)
     {

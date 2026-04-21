@@ -90,6 +90,7 @@ class HandleInertiaRequests extends Middleware
                             'on_waitlist' => $isOnWaitlist,
                             'verification_completed' => $user?->isVerifiedByGhanaCard() ?? false,
                             'verification_blocked' => (bool) ($user?->is_verification_blocked ?? false),
+                            'verification_status' => $this->resolveVerificationStatus($user),
                             'student_level' => config(SHOW_STUDENT_LEVEL, false) ? $user?->student_level : null,
                             'application_review_completed' => $user?->application_review_completed_at !== null,
                             'isOnlineCourse' => $user?->course?->isOnlineProgramme() ?? false,
@@ -108,5 +109,34 @@ class HandleInertiaRequests extends Middleware
             ],
             'recaptcha_site_key' => $user ? null : config('services.recaptcha.site_key'),
         ];
+    }
+
+    private function resolveVerificationStatus($user): string
+    {
+        if (! $user) {
+            return 'pending';
+        }
+
+        if ($user->isVerifiedByGhanaCard()) {
+            return 'verified';
+        }
+
+        if ($user->is_verification_blocked) {
+            return 'blocked';
+        }
+
+        $latest = $user->latestGhanaCardVerification;
+
+        if (! $latest) {
+            return 'pending';
+        }
+
+        // Submitted but no response yet — job is still processing
+        if (is_null($latest->response_timestamp)) {
+            return 'processing';
+        }
+
+        // Has a response but not verified — failed attempt
+        return 'failed';
     }
 }

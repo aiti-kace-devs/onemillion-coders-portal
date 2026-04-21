@@ -18,6 +18,11 @@ class ProfileUpdateRequest extends FormRequest
         return [
             'network_type' => ['required', 'string', Rule::in(['mtn', 'telecel', 'airteltigo'])],
             'mobile_no' => ['required', 'string', 'max:255'],
+            'first_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['nullable', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'gender' => ['nullable', 'string', Rule::in(['male', 'female'])],
+            'ghcard' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

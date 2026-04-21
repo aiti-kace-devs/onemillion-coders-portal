@@ -321,12 +321,12 @@ export const getSiblingCourses = async (userId, courseId, token, limit = 3) => {
  * Create a booking (reserve a slot)
  * @param {{ programme_batch_id: number, course_id: number, session_id?: number }} data
  * @param {string} token
- * @param {{ selfPace?: boolean }} [options] — when selfPace, POST /bookings?self_pace=true (study-from-home cohort attachment; server may omit session_id).
+ * @param {{ selfPace?: boolean }} [options] — when selfPace, POST /bookings?self-paced=true (study-from-home cohort attachment; server may omit session_id).
  * @returns {Promise<Object>} - Booking confirmation or 409 if full
  */
 export const createBooking = async (data, token, options = {}) => {
   try {
-    const qs = options.selfPace ? '?self_pace=true' : '';
+    const qs = options.selfPace ? '?self-paced=true' : '';
     const response = await apiRequest(`bookings${qs}`, {
       method: 'POST',
       data,
