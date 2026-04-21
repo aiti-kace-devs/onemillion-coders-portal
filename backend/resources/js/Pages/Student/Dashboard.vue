@@ -488,11 +488,11 @@ const greeting = computed(() => {
                 <div class="mt-6 space-y-10">
                     <div>
                         <p
-                            class="mb-1 text-xs font-bold text-gray-400 uppercase tracking-widest"
+                            class="mb-1 text-sm font-bold text-gray-400 uppercase tracking-widest"
                         >
                             Quick access
                         </p>
-                        <p class="mb-4 text-xs text-gray-500 max-w-2xl">
+                        <p class="mb-4 text-sm text-gray-500 max-w-2xl">
                             Application status is your hub for progress and the
                             expected flow; use the shortcuts below to complete
                             each step.
