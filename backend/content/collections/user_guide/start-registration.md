@@ -4,7 +4,7 @@ blueprint: user_guide
 title: 'Start Registration'
 description: 'Click on the “Register” button to begin your application.'
 images:
-  - userguide/registration.png
+  - user-guide/registration.png
 updated_by: 9
-updated_at: 1776637571
+updated_at: 1776718121
 ---
