@@ -1,8 +1,9 @@
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { Head, usePage, Link } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/Student/AuthenticatedLayout.vue";
 import RevokeOrDeclineAdmissionModal from "@/Components/RevokeOrDeclineAdmissionModal.vue";
+import Modal from "@/Components/Modal.vue";
 
 const props = defineProps({
     exams: Object,
@@ -12,13 +13,56 @@ const props = defineProps({
     centre: Object,
     waitlistPosition: Number,
     userAdmission: Object,
-    partnerAdmission: Object, // Added
+    isInAdmissionCooldown: Boolean,
+    admissionCooldownTimeRemaining: String,
+    partnerAdmission: Object,
 });
-console.log(props.registeredCourse);
+
 const { config } = usePage().props;
 const user = computed(() => usePage().props.auth?.user || {});
 const isOnWaitlist = computed(() => !!user.value?.on_waitlist);
-const onboardingStep = computed(() => user.value?.current_onboarding_step ?? null);
+const onboardingStep = computed(
+    () => user.value?.current_onboarding_step ?? null,
+);
+const showOnboardingModal = ref(
+    !!onboardingStep.value && !props.isInAdmissionCooldown,
+);
+const showCooldownModal = ref(props.isInAdmissionCooldown);
+
+const onboardingModalConfig = computed(() => {
+    const step = onboardingStep.value;
+    const configs = {
+        application_review: {
+            icon: 'menu_book',
+            title: 'Review Your Application',
+            message: 'Before you begin, please take a few minutes to review the enrollment process and understand each step ahead.',
+            buttonText: 'Start Review',
+            route: 'student.application-review.index',
+        },
+        assessment: {
+            icon: 'psychology',
+            title: 'Complete Your Assessment',
+            message: 'You need to complete the level determination assessment. This short test helps us place you at the right starting level.',
+            buttonText: 'Take Assessment',
+            route: 'student.level-assessment',
+        },
+        identity_verification: {
+            icon: 'verified_user',
+            title: 'Verify Your Identity',
+            message: 'Please complete your Ghana Card identity verification to continue your enrollment.',
+            buttonText: 'Start Verification',
+            route: 'student.verification.index',
+        },
+        course_selection: {
+            icon: 'school',
+            title: 'Choose a Course',
+            message: "You haven't selected a course yet. Please choose a course to continue your enrollment.",
+            buttonText: 'Choose a Course',
+            route: 'student.change-course',
+        },
+    };
+    return configs[step] || null;
+});
 
 const hasRegisteredCourse = computed(() => !!props.registeredCourse);
 
@@ -148,13 +192,73 @@ const greeting = computed(() => {
 <template>
 
     <Head title="Dashboard">
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                <link
-                    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap"
-                    rel="stylesheet">
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap"
+            rel="stylesheet" />
     </Head>
     <AuthenticatedLayout>
+        <!-- Admission Cooldown Modal -->
+        <Modal :show="showCooldownModal" max-width="md" @close="showCooldownModal = false">
+            <div class="text-center">
+                <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-orange-100">
+                    <span class="material-symbols-outlined text-3xl text-orange-700">schedule</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">
+                    Course Selection Temporarily Unavailable
+                </h3>
+                <p class="mt-2 text-sm text-gray-600">
+                    You recently revoked your admission. Please wait before
+                    selecting a new course.
+                </p>
+                <div v-if="admissionCooldownTimeRemaining"
+                    class="mt-4 inline-block px-4 py-3 rounded-lg bg-orange-50 border border-orange-200">
+                    <p class="text-sm font-semibold text-orange-800">
+                        Time remaining:
+                        <span class="text-lg">{{
+                            admissionCooldownTimeRemaining
+                            }}</span>
+                    </p>
+                </div>
+                <div class="mt-6 flex items-center justify-center gap-3">
+                    <button type="button"
+                        class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                        @click="showCooldownModal = false">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </Modal>
+
+        <!-- Onboarding Step Modal (dynamic for all steps) -->
+        <Modal :show="showOnboardingModal && !!onboardingModalConfig" max-width="md"
+            @close="showOnboardingModal = false">
+            <div v-if="onboardingModalConfig" class="text-center">
+                <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
+                    <span class="material-symbols-outlined text-3xl text-amber-700">{{ onboardingModalConfig.icon
+                        }}</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">
+                    {{ onboardingModalConfig.title }}
+                </h3>
+                <p class="mt-2 text-sm text-gray-600">
+                    {{ onboardingModalConfig.message }}
+                </p>
+                <div class="mt-6 flex items-center justify-center gap-3">
+                    <button type="button"
+                        class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                        @click="showOnboardingModal = false">
+                        Close
+                    </button>
+                    <Link :href="route(onboardingModalConfig.route)"
+                        class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-gray-900 bg-[#f9a825] hover:bg-[#e09621] transition-colors">
+                        {{ onboardingModalConfig.buttonText }}
+                    </Link>
+                </div>
+            </div>
+        </Modal>
+
         <template #header>
             <div class="flex items-center gap-2">
                 <h2 class="font-black text-2xl text-gray-900 tracking-tight">
@@ -194,7 +298,8 @@ const greeting = computed(() => {
                     <!-- Subtext with accent line -->
                     <div class="flex items-center gap-4 mt-4">
                         <p class="text-gray-500 font-medium text-base italic opacity-80">
-                            It's great to see you again. Here's what's happening today.
+                            It's great to see you again. Here's what's happening
+                            today.
                         </p>
                     </div>
                 </div>
@@ -207,13 +312,17 @@ const greeting = computed(() => {
                             <span class="material-symbols-outlined">hourglass_top</span>
                         </span>
                         <div>
-                            <h3 class="text-lg font-bold text-amber-800">You're on the Waitlist</h3>
+                            <h3 class="text-lg font-bold text-amber-800">
+                                You're on the Waitlist
+                            </h3>
                             <p class="text-sm text-amber-700 mt-1">
-                                You are currently on the waitlist for your chosen course.
-                                You will be notified when a space becomes available.
+                                You are currently on the waitlist for your
+                                chosen course. You will be notified when a space
+                                becomes available.
                             </p>
                             <p v-if="waitlistPosition" class="text-sm font-semibold text-amber-800 mt-2">
-                                Your position: <span class="text-lg">#{{ waitlistPosition }}</span>
+                                Your position:
+                                <span class="text-lg">#{{ waitlistPosition }}</span>
                             </p>
                         </div>
                     </div>
@@ -231,8 +340,12 @@ const greeting = computed(() => {
                                 <span class="material-symbols-outlined">school</span>
                             </span>
                             <div class="flex-1 text-left">
-                                <p class="text-gray-500 text-sm font-medium uppercase tracking-wider">
-                                    {{ isOnWaitlist ? 'Chosen Course' : 'Registered Course' }}
+                                <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">
+                                    {{
+                                        isOnWaitlist
+                                            ? "Chosen Course"
+                                            : "Registered Course"
+                                    }}
                                 </p>
                                 <h3 class="text-lg font-bold text-gray-800">
                                     {{ registeredCourse.course_name }}
@@ -285,8 +398,12 @@ const greeting = computed(() => {
                                 <span class="material-symbols-outlined">location_on</span>
                             </span>
                             <div class="flex-1 text-left">
-                                <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">Centre Details</p>
-                                <h3 class="text-lg font-bold text-gray-800">{{ centre.title }}</h3>
+                                <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">
+                                    Centre Details
+                                </p>
+                                <h3 class="text-lg font-bold text-gray-800">
+                                    {{ centre.title }}
+                                </h3>
                             </div>
                         </div>
                         <div v-if="centreDetailRow.length"
@@ -312,9 +429,9 @@ const greeting = computed(() => {
                             Quick access
                         </p>
                         <p class="mb-4 text-sm text-gray-500 max-w-2xl">
-                            Application status is your hub for progress and the expected flow; use the shortcuts below
-                            to
-                            complete each step.
+                            Application status is your hub for progress and the
+                            expected flow; use the shortcuts below to complete
+                            each step.
                         </p>
 
                         <Link :href="route('student.application-status')" class="block w-full max-w-3xl mb-6">
@@ -347,13 +464,20 @@ const greeting = computed(() => {
                                     <p class="mb-3 text-xs font-bold text-gray-400 uppercase tracking-widest">
                                         Application review
                                     </p>
-                                    <Link :href="route('student.application-review.index')" class="block w-full">
+                                    <Link :href="route(
+                                        'student.application-review.index',
+                                    )
+                                        " class="block w-full">
                                         <div
                                             class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                             <div
                                                 class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
                                             </div>
-                                            <span v-if="quickAccessShowNextRibbon('application_review')"
+                                            <span v-if="
+                                                quickAccessShowNextRibbon(
+                                                    'application_review',
+                                                )
+                                            "
                                                 class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
                                                 Next step
                                             </span>
@@ -370,7 +494,9 @@ const greeting = computed(() => {
                                             </div>
                                             <div class="mt-2 space-y-1 text-left">
                                                 <p class="text-sm">
-                                                    Read how enrollment works before you start the level assessment.
+                                                    Read how enrollment works
+                                                    before you start the level
+                                                    assessment.
                                                 </p>
                                             </div>
                                         </div>
@@ -381,13 +507,18 @@ const greeting = computed(() => {
                                     <p class="mb-3 text-xs font-bold text-gray-400 uppercase tracking-widest">
                                         Assessment
                                     </p>
-                                    <Link :href="route('student.level-assessment')" class="block w-full">
+                                    <Link :href="route('student.level-assessment')
+                                        " class="block w-full">
                                         <div
                                             class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                             <div
                                                 class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
                                             </div>
-                                            <span v-if="quickAccessShowNextRibbon('assessment')"
+                                            <span v-if="
+                                                quickAccessShowNextRibbon(
+                                                    'assessment',
+                                                )
+                                            "
                                                 class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
                                                 Next step
                                             </span>
@@ -398,14 +529,17 @@ const greeting = computed(() => {
                                                 </span>
                                                 <div class="flex-1 text-left">
                                                     <h3 class="text-lg font-bold text-gray-800">
-                                                        Level Determination Assessment
+                                                        Level Determination
+                                                        Assessment
                                                     </h3>
                                                 </div>
                                             </div>
                                             <div class="mt-2 space-y-1 text-left">
                                                 <p class="text-sm">
-                                                    Complete this before identity verification. It places you at the
-                                                    right starting level.
+                                                    Complete this before
+                                                    identity verification. It
+                                                    places you at the right
+                                                    starting level.
                                                 </p>
                                             </div>
                                         </div>
@@ -416,32 +550,52 @@ const greeting = computed(() => {
                                     <p class="mb-3 text-xs font-bold text-gray-400 uppercase tracking-widest">
                                         Identity Verification
                                     </p>
-                                    <Link :href="route('student.verification.index')" class="block w-full">
+                                    <Link :href="route('student.verification.index')
+                                        " class="block w-full">
                                         <div
                                             class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                             <div
                                                 class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
                                             </div>
-                                            <span v-if="quickAccessShowNextRibbon('identity_verification')"
+                                            <span v-if="
+                                                quickAccessShowNextRibbon(
+                                                    'identity_verification',
+                                                )
+                                            "
                                                 class="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 z-[1]">
                                                 Next step
                                             </span>
                                             <span
                                                 class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
                                                 :class="{
-                                                    'bg-green-100 text-green-700': user.verification_status === 'verified',
-                                                    'bg-red-100 text-red-700': user.verification_status === 'blocked',
-                                                    'bg-orange-100 text-orange-700': user.verification_status === 'processing',
-                                                    'bg-red-100 text-red-700': user.verification_status === 'failed',
-                                                    'bg-orange-100 text-orange-700': user.verification_status === 'pending',
+                                                    'bg-green-100 text-green-700':
+                                                        user.verification_status ===
+                                                        'verified',
+                                                    'bg-red-100 text-red-700':
+                                                        user.verification_status ===
+                                                        'blocked',
+                                                    'bg-orange-100 text-orange-700':
+                                                        user.verification_status ===
+                                                        'processing',
+                                                    'bg-red-100 text-red-700':
+                                                        user.verification_status ===
+                                                        'failed',
+                                                    'bg-orange-100 text-orange-700':
+                                                        user.verification_status ===
+                                                        'pending',
                                                 }">
-                                                {{ {
-                                                    verified: 'Verified',
-                                                    blocked: 'Blocked',
-                                                    processing: 'Processing',
-                                                    failed: 'Failed',
-                                                    pending: 'Pending',
-                                                }[user.verification_status] || 'Pending' }}
+                                                {{
+                                                    {
+                                                        verified: "Verified",
+                                                        blocked: "Blocked",
+                                                        processing:
+                                                            "Processing",
+                                                        failed: "Failed",
+                                                        pending: "Pending",
+                                                    }[
+                                                    user.verification_status
+                                                    ] || "Pending"
+                                                }}
                                             </span>
                                             <div class="flex items-center gap-3 mb-2">
                                                 <span
@@ -456,8 +610,9 @@ const greeting = computed(() => {
                                             </div>
                                             <div class="mt-2 space-y-1 text-left">
                                                 <p class="text-sm">
-                                                    Complete Ghana Card identity verification to continue course
-                                                    selection.
+                                                    Complete Ghana Card identity
+                                                    verification to continue
+                                                    course selection.
                                                 </p>
                                             </div>
                                         </div>
@@ -470,8 +625,10 @@ const greeting = computed(() => {
                                     More shortcuts
                                 </p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    <Link v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
-                                        :href="route('student.results')" class="block h-full">
+                                    <Link v-if="
+                                        user.isAdmitted &&
+                                        config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS
+                                    " :href="route('student.results')" class="block h-full">
                                         <div
                                             class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                             <!-- Hover Accent Line -->
@@ -501,9 +658,11 @@ const greeting = computed(() => {
                                         </div>
                                     </Link>
 
-                                    <Link :href="route('student.assessment.index')"
-                                        v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
-                                        class="block h-full">
+                                    <Link :href="route('student.assessment.index')
+                                        " v-if="
+                                            user.isAdmitted &&
+                                            config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS
+                                        " class="block h-full">
                                         <div
                                             class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                             <!-- Hover Accent Line -->
@@ -526,15 +685,18 @@ const greeting = computed(() => {
                                             <!-- Exam Details -->
                                             <div class="mt-2 space-y-1 text-left">
                                                 <p class="text-sm">
-                                                    Provide feedback and rating on
-                                                    course to improve course delivery.
+                                                    Provide feedback and rating
+                                                    on course to improve course
+                                                    delivery.
                                                 </p>
                                             </div>
                                         </div>
                                     </Link>
 
-                                    <Link v-if="user.isAdmitted && !user.isOnlineCourse"
-                                        :href="route('student.attendance.show')" class="block h-full">
+                                    <Link v-if="
+                                        user.isAdmitted &&
+                                        !user.isOnlineCourse
+                                    " :href="route('student.attendance.show')" class="block h-full">
                                         <div
                                             class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                             <!-- Hover Accent Line -->
@@ -556,8 +718,8 @@ const greeting = computed(() => {
                                             <!-- Exam Details -->
                                             <div class="mt-2 space-y-1 text-left">
                                                 <p class="text-sm">
-                                                    This module displays your attendance
-                                                    record.
+                                                    This module displays your
+                                                    attendance record.
                                                 </p>
                                             </div>
                                         </div>
@@ -566,7 +728,8 @@ const greeting = computed(() => {
                                     <Link v-if="
                                         tieredTestTaken &&
                                         !user.isAdmitted &&
-                                        !user.shortlist
+                                        !user.shortlist &&
+                                        !isInAdmissionCooldown
                                     " :href="route('student.change-course')" class="block h-full">
                                         <div
                                             class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
@@ -574,7 +737,11 @@ const greeting = computed(() => {
                                             <div
                                                 class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
                                             </div>
-                                            <span v-if="quickAccessShowNextRibbon('course_selection')"
+                                            <span v-if="
+                                                quickAccessShowNextRibbon(
+                                                    'course_selection',
+                                                )
+                                            "
                                                 class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 z-[1]">
                                                 Next step
                                             </span>
@@ -606,7 +773,6 @@ const greeting = computed(() => {
                                             </div>
                                         </div>
                                     </Link>
-
                                 </div>
                             </template>
                         </template>
@@ -632,7 +798,8 @@ const greeting = computed(() => {
                                     </div>
                                     <div class="mt-2 space-y-1 text-left">
                                         <p class="text-sm">
-                                            View your timeline, expected flow, and what to do next.
+                                            View your timeline, expected flow,
+                                            and what to do next.
                                         </p>
                                     </div>
                                 </div>
@@ -644,25 +811,42 @@ const greeting = computed(() => {
                                     <div
                                         class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
                                     </div>
-                                    <span v-if="quickAccessShowNextRibbon('identity_verification')"
+                                    <span v-if="
+                                        quickAccessShowNextRibbon(
+                                            'identity_verification',
+                                        )
+                                    "
                                         class="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 z-[1]">
                                         Next step
                                     </span>
                                     <span class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
                                         :class="{
-                                            'bg-green-100 text-green-700': user.verification_status === 'verified',
-                                            'bg-red-100 text-red-700': user.verification_status === 'blocked',
-                                            'bg-orange-100 text-orange-700': user.verification_status === 'processing',
-                                            'bg-red-100 text-red-700': user.verification_status === 'failed',
-                                            'bg-orange-100 text-orange-700': user.verification_status === 'pending',
+                                            'bg-green-100 text-green-700':
+                                                user.verification_status ===
+                                                'verified',
+                                            'bg-red-100 text-red-700':
+                                                user.verification_status ===
+                                                'blocked',
+                                            'bg-orange-100 text-orange-700':
+                                                user.verification_status ===
+                                                'processing',
+                                            'bg-red-100 text-red-700':
+                                                user.verification_status ===
+                                                'failed',
+                                            'bg-orange-100 text-orange-700':
+                                                user.verification_status ===
+                                                'pending',
                                         }">
-                                        {{ {
-                                            verified: 'Verified',
-                                            blocked: 'Blocked',
-                                            processing: 'Processing',
-                                            failed: 'Failed',
-                                            pending: 'Pending',
-                                        }[user.verification_status] || 'Pending' }}
+                                        {{
+                                            {
+                                                verified: "Verified",
+                                                blocked: "Blocked",
+                                                processing: "Processing",
+                                                failed: "Failed",
+                                                pending: "Pending",
+                                            }[user.verification_status] ||
+                                            "Pending"
+                                        }}
                                     </span>
                                     <div class="flex items-center gap-3 mb-2">
                                         <span
@@ -677,14 +861,18 @@ const greeting = computed(() => {
                                     </div>
                                     <div class="mt-2 space-y-1 text-left">
                                         <p class="text-sm">
-                                            Complete Ghana Card identity verification to continue course selection.
+                                            Complete Ghana Card identity
+                                            verification to continue course
+                                            selection.
                                         </p>
                                     </div>
                                 </div>
                             </Link>
 
-                            <Link v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
-                                :href="route('student.results')" class="block h-full">
+                            <Link v-if="
+                                user.isAdmitted &&
+                                config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS
+                            " :href="route('student.results')" class="block h-full">
                                 <div
                                     class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                     <div
@@ -703,15 +891,17 @@ const greeting = computed(() => {
                                     </div>
                                     <div class="mt-2 space-y-1 text-left">
                                         <p class="text-sm">
-                                            View your exam results and performance.
+                                            View your exam results and
+                                            performance.
                                         </p>
                                     </div>
                                 </div>
                             </Link>
 
-                            <Link :href="route('student.assessment.index')"
-                                v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS"
-                                class="block h-full">
+                            <Link :href="route('student.assessment.index')" v-if="
+                                user.isAdmitted &&
+                                config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS
+                            " class="block h-full">
                                 <div
                                     class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                     <div
@@ -730,7 +920,8 @@ const greeting = computed(() => {
                                     </div>
                                     <div class="mt-2 space-y-1 text-left">
                                         <p class="text-sm">
-                                            Provide feedback and rating on course to improve course delivery.
+                                            Provide feedback and rating on
+                                            course to improve course delivery.
                                         </p>
                                     </div>
                                 </div>
@@ -756,7 +947,8 @@ const greeting = computed(() => {
                                     </div>
                                     <div class="mt-2 space-y-1 text-left">
                                         <p class="text-sm">
-                                            This module displays your attendance record.
+                                            This module displays your attendance
+                                            record.
                                         </p>
                                     </div>
                                 </div>
@@ -765,14 +957,19 @@ const greeting = computed(() => {
                             <Link v-if="
                                 tieredTestTaken &&
                                 !user.isAdmitted &&
-                                !user.shortlist
+                                !user.shortlist &&
+                                !isInAdmissionCooldown
                             " :href="route('student.change-course')" class="block h-full">
                                 <div
                                     class="relative group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 p-7 flex flex-col h-full border border-gray-100/80 overflow-hidden">
                                     <div
                                         class="absolute top-0 left-0 w-full h-1 bg-[#f9a825] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500">
                                     </div>
-                                    <span v-if="quickAccessShowNextRibbon('course_selection')"
+                                    <span v-if="
+                                        quickAccessShowNextRibbon(
+                                            'course_selection',
+                                        )
+                                    "
                                         class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 z-[1]">
                                         Next step
                                     </span>
@@ -804,7 +1001,10 @@ const greeting = computed(() => {
                             </Link>
                         </div>
                     </div>
-                    <div v-if="user.isAdmitted && config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS">
+                    <div v-if="
+                        user.isAdmitted &&
+                        config.SHOW_COURSE_ASSESSMENT_TO_STUDENTS
+                    ">
                         <p class="mb-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
                             Course Assessment
                         </p>
@@ -824,8 +1024,8 @@ const greeting = computed(() => {
                                     <!-- Status badge -->
                                     <span class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold"
                                         :class="questionnaire.is_submitted
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-yellow-100 text-yellow-700'
+                                                ? 'bg-green-100 text-green-700'
+                                                : 'bg-yellow-100 text-yellow-700'
                                             ">
                                         {{
                                             questionnaire.is_submitted

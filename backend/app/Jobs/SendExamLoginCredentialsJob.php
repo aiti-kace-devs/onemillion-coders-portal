@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Helpers\MailerHelper;
+use App\Http\Controllers\NotificationController;
 use App\Models\Oex_exam_master;
 use App\Models\User;
 use Carbon\Carbon;
@@ -58,7 +59,19 @@ class SendExamLoginCredentialsJob implements ShouldQueue
                 'email' => $this->std->email,
                 'examUrl' => url('/student/level-assessment'),
             ],
-            "Welcome — {$appName}"
+            "Welcome — {$appName}",
+            false,
+            false
+        );
+
+        NotificationController::notify(
+            $this->std->id,
+            'WELCOME',
+            "Welcome to {$appName}!",
+            "Congratulations, {$fullName}! Your account has been successfully created. "
+            . "We're thrilled to have you join us — you're taking a great step forward. "
+            . "Your next step is to review the application process. "
+            . "Head to <strong>Application Review</strong> on your dashboard to get started."
         );
     }
 
