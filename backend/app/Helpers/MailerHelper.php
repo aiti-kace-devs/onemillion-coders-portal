@@ -73,7 +73,7 @@ class MailerHelper
         return $content;
     }
 
-    public static function sendGenericTemplateEmail(string|array $emails, string $content, $subject = null, $bulk = false, $data = [])
+    public static function sendGenericTemplateEmail(string|array $emails, string $content, $subject = null, $bulk = false, $data = [], bool $createNotification = true)
     {
         $replaceContent = static::parseMarkdown($content);
         $filename = static::createView($replaceContent);
@@ -99,7 +99,10 @@ class MailerHelper
         activity('email')
             ->event('Sent email')
             ->log("Sent email: '{$subject}' to {$recipientLog}");
-        static::createNotifications($emails, $subject, $content);
+
+        if ($createNotification) {
+            static::createNotifications($emails, $subject, $content);
+        }
     }
 
 
@@ -108,7 +111,8 @@ class MailerHelper
         string|array $emails,
         array $data,
         string $subject,
-        bool $bulk = false
+        bool $bulk = false,
+        bool $createNotification = true
     ): bool {
         try {
             $content = self::getEmailTemplate($templateName, $data);
@@ -118,7 +122,7 @@ class MailerHelper
                 return false;
             }
 
-            self::sendGenericTemplateEmail($emails, $content, $subject, $bulk, $data);
+            self::sendGenericTemplateEmail($emails, $content, $subject, $bulk, $data, $createNotification);
 
             activity('email')
                 ->event('Sent email template')

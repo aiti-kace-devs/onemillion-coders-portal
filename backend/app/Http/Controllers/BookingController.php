@@ -131,6 +131,9 @@ class BookingController extends Controller
             ], 409);
         }
 
+        // Partner Integration
+        app(\App\Services\PartnerAdmissionService::class)->handleEnrollment($user, $programme);
+
         return response()->json([
             'status' => 'success',
             'message' => 'Booking successful.',

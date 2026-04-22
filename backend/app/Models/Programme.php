@@ -21,6 +21,10 @@ class Programme extends Model
 
     public const COURSE_TYPE_LONG = 'long';
 
+    public const IN_PERSON = 'in person';
+
+    public const ONLINE = 'online';
+
     public function courseType(): string
     {
         return (int) $this->time_allocation === self::TIME_ALLOCATION_LONG
@@ -34,7 +38,7 @@ class Programme extends Model
             ->logFillable()
             ->logOnlyDirty()
             ->useLogName('programme')
-            ->setDescriptionForEvent(fn (string $event) => "Programme {$event}");
+            ->setDescriptionForEvent(fn(string $event) => "Programme {$event}");
     }
 
     protected $fillable = [
@@ -56,11 +60,14 @@ class Programme extends Model
         'status',
         'mode_of_delivery',
         'provider',
+        'partner_id',
+        'meta',
     ];
 
     protected $casts = [
         'status' => 'boolean',
         'overview' => 'array',
+        'meta' => 'array',
     ];
 
     public function centre()
@@ -114,9 +121,24 @@ class Programme extends Model
         return $this->morphToMany(Tag::class, 'taggable');
     }
 
+    public function partner()
+    {
+        return $this->belongsTo(Partner::class);
+    }
+
     public function isOnline(): bool
     {
         return strtolower(trim((string) $this->mode_of_delivery)) === 'online';
+    }
+
+    public function partnerStudentAdmissions()
+    {
+        return $this->hasMany(PartnerStudentAdmission::class);
+    }
+
+    public function admissions()
+    {
+        return $this->hasManyThrough(UserAdmission::class, Course::class, 'programme_id', 'course_id', 'id', 'id');
     }
 
     /**
@@ -184,7 +206,7 @@ class Programme extends Model
                     $programme->duration_in_days = 60;
                 }
 
-                $programme->duration = $hours.' hours';
+                $programme->duration = $hours . ' hours';
             }
         });
 

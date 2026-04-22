@@ -571,6 +571,8 @@ Route::prefix('student')->name('student.')->group(function () {
         Route::get('/application-review', [StudentOperation::class, 'application_review'])->name('application-review.index');
         Route::post('/application-review/complete', [StudentOperation::class, 'complete_application_review'])->name('application-review.complete');
 
+        Route::get('/partner-login/{partner_slug}', [StudentOperation::class, 'partner_login'])->name('partner-login');
+
         // Dashboard route
         Route::get('/dashboard', [StudentOperation::class, 'dashboard'])->name('dashboard');
 
