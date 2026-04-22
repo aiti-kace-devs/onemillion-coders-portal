@@ -7,6 +7,7 @@ use App\Helpers\SmsHelper;
 use App\Http\Controllers\NotificationController;
 use App\Models\Course;
 use App\Models\CourseSession;
+use App\Models\EmailTemplate;
 use App\Models\ProgrammeBatch;
 use App\Models\User;
 use App\Models\UserAdmission;
@@ -50,26 +51,29 @@ class AdmitStudentJob implements ShouldQueue
     private function sendConfirmationEmail(): void
     {
         $confirmationData = $this->buildConfirmationEmailData();
+        $subject = 'Admission Confirmation Successful';
+        $confirmationMessage = $this->getConfirmationTemplateContent($confirmationData);
 
         if (config(SEND_EMAIL_AFTER_ADMISSION_CONFIRMATION, true)) {
-            MailerHelper::sendGenericTemplateEmail(
-                $this->student->email,
-                $this->buildConfirmationEmailMessage($confirmationData),
-                'Admission Confirmation Successful',
-                false,
-                $confirmationData,
-                false
+            MailerHelper::sendTemplateEmail(
+                templateName: AFTER_ADMISSION_CONFIRMATION_EMAIL,
+                emails: $this->student->email,
+                data: $confirmationData,
+                subject: $subject,
+                createNotification: false
             );
         }
 
-        NotificationController::notify(
-            $this->student->id,
-            'COURSE_SELECTION',
-            'Enrollment Confirmed',
-            $this->buildConfirmationNotificationMessage($confirmationData),
-            'normal',
-            'email'
-        );
+        if (! empty($confirmationMessage)) {
+            NotificationController::notify(
+                $this->student->id,
+                'COURSE_SELECTION',
+                'Enrollment Confirmed',
+                $confirmationMessage,
+                'normal',
+                'email'
+            );
+        }
 
         if (config(SEND_SMS_AFTER_ADMISSION_CONFIRMATION, true)) {
             $smsContent = SmsHelper::getTemplate(AFTER_ADMISSION_CONFIRMATION_SMS, [
@@ -84,92 +88,15 @@ class AdmitStudentJob implements ShouldQueue
         }
     }
 
-    private function buildConfirmationEmailMessage(array $confirmationData): string
+    private function getConfirmationTemplateContent(array $confirmationData): string
     {
-        $message = <<<EOD
-# Dear {$confirmationData['name']},
+        $template = EmailTemplate::where('name', AFTER_ADMISSION_CONFIRMATION_EMAIL)->value('content');
 
-Congratulations on your successful enrollment in **{$confirmationData['course_name']}**.
-
-This is to confirm your training details for **{$confirmationData['courseSessioName']}**. <br>
-**Time:** {$confirmationData['courseSessionTime']} <br>
-**Start Date:** {$confirmationData['start_date']} <br>
-**End Date:** {$confirmationData['end_date']} <br>
-**Training Duration:** {$confirmationData['duration']} <br>
-**Venue:** {$confirmationData['venue']} <br>
-**Learning Mode:** {$confirmationData['support_mode']} <br>
-**Student ID:** {$confirmationData['student_id']}
-
-[component]: # ('mail::panel')
-Please keep this information for your records and ensure you are available to participate as scheduled.
-[endcomponent]: #
-EOD;
-
-        if (! empty($confirmationData['link'])) {
-            $message .= <<<EOD
-
-
-You can join the official WhatsApp group for this session by clicking the button below.
-
-[component]: # ('mail::button', ['url' => '{$confirmationData['link']}'])
-Join WhatsApp Group
-[endcomponent]: #
-EOD;
+        if (! $template) {
+            return '';
         }
 
-        $message .= <<<EOD
-
-
-[component]: # ('mail::panel')
-If any of the details above change, you will be notified through your registered email address and phone number.
-[endcomponent]: #
-EOD;
-
-        return $message;
-    }
-
-    private function buildConfirmationNotificationMessage(array $confirmationData): string
-    {
-        $message = <<<EOD
-Dear {$confirmationData['name']},<br><br>
-
-Congratulations on your successful enrollment in **{$confirmationData['course_name']}**.
-
-This is to confirm your training details for **{$confirmationData['courseSessioName']}**. <br>
-**Time:** {$confirmationData['courseSessionTime']} <br>
-**Start Date:** {$confirmationData['start_date']} <br>
-**End Date:** {$confirmationData['end_date']} <br>
-**Training Duration:** {$confirmationData['duration']} <br>
-**Venue:** {$confirmationData['venue']} <br>
-**Learning Mode:** {$confirmationData['support_mode']} <br>
-**Student ID:** {$confirmationData['student_id']}
-
-[component]: # ('mail::panel')
-Please keep this information for your records and ensure you are available to participate as scheduled.
-[endcomponent]: #
-EOD;
-
-        if (! empty($confirmationData['link'])) {
-            $message .= <<<EOD
-
-
-You can join the official WhatsApp group for this session by clicking the button below.
-
-[component]: # ('mail::button', ['url' => '{$confirmationData['link']}'])
-Join WhatsApp Group
-[endcomponent]: #
-EOD;
-        }
-
-        $message .= <<<EOD
-
-
-[component]: # ('mail::panel')
-If any of the details above change, you will be notified through your registered email address and phone number.
-[endcomponent]: #
-EOD;
-
-        return $message;
+        return MailerHelper::replaceVariables($template, $confirmationData);
     }
 
     private function buildConfirmationEmailData(): array
