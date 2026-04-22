@@ -27,6 +27,8 @@ class GhanaCardService
     protected string $merchantKey;
     private const DEFAULT_IMAGE_DISK = 'private_cloud';
     private const DEFAULT_IMAGE_DIR = 'omcp/users-profile';
+    private const GHANAIAN_NATIONALITY = 'GHANA';
+
 
     public function __construct()
     {
@@ -87,7 +89,7 @@ class GhanaCardService
                 'status_message' => $this->normalizeStatusMessage(
                     ($data['success'] ?? false) ? 'Success' : 'NIA Error: ' . ($data['msg'] ?? 'Unknown Error')
                 ),
-                'pin_number' => $data['data']['person']['cardId'] ?? $data['data']['person']['nationalId'] ?? $verification->pin_number,
+                'pin_number' => $user->ghcard,
             ]);
 
             // 5. Handle Business Logic based on codes
@@ -117,10 +119,10 @@ class GhanaCardService
             }
         } finally {
             // remove the base64 image from the data
-            if (isset($verification->person_data['biometricFeed']['face']['data'])) {
-                unset($verification->person_data['biometricFeed']['face']['data']);
-                $verification->saveQuietly();
-            }
+            $personData = $verification->person_data;
+            $personData = data_forget($personData, 'biometricFeed.face.data');
+            $verification->person_data = $personData;
+            $verification->saveQuietly();
         }
 
         return $verification;
@@ -540,12 +542,12 @@ class GhanaCardService
         }
 
         $nationality = $this->extractNationality($person);
-        if ($nationality !== null && $nationality !== 'ghanaian') {
+        if ($nationality !== null && strtoupper($nationality) !== self::GHANAIAN_NATIONALITY) {
             return [
                 'allow' => false,
                 'reason' => self::BLOCK_REASON_NON_GHANAIAN,
                 'code' => self::CODE_NON_GHANAIAN,
-                'message' => 'This programme is currently available to Ghanaian nationals only.',
+                'message' => 'This programme is currently available to Ghanaian nationals only. Your citizenship is listed as ' . $nationality,
             ];
         }
 
@@ -577,10 +579,7 @@ class GhanaCardService
 
     private function extractNationality(array $person): ?string
     {
-        $rawNationality = $person['nationality']
-            ?? $person['citizenship']
-            ?? data_get($person, 'country.nationality')
-            ?? null;
+        $rawNationality = $person['nationality'];
 
         if (! is_string($rawNationality) || trim($rawNationality) === '') {
             return null;

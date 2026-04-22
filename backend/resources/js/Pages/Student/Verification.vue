@@ -213,10 +213,47 @@ onUnmounted(() => {
         </template>
 
         <div class="py-6 space-y-6">
+            <div v-if="!isBlocked && !iframeUnavailable && verification_embed_url" class="space-y-4">
+                <div class="flex items-center gap-2">
+                    <div
+                        class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-sm">photo_camera</span>
+                    </div>
+                    <p class="text-sm font-medium text-gray-700">
+                        Use the secure interface below to verify your identity. The page will refresh automatically
+                        upon
+                        completion.
+                    </p>
+                </div>
+
+                <div class="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-inner p-1">
+                    <iframe ref="verificationIframeRef" :src="localEmbedUrl" class="w-full rounded-lg bg-white"
+                        :style="{ height: `${iframeHeight}px` }" loading="lazy" allow="camera; microphone"
+                        referrerpolicy="strict-origin-when-cross-origin" @load="handleIframeLoad"
+                        @error="handleIframeError" />
+                </div>
+            </div>
+
+            <div v-else-if="!isBlocked" class="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
+                <span class="material-symbols-outlined text-4xl text-gray-300 mb-3 block">hourglass_empty</span>
+                <h3 class="text-gray-900 font-semibold text-lg mb-1">Interface Unavailable</h3>
+                <p class="text-sm text-gray-500 mb-5 max-w-md mx-auto">
+                    Verification UI is not available yet on this branch. Please retry later.
+                </p>
+                <button
+                    class="inline-flex items-center gap-2 justify-center px-6 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-black transition-colors focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                    @click="refreshStatus">
+                    <span class="material-symbols-outlined text-sm">refresh</span> Try Again Later
+                </button>
+            </div>
             <!-- Header Section -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
                 <!-- Subtle side accent -->
+
+
                 <div class="absolute top-0 left-0 w-1.5 h-full bg-amber-400"></div>
+
+
 
                 <div class="p-6 md:p-8 ml-1.5">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -241,7 +278,7 @@ onUnmounted(() => {
                             </div>
                         </div>
                         <!-- use column on mobile -->
-                        <div class="flex items-center gap-3 flex-col md:flex-row ">
+                        <div v-if="!isBlocked" class="flex items-center gap-3 flex-col md:flex-row ">
                             <button v-if="!isVerified"
                                 class="inline-flex items-center gap-2 justify-center px-5 py-2.5 rounded-xl bg-green-600 text-white font-semibold transition-all duration-200 hover:bg-green-700 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed focus:ring-2 focus:ring-green-500 focus:ring-offset-1 border border-green-700/10"
                                 :disabled="isRefreshing" @click="refreshStatus">
@@ -279,7 +316,7 @@ onUnmounted(() => {
                                 <li class="flex flex-col gap-1 text-sm pt-1">
                                     <span class="text-gray-500">Message</span>
                                     <span class="font-medium text-gray-800">{{ latestAttemptMessage || "No attempt yet."
-                                    }}</span>
+                                        }}</span>
                                 </li>
                             </ul>
                         </div>
@@ -300,13 +337,13 @@ onUnmounted(() => {
                                 <li class="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
                                     <span class="text-gray-500">Name</span>
                                     <span class="font-medium text-gray-800 truncate pl-4">{{ profile.name || "N/A"
-                                    }}</span>
+                                        }}</span>
                                 </li>
                                 <li class="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
                                     <span class="text-gray-500">Previous Name</span>
                                     <span class="font-medium text-gray-800 truncate pl-4">{{ profile.previous_name ||
                                         "N/A"
-                                    }}</span>
+                                        }}</span>
                                 </li>
                                 <li class="flex justify-between items-center text-sm">
                                     <span class="text-gray-500">Date of Birth</span>
@@ -352,7 +389,7 @@ onUnmounted(() => {
                                 <div class="bg-gray-50 rounded-lg p-3">
                                     <span class="block text-xs font-medium text-gray-500 mb-1">Full Name</span>
                                     <span class="block text-base font-semibold text-gray-900">{{ profile.name || "N/A"
-                                    }}</span>
+                                        }}</span>
                                 </div>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -360,19 +397,19 @@ onUnmounted(() => {
                                         <span class="block text-xs font-medium text-gray-500 mb-1">First Name</span>
                                         <span class="block text-sm font-semibold text-gray-800">{{ profile.first_name ||
                                             "N/A"
-                                        }}</span>
+                                            }}</span>
                                     </div>
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="block text-xs font-medium text-gray-500 mb-1">Last Name</span>
                                         <span class="block text-sm font-semibold text-gray-800">{{ profile.last_name ||
                                             "N/A"
-                                        }}</span>
+                                            }}</span>
                                     </div>
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="block text-xs font-medium text-gray-500 mb-1">Middle Name</span>
                                         <span class="block text-sm font-semibold text-gray-800">{{ profile.middle_name
                                             || "N/A"
-                                        }}</span>
+                                            }}</span>
                                     </div>
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="block text-xs font-medium text-gray-500 mb-1">Date of Birth</span>
@@ -388,7 +425,8 @@ onUnmounted(() => {
             </div>
 
             <!-- Unverified State Section -->
-            <div v-else class="bg-white rounded-2xl shadow-sm border border-gray-100 p-0 md:p-6">
+            <div v-else-if="isBlocked || fallbackMessage"
+                class="bg-white rounded-2xl shadow-sm border border-gray-100 p-0 md:p-6">
                 <div v-if="isBlocked" class="rounded-xl border border-red-200 bg-red-50 p-2 mb-6">
                     <div class="flex items-start gap-3 text-red-800">
                         <span class="material-symbols-outlined mt-0.5 text-red-600">block</span>
@@ -408,40 +446,6 @@ onUnmounted(() => {
                     class="rounded-xl border border-gray-200 bg-gray-50 p-4 mb-6 flex items-center gap-3 text-gray-700">
                     <span class="material-symbols-outlined text-gray-400">info</span>
                     <span class="text-sm font-medium">{{ fallbackMessage }}</span>
-                </div>
-
-                <div v-if="!isBlocked && !iframeUnavailable && verification_embed_url" class="space-y-4">
-                    <div class="flex items-center gap-2">
-                        <div
-                            class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                            <span class="material-symbols-outlined text-sm">photo_camera</span>
-                        </div>
-                        <p class="text-sm font-medium text-gray-700">
-                            Use the secure interface below to verify your identity. The page will refresh automatically
-                            upon
-                            completion.
-                        </p>
-                    </div>
-
-                    <div class="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-inner p-1">
-                        <iframe ref="verificationIframeRef" :src="localEmbedUrl" class="w-full rounded-lg bg-white"
-                            :style="{ height: `${iframeHeight}px` }" loading="lazy" allow="camera; microphone"
-                            referrerpolicy="strict-origin-when-cross-origin" @load="handleIframeLoad"
-                            @error="handleIframeError" />
-                    </div>
-                </div>
-
-                <div v-else-if="!isBlocked" class="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
-                    <span class="material-symbols-outlined text-4xl text-gray-300 mb-3 block">hourglass_empty</span>
-                    <h3 class="text-gray-900 font-semibold text-lg mb-1">Interface Unavailable</h3>
-                    <p class="text-sm text-gray-500 mb-5 max-w-md mx-auto">
-                        Verification UI is not available yet on this branch. Please retry later.
-                    </p>
-                    <button
-                        class="inline-flex items-center gap-2 justify-center px-6 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-black transition-colors focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-                        @click="refreshStatus">
-                        <span class="material-symbols-outlined text-sm">refresh</span> Try Again Later
-                    </button>
                 </div>
             </div>
         </div>
