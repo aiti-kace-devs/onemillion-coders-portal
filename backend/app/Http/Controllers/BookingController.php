@@ -251,4 +251,5 @@ class BookingController extends Controller
             'data' => $bookings,
         ]);
     }
+    
 }
