@@ -17,7 +17,7 @@ class AdmissionRejection extends Model
         'user_id',
         'course_id',
         'reason',
-        'revoked_by',
+        'source',
         'rejected_at',
     ];
 

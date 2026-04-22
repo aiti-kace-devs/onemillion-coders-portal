@@ -36,6 +36,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use App\Http\Controllers\NotificationController;
 
 class StudentOperation extends Controller
 {
@@ -47,6 +48,10 @@ class StudentOperation extends Controller
             && \App\Models\AdmissionWaitlist::where('user_id', $user->userId)
                 ->whereIn('status', ['pending', 'notified'])
                 ->exists();
+
+        // Check admission cooldown
+        $isInCooldown = $this->isInAdmissionCooldown($user);
+        $cooldownTimeRemaining = $isInCooldown ? $this->getAdmissionCooldownTimeRemaining($user) : null;
 
         $questionnaires = Questionnaire::where('active', true)
             ->latest()
@@ -143,6 +148,8 @@ class StudentOperation extends Controller
                 'id' => $userAdmission->id,
                 'confirmed' => (bool) $userAdmission->confirmed,
             ] : null,
+            'isInAdmissionCooldown' => $isInCooldown,
+            'admissionCooldownTimeRemaining' => $cooldownTimeRemaining,
         ]);
     }
 
@@ -917,7 +924,7 @@ class StudentOperation extends Controller
             $user->id,
             'COURSE_SELECTION',
             'Course Selected',
-            'You have successfully selected <strong>' . e($newCourse->course_name) . '</strong>. Thank you for your selection.'
+            'You have successfully selected <strong>' . e($newCourse->course_name) . '</strong>. You will be notified of next steps.'
         );
 
         return redirect()->route('student.application-status');
@@ -993,9 +1000,22 @@ class StudentOperation extends Controller
                         'user_id' => $user->userId,
                         'course_id' => $courseId,
                         'reason' => $request->input('reason'),
-                        'revoked_by' => 'self',
+                        'source' => 'SELF',
                         'rejected_at' => now(),
                     ]);
+
+                    $course = \App\Models\Course::find($courseId);
+                    $cooldownHours = (int) \App\Models\AppConfig::getValue('ADMISSION_REVOCATION_COOLDOWN_HOURS', 24);
+                    $cooldownEndTime = now()->addHours($cooldownHours);
+
+                    NotificationController::notify(
+                        $user->id,
+                        'ADMISSION_REVOKED',
+                        'Admission Revoked',
+                        "You have revoked your admission for {$course->course_name}. "
+                        . "You must wait {$cooldownHours} hours before selecting a new course. "
+                        . "You can select a new course after " . $cooldownEndTime->format('l jS F, Y g:i A') . "."
+                    );
 
                     event(new AdmissionDeleted($courseId));
 
@@ -1364,7 +1384,7 @@ class StudentOperation extends Controller
     {
         $notifications = Notification::where('user_id', Auth::id())
             ->orderByDesc('created_at')
-            ->paginate(10);
+            ->paginate(20);
 
         return Inertia::render('Student/Notifications/Index', compact('notifications'));
     }

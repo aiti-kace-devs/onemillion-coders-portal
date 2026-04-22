@@ -43,7 +43,7 @@ class AdmissionRevocationService
             $rejection = AdmissionRejection::create([
                 'user_id' => $userId,
                 'course_id' => $courseId,
-                'revoked_by' => 'admin',
+                'source' => 'ADMIN',
                 'rejected_at' => now(),
             ]);
 
