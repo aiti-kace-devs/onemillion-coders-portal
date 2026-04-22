@@ -15,6 +15,8 @@ class DashboardController extends AdminController
 
         $this->middleware('permission:dashboard.read.all', ['only' => ['index', 'show']]);
 
+        DashboardWidgetHelper::maintenanceAlertWidget();
+
         DashboardWidgetHelper::dashboardCountStatisticsWidget();
 
         DashboardWidgetHelper::dashboardUserGenderStatisticsWidget();

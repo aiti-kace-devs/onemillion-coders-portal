@@ -137,7 +137,6 @@ class BookingObserver
             return true;
         }
 
-        // Existing rows from before capacity_pool should keep their old reserved semantics.
         return $booking->capacity_pool === null && (bool) $booking->is_protocol;
     }
 

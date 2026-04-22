@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Models\MaintenanceAlert;
 use Backpack\CRUD\app\Http\Controllers\AdminController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 
 class UtilitiesController extends AdminController
 {
@@ -21,11 +23,15 @@ class UtilitiesController extends AdminController
         $commands = $this->getCustomCommands();
         $utilities = config('utilities.utilities', []);
         $commandConfigs = config('utilities.commands', []);
+        $occupancyAlert = Schema::hasTable('maintenance_alerts')
+            ? MaintenanceAlert::visibleOccupancyDrift()
+            : null;
 
         return view('admin.utilities.index', [
             'commands' => $commands,
             'utilities' => $utilities,
             'commandConfigs' => $commandConfigs,
+            'occupancyAlert' => $occupancyAlert,
         ]);
     }
 
@@ -48,7 +54,18 @@ class UtilitiesController extends AdminController
         $options = $validated['options'] ?? [];
         $rawOptions = $validated['raw_options'] ?? null;
 
+        if ($this->isSeatCountRepairRequest($type, $key) && $this->seatCountRepairIsRunning()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Availability slot count repair is already running. Please wait for it to finish.',
+                'output' => '',
+                'exit_code' => 1,
+            ], 409);
+        }
+
         try {
+            $exitCode = 0;
+
             if ($type === 'custom') {
                 $command = $this->getCustomCommands()
                     ->firstWhere('name', $key);
@@ -64,7 +81,7 @@ class UtilitiesController extends AdminController
 
                 $args = $this->buildCommandArguments($key, $options, $rawOptions);
 
-                Artisan::call($key, $args);
+                $exitCode = Artisan::call($key, $args);
             } else {
                 $utilities = config('utilities.utilities', []);
                 $utility = Arr::get($utilities, $key);
@@ -92,17 +109,23 @@ class UtilitiesController extends AdminController
 
                 $args = $this->buildCommandArguments($artisanCommand, $options, $rawOptions, $baseOptions);
 
-                Artisan::call($artisanCommand, $args);
+                $exitCode = Artisan::call($artisanCommand, $args);
             }
 
+            $succeeded = $exitCode === 0;
             $output = Artisan::output();
+            if (trim($output) === '') {
+                $output = $succeeded
+                    ? 'Task completed successfully. No detailed output was returned by this task.'
+                    : 'Task did not complete successfully. No detailed output was returned by this task.';
+            }
 
             return response()->json([
-                'status' => 'success',
-                'message' => 'Command executed successfully.',
+                'status' => $succeeded ? 'success' : 'error',
+                'message' => $succeeded ? 'Task completed successfully.' : 'Task failed.',
                 'output' => $output,
-                'exit_code' => 0,
-            ]);
+                'exit_code' => $exitCode,
+            ], $succeeded ? 200 : 500);
         } catch (\Throwable $e) {
             return response()->json([
                 'status' => 'error',
@@ -130,7 +153,13 @@ class UtilitiesController extends AdminController
                 return str_starts_with($class, 'App\\Console\\Commands\\');
             })
             ->reject(function ($command, $name) use ($blacklist) {
-                return in_array($name, $blacklist, true);
+                if (in_array($name, $blacklist, true)) {
+                    return true;
+                }
+
+                $config = config('utilities.commands.' . $name, []);
+
+                return app()->environment('production') && (bool) ($config['hide_in_production'] ?? false);
             })
             ->map(function ($command, $name) {
                 $config = config('utilities.commands.' . $name, []);
@@ -260,5 +289,26 @@ class UtilitiesController extends AdminController
         }
 
         abort(403);
+    }
+
+    protected function isSeatCountRepairRequest(string $type, string $key): bool
+    {
+        if ($type === 'custom') {
+            return $key === 'occupancy:rebuild';
+        }
+
+        return $type === 'utility' && $key === 'occupancy_rebuild';
+    }
+
+    protected function seatCountRepairIsRunning(): bool
+    {
+        if (! Schema::hasTable('maintenance_alerts')) {
+            return false;
+        }
+
+        return MaintenanceAlert::query()
+            ->where('key', MaintenanceAlert::KEY_OCCUPANCY_DRIFT)
+            ->where('status', MaintenanceAlert::STATUS_REPAIRING)
+            ->exists();
     }
 }

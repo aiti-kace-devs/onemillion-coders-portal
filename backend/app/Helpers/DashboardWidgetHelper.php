@@ -4,13 +4,56 @@ namespace App\Helpers;
 
 use Backpack\CRUD\app\Library\Widget;
 use App\Models\Course;
+use App\Models\MaintenanceAlert;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardWidgetHelper
 {
-    
+    public static function maintenanceAlertWidget(): void
+    {
+        $admin = backpack_user();
+        $requiredRole = config('utilities.super_admin_role', 'super-admin');
+        $isAllowed = $admin
+            && (
+                (method_exists($admin, 'hasRole') && $admin->hasRole($requiredRole))
+                || (method_exists($admin, 'isSuper') && $admin->isSuper())
+            );
+
+        if (! $isAllowed || ! Schema::hasTable('maintenance_alerts')) {
+            return;
+        }
+
+        $alert = MaintenanceAlert::visibleOccupancyDrift();
+        if (! $alert) {
+            return;
+        }
+
+        $payload = $alert->payload ?? [];
+        $mismatchCount = isset($payload['mismatch_count'])
+            ? number_format((int) $payload['mismatch_count'])
+            : 'some';
+        $dueText = $alert->action_due_at
+            ? ' Automatic repair is due at '.$alert->action_due_at->format('Y-m-d H:i').'.'
+            : '';
+        $class = $alert->status === MaintenanceAlert::STATUS_FAILED
+            ? 'alert alert-danger'
+            : ($alert->status === MaintenanceAlert::STATUS_REPAIRING
+                ? 'alert alert-info'
+                : 'alert alert-warning');
+        $statusText = $alert->status === MaintenanceAlert::STATUS_REPAIRING
+            ? ' A safe repair is already running.'
+            : '';
+
+        Widget::add([
+            'type' => 'alert',
+            'class' => $class,
+            'content' => "Availability slot counts need attention in {$mismatchCount} record(s).{$dueText}{$statusText} <a href=\"".backpack_url('utilities')."\" class=\"alert-link\">Open Utilities</a> to review or run a safe repair.",
+        ]);
+    }
+
     private static function isCentreManager(): bool
     {
         $admin = backpack_user();

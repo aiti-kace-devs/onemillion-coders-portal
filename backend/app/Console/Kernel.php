@@ -32,6 +32,17 @@ class Kernel extends ConsoleKernel
         $schedule->command('otp:clean')->everyMinute();
 
         $schedule->command('metrics:sync-public-statistics')->dailyAt('02:00');
+
+        $schedule->command('occupancy:audit', [
+            '--limit' => 10,
+            '--repair-after-minutes' => config('utilities.occupancy_alert.auto_repair_grace_minutes', 60),
+        ])
+            ->dailyAt('02:30')
+            ->withoutOverlapping();
+
+        $schedule->command('occupancy:repair-due')
+            ->everyTenMinutes()
+            ->withoutOverlapping();
     }
 
     /**

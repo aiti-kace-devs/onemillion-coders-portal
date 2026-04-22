@@ -20,9 +20,121 @@
 
 @section('content')
     <div class="container-fluid">
+        @php
+            $isSeatRepairRunning = !empty($occupancyAlert)
+                && $occupancyAlert->status === \App\Models\MaintenanceAlert::STATUS_REPAIRING;
+        @endphp
+
+        @if (!empty($occupancyAlert))
+            @php
+                $payload = $occupancyAlert->payload ?? [];
+                $samples = $payload['samples'] ?? [];
+                $mismatchCount = $payload['mismatch_count'] ?? null;
+                $statusLabels = [
+                    \App\Models\MaintenanceAlert::STATUS_PENDING => 'Waiting for admin review',
+                    \App\Models\MaintenanceAlert::STATUS_REPAIRING => 'Repair running',
+                    \App\Models\MaintenanceAlert::STATUS_FAILED => 'Repair failed',
+                ];
+                $statusLabel = $statusLabels[$occupancyAlert->status] ?? ucfirst($occupancyAlert->status);
+                $alertClass = match ($occupancyAlert->status) {
+                    \App\Models\MaintenanceAlert::STATUS_REPAIRING => 'alert-info',
+                    \App\Models\MaintenanceAlert::STATUS_FAILED => 'alert-danger',
+                    default => 'alert-warning',
+                };
+            @endphp
+
+            <div class="alert {{ $alertClass }} mb-4">
+                <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+                    <div>
+                        <h5 class="alert-heading mb-1">{{ $occupancyAlert->title }}</h5>
+                        <p class="mb-2">{{ $occupancyAlert->message }}</p>
+                        <div class="small">
+                            <span class="me-3">
+                                Status: <strong>{{ $statusLabel }}</strong>
+                            </span>
+                                @if ($mismatchCount !== null)
+                                    <span class="me-3">
+                                        Affected records: <strong>{{ number_format((int) $mismatchCount) }}</strong>
+                                </span>
+                            @endif
+                            @if ($occupancyAlert->detected_at)
+                                <span class="me-3">
+                                    Detected: <strong>{{ $occupancyAlert->detected_at->format('Y-m-d H:i') }}</strong>
+                                </span>
+                            @endif
+                            @if ($occupancyAlert->action_due_at)
+                                <span>
+                                    Automatic repair due: <strong>{{ $occupancyAlert->action_due_at->format('Y-m-d H:i') }}</strong>
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-start gap-2">
+                        <button type="button" class="btn btn-sm btn-danger js-run-utility"
+                            data-key="occupancy_rebuild" data-refresh-on-success="true"
+                            @disabled($isSeatRepairRunning)>
+                            {{ $isSeatRepairRunning ? 'Repair Running' : 'Repair Availability Slot Count Now' }}
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary js-run-command"
+                            data-command="occupancy:audit" data-refresh-on-success="true"
+                            @disabled($isSeatRepairRunning)>
+                            Recheck Seat Counts
+                        </button>
+                    </div>
+                </div>
+
+                @if (!empty($samples))
+                    <div class="table-responsive mt-3">
+                        <table class="table table-sm table-bordered mb-0 bg-white">
+                            <thead>
+                                <tr>
+                                    <th>What needs attention</th>
+                                    <th>Centre</th>
+                                    <th>Date</th>
+                                    <th>Session</th>
+                                    <th>Course type</th>
+                                    <th>Course and cohort</th>
+                                    <th>Correct count</th>
+                                    <th>Currently displayed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($samples as $sample)
+                                    @php
+                                        $courses = $sample['course_names'] ?? [];
+                                        $cohorts = $sample['cohort_names'] ?? [];
+                                        $programmeBatches = $sample['programme_batch_labels'] ?? [];
+                                    @endphp
+                                    <tr>
+                                        <td>{{ $sample['issue'] ?? 'Displayed slot count does not match confirmed bookings.' }}</td>
+                                        <td>{{ $sample['centre_name'] ?? 'Unknown centre' }}</td>
+                                        <td>{{ $sample['date'] ?? 'Unknown date' }}</td>
+                                        <td>{{ $sample['session_name'] ?? 'Unknown session' }}</td>
+                                        <td>{{ $sample['course_type'] ?? 'Unknown' }}</td>
+                                        <td>
+                                            <div>{{ implode(', ', $courses) ?: 'Course not known' }}</div>
+                                            <div class="text-muted small">{{ implode(', ', $cohorts) ?: 'Cohort not known' }}</div>
+                                            @if (!empty($programmeBatches))
+                                                <div class="text-muted small">{{ implode(', ', $programmeBatches) }}</div>
+                                            @endif
+                                        </td>
+                                        <td>{{ $sample['correct_display'] ?? 'Unknown' }}</td>
+                                        <td>{{ $sample['current_display'] ?? 'Unknown' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         @if (!empty($utilities))
             <div class="row g-3 mb-4">
                 @foreach ($utilities as $key => $utility)
+                    @php
+                        $isRepairUtility = $key === 'occupancy_rebuild';
+                    @endphp
                     <div class="col-12 col-md-4 col-xl-3">
                         <div class="card h-100">
                             <div class="card-body d-flex flex-column">
@@ -31,8 +143,10 @@
                                     {{ $utility['description'] ?? '' }}
                                 </p>
                                 <button type="button" class="btn btn-primary mt-2 js-run-utility"
-                                    data-key="{{ $key }}">
-                                    {{ $utility['button_label'] ?? 'Run' }}
+                                    data-key="{{ $key }}"
+                                    data-refresh-on-success="{{ $isRepairUtility ? 'true' : 'false' }}"
+                                    @disabled($isRepairUtility && $isSeatRepairRunning)>
+                                    {{ $isRepairUtility && $isSeatRepairRunning ? 'Repair Running' : ($utility['button_label'] ?? 'Run') }}
                                 </button>
                             </div>
                         </div>
@@ -58,6 +172,9 @@
                         </thead>
                         <tbody>
                             @forelse ($commands as $command)
+                                @php
+                                    $isRepairCommand = $command['name'] === 'occupancy:rebuild';
+                                @endphp
                                 <tr>
                                     <td>
                                         <code>{{ $command['name'] }}</code>
@@ -66,12 +183,15 @@
                                     <td class="text-end">
                                         <div class="btn-group" role="group">
                                             <button type="button" class="btn btn-sm btn-outline-primary js-run-command"
-                                                data-command="{{ $command['name'] }}">
-                                                Run
+                                                data-command="{{ $command['name'] }}"
+                                                data-refresh-on-success="{{ str_starts_with($command['name'], 'occupancy:') ? 'true' : 'false' }}"
+                                                @disabled($isRepairCommand && $isSeatRepairRunning)>
+                                                {{ $isRepairCommand && $isSeatRepairRunning ? 'Running' : 'Run' }}
                                             </button>
                                             <button type="button"
                                                 class="btn btn-sm btn-outline-secondary js-open-command-options"
-                                                data-command="{{ $command['name'] }}">
+                                                data-command="{{ $command['name'] }}"
+                                                @disabled($isRepairCommand && $isSeatRepairRunning)>
                                                 Options
                                             </button>
                                         </div>
@@ -144,8 +264,54 @@
             const csrfToken = '{{ csrf_token() }}';
             const runUrl = '{{ backpack_url('utilities/run') }}';
             const commandConfigs = @json($commandConfigs ?? []);
+            const lastOutputStorageKey = 'adminUtilitiesLastCommandOutput';
 
             let currentCommand = null;
+
+            function showCommandOutput(data) {
+                const outputCard = document.getElementById('utilities-output-card');
+                const outputStatus = document.getElementById('utilities-output-status');
+                const outputEl = document.getElementById('utilities-output');
+
+                if (!(outputCard && outputStatus && outputEl)) {
+                    return;
+                }
+
+                outputCard.style.display = 'block';
+                outputEl.textContent = data.output || 'No command output was returned.';
+
+                if (data.status === 'success') {
+                    outputStatus.className = 'badge bg-success';
+                    outputStatus.textContent = 'Success';
+                } else {
+                    outputStatus.className = 'badge bg-danger';
+                    outputStatus.textContent = 'Error';
+                }
+            }
+
+            function rememberCommandOutput(data) {
+                try {
+                    window.sessionStorage.setItem(lastOutputStorageKey, JSON.stringify(data));
+                } catch (e) {
+                    // Ignore private browsing / storage quota issues.
+                }
+            }
+
+            function restoreCommandOutput() {
+                try {
+                    const raw = window.sessionStorage.getItem(lastOutputStorageKey);
+                    if (!raw) {
+                        return;
+                    }
+
+                    const data = JSON.parse(raw);
+                    showCommandOutput(data);
+                } catch (e) {
+                    // Ignore malformed stored output.
+                }
+            }
+
+            restoreCommandOutput();
 
             function buildFieldHtml(commandName) {
                 const config = commandConfigs[commandName] || {};
@@ -280,23 +446,8 @@
                     });
 
                     const data = await response.json();
-
-                    const outputCard = document.getElementById('utilities-output-card');
-                    const outputStatus = document.getElementById('utilities-output-status');
-                    const outputEl = document.getElementById('utilities-output');
-
-                    if (outputCard && outputStatus && outputEl) {
-                        outputCard.style.display = 'block';
-                        outputEl.textContent = data.output || '';
-
-                        if (data.status === 'success') {
-                            outputStatus.className = 'badge bg-success';
-                            outputStatus.textContent = 'Success';
-                        } else {
-                            outputStatus.className = 'badge bg-danger';
-                            outputStatus.textContent = 'Error';
-                        }
-                    }
+                    showCommandOutput(data);
+                    rememberCommandOutput(data);
 
                     if (typeof Noty !== 'undefined') {
                         new Noty({
@@ -305,6 +456,12 @@
                                 'Command executed successfully.' :
                                 'Command failed.'),
                         }).show();
+                    }
+
+                    if (data.status === 'success' && button && button.dataset.refreshOnSuccess === 'true') {
+                        window.setTimeout(function() {
+                            window.location.reload();
+                        }, 2000);
                     }
                 } catch (e) {
                     if (typeof Noty !== 'undefined') {
