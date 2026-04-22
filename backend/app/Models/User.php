@@ -496,4 +496,9 @@ class User extends Authenticatable
             ->where('verified', true)
             ->exists();
     }
+
+    public function partnerAdmissions()
+    {
+        return $this->hasMany(PartnerStudentAdmission::class, 'user_id', 'userId');
+    }
 }

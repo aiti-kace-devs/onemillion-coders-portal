@@ -160,26 +160,15 @@ class BookingController extends Controller
             ], 409);
         }
 
-        $responseUser = $isInPerson ? null : $enrollmentJob->enrolledUser;
-
-        Log::info('Enrollment handled successfully', [
-            'Enrollment User in BookingController' => $enrollmentJob->enrolledUser,
-        ]);
+        // Partner Integration
+        app(\App\Services\PartnerAdmissionService::class)->handleEnrollment($user, $programme);
 
         return response()->json([
             'status' => 'success',
-            'message' => $this->resolveSuccessMessage($isSelfPaced, $withSupport, $isInPerson),
-            'data' => [
-                'booking' => $enrollmentJob->booking,
-                'user' => $responseUser,
-                'admission' => $enrollmentJob->admission,
-                'enrollment' => [
-                    'is_self_paced' => $isSelfPaced,
-                    'with_support' => $withSupport,
-                    'is_in_person' => $isInPerson,
-                ],
-            ],
+            'message' => 'Booking successful.',
         ], 201);
+    
+
     }
 
     /**
