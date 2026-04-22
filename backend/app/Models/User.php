@@ -122,14 +122,14 @@ class User extends Authenticatable
                 );
             }
 
-            if ($user->wasChanged('registered_course') && $user->registered_course) {
-                $course = \App\Models\Course::find($user->registered_course);
-                $studentId = StudentIdGenerator::generate($user, $course);
-                if ($studentId && $studentId !== $user->student_id) {
-                    $user->student_id = $studentId;
-                    $user->saveQuietly();
-                }
-            }
+            // if ($user->wasChanged('registered_course') && $user->registered_course) {
+            //     $course = \App\Models\Course::find($user->registered_course);
+            //     $studentId = StudentIdGenerator::generate($user, $course);
+            //     if ($studentId && $studentId !== $user->student_id) {
+            //         $user->student_id = $studentId;
+            //         $user->saveQuietly();
+            //     }
+            // }
         });
 
         static::updating(function ($user) {
