@@ -53,6 +53,10 @@ class StudentOperation extends Controller
         $isInCooldown = $this->isInAdmissionCooldown($user);
         $cooldownTimeRemaining = $isInCooldown ? $this->getAdmissionCooldownTimeRemaining($user) : null;
 
+        // Check admission cooldown
+        $isInCooldown = $this->isInAdmissionCooldown($user);
+        $cooldownTimeRemaining = $isInCooldown ? $this->getAdmissionCooldownTimeRemaining($user) : null;
+
         $questionnaires = Questionnaire::where('active', true)
             ->latest()
             ->get(['id', 'title', 'code'])
@@ -966,7 +970,7 @@ class StudentOperation extends Controller
             $user->id,
             'COURSE_SELECTION',
             'Course Selected',
-            'You have successfully selected <strong>' . e($newCourse->course_name) . '</strong>. Thank you for your selection.'
+            'You have successfully selected <strong>' . e($newCourse->course_name) . '</strong>. You will be notified of next steps.'
         );
 
         return redirect()->route('student.application-status');
@@ -1042,7 +1046,7 @@ class StudentOperation extends Controller
                         'user_id' => $user->userId,
                         'course_id' => $courseId,
                         'reason' => $request->input('reason'),
-                        'revoked_by' => 'self',
+                        'source' => 'SELF',
                         'rejected_at' => now(),
                     ]);
 
@@ -1426,7 +1430,7 @@ class StudentOperation extends Controller
     {
         $notifications = Notification::where('user_id', Auth::id())
             ->orderByDesc('created_at')
-            ->paginate(10);
+            ->paginate(20);
 
         return Inertia::render('Student/Notifications/Index', compact('notifications'));
     }

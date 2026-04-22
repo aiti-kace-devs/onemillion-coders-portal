@@ -13,7 +13,9 @@ return new class extends Migration
     {
         Schema::table('admission_rejections', function (Blueprint $table) {
             $table->text('reason')->nullable()->after('course_id');
-            $table->string('revoked_by')->nullable()->after('reason');
+            $table->enum('source', ['SELF', 'SYSTEM', 'ADMIN'])
+                ->default('SELF')
+                ->after('reason');
         });
     }
 
@@ -23,7 +25,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('admission_rejections', function (Blueprint $table) {
-            $table->dropColumn(['reason', 'revoked_by']);
+            $table->dropColumn(['reason', 'source']);
         });
     }
 };

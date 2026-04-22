@@ -139,7 +139,7 @@ class BookingService
      */
     /**
      * Compute remaining seats directly from DB — no cache (used inside atomic lock)
-     * 
+     *
      * @param CourseSession|MasterSession $session
      * @param bool $isInPerson Whether this is an in-person course
      */
