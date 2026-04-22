@@ -26,6 +26,7 @@ import {
 import Button from "../../components/Button";
 import GhanaGradientText from "../../components/GhanaGradients/GhanaGradientText";
 import OtpVerification from "../../components/OtpVerification";
+import { runFieldRules } from "../../lib/formRules";
 
 import parsePhoneNumberFromString from "libphonenumber-js";
 
@@ -311,6 +312,18 @@ function RegisterForm() {
             errors[field.field_name] = `Only ${allowedExtensions.map((e) => e.toUpperCase()).join(", ")} files are allowed`;
           }
         }
+
+        // Fall back to the backend's Laravel-style `rules` string for anything
+        // the specific checks above didn't flag (regex, min, max, etc.). File
+        // inputs hold File objects, not strings, so skip them here.
+        if (
+          !errors[field.field_name] &&
+          field.type !== "file" &&
+          field.type !== "image"
+        ) {
+          const ruleError = runFieldRules(field, value);
+          if (ruleError) errors[field.field_name] = ruleError;
+        }
       });
 
     // Confirm-password check (frontend-only): if this group contains the password
@@ -395,11 +408,19 @@ function RegisterForm() {
     setFormErrors(errors);
 
     if (Object.keys(errors).length > 0) {
-      // Find the first group with an error and navigate to it
+      // Find the first group with an error, navigate to it, and scroll the
+      // errored field into view — same behaviour as the server-error path.
+      const firstErrorField = Object.keys(errors)[0];
       for (let i = 0; i < groupedSchema.length; i++) {
         const groupErrors = validateGroup(i);
         if (Object.keys(groupErrors).length > 0) {
           setCurrentGroupIndex(i);
+          setTimeout(() => {
+            const el = document.getElementById(`field-${firstErrorField}`);
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }, 300);
           break;
         }
       }
