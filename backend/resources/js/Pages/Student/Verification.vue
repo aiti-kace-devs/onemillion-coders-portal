@@ -89,6 +89,11 @@ function updateUniformIframeHeight() {
 
 async function refreshStatus(sync = false, final = false) {
     isRefreshing.value = true;
+    // if sync wait before trying
+    if (sync) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+
     try {
         const response = await fetch(route("student.verification.status"), {
             headers: {
@@ -97,27 +102,37 @@ async function refreshStatus(sync = false, final = false) {
             },
             credentials: "same-origin",
         });
+
         if (!response.ok) {
             throw new Error("Unable to refresh verification status.");
         }
+
         const payload = await response.json();
-        const attemptTimestamp = latestAttempt.value?.response_timestamp;
         status.value = payload.data;
-        latestAttempt.value = payload.data.latest_attempt;
-        currentAttempts.value = status.value?.attempts?.used ?? 0;
+        currentAttempts = payload.attempts.used;
+        if (payload.data.verified) {
+            final = true;
+        }
+
         // determine if should sync
         // if the difference between the current time and attempt timestamp is less than 30 seconds, and sync is true, do not refresh
         if (sync && !final) {
-            if (Date.now() - attemptTimestamp < 60000) {
-                return;
-            } else {
-                for (let i = 0; i < MAX_SYNC_ATTEMPTS; i++) {
-                    let isFinal = i === MAX_SYNC_ATTEMPTS - 1;
-                    // wait 3 seconds
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                    await refreshStatus(false, isFinal);
+            console.log('will go again');
+            for (let i = 0; i < MAX_SYNC_ATTEMPTS; i++) {
+                if (status.value.verified) {
+                    final = true;
                 }
+                let isFinal = i === MAX_SYNC_ATTEMPTS - 1;
+                // wait 3 seconds
+                console.log('wait and refresh');
+
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                await refreshStatus(false, isFinal);
             }
+        }
+
+        if (final && !status.value.verified) {
+            reloadIframe();
         }
 
     } catch (error) {
@@ -146,16 +161,19 @@ async function handleIframePostMessage(event) {
         return;
     }
 
-    if (payload.type === "verification_submitted") {
-        fallbackMessage.value = "Verification submitted. Refreshing your status...";
-        await refreshStatus(true);
-        return;
-    }
+    if (payload.type === "verification_submitted" || payload.type === "verification_failed") {
+        if (payload.type === "verification_submitted") {
+            fallbackMessage.value = "Verification submitted. Refreshing your status...";
+        } else {
+            fallbackMessage.value = "Verification failed. Please correct the issue and try again.";
+        }
+        refreshStatus(true, false).then(() => {
+            if (typeof sendResponse === 'function') {
+                sendResponse({ status: "refreshed" });
+            }
+        });
 
-    if (payload.type === "verification_failed") {
-        fallbackMessage.value = "Verification failed. Please correct the issue and try again.";
-        await refreshStatus(true);
-        return;
+        return true;
     }
 }
 
@@ -177,7 +195,7 @@ onMounted(() => {
     updateUniformIframeHeight();
     window.addEventListener("resize", updateUniformIframeHeight);
     window.addEventListener("message", handleIframePostMessage);
-    refreshStatus();
+    refreshStatus(false, true);
     currentAttempts.value = startAttempts.value;
 });
 
@@ -213,7 +231,7 @@ onUnmounted(() => {
         </template>
 
         <div class="py-6 space-y-6">
-            <div v-if="!isBlocked && !iframeUnavailable && verification_embed_url" class="space-y-4">
+            <div v-if="!isBlocked && !isVerified" class="space-y-4">
                 <div class="flex items-center gap-2">
                     <div
                         class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -229,12 +247,13 @@ onUnmounted(() => {
                 <div class="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-inner p-1">
                     <iframe ref="verificationIframeRef" :src="localEmbedUrl" class="w-full rounded-lg bg-white"
                         :style="{ height: `${iframeHeight}px` }" loading="lazy" allow="camera; microphone"
+                        sandbox="allow-forms allow-scripts allow-same-origin allow-popups"
                         referrerpolicy="strict-origin-when-cross-origin" @load="handleIframeLoad"
                         @error="handleIframeError" />
                 </div>
             </div>
 
-            <div v-else-if="!isBlocked" class="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
+            <!-- <div v-else-if="!isBlocked" class="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
                 <span class="material-symbols-outlined text-4xl text-gray-300 mb-3 block">hourglass_empty</span>
                 <h3 class="text-gray-900 font-semibold text-lg mb-1">Interface Unavailable</h3>
                 <p class="text-sm text-gray-500 mb-5 max-w-md mx-auto">
@@ -245,7 +264,7 @@ onUnmounted(() => {
                     @click="refreshStatus">
                     <span class="material-symbols-outlined text-sm">refresh</span> Try Again Later
                 </button>
-            </div>
+            </div> -->
             <!-- Header Section -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
                 <!-- Subtle side accent -->
@@ -316,7 +335,7 @@ onUnmounted(() => {
                                 <li class="flex flex-col gap-1 text-sm pt-1">
                                     <span class="text-gray-500">Message</span>
                                     <span class="font-medium text-gray-800">{{ latestAttemptMessage || "No attempt yet."
-                                        }}</span>
+                                    }}</span>
                                 </li>
                             </ul>
                         </div>
@@ -337,13 +356,13 @@ onUnmounted(() => {
                                 <li class="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
                                     <span class="text-gray-500">Name</span>
                                     <span class="font-medium text-gray-800 truncate pl-4">{{ profile.name || "N/A"
-                                        }}</span>
+                                    }}</span>
                                 </li>
                                 <li class="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
                                     <span class="text-gray-500">Previous Name</span>
                                     <span class="font-medium text-gray-800 truncate pl-4">{{ profile.previous_name ||
                                         "N/A"
-                                        }}</span>
+                                    }}</span>
                                 </li>
                                 <li class="flex justify-between items-center text-sm">
                                     <span class="text-gray-500">Date of Birth</span>
@@ -389,7 +408,7 @@ onUnmounted(() => {
                                 <div class="bg-gray-50 rounded-lg p-3">
                                     <span class="block text-xs font-medium text-gray-500 mb-1">Full Name</span>
                                     <span class="block text-base font-semibold text-gray-900">{{ profile.name || "N/A"
-                                        }}</span>
+                                    }}</span>
                                 </div>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -397,19 +416,19 @@ onUnmounted(() => {
                                         <span class="block text-xs font-medium text-gray-500 mb-1">First Name</span>
                                         <span class="block text-sm font-semibold text-gray-800">{{ profile.first_name ||
                                             "N/A"
-                                            }}</span>
+                                        }}</span>
                                     </div>
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="block text-xs font-medium text-gray-500 mb-1">Last Name</span>
                                         <span class="block text-sm font-semibold text-gray-800">{{ profile.last_name ||
                                             "N/A"
-                                            }}</span>
+                                        }}</span>
                                     </div>
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="block text-xs font-medium text-gray-500 mb-1">Middle Name</span>
                                         <span class="block text-sm font-semibold text-gray-800">{{ profile.middle_name
                                             || "N/A"
-                                            }}</span>
+                                        }}</span>
                                     </div>
                                     <div class="bg-gray-50 rounded-lg p-3">
                                         <span class="block text-xs font-medium text-gray-500 mb-1">Date of Birth</span>

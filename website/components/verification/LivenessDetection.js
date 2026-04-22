@@ -14,7 +14,6 @@ const CHALLENGE_LABELS = {
   blink: "Please blink your eyes",
   turn_left: "Slowly turn your head left",
   turn_right: "Slowly turn your head right",
-  hold_still: "Hold perfectly still",
   capture_photo: "Hold still for your photo",
 };
 
@@ -36,9 +35,6 @@ const RIGHT_EYE_EAR = [362, 385, 387, 263, 373, 380];
 
 const CAPTURE_FACE_MIN_RATIO = 0.40;
 const CAPTURE_FACE_MAX_RATIO = 0.55;
-
-const HOLD_STILL_DRIFT_TOLERANCE = 0.015;
-const HOLD_STILL_MS = 2000;
 
 function estimateFaceSize(landmarks) {
   const chin = landmarks[152];
@@ -130,7 +126,7 @@ export default function LivenessDetection({ onComplete, onCancel }) {
   });
 
   const challenges = useMemo(
-    () => ["center_face", "blink", "turn_left", "turn_right", "hold_still", "capture_photo"],
+    () => ["center_face", "blink", "turn_left", "turn_right", "capture_photo"],
     []
   );
 
@@ -309,38 +305,6 @@ export default function LivenessDetection({ onComplete, onCancel }) {
             advanceChallenge();
           } else {
             setChallengeProgress(Math.max(0, Math.min((Math.abs(yaw) / HEAD_TURN_THRESHOLD) * 100, 90)));
-          }
-          break;
-        }
-
-        case "hold_still": {
-          const nose = landmarks[LANDMARK_NOSE_TIP];
-
-          if (!holdStillRef.current) {
-            holdStillRef.current = { x: nose.x, y: nose.y };
-          }
-
-          const drift = Math.sqrt(
-            Math.pow(nose.x - holdStillRef.current.x, 2) +
-            Math.pow(nose.y - holdStillRef.current.y, 2)
-          );
-
-          const isStill = drift < HOLD_STILL_DRIFT_TOLERANCE;
-
-          if (isStill) {
-            if (!captureStartRef.current) captureStartRef.current = Date.now();
-            const elapsed = Date.now() - captureStartRef.current;
-            const remaining = Math.max(0, Math.ceil((HOLD_STILL_MS - elapsed) / 1000));
-            setCaptureCountdown(remaining);
-            const progress = Math.min((elapsed / HOLD_STILL_MS) * 100, 100);
-            setChallengeProgress(progress);
-            if (progress >= 100) advanceChallenge();
-          } else {
-            // Reset anchor to current position — user moved, start measuring from here
-            holdStillRef.current = { x: nose.x, y: nose.y };
-            captureStartRef.current = null;
-            setCaptureCountdown(null);
-            setChallengeProgress(0);
           }
           break;
         }
@@ -607,35 +571,6 @@ export default function LivenessDetection({ onComplete, onCancel }) {
             </div>
           )}
 
-          {currentChallenge === "hold_still" && (
-            <motion.div
-              animate={{ scale: [1, 1.04, 1] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                <ellipse cx="40" cy="40" rx="22" ry="28" stroke="#F9A825" strokeWidth="2" fill="none" opacity="0.4" />
-                <ellipse cx="32" cy="35" rx="4" ry="2.5" fill="#F9A825" opacity="0.7" />
-                <ellipse cx="48" cy="35" rx="4" ry="2.5" fill="#F9A825" opacity="0.7" />
-                <path d="M40 40 L38 46 L42 46" stroke="#F9A825" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
-                <path d="M33 52 C36 56 44 56 47 52" stroke="#F9A825" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.6" />
-                {/* Stillness ring — pulses slowly to indicate "wait" */}
-                <motion.circle
-                  cx="40" cy="40" r="34"
-                  stroke="#F9A825" strokeWidth="1.5" fill="none"
-                  strokeDasharray="4 3"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-                  style={{ transformOrigin: "40px 40px" }}
-                />
-                {/* Four corner anchors to imply "locked in place" */}
-                <path d="M14 26 L14 18 L22 18" stroke="#F9A825" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
-                <path d="M58 18 L66 18 L66 26" stroke="#F9A825" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
-                <path d="M66 54 L66 62 L58 62" stroke="#F9A825" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
-                <path d="M22 62 L14 62 L14 54" stroke="#F9A825" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
-              </svg>
-            </motion.div>
-          )}
-
           {currentChallenge === "capture_photo" && (
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.4 }}>
               <svg width="90" height="90" viewBox="0 0 90 90" fill="none">
@@ -688,31 +623,6 @@ export default function LivenessDetection({ onComplete, onCancel }) {
               </motion.p>
             )}
             {captureCountdown === null && <p className="text-xs text-gray-500 mt-1">Position your face so all checkmarks are green</p>}
-          </div>
-        )}
-
-        {currentChallenge === "hold_still" && faceDetected && (
-          <div className="mt-3 space-y-1">
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs">
-              <span className={captureCountdown !== null ? "text-green-600" : "text-yellow-500"}>
-                {captureCountdown !== null ? "✓ Holding still" : "✗ Keep still"}
-              </span>
-            </div>
-            {captureCountdown !== null && captureCountdown > 0 && (
-              <motion.p
-                key={captureCountdown}
-                initial={{ scale: 1.3, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="text-2xl font-bold text-yellow-500 mt-2"
-              >
-                {captureCountdown}
-              </motion.p>
-            )}
-            {captureCountdown === null && (
-              <p className="text-xs text-gray-500 mt-1">
-                Hold your face still for {HOLD_STILL_MS / 1000} seconds
-              </p>
-            )}
           </div>
         )}
       </motion.div>

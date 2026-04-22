@@ -55,8 +55,7 @@ function VerifyUserContent() {
 
     if (typeof window === "undefined" || window.parent === window) return;
 
-    const targetOrigin =
-      parentOrigin && /^https?:\/\//.test(parentOrigin) ? parentOrigin : "*";
+    const targetOrigin = "*";
 
     window.parent.postMessage(
       {
