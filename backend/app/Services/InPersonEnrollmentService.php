@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Booking;
 use App\Models\Course;
 use App\Models\CourseSession;
+use App\Models\MasterSession;
 use App\Models\ProgrammeBatch;
 use App\Models\User;
 use Exception;
@@ -23,7 +24,13 @@ class InPersonEnrollmentService
             ->where('status', true);
 
         if ($forProtocolBooking) {
-            $q->where('is_protocol', true);
+            $q->where(function ($query) {
+                $query->where('capacity_pool', Booking::CAPACITY_POOL_RESERVED)
+                    ->orWhere(function ($legacy) {
+                        $legacy->whereNull('capacity_pool')
+                            ->where('is_protocol', true);
+                    });
+            });
         }
 
         return $q->count();
@@ -52,15 +59,27 @@ class InPersonEnrollmentService
     /**
      * @throws Exception when validation fails or capacity is exhausted
      */
-    public function enroll(User $user, Course $course, ProgrammeBatch $batch, CourseSession $centreSession): Booking
+    public function enroll(
+        User $user,
+        Course $course,
+        ProgrammeBatch $batch,
+        CourseSession|MasterSession $centreSession,
+        ?string $capacityPool = null
+    ): Booking
     {
         if (! $course->isInPersonProgramme()) {
             throw new Exception('Course is not an in-person programme.');
         }
 
-        if ($centreSession->session_type !== CourseSession::TYPE_CENTRE
-            || (int) $centreSession->course_id !== (int) $course->id
-            || (int) $centreSession->centre_id !== (int) $course->centre_id) {
+        if ($centreSession instanceof CourseSession) {
+            if ($centreSession->session_type !== CourseSession::TYPE_CENTRE
+                || (int) $centreSession->centre_id !== (int) $course->centre_id
+                || ($centreSession->course_id !== null && (int) $centreSession->course_id !== (int) $course->id)) {
+                throw new Exception('Invalid session for this course.');
+            }
+        } elseif ($centreSession->session_type === 'Online'
+            || $centreSession->course_type !== $course->programme?->courseType()
+            || ! $centreSession->status) {
             throw new Exception('Invalid session for this course.');
         }
 
@@ -68,7 +87,7 @@ class InPersonEnrollmentService
             throw new Exception('Course does not belong to this programme batch.');
         }
 
-        $booking = $this->bookingService->book($user, $course, $batch, $centreSession, false);
+        $booking = $this->bookingService->book($user, $course, $batch, $centreSession, false, $capacityPool);
 
         if (! $booking instanceof Booking) {
             throw new Exception('Enrollment failed.');

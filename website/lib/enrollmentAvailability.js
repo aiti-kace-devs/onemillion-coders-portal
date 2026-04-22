@@ -8,12 +8,12 @@ export function deriveAvailabilityIssueFromBatches(batches) {
   if (list.length === 0) {
     return "no_batches";
   }
-  const hasAnySession = list.some((b) => (b.sessions?.length ?? 0) > 0);
+  const hasAnySession = list.some((b) => ((b.sessions?.length ?? 0) + (b.standard_sessions?.length ?? 0)) > 0);
   if (!hasAnySession) {
     return "no_sessions";
   }
   const hasSeat = list.some((b) =>
-    (b.sessions || []).some((s) => Number(s.remaining) > 0),
+    [...(b.sessions || []), ...(b.standard_sessions || [])].some((s) => Number(s.remaining) > 0),
   );
   if (!hasSeat) {
     return "sold_out";

@@ -319,7 +319,7 @@ export const getSiblingCourses = async (userId, courseId, token, limit = 3) => {
 
 /**
  * Create a booking (reserve a slot)
- * @param {{ programme_batch_id: number, course_id: number, session_id?: number }} data
+ * @param {{ programme_batch_id: number, course_id: number, session_id?: number, capacity_pool?: "reserved"|"standard" }} data
  * @param {string} token
  * @param {{ selfPace?: boolean }} [options] — when selfPace, POST /bookings?self-paced=true (study-from-home cohort attachment; server may omit session_id).
  * @returns {Promise<Object>} - Booking confirmation or 409 if full
@@ -344,7 +344,7 @@ export const createBooking = async (data, token, options = {}) => {
 
 /**
  * Confirm in-person enrollment via POST /api/bookings (same as online; centre session in session_id).
- * @param {{ programme_batch_id: number, course_id: number, course_session_id?: number, session_id?: number }} data
+ * @param {{ programme_batch_id: number, course_id: number, course_session_id?: number, session_id?: number, capacity_pool?: "reserved"|"standard" }} data
  * @param {string} token
  */
 export const submitInPersonEnrollment = async (data, token) => {
@@ -354,6 +354,7 @@ export const submitInPersonEnrollment = async (data, token) => {
       programme_batch_id: data.programme_batch_id,
       course_id: data.course_id,
       session_id: sessionId,
+      ...(data.capacity_pool && { capacity_pool: data.capacity_pool }),
     },
     token,
   );

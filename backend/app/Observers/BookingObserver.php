@@ -110,7 +110,7 @@ class BookingObserver
                 DB::table('daily_session_occupancy')->insert($attributes + [
                     'course_type' => $courseType,
                     'occupied_count' => 1,
-                    'protocol_occupied_count' => $booking->is_protocol ? 1 : 0,
+                    'protocol_occupied_count' => $this->bookingUsesReservedPool($booking) ? 1 : 0,
                 ]);
 
                 continue;
@@ -121,7 +121,7 @@ class BookingObserver
                 'occupied_count' => max(0, (int) ($existing->occupied_count ?? 0) + $change),
             ];
 
-            if ($booking->is_protocol) {
+            if ($this->bookingUsesReservedPool($booking)) {
                 $values['protocol_occupied_count'] = max(0, (int) ($existing->protocol_occupied_count ?? 0) + $change);
             }
 
@@ -129,6 +129,16 @@ class BookingObserver
                 ->where($attributes)
                 ->update($values);
         }
+    }
+
+    protected function bookingUsesReservedPool(Booking $booking): bool
+    {
+        if ($booking->capacity_pool === Booking::CAPACITY_POOL_RESERVED) {
+            return true;
+        }
+
+        // Existing rows from before capacity_pool should keep their old reserved semantics.
+        return $booking->capacity_pool === null && (bool) $booking->is_protocol;
     }
 
     /**

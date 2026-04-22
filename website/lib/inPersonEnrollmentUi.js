@@ -85,7 +85,31 @@ export function normalizeInPersonBatches(batches) {
     .map((b) => ({
       ...b,
       sessions: sortSessionsChronologically(b.sessions),
+      standard_sessions: sortSessionsChronologically(b.standard_sessions),
     }));
+}
+
+export function cohortSessions(batch) {
+  return [
+    ...((batch?.sessions || [])),
+    ...((batch?.standard_sessions || [])),
+  ];
+}
+
+export function hasBookableSession(batch) {
+  return cohortSessions(batch).some((session) => Number(session?.remaining) > 0);
+}
+
+export function availableSessionCount(batch) {
+  return cohortSessions(batch).filter((session) => Number(session?.remaining) > 0).length;
+}
+
+export function totalSessionCount(batch) {
+  return cohortSessions(batch).length;
+}
+
+export function batchTotalRemaining(batch) {
+  return cohortSessions(batch).reduce((sum, session) => sum + Number(session?.remaining || 0), 0);
 }
 
 /**

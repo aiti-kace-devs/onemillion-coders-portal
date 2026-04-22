@@ -37,6 +37,7 @@ class BookingController extends Controller
             'course_id' => 'required|integer|exists:courses,id',
             'session_id' => $isSelfPaced ? 'nullable|integer' : 'required|integer',
             'is_protocol' => 'sometimes|boolean',
+            'capacity_pool' => 'nullable|string|in:reserved,standard',
         ];
 
         $validated = $request->validate($validationRules);
@@ -114,9 +115,10 @@ class BookingController extends Controller
         }
 
         $forProtocol = (bool) ($user->is_protocol ?? false);
+        $capacityPool = $validated['capacity_pool'] ?? null;
 
         try {
-            $bookingService->book($user, $course, $batch, $session, $forProtocol);
+            $bookingService->book($user, $course, $batch, $session, $forProtocol, $capacityPool);
         } catch (Exception $e) {
             Log::error('Booking failed', [
                 'user_id' => $user->userId,
@@ -125,6 +127,7 @@ class BookingController extends Controller
                 'session_id' => $session->id,
                 'is_in_person' => $isInPerson,
                 'for_protocol' => $forProtocol,
+                'capacity_pool' => $capacityPool,
                 'error' => $e->getMessage(),
             ]);
 
@@ -195,10 +198,14 @@ class BookingController extends Controller
                 ->first();
 
             if (! $session
-                || (int) $session->course_id !== (int) $course->id
                 || (int) $session->centre_id !== (int) $course->centre_id
-                || $session->session_type !== CourseSession::TYPE_CENTRE) {
-                return null;
+                || $session->session_type !== CourseSession::TYPE_CENTRE
+                || ($session->course_id !== null && (int) $session->course_id !== (int) $course->id)) {
+                return MasterSession::where('id', $sessionId)
+                    ->where('status', true)
+                    ->where('course_type', $course->programme?->courseType())
+                    ->where('session_type', '!=', 'Online')
+                    ->first();
             }
 
             return $session;
@@ -207,6 +214,7 @@ class BookingController extends Controller
         return MasterSession::where('id', $sessionId)
             ->where('status', true)
             ->where('course_type', $course->programme?->courseType())
+            ->where('session_type', '!=', 'Online')
             ->first();
     }
 

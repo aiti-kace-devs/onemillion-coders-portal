@@ -17,6 +17,12 @@ use Illuminate\Support\Facades\DB;
 class AvailabilityService
 {
     /**
+     * Match BookingService for online courses whose centres have not configured
+     * slot counts yet; otherwise availability can show zero while booking allows.
+     */
+    private const UNCONFIGURED_ONLINE_CAPACITY_FALLBACK = 999999;
+
+    /**
      * Get available slots for a centre/course within a date range.
      *
      * @return array{available: int, quota_source: string, recommendations: array}
@@ -152,6 +158,10 @@ class AvailabilityService
         // Resolve quota source and capacity via IQS
         $quotaSource = 'standard';
         $capacity = $this->resolveTotalCapacityForCentre($centre, $courseType, $from, $to, $quotaSource);
+        if ($capacity === null) {
+            $capacity = self::UNCONFIGURED_ONLINE_CAPACITY_FALLBACK;
+        }
+
         $reserved = $this->protocolReservedCapacity($centre, $courseType, $capacity);
 
         // Use occupancy table: find peak occupancy across ALL sessions for this course type
@@ -162,11 +172,14 @@ class AvailabilityService
             ->get(['occupied_count', 'protocol_occupied_count']);
 
         $poolOccupancy = $this->poolOccupancyFromRows($occupancyRows, $reserved);
-        $totalAvailable = $this->remainingSeatsFromPoolOccupancy($capacity, $reserved, $poolOccupancy, $forProtocolBooking);
+        $breakdown = $this->seatBreakdownFromPoolOccupancy($capacity, $reserved, $poolOccupancy);
+        $totalAvailable = $this->remainingForMode($breakdown, $forProtocolBooking);
 
         if ($totalAvailable > 0) {
             return [
                 'available' => $totalAvailable,
+                'reserved_available' => $breakdown['reserved_remaining'],
+                'standard_available' => $breakdown['standard_remaining'],
                 'quota_source' => $quotaSource,
                 'recommendations' => [],
                 'batches' => $batches->map(function ($batch) {
@@ -184,6 +197,8 @@ class AvailabilityService
 
         return [
             'available' => 0,
+            'reserved_available' => $breakdown['reserved_remaining'],
+            'standard_available' => $breakdown['standard_remaining'],
             'quota_source' => $quotaSource,
             'recommendations' => $recommendations,
             'batches' => [],
@@ -199,37 +214,47 @@ class AvailabilityService
     private function resolveCapacityForCentre(Centre $centre, string $courseType, Carbon $from, Carbon $to, string &$quotaSource, bool $forProtocolBooking = false): int
     {
         $capacity = $this->resolveTotalCapacityForCentre($centre, $courseType, $from, $to, $quotaSource);
+        if ($capacity === null) {
+            $capacity = self::UNCONFIGURED_ONLINE_CAPACITY_FALLBACK;
+        }
+
         $reserved = $this->protocolReservedCapacity($centre, $courseType, $capacity);
 
         return $forProtocolBooking
-            ? $capacity
+            ? $reserved
             : max(0, $capacity - $reserved);
     }
 
-    private function resolveTotalCapacityForCentre(Centre $centre, string $courseType, Carbon $from, Carbon $to, string &$quotaSource): int
+    private function resolveTotalCapacityForCentre(Centre $centre, string $courseType, Carbon $from, Carbon $to, string &$quotaSource): ?int
     {
         $isShort = $courseType === Programme::COURSE_TYPE_SHORT;
+        $capacity = $this->configuredCourseTypeCapacity($centre, $courseType);
 
         // IQS check: is the remaining window too short for any long course?
         if ($isShort && $this->isIqsActive($from, $to)) {
             $quotaSource = 'reallocated';
-            $capacity = $centre->seat_count ? (int) $centre->seat_count : 0;
-        } else {
-            // Standard capacity from centre config
-            $capacity = $centre->slotCapacityFor($courseType);
 
-            // If centre hasn't configured slots, derive from global AppConfig
-            if ($capacity === null && $centre->seat_count) {
-                $shortPercent = (int) AppConfig::getValue('SHORT_SLOTS_PERCENTAGE', 60);
-                $longPercent = (int) AppConfig::getValue('LONG_SLOTS_PERCENTAGE', 40);
-
-                $capacity = $isShort
-                    ? (int) round($centre->seat_count * $shortPercent / 100)
-                    : (int) round($centre->seat_count * $longPercent / 100);
-            }
+            return $capacity ?? ($centre->seat_count ? (int) $centre->seat_count : null);
         }
 
-        return $capacity ?? 0;
+        return $capacity !== null ? (int) $capacity : null;
+    }
+
+    private function configuredCourseTypeCapacity(Centre $centre, string $courseType): ?int
+    {
+        $capacity = $centre->slotCapacityFor($courseType);
+
+        // If centre hasn't configured slots, derive from global AppConfig
+        if ($capacity === null && $centre->seat_count) {
+            $shortPercent = (int) AppConfig::getValue('SHORT_SLOTS_PERCENTAGE', 60);
+            $longPercent = (int) AppConfig::getValue('LONG_SLOTS_PERCENTAGE', 40);
+
+            $capacity = $courseType === Programme::COURSE_TYPE_SHORT
+                ? (int) round($centre->seat_count * $shortPercent / 100)
+                : (int) round($centre->seat_count * $longPercent / 100);
+        }
+
+        return $capacity !== null ? (int) $capacity : null;
     }
 
     private function protocolReservedCapacity(Centre $centre, string $courseType, int $capacity): int
@@ -271,16 +296,39 @@ class AvailabilityService
      */
     private function remainingSeatsFromPoolOccupancy(int $capacity, int $reserved, array $poolOccupancy, bool $forProtocolBooking): int
     {
-        $mainCapacity = max(0, $capacity - $reserved);
-        $mainRemaining = max(0, $mainCapacity - (int) $poolOccupancy['main_peak']);
+        return $this->remainingForMode(
+            $this->seatBreakdownFromPoolOccupancy($capacity, $reserved, $poolOccupancy),
+            $forProtocolBooking
+        );
+    }
 
-        if (! $forProtocolBooking) {
-            return $mainRemaining;
-        }
+    /**
+     * @param  array{protocol_peak: int, main_peak: int}  $poolOccupancy
+     * @return array{capacity: int, reserved_capacity: int, standard_capacity: int, reserved_remaining: int, standard_remaining: int}
+     */
+    private function seatBreakdownFromPoolOccupancy(int $capacity, int $reserved, array $poolOccupancy): array
+    {
+        $capacity = max(0, $capacity);
+        $reserved = min(max(0, $reserved), $capacity);
+        $standardCapacity = max(0, $capacity - $reserved);
 
-        $reservedRemaining = max(0, $reserved - (int) $poolOccupancy['protocol_peak']);
+        return [
+            'capacity' => $capacity,
+            'reserved_capacity' => $reserved,
+            'standard_capacity' => $standardCapacity,
+            'reserved_remaining' => max(0, $reserved - (int) $poolOccupancy['protocol_peak']),
+            'standard_remaining' => max(0, $standardCapacity - (int) $poolOccupancy['main_peak']),
+        ];
+    }
 
-        return $reservedRemaining + $mainRemaining;
+    /**
+     * @param  array{reserved_remaining: int, standard_remaining: int}  $breakdown
+     */
+    private function remainingForMode(array $breakdown, bool $forProtocolBooking): int
+    {
+        return $forProtocolBooking
+            ? (int) ($breakdown['reserved_remaining'] ?? 0)
+            : (int) ($breakdown['standard_remaining'] ?? 0);
     }
 
     /**
