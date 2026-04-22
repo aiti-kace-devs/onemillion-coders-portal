@@ -34,130 +34,144 @@ class BookingService
      * @param bool $isInPerson Whether this is an in-person course (determines capacity logic)
      * @throws Exception when capacity is exhausted or the session is incompatible.
      */
-public function book(
-    User $user,
-    Course $course,
-    ProgrammeBatch $batch,
-    CourseSession|MasterSession $session,
-    bool $isInPerson = false
-): ?Booking {
-    $programme = $course->programme;
-    $centreId = $isInPerson ? $course->centre_id : ($session->centre_id ?? $course->centre_id);
-    $sessionId = $session->id;
-    $sessionType = $isInPerson ? 'course_session' : 'master_session';
+    public function book(
+        User $user,
+        Course $course,
+        ProgrammeBatch $batch,
+        CourseSession|MasterSession $session,
+        bool $isInPerson = false
+    ): ?Booking {
+        $programme = $course->programme;
+        $centreId = $isInPerson ? $course->centre_id : ($session->centre_id ?? $course->centre_id);
+        $sessionId = $session->id;
+        $sessionType = $isInPerson ? 'course_session' : 'master_session';
 
-    $lockKey = "booking_lock:{$centreId}:{$sessionId}";
+        $lockKey = "booking_lock:{$centreId}:{$sessionId}";
 
-    return Cache::lock($lockKey, 10)->block(5, function () use (
-        $user, $course, $batch, $session, $centreId, $sessionId, $isInPerson, $sessionType
-    ) {
-        return DB::transaction(function () use (
-            $user, $course, $batch, $session, $centreId, $sessionId, $isInPerson, $sessionType
+        return Cache::lock($lockKey, 10)->block(5, function () use (
+            $user,
+            $course,
+            $batch,
+            $session,
+            $centreId,
+            $sessionId,
+            $isInPerson,
+            $sessionType
         ) {
-            $courseType = Booking::resolveCourseType($course->id);
-
-            // Idempotency: return existing booking if already booked in this batch
-            $existing = Booking::where('user_id', $user->userId)
-                ->where('programme_batch_id', $batch->id)
-                ->where('status', true)
-                ->first();
-
-            if ($existing) {
-                Log::info('Booking already exists', [
-                    'user_id' => $user->userId,
-                    'batch_id' => $batch->id,
-                    'booking_id' => $existing->id,
-                ]);
-                return $existing;
-            }
-
-            // Compute remaining seats with correct logic for session type
-            $remaining = $this->computeRemainingSeats($centreId, $batch, $session, $isInPerson);
-
-            if ($remaining <= 0) {
-                Log::warning('Booking failed: session full', [
-                    'centre_id' => $centreId,
-                    'batch_id' => $batch->id,
-                    'session_id' => $sessionId, 
-                    'session_type' => $sessionType,
-                ]);
-                throw new Exception('Course session is full.');
-            }
-
-            // Cancel any previous booking for a different batch
-            $previous = Booking::where('user_id', $user->userId)
-                ->where('programme_batch_id', '!=', $batch->id)
-                ->where('status', true)
-                ->first();
-
-            if ($previous) {
-                $this->cancel($previous);
-            }
-
-            // Clear availability cache
-            AvailabilityService::clearCache(
+            return DB::transaction(function () use (
+                $user,
+                $course,
+                $batch,
+                $session,
                 $centreId,
-                $course->id,
-                $batch->start_date,
-                $batch->end_date
-            );
+                $sessionId,
+                $isInPerson,
+                $sessionType
+            ) {
+                $courseType = Booking::resolveCourseType($course->id);
 
-            // Update user profile
-            $user->registered_course = $course->id;
-            $user->shortlist = true;
-            $user->save();
+                // Idempotency: return existing booking if already booked in this batch
+                $existing = Booking::where('user_id', $user->userId)
+                    ->where('programme_batch_id', $batch->id)
+                    ->where('status', true)
+                    ->first();
 
-            // Create or update admission record
-            $admission = UserAdmission::updateOrCreate(
-                ['user_id' => $user->userId],
-                [
+                if ($existing) {
+                    Log::info('Booking already exists', [
+                        'user_id' => $user->userId,
+                        'batch_id' => $batch->id,
+                        'booking_id' => $existing->id,
+                    ]);
+                    return $existing;
+                }
+
+                // Compute remaining seats with correct logic for session type
+                $remaining = $this->computeRemainingSeats($centreId, $batch, $session, $isInPerson);
+
+                if ($remaining <= 0) {
+                    Log::warning('Booking failed: session full', [
+                        'centre_id' => $centreId,
+                        'batch_id' => $batch->id,
+                        'session_id' => $sessionId,
+                        'session_type' => $sessionType,
+                    ]);
+                    throw new Exception('Course session is full.');
+                }
+
+                // Cancel any previous booking for a different batch
+                $previous = Booking::where('user_id', $user->userId)
+                    ->where('programme_batch_id', '!=', $batch->id)
+                    ->where('status', true)
+                    ->first();
+
+                if ($previous) {
+                    $this->cancel($previous);
+                }
+
+                // Clear availability cache
+                AvailabilityService::clearCache(
+                    $centreId,
+                    $course->id,
+                    $batch->start_date,
+                    $batch->end_date
+                );
+
+                // Update user profile
+                $user->registered_course = $course->id;
+                $user->shortlist = true;
+                $user->save();
+
+                // Create or update admission record
+                $admission = UserAdmission::updateOrCreate(
+                    ['user_id' => $user->userId],
+                    [
+                        'course_id' => $course->id,
+                        'programme_batch_id' => $batch->id,
+                        'email_sent' => now(),
+                        'confirmed' => now(),
+                        'session' => $session->id,
+                    ]
+                );
+
+                // Send notification
+                NotificationController::notify(
+                    $user->id,
+                    'COURSE_SELECTION',
+                    'Enrollment Confirmed',
+                    'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
+                );
+
+                // Remove from waitlist if exists
+                AdmissionWaitlist::where('user_id', $user->userId)->delete();
+
+                // Clear cached seat count for this specific combination
+                Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$sessionId}");
+
+                Log::info('Booking created successfully', [
+                    'user_id' => $user->userId,
                     'course_id' => $course->id,
+                    'batch_id' => $batch->id,
+                    'session_id' => $sessionId,
+                    'session_type' => $sessionType,
+                    'centre_id' => $centreId,
+                ]);
+
+                // Create booking record with correct session reference
+                return Booking::create([
+                    'user_id' => $user->userId,
                     'programme_batch_id' => $batch->id,
-                    'email_sent' => now(),
-                    'confirmed' => now(),
-                    'session' => $session->id,
-                ]
-            );
-
-            // Send notification
-            NotificationController::notify(
-                $user->id,
-                'COURSE_SELECTION',
-                'Enrollment Confirmed',
-                'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
-            );
-
-            // Remove from waitlist if exists
-            AdmissionWaitlist::where('user_id', $user->userId)->delete();
-
-            // Clear cached seat count for this specific combination
-            Cache::forget("remaining_seats:{$centreId}:{$batch->id}:{$sessionId}"); 
-
-            Log::info('Booking created successfully', [
-                'user_id' => $user->userId,
-                'course_id' => $course->id,
-                'batch_id' => $batch->id,
-                'session_id' => $sessionId, 
-                'session_type' => $sessionType,
-                'centre_id' => $centreId,
-            ]);
-
-            // Create booking record with correct session reference
-            return Booking::create([
-                'user_id' => $user->userId,
-                'programme_batch_id' => $batch->id,
-                'master_session_id' => $isInPerson ? null : $session->id,
-                'course_session_id' => $isInPerson ? $session->id : null,
-                'centre_id' => $centreId,
-                'course_id' => $course->id,
-                'course_type' => $courseType,
-                'status' => true,
-                'booked_at' => now(),
-                'user_admission_id' => $admission->id,
-            ]);
+                    'master_session_id' => $isInPerson ? null : $session->id,
+                    'course_session_id' => $isInPerson ? $session->id : null,
+                    'centre_id' => $centreId,
+                    'course_id' => $course->id,
+                    'course_type' => $courseType,
+                    'status' => true,
+                    'booked_at' => now(),
+                    'user_admission_id' => $admission->id,
+                ]);
+            });
         });
-    });
-}
+    }
 
     /**
      * Cancel a booking: hard-delete the row and fire AdmissionSlotFreed
@@ -216,12 +230,12 @@ public function book(
      * @param CourseSession|MasterSession $session
      * @param bool $isInPerson Whether this is an in-person course
      */
-/**
- * Compute remaining seats directly from DB — no cache (used inside atomic lock)
- * 
- * @param CourseSession|MasterSession $session
- * @param bool $isInPerson Whether this is an in-person course
- */
+    /**
+     * Compute remaining seats directly from DB — no cache (used inside atomic lock)
+     * 
+     * @param CourseSession|MasterSession $session
+     * @param bool $isInPerson Whether this is an in-person course
+     */
     protected function computeRemainingSeats(
         int $centreId,
         ProgrammeBatch $batch,
@@ -235,7 +249,7 @@ public function book(
 
         if ($isInPerson && $session instanceof CourseSession) {
             $limit = $session->limit ?? $session->seat_count ?? 0;
-            
+
             if ($limit <= 0) {
                 $limit = $centre->seat_count ?? 0;
             }
@@ -290,7 +304,7 @@ public function book(
         if ($isInPerson && $session instanceof CourseSession) {
             // IN-PERSON LOGIC: Use CourseSession's own capacity
             $capacity = $session->capacity ?? $session->seat_count ?? 0;
-            
+
             if ($capacity <= 0) {
                 // Fallback to centre seat_count if session has no capacity defined
                 $capacity = $centre->seat_count ?? 0;
@@ -426,7 +440,7 @@ public function book(
                 $key = "{$batchId}:{$sessionId}";
                 $cacheKey = "remaining_seats:{$centreId}:{$batchId}:{$sessionId}";
                 $cached = Cache::get($cacheKey);
-                
+
                 if ($cached !== null) {
                     $results[$key] = (int) $cached;
                     continue;
