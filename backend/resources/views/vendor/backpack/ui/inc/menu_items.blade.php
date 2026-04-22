@@ -130,6 +130,14 @@
     <x-backpack::menu-item title="Programme Batches" icon="la la-calendar" :link="backpack_url('programme-batch')" />
 @endcan
 
+@can('partner.read.all')
+<x-backpack::menu-dropdown title="Partner Management" icon="la la-handshake">
+    <x-backpack::menu-dropdown-item title="Admissions Dashboard" icon="la la-tachometer-alt" :link="backpack_url('partner-admissions')" />
+    <x-backpack::menu-dropdown-item title="Partners" icon="la la-certificate" :link="backpack_url('partner')" />
+    <x-backpack::menu-dropdown-item title="Partner Admissions" icon="la la-user-check" :link="backpack_url('partner-student-admission')" />
+</x-backpack::menu-dropdown>
+@endcan
+
 {{-- @can('branch.read.all')
     <x-backpack::menu-item title="Branches" icon="la la-code-branch" :link="backpack_url('branch')" />
 @endcan --}}

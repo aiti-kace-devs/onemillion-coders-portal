@@ -46,7 +46,9 @@ class PermissionSeeder extends Seeder
             'student',
             'email-template',
             'sms-template',
-            'app-config'
+            'app-config',
+            'partner',
+            'partner-student-admission',
         ];
 
         // Define actions
@@ -135,7 +137,7 @@ class PermissionSeeder extends Seeder
         // ADMISSION OFFICER ROLE
         $admissionOfficerRole = Role::findByName('admission-officer', 'admin');
         $admissionOfficerPermissions = $this->findResourcePermissions(
-            ['student', 'user-admission', 'student-verification', 'batch'],
+            ['student', 'user-admission', 'student-verification', 'batch', 'partner', 'partner-student-admission'],
             ['create', 'read', 'update'],
             ['all', 'self'],
             ['student' => ['shortlist', 'admit', 'verify', 'assign-batch']]
@@ -207,7 +209,7 @@ class PermissionSeeder extends Seeder
         // ADMINISTRATOR ROLE
         $administratorRole = Role::findByName('administrator', 'admin');
         $administratorPermissions = $this->findResourcePermissions(
-            ['student', 'user-admission', 'course', 'attendance', 'form', 'manage-exam', 'branch', 'centre', 'programme'],
+            ['student', 'user-admission', 'course', 'attendance', 'form', 'manage-exam', 'branch', 'centre', 'programme', 'partner', 'partner-student-admission'],
             ['create', 'read', 'update', 'delete'],
             ['all'],
             ['student' => ['shortlist', 'admit', 'verify'], 'user-admission' => ['pending', 'approved', 'rejected', 'shortlisted']]

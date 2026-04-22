@@ -1,5 +1,19 @@
 @extends(backpack_view('blank'))
 
+@once
+    @push('crud_fields_styles')
+        <link rel="stylesheet" href="{{ asset('assets/plugins/select2/css/select2.min.css') }}">
+        <link rel="stylesheet" href="{{ asset('assets/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
+    @endpush
+
+    @push('crud_fields_scripts')
+        <script src="{{ asset('assets/plugins/select2/js/select2.full.min.js') }}"></script>
+        @if (app()->getLocale() !== 'en')
+            <script src="{{ asset('assets/plugins/select2/js/i18n/' . str_replace('_', '-', app()->getLocale()) . '.js') }}"></script>
+        @endif
+    @endpush
+@endonce
+
 @section('content')
 
 <div class="container-xl">
@@ -12,6 +26,7 @@
             </div>
         </div>
     </div>
+
     <div class="page-body">
         <div class="row">
             <div class="col-12">
@@ -19,27 +34,37 @@
                     <div class="card-header">
                         <h3 class="card-title">Send Customized Campaign to Admitted Users</h3>
                     </div>
+
                     <div class="card-body">
                         <form action="{{ backpack_url('campaign') }}" method="POST" id="campaignForm">
                             @csrf
 
-                            <!-- Campaign Title -->
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label" for="title">Campaign Title <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('title') is-invalid @enderror" 
-                                           id="title" name="title" placeholder="e.g., Q1 2026 Training Reminder" 
-                                           value="{{ old('title') }}" required>
+                                    <input
+                                        type="text"
+                                        class="form-control @error('title') is-invalid @enderror"
+                                        id="title"
+                                        name="title"
+                                        placeholder="e.g., Q1 2026 Training Reminder"
+                                        value="{{ old('title') }}"
+                                        required
+                                    >
                                     @error('title')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <!-- Priority -->
                                 <div class="col-md-6">
                                     <label class="form-label" for="priority">Priority <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('priority') is-invalid @enderror" 
-                                            id="priority" name="priority" required>
+                                    <select
+                                        class="form-select js-enhanced-select @error('priority') is-invalid @enderror"
+                                        id="priority"
+                                        name="priority"
+                                        required
+                                        data-placeholder="Select priority"
+                                    >
                                         <option value="low" @selected(old('priority') === 'low')>Low</option>
                                         <option value="normal" @selected(old('priority') === 'normal' || !old('priority'))>Normal</option>
                                         <option value="high" @selected(old('priority') === 'high')>High</option>
@@ -50,72 +75,95 @@
                                 </div>
                             </div>
 
-                            <!-- Targeting Hierarchy Section -->
                             <div class="card mb-4">
                                 <div class="card-header bg-light">
                                     <h5 class="mb-0">Target Admitted Users (Select as Specific as Needed)</h5>
                                     <small class="text-muted">Select deeper levels to narrow your audience. E.g., select a branch, then optionally filter by district within that branch.</small>
                                 </div>
+
                                 <div class="card-body">
-                                    <!-- Branches -->
                                     <div class="row mb-3">
                                         <div class="col-md-6">
                                             <label class="form-label" for="branches"><strong>Branches</strong></label>
-                                            <select class="form-select form-select-targeting" id="branches" name="target_branches[]" multiple data-loaded="false">
-                                                <option value="">Loading branches...</option>
+                                            <select
+                                                class="form-control select2_multiple form-select-targeting js-targeting-select"
+                                                id="branches"
+                                                name="target_branches[]"
+                                                multiple
+                                                data-placeholder="Select branch(es)"
+                                            >
+                                                @foreach($branches as $branch)
+                                                    <option value="{{ $branch->id }}" @selected(in_array($branch->id, old('target_branches', [])))>
+                                                        {{ $branch->title }}
+                                                    </option>
+                                                @endforeach
                                             </select>
                                             <small class="text-muted">Leave empty to include all branches</small>
                                         </div>
 
-                                        <!-- Districts -->
                                         <div class="col-md-6">
                                             <label class="form-label" for="districts"><strong>Districts</strong></label>
-                                            <select class="form-select form-select-targeting" id="districts" name="target_districts[]" multiple disabled data-loaded="false">
-                                                <option value="">Select branches first</option>
-                                            </select>
+                                            <select
+                                                class="form-control select2_multiple form-select-targeting js-targeting-select"
+                                                id="districts"
+                                                name="target_districts[]"
+                                                multiple
+                                                disabled
+                                                data-placeholder="Select district(s)"
+                                            ></select>
                                             <small class="text-muted">Only shows districts from selected branches</small>
                                         </div>
                                     </div>
 
-                                    <!-- Centres -->
                                     <div class="row mb-3">
                                         <div class="col-md-6">
                                             <label class="form-label" for="centres"><strong>Centres</strong></label>
-                                            <select class="form-select form-select-targeting" id="centres" name="target_centres[]" multiple disabled data-loaded="false">
-                                                <option value="">Select districts first</option>
-                                            </select>
+                                            <select
+                                                class="form-control select2_multiple form-select-targeting js-targeting-select"
+                                                id="centres"
+                                                name="target_centres[]"
+                                                multiple
+                                                disabled
+                                                data-placeholder="Select centre(s)"
+                                            ></select>
                                             <small class="text-muted">Only shows centres from selected districts</small>
                                         </div>
 
-                                        <!-- Courses -->
                                         <div class="col-md-6">
                                             <label class="form-label" for="courses"><strong>Courses</strong></label>
-                                            <select class="form-select form-select-targeting" id="courses" name="target_courses[]" multiple disabled data-loaded="false">
-                                                <option value="">Select centres first</option>
-                                            </select>
+                                            <select
+                                                class="form-control select2_multiple form-select-targeting js-targeting-select"
+                                                id="courses"
+                                                name="target_courses[]"
+                                                multiple
+                                                disabled
+                                                data-placeholder="Select course(s)"
+                                            ></select>
                                             <small class="text-muted">Only shows courses from selected centres</small>
                                         </div>
                                     </div>
 
-                                    <!-- Sessions -->
                                     <div class="row mb-3">
                                         <div class="col-md-12">
                                             <label class="form-label" for="sessions"><strong>Sessions</strong></label>
-                                            <select class="form-select form-select-targeting" id="sessions" name="target_course_sessions[]" multiple disabled data-loaded="false">
-                                                <option value="">Select courses first</option>
-                                            </select>
+                                            <select
+                                                class="form-control select2_multiple form-select-targeting js-targeting-select"
+                                                id="sessions"
+                                                name="target_course_sessions[]"
+                                                multiple
+                                                disabled
+                                                data-placeholder="Select session(s)"
+                                            ></select>
                                             <small class="text-muted">Only shows sessions from selected courses. Includes both Master and Course sessions.</small>
                                         </div>
                                     </div>
 
-                                    <!-- Summary -->
                                     <div class="alert alert-info mt-3" id="targeting-summary" style="display: none;">
                                         <strong>Target Summary:</strong> <span id="summary-text"></span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Message Section with TinyMCE -->
                             <div class="mb-3">
                                 <label class="form-label" for="message">Message <span class="text-danger">*</span></label>
                                 <p class="text-muted small mb-2">
@@ -126,19 +174,21 @@
                                     <span class="badge bg-light text-dark cursor-pointer" onclick="insertVariable('[[phone_number]]')">Phone</span>
                                     <span class="badge bg-light text-dark cursor-pointer" onclick="insertVariable('[[centre_name]]')">Centre</span>
                                 </p>
-                                <textarea class="form-control tinymce-editor @error('message') is-invalid @enderror" 
-                                          id="message" name="message" rows="8"
-                                          required>{{ old('message') }}</textarea>
+                                <textarea
+                                    class="form-control tinymce-editor @error('message') is-invalid @enderror"
+                                    id="message"
+                                    name="message"
+                                    rows="8"
+                                    required
+                                >{{ old('message') }}</textarea>
                                 @error('message')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
                             </div>
 
-                            <!-- Hidden type field -->
                             <input type="hidden" name="type" value="campaign">
                             <input type="hidden" name="created_by" value="{{ backpack_auth()->id() }}">
 
-                            <!-- Form Actions -->
                             <div class="form-footer mt-4">
                                 <a href="{{ backpack_url('campaign') }}" class="btn btn-secondary">
                                     <i class="fas fa-times"></i> Cancel
@@ -147,7 +197,6 @@
                                     <i class="fas fa-save"></i> Create Campaign
                                 </button>
                             </div>
-
                         </form>
                     </div>
                 </div>
@@ -161,10 +210,12 @@
         cursor: pointer;
         transition: all 0.2s ease;
     }
+
     .cursor-pointer:hover {
         background-color: #0d6efd !important;
         color: white !important;
     }
+
     .form-footer {
         display: flex;
         gap: 10px;
@@ -174,33 +225,31 @@
     }
 </style>
 
-<!-- Select2 CSS & JS -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-<!-- TinyMCE Open Source CDN (No API Key Required) -->
 <script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js"></script>
 
 <script>
-// Performance optimization: Data cache to avoid re-fetching
 const dataCache = {
-    branches: null,
     districts: {},
     centres: {},
     courses: {},
     sessions: {}
 };
 
-const loadingState = {
-    branches: false,
-    districts: false,
-    centres: false,
-    courses: false,
-    sessions: false
+const targetingRoutes = {
+    districts: '/api/campaign-targeting/districts',
+    centres: '/api/campaign-targeting/centres',
+    courses: '/api/campaign-targeting/courses',
+    sessions: '/api/campaign-targeting/sessions'
 };
 
-// Initialize TinyMCE
+const existingSelections = {
+    branches: @json(old('target_branches', [])),
+    districts: @json(old('target_districts', [])),
+    centres: @json(old('target_centres', [])),
+    courses: @json(old('target_courses', [])),
+    sessions: @json(old('target_course_sessions', []))
+};
+
 tinymce.init({
     selector: '.tinymce-editor',
     plugins: 'paste,link,lists,table',
@@ -209,8 +258,8 @@ tinymce.init({
     statusbar: true,
     height: 300,
     paste_data_images: false,
-    setup: function(ed) {
-        ed.on('change', function(e) {
+    setup: function (ed) {
+        ed.on('change', function () {
             ed.save();
         });
     }
@@ -218,267 +267,367 @@ tinymce.init({
 
 function insertVariable(variable) {
     const editor = tinymce.get('message');
+
     if (editor) {
         editor.insertContent(variable);
         editor.focus();
-    } else {
-        const textarea = document.getElementById('message');
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const text = textarea.value;
-        const newText = text.substring(0, start) + variable + text.substring(end);
-        textarea.value = newText;
-        textarea.focus();
+        return;
     }
+
+    const textarea = document.getElementById('message');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    textarea.value = text.substring(0, start) + variable + text.substring(end);
+    textarea.focus();
 }
 
-// Initialize Select2 with optimizations
-document.addEventListener('DOMContentLoaded', function() {
-    initializeSelect2();
+let select2InitAttempts = 0;
+
+document.addEventListener('DOMContentLoaded', async function () {
     setupEventListeners();
+    await loadInitialData();
+    ensureSelect2Initialized();
     updateTargetSummary();
 });
 
+function hasSelect2() {
+    return typeof window.jQuery !== 'undefined'
+        && typeof window.jQuery.fn !== 'undefined'
+        && typeof window.jQuery.fn.select2 === 'function';
+}
+
+function ensureSelect2Initialized() {
+    if (initializeSelect2()) {
+        return;
+    }
+
+    if (select2InitAttempts >= 20) {
+        return;
+    }
+
+    select2InitAttempts += 1;
+    window.setTimeout(ensureSelect2Initialized, 150);
+}
+
 function initializeSelect2() {
-    const selects = document.querySelectorAll('.form-select-targeting');
-    
-    selects.forEach(select => {
-        $(select).select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: select.getAttribute('placeholder') || 'Select options...',
-            allowClear: true,
-            minimumResultsForSearch: 5,
-            language: {
-                noResults: function() {
-                    return "No results found";
-                }
-            }
-        });
-    });
+    if (!hasSelect2()) {
+        return false;
+    }
 
-    // Lazy load branches on first open
-    $('#branches').on('select2:opening', async function() {
-        if (!dataCache.branches && !loadingState.branches) {
-            loadingState.branches = true;
-            await loadBranches();
+    window.jQuery('.js-enhanced-select').each(function () {
+        const $select = window.jQuery(this);
+
+        if ($select.hasClass('select2-hidden-accessible')) {
+            return;
         }
+
+        $select.select2({
+            theme: 'bootstrap4',
+            width: '100%',
+            placeholder: $select.data('placeholder') || undefined
+        });
     });
 
-    // Lazy load districts on change
-    $('#branches').on('change', async function() {
+    window.jQuery('.js-targeting-select').each(function () {
+        const $select = window.jQuery(this);
+
+        if ($select.hasClass('select2-hidden-accessible')) {
+            return;
+        }
+
+        $select.select2({
+            theme: 'bootstrap4',
+            width: '100%',
+            placeholder: $select.data('placeholder') || 'Select options...',
+            allowClear: true,
+            closeOnSelect: false
+        });
+    });
+
+    return true;
+}
+
+async function loadInitialData() {
+    applySelectedValues('branches', existingSelections.branches);
+
+    if ((existingSelections.branches || []).length > 0) {
         await loadDistricts();
-        $('#centres').val(null).trigger('change');
-        $('#courses').val(null).trigger('change');
-        $('#sessions').val(null).trigger('change');
-        $('#centres').prop('disabled', true);
-        $('#courses').prop('disabled', true);
-        $('#sessions').prop('disabled', true);
-        updateTargetSummary();
-    });
+        applySelectedValues('districts', existingSelections.districts);
+    } else {
+        resetSelect('districts', 'Select branch(es) first', true);
+    }
 
-    $('#districts').on('change', async function() {
+    if ((existingSelections.districts || []).length > 0) {
         await loadCentres();
-        $('#courses').val(null).trigger('change');
-        $('#sessions').val(null).trigger('change');
-        $('#courses').prop('disabled', true);
-        $('#sessions').prop('disabled', true);
-        updateTargetSummary();
-    });
+        applySelectedValues('centres', existingSelections.centres);
+    } else {
+        resetSelect('centres', 'Select district(s) first', true);
+    }
 
-    $('#centres').on('change', async function() {
+    if ((existingSelections.centres || []).length > 0) {
         await loadCourses();
-        $('#sessions').val(null).trigger('change');
-        $('#sessions').prop('disabled', true);
-        updateTargetSummary();
-    });
+        applySelectedValues('courses', existingSelections.courses);
+    } else {
+        resetSelect('courses', 'Select centre(s) first', true);
+    }
 
-    $('#courses').on('change', async function() {
+    if ((existingSelections.courses || []).length > 0) {
         await loadSessions();
-        updateTargetSummary();
-    });
-
-    $('#sessions').on('change', updateTargetSummary);
-}
-
-async function loadBranches() {
-    if (dataCache.branches) return;
-    
-    try {
-        const response = await fetch('/api/campaign-targeting/branches');
-        dataCache.branches = await response.json();
-        populateSelect('branches', dataCache.branches);
-    } catch (error) {
-        console.error('Error loading branches:', error);
-        loadingState.branches = false;
-    }
-}
-
-async function loadDistricts() {
-    const branchIds = $('#branches').val() || [];
-    
-    if (!branchIds || branchIds.length === 0) {
-        $('#districts').prop('disabled', true).val(null).trigger('change');
-        $('#districts').select2('data', []);
-        return;
-    }
-
-    $('#districts').prop('disabled', false);
-    const cacheKey = branchIds.join(',');
-    
-    if (dataCache.districts[cacheKey]) {
-        populateSelect('districts', dataCache.districts[cacheKey]);
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/campaign-targeting/districts', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value 
-            },
-            body: JSON.stringify({ branch_ids: branchIds })
-        });
-        const data = await response.json();
-        dataCache.districts[cacheKey] = data;
-        populateSelect('districts', data);
-    } catch (error) {
-        console.error('Error loading districts:', error);
-    }
-}
-
-async function loadCentres() {
-    const districtIds = $('#districts').val() || [];
-    
-    if (!districtIds || districtIds.length === 0) {
-        $('#centres').prop('disabled', true).val(null).trigger('change');
-        return;
-    }
-
-    $('#centres').prop('disabled', false);
-    const cacheKey = districtIds.join(',');
-    
-    if (dataCache.centres[cacheKey]) {
-        populateSelect('centres', dataCache.centres[cacheKey]);
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/campaign-targeting/centres', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value 
-            },
-            body: JSON.stringify({ district_ids: districtIds })
-        });
-        const data = await response.json();
-        dataCache.centres[cacheKey] = data;
-        populateSelect('centres', data);
-    } catch (error) {
-        console.error('Error loading centres:', error);
-    }
-}
-
-async function loadCourses() {
-    const centreIds = $('#centres').val() || [];
-    
-    if (!centreIds || centreIds.length === 0) {
-        $('#courses').prop('disabled', true).val(null).trigger('change');
-        return;
-    }
-
-    $('#courses').prop('disabled', false);
-    const cacheKey = centreIds.join(',');
-    
-    if (dataCache.courses[cacheKey]) {
-        populateSelect('courses', dataCache.courses[cacheKey]);
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/campaign-targeting/courses', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value 
-            },
-            body: JSON.stringify({ centre_ids: centreIds })
-        });
-        const data = await response.json();
-        dataCache.courses[cacheKey] = data;
-        populateSelect('courses', data);
-    } catch (error) {
-        console.error('Error loading courses:', error);
-    }
-}
-
-async function loadSessions() {
-    const courseIds = $('#courses').val() || [];
-    
-    if (!courseIds || courseIds.length === 0) {
-        $('#sessions').prop('disabled', true).val(null).trigger('change');
-        return;
-    }
-
-    $('#sessions').prop('disabled', false);
-    const cacheKey = courseIds.join(',');
-    
-    if (dataCache.sessions[cacheKey]) {
-        populateSelect('sessions', dataCache.sessions[cacheKey]);
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/campaign-targeting/sessions', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value 
-            },
-            body: JSON.stringify({ course_ids: courseIds })
-        });
-        const data = await response.json();
-        dataCache.sessions[cacheKey] = data;
-        populateSelect('sessions', data);
-    } catch (error) {
-        console.error('Error loading sessions:', error);
-    }
-}
-
-function populateSelect(selectId, options) {
-    const $select = $('#' + selectId);
-    const currentValues = $select.val() || [];
-    
-    const formattedOptions = options.map(opt => ({
-        id: opt.id,
-        text: opt.title || opt.text || opt.name
-    }));
-    
-    $select.select2({
-        data: formattedOptions,
-        theme: 'bootstrap-5'
-    });
-    
-    if (currentValues.length > 0) {
-        $select.val(currentValues).trigger('change');
+        applySelectedValues('sessions', existingSelections.sessions);
+    } else {
+        resetSelect('sessions', 'Select course(s) first', true);
     }
 }
 
 function setupEventListeners() {
-    // Event listeners are set up in initializeSelect2
+    const branches = document.getElementById('branches');
+    const districts = document.getElementById('districts');
+    const centres = document.getElementById('centres');
+    const courses = document.getElementById('courses');
+    const sessions = document.getElementById('sessions');
+
+    branches?.addEventListener('change', async function () {
+        resetSelect('districts', 'Loading district(s)...', true);
+        resetSelect('centres', 'Select district(s) first', true);
+        resetSelect('courses', 'Select centre(s) first', true);
+        resetSelect('sessions', 'Select course(s) first', true);
+        await loadDistricts();
+        updateTargetSummary();
+    });
+
+    districts?.addEventListener('change', async function () {
+        resetSelect('centres', 'Loading centre(s)...', true);
+        resetSelect('courses', 'Select centre(s) first', true);
+        resetSelect('sessions', 'Select course(s) first', true);
+        await loadCentres();
+        updateTargetSummary();
+    });
+
+    centres?.addEventListener('change', async function () {
+        resetSelect('courses', 'Loading course(s)...', true);
+        resetSelect('sessions', 'Select course(s) first', true);
+        await loadCourses();
+        updateTargetSummary();
+    });
+
+    courses?.addEventListener('change', async function () {
+        resetSelect('sessions', 'Loading session(s)...', true);
+        await loadSessions();
+        updateTargetSummary();
+    });
+
+    sessions?.addEventListener('change', updateTargetSummary);
+}
+
+async function fetchJson(url, payload = null) {
+    const options = {
+        method: payload ? 'POST' : 'GET',
+        credentials: 'same-origin',
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    };
+
+    if (payload) {
+        options.headers['Content-Type'] = 'application/json';
+        options.headers['X-CSRF-TOKEN'] = document.querySelector('input[name="_token"]').value;
+        options.body = JSON.stringify(payload);
+    }
+
+    const response = await fetch(url, options);
+
+    if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+    }
+
+    return response.json();
+}
+
+function getSelectedValues(selectId) {
+    const select = document.getElementById(selectId);
+
+    if (!select) {
+        return [];
+    }
+
+    return Array.from(select.selectedOptions)
+        .map(option => String(option.value))
+        .filter(Boolean);
+}
+
+function syncSelectUi(selectId) {
+    if (!hasSelect2()) {
+        return;
+    }
+
+    window.jQuery('#' + selectId).trigger('change.select2');
+}
+
+async function loadDistricts() {
+    const branchIds = getSelectedValues('branches');
+
+    if (branchIds.length === 0) {
+        resetSelect('districts', 'Select branch(es) first', true);
+        return;
+    }
+
+    const cacheKey = branchIds.join(',');
+
+    try {
+        const data = dataCache.districts[cacheKey]
+            ?? await fetchJson(targetingRoutes.districts, { branch_ids: branchIds });
+
+        dataCache.districts[cacheKey] = Array.isArray(data) ? data : [];
+        populateSelect('districts', dataCache.districts[cacheKey]);
+        setSelectDisabled('districts', false);
+    } catch (error) {
+        console.error('Error loading districts:', error);
+        resetSelect('districts', 'Unable to load districts', true);
+    }
+}
+
+async function loadCentres() {
+    const districtIds = getSelectedValues('districts');
+
+    if (districtIds.length === 0) {
+        resetSelect('centres', 'Select district(s) first', true);
+        return;
+    }
+
+    const cacheKey = districtIds.join(',');
+
+    try {
+        const data = dataCache.centres[cacheKey]
+            ?? await fetchJson(targetingRoutes.centres, { district_ids: districtIds });
+
+        dataCache.centres[cacheKey] = Array.isArray(data) ? data : [];
+        populateSelect('centres', dataCache.centres[cacheKey]);
+        setSelectDisabled('centres', false);
+    } catch (error) {
+        console.error('Error loading centres:', error);
+        resetSelect('centres', 'Unable to load centres', true);
+    }
+}
+
+async function loadCourses() {
+    const centreIds = getSelectedValues('centres');
+
+    if (centreIds.length === 0) {
+        resetSelect('courses', 'Select centre(s) first', true);
+        return;
+    }
+
+    const cacheKey = centreIds.join(',');
+
+    try {
+        const data = dataCache.courses[cacheKey]
+            ?? await fetchJson(targetingRoutes.courses, { centre_ids: centreIds });
+
+        dataCache.courses[cacheKey] = Array.isArray(data) ? data : [];
+        populateSelect('courses', dataCache.courses[cacheKey]);
+        setSelectDisabled('courses', false);
+    } catch (error) {
+        console.error('Error loading courses:', error);
+        resetSelect('courses', 'Unable to load courses', true);
+    }
+}
+
+async function loadSessions() {
+    const courseIds = getSelectedValues('courses');
+
+    if (courseIds.length === 0) {
+        resetSelect('sessions', 'Select course(s) first', true);
+        return;
+    }
+
+    const cacheKey = courseIds.join(',');
+
+    try {
+        const data = dataCache.sessions[cacheKey]
+            ?? await fetchJson(targetingRoutes.sessions, { course_ids: courseIds });
+
+        dataCache.sessions[cacheKey] = Array.isArray(data) ? data : [];
+        populateSelect('sessions', dataCache.sessions[cacheKey]);
+        setSelectDisabled('sessions', false);
+    } catch (error) {
+        console.error('Error loading sessions:', error);
+        resetSelect('sessions', 'Unable to load sessions', true);
+    }
+}
+
+function populateSelect(selectId, options) {
+    const select = document.getElementById(selectId);
+    const currentValues = getSelectedValues(selectId);
+
+    if (!select) {
+        return;
+    }
+
+    select.innerHTML = '';
+
+    (options || []).forEach(function (opt) {
+        const value = String(opt.id);
+        const label = opt.title || opt.text || opt.name || value;
+        const option = new Option(label, value, false, currentValues.includes(value));
+        select.appendChild(option);
+    });
+
+    syncSelectUi(selectId);
+}
+
+function applySelectedValues(selectId, values) {
+    const select = document.getElementById(selectId);
+    const normalizedValues = (values || []).map(String);
+
+    if (!select) {
+        return;
+    }
+
+    Array.from(select.options).forEach(function (option) {
+        option.selected = normalizedValues.includes(String(option.value));
+    });
+
+    syncSelectUi(selectId);
+}
+
+function setSelectDisabled(selectId, disabled) {
+    const select = document.getElementById(selectId);
+
+    if (!select) {
+        return;
+    }
+
+    select.disabled = disabled;
+    syncSelectUi(selectId);
+}
+
+function resetSelect(selectId, placeholder, disabled) {
+    const select = document.getElementById(selectId);
+
+    if (!select) {
+        return;
+    }
+
+    select.innerHTML = '';
+    Array.from(select.options).forEach(function (option) {
+        option.selected = false;
+    });
+    select.dataset.placeholder = placeholder;
+    select.disabled = disabled;
+    syncSelectUi(selectId);
 }
 
 function updateTargetSummary() {
-    const branches = $('#branches').val() || [];
-    const districts = $('#districts').val() || [];
-    const centres = $('#centres').val() || [];
-    const courses = $('#courses').val() || [];
-    const sessions = $('#sessions').val() || [];
+    const branches = getSelectedValues('branches');
+    const districts = getSelectedValues('districts');
+    const centres = getSelectedValues('centres');
+    const courses = getSelectedValues('courses');
+    const sessions = getSelectedValues('sessions');
 
     let summary = 'Will send to admitted users in: ';
-    
+
     if (sessions.length > 0) {
         summary += sessions.length + ' session(s)';
     } else if (courses.length > 0) {
@@ -495,7 +644,7 @@ function updateTargetSummary() {
 
     const summaryEl = document.getElementById('targeting-summary');
     const summaryText = document.getElementById('summary-text');
-    
+
     if (branches.length > 0 || districts.length > 0 || centres.length > 0 || courses.length > 0 || sessions.length > 0) {
         summaryText.textContent = summary;
         summaryEl.style.display = 'block';
@@ -503,7 +652,6 @@ function updateTargetSummary() {
         summaryEl.style.display = 'none';
     }
 }
-</script>
 </script>
 
 @endsection
