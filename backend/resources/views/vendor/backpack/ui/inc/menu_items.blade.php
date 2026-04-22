@@ -16,7 +16,9 @@
     </x-backpack::menu-dropdown>
 @endcan
 
-@if (auth()->user()->can('student.read.all') || auth()->user()->can('student-verification.read.all') || auth()->user()->can('ghana-card-verification.read.all'))
+@if (auth()->user()->can('student.read.all') ||
+        auth()->user()->can('student-verification.read.all') ||
+        auth()->user()->can('ghana-card-verification.read.all'))
     <x-backpack::menu-dropdown title="Student Management" icon="la la-users">
         @can('student.read.all')
             <x-backpack::menu-dropdown-item title="Manage Students" icon="la la-user-graduate" :link="backpack_url('manage-student')" />
@@ -28,6 +30,9 @@
         @canany(['ghana-card-verification.read.all', 'ghana-card-verification.index'])
             <x-backpack::menu-dropdown-item title="Ghana Card Verifications" icon="la la-id-card" :link="backpack_url('ghana-card-verification')" />
         @endcanany
+        @can('student-verification.read.all')
+            <x-backpack::menu-dropdown-item title="Admission rejections" icon="la la-times-circle" :link="backpack_url('admission-rejection')" />
+        @endcan
     </x-backpack::menu-dropdown>
 @endif
 
@@ -131,11 +136,11 @@
 @endcan
 
 @can('partner.read.all')
-<x-backpack::menu-dropdown title="Partner Management" icon="la la-handshake">
-    <x-backpack::menu-dropdown-item title="Admissions Dashboard" icon="la la-tachometer-alt" :link="backpack_url('partner-admissions')" />
-    <x-backpack::menu-dropdown-item title="Partners" icon="la la-certificate" :link="backpack_url('partner')" />
-    <x-backpack::menu-dropdown-item title="Partner Admissions" icon="la la-user-check" :link="backpack_url('partner-student-admission')" />
-</x-backpack::menu-dropdown>
+    <x-backpack::menu-dropdown title="Partner Management" icon="la la-handshake">
+        <x-backpack::menu-dropdown-item title="Admissions Dashboard" icon="la la-tachometer-alt" :link="backpack_url('partner-admissions')" />
+        <x-backpack::menu-dropdown-item title="Partners" icon="la la-certificate" :link="backpack_url('partner')" />
+        <x-backpack::menu-dropdown-item title="Partner Admissions" icon="la la-user-check" :link="backpack_url('partner-student-admission')" />
+    </x-backpack::menu-dropdown>
 @endcan
 
 {{-- @can('branch.read.all')
@@ -194,7 +199,6 @@
 <!-- <x-backpack::menu-item title="Sms templates" icon="la la-sms" :link="backpack_url('sms-template')" /> -->
 <!-- <x-backpack::menu-item title="User admissions" icon="la la-user-check" :link="backpack_url('user-admission')" /> -->
 <!-- <x-backpack::menu-item title="User exams" icon="la la-clipboard-list" :link="backpack_url('user-exam')" /> -->
-<!-- <x-backpack::menu-item title="Admission rejections" icon="la la-times-circle" :link="backpack_url('admission-rejection')" /> -->
 
 {{-- Only show dropdown if user has at least one permission for the dropdown items --}}
 <!-- <x-backpack::menu-dropdown title="Add-ons" icon="la la-puzzle-piece">
