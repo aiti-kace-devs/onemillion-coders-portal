@@ -8,7 +8,6 @@ import {
   FiArrowRight,
   FiCheck,
   FiAlertCircle,
-  FiClock,
   FiList,
   FiArrowUp,
 } from "react-icons/fi";
@@ -64,7 +63,6 @@ export default function HowToRegisterPage() {
       ),
     [sections]
   );
-  const readMinutes = Math.max(2, Math.ceil(totalSteps * 1.5));
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -120,11 +118,6 @@ export default function HowToRegisterPage() {
                   label="Steps"
                   value={totalSteps}
                   icon={FiList}
-                />
-                <MetaPill
-                  label="Time"
-                  value={`~${readMinutes} min`}
-                  icon={FiClock}
                 />
               </motion.div>
             )}
