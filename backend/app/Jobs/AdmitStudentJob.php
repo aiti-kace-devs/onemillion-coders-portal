@@ -68,7 +68,7 @@ class AdmitStudentJob implements ShouldQueue
             NotificationController::notify(
                 $this->student->id,
                 'COURSE_SELECTION',
-                'Enrollment Confirmed',
+                'Admission Confirmation Successful',
                 $confirmationMessage,
                 'normal',
                 'email'
