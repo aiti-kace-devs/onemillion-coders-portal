@@ -40,7 +40,7 @@ services:
       - "--entrypoints.web.http.maxHeaderBytes=2097152"
     ports:
       - "${TRAEFIK_PORT:-80}:80"
-      # - "8082:8080" # Traefik Dashboard
+      - "8082:8080" # Traefik Dashboard
     labels:
       - "traefik.enable=true"
       # HTTP Basic Auth for dashboard, PhpMyAdmin, Mailpit (credentials from env)
