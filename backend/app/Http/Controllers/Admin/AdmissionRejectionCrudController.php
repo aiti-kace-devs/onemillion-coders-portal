@@ -51,6 +51,7 @@ class AdmissionRejectionCrudController extends CrudController
         CRUD::column('rejected_at');
         $this->courseFilter('course_id');
         $this->addCourseField();
+        CRUD::column('reason');
         CRUD::column('source');
         FilterHelper::addSelectFilter('source', 'Source', [
             'SELF' => 'Self',
@@ -71,7 +72,7 @@ class AdmissionRejectionCrudController extends CrudController
         CRUD::column('rejected_at');
         $this->courseFilter('course_id');
         $this->addCourseField();
-        CRUD::column('reason');
+        CRUD::column('reason')->type('textarea');
         CRUD::column('source');
         CRUD::enableExportButtons();
         CRUD::denyAccess(['create', 'update', 'delete']);
