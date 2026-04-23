@@ -25,8 +25,9 @@ try_files $uri $uri/ /index.php?$query_string;
 location ~ \.php$ {
 include snippets/fastcgi-php.conf;
 fastcgi_param HTTP_X_FORWARDED_FOR $http_fly_client_ip;
-fastcgi_buffers 16 16k;
-fastcgi_buffer_size 32k;
+fastcgi_buffer_size 128k;
+fastcgi_buffers 4 256k;
+fastcgi_busy_buffers_size 256k;
 fastcgi_pass phpfpm;
 }
 

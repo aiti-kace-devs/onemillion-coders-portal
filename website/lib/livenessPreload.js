@@ -1,7 +1,6 @@
 const MEDIAPIPE_VERSION = "0.10.34";
-export const MEDIAPIPE_WASM_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`;
-export const FACE_LANDMARKER_MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task";
+export const MEDIAPIPE_WASM_URL = process.env.MEDIAPIPE_WASM_URL || `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`;
+export const FACE_LANDMARKER_MODEL_URL = process.env.FACE_LANDMARKER_MODEL_URL || "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task";
 
 let filesetResolverPromise = null;
 let modelPrefetchPromise = null;
@@ -27,7 +26,7 @@ export function prefetchFaceLandmarkerModel() {
     method: "GET",
     credentials: "omit",
     cache: "force-cache",
-  }).catch(() => {});
+  }).catch(() => { });
   return modelPrefetchPromise;
 }
 

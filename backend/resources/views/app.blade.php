@@ -25,7 +25,7 @@
         
 
     <!-- CSS -->
-    <link rel="stylesheet" type="text/css" href="/DataTables-1.13.8/css/jquery.dataTables.css">
+    {{-- <link rel="stylesheet" type="text/css" href="/DataTables-1.13.8/css/jquery.dataTables.css"> --}}
     {{-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
         integrity="sha512-vKMx8UnXk60zUwyUnUPM3HbQo8QfmNx7+ltw8Pm5zLusl1XIfwcxo8DbWCqMGKaWeNxWA8yrx5v3SaVpMvR3CA=="
         crossorigin="anonymous" referrerpolicy="no-referrer" /> --}}
@@ -36,23 +36,21 @@
     {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"
         integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script> --}}
-    <script src="{{ url('/assets/plugins/jquery/jquery.min.js') }}" referrerpolicy="no-referrer"></script>
     @include('vite-asset')
-    @routes(nonce: csp_nonce())
-    @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
     @inertiaHead
 </head>
 
 <body class="font-sans antialiased">
     @inertia
 
-    <script @nonce src="{{ asset('assets') }}/js/core/jquery.min.js"></script>
-    <script @nonce src="{{ asset('assets') }}/js/core/popper.min.js"></script>
-    <script @nonce src="{{ asset('assets') }}/js/core/bootstrap.min.js"></script>
-    <script @nonce src="{{ asset('assets') }}/plugins/toastr/toastr.min.js"></script>
-    <script @nonce type="text/javascript" src="/DataTables-1.13.8/js/jquery.dataTables.js"></script>
-    <script @nonce src="{{ asset('assets/js/jquery.inputmask.bundle.min.js') }}"></script>
-    <script @nonce src="{{ asset('assets/js/easy.qrcode.min.js') }}"></script>
+    <script nonce="{{ csp_nonce() }}" src="{{ asset('assets') }}/js/core/popper.min.js"></script>
+    <script nonce="{{ csp_nonce() }}" src="{{ asset('assets') }}/js/core/jquery.min.js"></script>
+    {{-- <script src="{{ url('/assets/plugins/jquery/jquery.min.js') }}" referrerpolicy="no-referrer"></script> --}}
+    <script nonce="{{ csp_nonce() }}" src="{{ asset('assets') }}/js/core/bootstrap.min.js"></script>
+    <script nonce="{{ csp_nonce() }}" src="{{ asset('assets') }}/plugins/toastr/toastr.min.js"></script>
+    <script nonce="{{ csp_nonce() }}" type="text/javascript" src="/DataTables-1.13.8/js/jquery.dataTables.js"></script>
+    <script nonce="{{ csp_nonce() }}" src="{{ asset('assets/js/jquery.inputmask.bundle.min.js') }}"></script>
+    <script nonce="{{ csp_nonce() }}" src="{{ asset('assets/js/easy.qrcode.min.js') }}"></script>
 
     {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"
         integrity="sha512-VEd+nq25CkR676O+pLBnDW09R7VQX9Mdiij052gVCp5yVH3jGtH70Ho/UUv4mJDsEdTvqRCFZg0NKGiojGnUCw=="

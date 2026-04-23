@@ -2,15 +2,15 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "vite",
-        "build": "vite build",
         "mix-dev": "npm run development",
         "development": "mix",
         "watch": "mix watch",
         "watch-poll": "mix watch -- --watch-options-poll=1000",
         "hot": "mix watch --hot",
         "prod": "npm run production",
-        "production": "mix --production"
+        "production": "mix --production",
+        "dev": "php artisan ziggy:generate resources/js/ziggy.js && vite",
+        "build": "php artisan ziggy:generate resources/js/ziggy.js && vite build"
     },
     "devDependencies": {
         "@inertiajs/vue3": "^1.0.0",

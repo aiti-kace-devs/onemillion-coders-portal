@@ -102,12 +102,14 @@ class CourseMatchAPIController extends Controller
 
             $centre = $courses->first()?->centre;
 
+            $centreID = $centre?->id ?? null;
             $centreTitle = $centre?->title ?? null;
             $region = $centre?->branch?->title ?? null;
             $districts = $centre?->districts?->pluck('title')->filter()->values() ?? collect();
 
             // Build a readable location string
             $locationParts = collect([
+                $centreID,
                 $centreTitle,
                 $districts->implode(', '),
                 $region,
