@@ -23,6 +23,7 @@ import {
   submitAssessmentAnswer,
   recordViolation,
 } from "../../../services/api";
+import { redirectToStudentDashboard } from "../../../lib/inPersonEnrollmentUi";
 
 // ─── Constants ─────────────────────────────────────────────
 const MAX_VIOLATIONS = 3;
@@ -863,7 +864,7 @@ export default function QuizPage({ params }) {
                     />
                   )}
                   <div
-                    className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg text-xs font-bold transition-all flex-1 justify-center"
+                    className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex-1 justify-center"
                     style={{
                       background: isActive
                         ? `${level.color}25`
@@ -898,8 +899,7 @@ export default function QuizPage({ params }) {
                         }}
                       />
                     )}
-                    <span className="hidden sm:inline">{level.label}</span>
-                    <span className="sm:hidden">{level.label.slice(0, 3)}</span>
+                    <span>{level.label}</span>
                   </div>
                 </React.Fragment>
               );
@@ -1072,18 +1072,10 @@ export default function QuizPage({ params }) {
 
                     <div className="space-y-2.5">
                       <button
-                        onClick={() => {
-                          // Fix for iframe also appending /student/choose-course to its url
-                          if (window.parent !== window) {
-                            window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
-                          } else {
-                            const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || '';
-                            window.location.href = `${portalUrl}/student/choose-course`;
-                          }
-                        }}
+                        onClick={() => redirectToStudentDashboard()}
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
-                        Proceed to Course Selection <FiArrowRight size={16} />
+                        Proceed to Dashboard <FiArrowRight size={16} />
                       </button>
                     </div>
                   </div>
@@ -1146,18 +1138,10 @@ export default function QuizPage({ params }) {
                     </div>
                     <div className="space-y-2.5">
                       <button
-                        onClick={() => {
-                          // Fix for iframe also appending /student/choose-course to its url
-                          if (window.parent !== window) {
-                            window.parent.postMessage({ type: 'LARAVEL_IFRAME_DETECTED' }, '*');
-                          } else {
-                            const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || '';
-                            window.location.href = `${portalUrl}/student/choose-course`;
-                          }
-                        }}
+                        onClick={() => redirectToStudentDashboard()}
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
-                        Proceed to Course Selection <FiArrowRight size={16} />
+                        Proceed to Dashboard <FiArrowRight size={16} />
                       </button>
                     </div>
                   </div>

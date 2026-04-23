@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AdmissionWaitlist;
+use App\Jobs\HandleEnrollmentJob;
 use App\Models\Booking;
 use App\Models\Course;
 use App\Models\CourseSession;
@@ -17,6 +17,8 @@ use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use ReflectionMethod;
+use ReflectionException;
 
 class BookingController extends Controller
 {
@@ -26,11 +28,8 @@ class BookingController extends Controller
         AvailabilityService $availabilityService,
         GhanaCardService $ghanaCardService
     ): JsonResponse {
-        $selfPacedFlag = $request->query(
-            'self-paced',
-            $request->query('self_pace', $request->query('selfPace', false))
-        );
-        $isSelfPaced = filter_var($selfPacedFlag, FILTER_VALIDATE_BOOLEAN);
+        $isSelfPaced = filter_var($request->query('self-paced', 'false'), FILTER_VALIDATE_BOOLEAN);
+        $withSupport = filter_var($request->query('with-support', 'false'), FILTER_VALIDATE_BOOLEAN);
 
         $validationRules = [
             'programme_batch_id' => 'required|integer|exists:programme_batches,id',
@@ -52,7 +51,10 @@ class BookingController extends Controller
 
         $user = $request->user();
         if (! $user) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthenticated.',
+            ], 401);
         }
 
         if (! $ghanaCardService->isVerified($user)) {
@@ -94,50 +96,86 @@ class BookingController extends Controller
             ], 422);
         }
 
-        if ($isSelfPaced && $isInPerson) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'In-person programmes require centre session enrollment.',
-            ], 422);
+        if ($withSupport) {
+            $centreIsReady = (bool) ($course->centre?->is_ready);
+
+            if (! $centreIsReady) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Resource (internet & laptop) support is not available for the selected centre at this time. You can try again later',
+                ], 422);
+            }
         }
 
-        if ($isSelfPaced) {
-            return $this->handleSelfPacedEnrollment($user, $course, $batch);
+        $session = null;
+        if (! $isSelfPaced) {
+            $session = $this->resolveSession($course, $isInPerson, (int) $validated['session_id']);
+
+            if (! $session) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'The selected session id is invalid.',
+                    'errors' => ['session_id' => ['The selected session id is invalid.']],
+                ], 422);
+            }
         }
 
-        $session = $this->resolveSession($course, $isInPerson, (int) $validated['session_id']);
-        if (! $session) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'The selected session id is invalid.',
-                'errors' => ['session_id' => ['The selected session id is invalid.']],
-            ], 422);
-        }
-
-        $forProtocol = (bool) ($user->is_protocol ?? false);
+        $forProtocol = array_key_exists('is_protocol', $validated)
+            ? (bool) $validated['is_protocol']
+            : (bool) ($user->is_protocol ?? false);
         $capacityPool = $validated['capacity_pool'] ?? null;
 
+        $enrollmentJob = new HandleEnrollmentJob(
+            $user,
+            $course,
+            $batch,
+            $session?->id,
+            $isSelfPaced,
+            $withSupport,
+            $isInPerson,
+            $forProtocol,
+            $capacityPool
+        );
+
         try {
-            $bookingService->book($user, $course, $batch, $session, $forProtocol, $capacityPool);
+            if ($session) {
+                $bookingService->validateBookingAvailability(
+                    $user,
+                    $course,
+                    $batch,
+                    $session,
+                    $isInPerson,
+                    $forProtocol,
+                    $capacityPool
+                );
+            }
+
+            $enrollmentJob->handle();
         } catch (Exception $e) {
-            Log::error('Booking failed', [
+            Log::error('Enrollment failed', [
                 'user_id' => $user->userId,
                 'course_id' => $course->id,
                 'batch_id' => $batch->id,
-                'session_id' => $session->id,
+                'session_id' => $session?->id,
+                'is_self_paced' => $isSelfPaced,
+                'with_support' => $withSupport,
                 'is_in_person' => $isInPerson,
                 'for_protocol' => $forProtocol,
                 'capacity_pool' => $capacityPool,
                 'error' => $e->getMessage(),
             ]);
 
-            $recommendations = $availabilityService->getAvailableSlots(
-                $course->centre_id,
-                $course->id,
-                Carbon::parse($batch->start_date),
-                Carbon::parse($batch->end_date),
-                $forProtocol
-            );
+            $recommendations = [];
+            if ($session) {
+                $recommendations = $this->getAvailableSlotsWithProtocolFallback(
+                    $availabilityService,
+                    (int) $course->centre_id,
+                    (int) $course->id,
+                    Carbon::parse($batch->start_date),
+                    Carbon::parse($batch->end_date),
+                    $forProtocol
+                );
+            }
 
             return response()->json([
                 'status' => 'error',
@@ -146,69 +184,49 @@ class BookingController extends Controller
             ], 409);
         }
 
-        if (! $isInPerson) {
-            $user->support = true;
-            $user->save();
-        }
+        // Partner Integration
+        app(\App\Services\PartnerAdmissionService::class)->handleEnrollment($user, $programme);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Booking successful.',
         ], 201);
+    
+
     }
 
-    protected function handleSelfPacedEnrollment($user, Course $course, ProgrammeBatch $batch): JsonResponse
-    {
-        $user->registered_course = $course->id;
-        $user->shortlist = true;
-        $user->support = false;
-        $user->save();
 
-        UserAdmission::updateOrCreate(
-            ['user_id' => $user->userId],
-            [
-                'programme_batch_id' => $batch->id,
-                'email_sent' => now(),
-                'confirmed' => now(),
-                'course_id' => $course->id,
-                'session' => null,
-            ]
-        );
 
-        AdmissionWaitlist::where('user_id', $user->userId)->delete();
 
-        NotificationController::notify(
-            $user->id,
-            'COURSE_SELECTION',
-            'Enrollment Confirmed',
-            'You have successfully enrolled in <strong>'.e($course->course_name).'</strong> (self-paced). You will be notified of next steps.'
-        );
+    protected function getAvailableSlotsWithProtocolFallback(
+            AvailabilityService $availabilityService,
+            int $centreId,
+            int $courseId,
+            Carbon $startDate,
+            Carbon $endDate,
+            bool $forProtocol
+        ): array {
+            try {
+                $method = new ReflectionMethod($availabilityService, 'getAvailableSlots');
+                if ($method->getNumberOfParameters() >= 5) {
+                    return $availabilityService->getAvailableSlots($centreId, $courseId, $startDate, $endDate, $forProtocol);
+                }
+            } catch (ReflectionException $e) {
+                Log::warning('Unable to inspect getAvailableSlots signature', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Self-paced enrollment successful.',
-        ], 201);
-    }
+            return $availabilityService->getAvailableSlots($centreId, $courseId, $startDate, $endDate);
+        }
+
 
     protected function resolveSession(Course $course, bool $isInPerson, int $sessionId): CourseSession|MasterSession|null
     {
         if ($isInPerson) {
-            $session = CourseSession::where('id', $sessionId)
-                ->where('status', true)
-                ->first();
+            $session = CourseSession::find($sessionId);
 
-            if (! $session
-                || (int) $session->centre_id !== (int) $course->centre_id
-                || $session->session_type !== CourseSession::TYPE_CENTRE
-                || ($session->course_id !== null && (int) $session->course_id !== (int) $course->id)) {
-                return MasterSession::where('id', $sessionId)
-                    ->where('status', true)
-                    ->where('course_type', $course->programme?->courseType())
-                    ->where('session_type', '!=', 'Online')
-                    ->first();
-            }
-
-            return $session;
+            return ($session && $session->course_id === $course->id) ? $session : null;
         }
 
         return MasterSession::where('id', $sessionId)
@@ -218,19 +236,21 @@ class BookingController extends Controller
             ->first();
     }
 
-    public function destroy(Request $request, Booking $booking, BookingService $bookingService): JsonResponse
+    protected function resolveSuccessMessage(bool $isSelfPaced, bool $withSupport, bool $isInPerson): string
     {
-        $user = $request->user();
-        if (! $user || $booking->user_id !== $user->userId) {
-            return response()->json(['status' => 'error', 'message' => 'Forbidden.'], 403);
+        if ($isSelfPaced) {
+            return 'Self-paced enrollment successful.';
         }
 
-        $slotRestored = $bookingService->cancel($booking);
+        if ($withSupport) {
+            return 'With-support enrollment successful.';
+        }
 
-        return response()->json([
-            'status' => 'success',
-            'slot_restored' => $slotRestored,
-        ]);
+        if ($isInPerson) {
+            return 'In-person enrollment successful.';
+        }
+
+        return 'Enrollment successful.';
     }
 
     public function mine(Request $request): JsonResponse
@@ -251,5 +271,4 @@ class BookingController extends Controller
             'data' => $bookings,
         ]);
     }
-    
 }

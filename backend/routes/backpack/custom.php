@@ -181,6 +181,17 @@ Route::group([
     Route::crud('constituency', 'ConstituencyCrudController');
     Route::post('campaign/{id}/send', 'CampaignCrudController@sendCampaign')->name('campaign.send');
     Route::crud('campaign', 'CampaignCrudController');
+    Route::crud('partner', 'PartnerCrudController');
+    Route::crud('partner-student-admission', 'PartnerStudentAdmissionCrudController');
+
+    // Partner Admissions Dashboard
+    Route::get('partner-admissions', 'PartnerAdmissionsController@index');
+    Route::post('partner-admissions/enrol-all', 'PartnerAdmissionsController@enrolAll');
+    Route::post('partner-admissions/{id}/enrol-programme', 'PartnerAdmissionsController@enrolProgramme');
+
+    // Chart Routes
+    Route::get('charts/partner-enrollment-by-programme', 'Charts\PartnerEnrollmentByProgrammeChartController@response')->name('charts.partner-enrollment-by-programme.index');
+    Route::get('charts/partner-enrollment-by-partner', 'Charts\PartnerEnrollmentByPartnerChartController@response')->name('charts.partner-enrollment-by-partner.index');
 }); // this should be the absolute last line of this file
 
 /**

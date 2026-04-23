@@ -97,13 +97,15 @@ export default function CourseDetailsPage() {
     }
   }, [params.id]);
 
-  // Load regions for the availability section
+  // Load regions for the availability section — scoped to this programme so
+  // centre counts only include centres with availability for it.
   useEffect(() => {
+    if (!params.id) return undefined;
     let cancelled = false;
     const fetchRegions = async () => {
       try {
         setLoadingRegions(true);
-        const data = await getAllRegionsWithCentreCounts();
+        const data = await getAllRegionsWithCentreCounts(undefined, params.id);
         if (!cancelled) setRegions(data || []);
       } catch (err) {
         console.error('Error fetching regions:', err);
@@ -115,7 +117,7 @@ export default function CourseDetailsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [params.id]);
 
   // Sync selection to URL (preserves existing params).
   // Use history.replaceState rather than router.replace to avoid Next.js app-router
@@ -196,7 +198,7 @@ export default function CourseDetailsPage() {
 
       try {
         setLoadingDistricts(true);
-        const data = await getDistrictsByBranch(region.id);
+        const data = await getDistrictsByBranch(region.id, undefined, params.id);
         setDistricts(data?.districts || []);
       } catch (err) {
         console.error('Error fetching districts:', err);
@@ -205,7 +207,7 @@ export default function CourseDetailsPage() {
         setLoadingDistricts(false);
       }
     },
-    [updateQuery]
+    [updateQuery, params.id]
   );
 
   const handleDistrictSelect = useCallback(

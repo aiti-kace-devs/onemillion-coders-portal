@@ -28,6 +28,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'cdn.onemillioncoders.gov.gh',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };

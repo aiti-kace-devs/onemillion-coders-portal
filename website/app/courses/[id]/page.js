@@ -765,6 +765,14 @@ export default function CoursesPage({ params }) {
     setSelectedBatchMonth(null);
     setCourseFullTab("centres");
 
+    // For users coming in via previously-recommended courses, selectedCentre
+    // is not populated by the region/district/centre picker flow. Hydrate it
+    // from the centre attached to this specific recommended course so the
+    // study-mode modal can read is_ready correctly.
+    if (course.centre) {
+      setSelectedCentre(course.centre);
+    }
+
     const inPerson = isInPersonDeliveryCourse(course);
     setInPersonEnrollmentFlow(inPerson);
     setEnrollingCourseRecord(course || null);
@@ -1005,6 +1013,13 @@ export default function CoursesPage({ params }) {
     closeEnrollmentModal();
   };
 
+  // Waitlist close → send the user back to the Laravel student dashboard
+  // (iframe-aware), then reset modal state for the non-iframe case.
+  const handleWaitlistClose = () => {
+    redirectToStudentDashboard();
+    closeEnrollmentModal();
+  };
+
   const closeEnrollmentModal = () => {
     setEnrollmentStep(null);
     setEnrollingCourseId(null);
@@ -1205,10 +1220,10 @@ export default function CoursesPage({ params }) {
                             .
                           </p>
                           <button
-                            onClick={closeEnrollmentModal}
+                            onClick={handleWaitlistClose}
                             className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold text-sm rounded-xl transition-colors"
                           >
-                            Close
+                            Go to my dashboard
                           </button>
                         </div>
                       )}
@@ -2044,15 +2059,17 @@ export default function CoursesPage({ params }) {
                             {/* Bottom section */}
                             <div className="pt-4 border-t border-gray-100">
                               <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-700 uppercase tracking-widest text-center mb-3">Or</h4>
-                              <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting}
-                                  className="p-3 sm:p-4 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] text-center">
-                                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center mx-auto mb-2 group-hover:from-green-100 group-hover:to-emerald-100 transition-colors">
-                                    {enrollSubmitting ? <FiLoader className="w-4 h-4 text-green-600 animate-spin" /> : <FiCheckCircle className="w-4 h-4 text-green-600" />}
-                                  </div>
-                                  <div className="text-xs sm:text-sm font-semibold text-gray-900 mb-0.5">Enroll without support</div>
-                                  <div className="text-[10px] sm:text-[11px] text-gray-400 leading-tight">Skip support, enroll now</div>
-                                </button>
+                              <div className={`grid gap-2 ${inPersonEnrollmentFlow ? "grid-cols-1" : "grid-cols-2"}`}>
+                                {!inPersonEnrollmentFlow && (
+                                  <button onClick={() => handleSupportAnswer(false)} disabled={enrollSubmitting}
+                                    className="p-3 sm:p-4 rounded-xl bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] text-center">
+                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center mx-auto mb-2 group-hover:from-green-100 group-hover:to-emerald-100 transition-colors">
+                                      {enrollSubmitting ? <FiLoader className="w-4 h-4 text-green-600 animate-spin" /> : <FiCheckCircle className="w-4 h-4 text-green-600" />}
+                                    </div>
+                                    <div className="text-xs sm:text-sm font-semibold text-gray-900 mb-0.5">Enroll without support</div>
+                                    <div className="text-[10px] sm:text-[11px] text-gray-400 leading-tight">Skip support, enroll now</div>
+                                  </button>
+                                )}
                                 <button onClick={handleJoinWaitlist}
                                   className="p-3 sm:p-4 rounded-xl bg-white border border-dashed border-gray-300 hover:border-yellow-400 hover:shadow-md transition-all duration-200 group active:scale-[0.98] text-center">
                                   <div className="w-9 h-9 rounded-xl bg-yellow-50 flex items-center justify-center mx-auto mb-2 group-hover:bg-yellow-100 transition-colors">

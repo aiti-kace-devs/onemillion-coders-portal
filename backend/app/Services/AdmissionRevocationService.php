@@ -6,6 +6,7 @@ use App\Models\AdmissionRejection;
 use App\Models\Booking;
 use App\Models\User;
 use App\Models\UserAdmission;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\DB;
 
 class AdmissionRevocationService
@@ -43,6 +44,7 @@ class AdmissionRevocationService
             $rejection = AdmissionRejection::create([
                 'user_id' => $userId,
                 'course_id' => $courseId,
+                'source' => 'ADMIN',
                 'rejected_at' => now(),
             ]);
 
@@ -50,6 +52,22 @@ class AdmissionRevocationService
                 'shortlist' => 0,
                 'registered_course' => null,
             ]);
+
+            $user = User::where('userId', $userId)->first();
+            $course = \App\Models\Course::find($courseId);
+            if ($user && $course) {
+                $cooldownHours = (int) \App\Models\AppConfig::getValue('ADMISSION_REVOCATION_COOLDOWN_HOURS', 24);
+                $cooldownEndTime = now()->addHours($cooldownHours);
+
+                NotificationController::notify(
+                    $user->id,
+                    'ADMISSION_REVOKED',
+                    'Admission Revoked',
+                    "You have revoked your admission for {$course->course_name}. "
+                    . "You must wait {$cooldownHours} hours before selecting a new course. "
+                    . "You can select a new course after " . $cooldownEndTime->format('l jS F, Y g:i A') . "."
+                );
+            }
 
             return [
                 'slot_restored' => $slotRestored,

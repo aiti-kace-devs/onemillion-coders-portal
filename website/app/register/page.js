@@ -26,6 +26,7 @@ import {
 import Button from "../../components/Button";
 import GhanaGradientText from "../../components/GhanaGradients/GhanaGradientText";
 import OtpVerification from "../../components/OtpVerification";
+import { runFieldRules } from "../../lib/formRules";
 
 import parsePhoneNumberFromString from "libphonenumber-js";
 
@@ -311,6 +312,18 @@ function RegisterForm() {
             errors[field.field_name] = `Only ${allowedExtensions.map((e) => e.toUpperCase()).join(", ")} files are allowed`;
           }
         }
+
+        // Fall back to the backend's Laravel-style `rules` string for anything
+        // the specific checks above didn't flag (regex, min, max, etc.). File
+        // inputs hold File objects, not strings, so skip them here.
+        if (
+          !errors[field.field_name] &&
+          field.type !== "file" &&
+          field.type !== "image"
+        ) {
+          const ruleError = runFieldRules(field, value);
+          if (ruleError) errors[field.field_name] = ruleError;
+        }
       });
 
     // Confirm-password check (frontend-only): if this group contains the password
@@ -395,13 +408,47 @@ function RegisterForm() {
     setFormErrors(errors);
 
     if (Object.keys(errors).length > 0) {
-      // Find the first group with an error and navigate to it
+      // Decide which step to jump to and which element to scroll into view.
+      // 1. Per-field errors win — jump to the first group that has one.
+      // 2. Otherwise honour the form-level errors (otp → email field's group;
+      //    consent → the last group where the checkbox lives).
+      let targetGroupIndex = null;
+      let targetElementId = null;
+
       for (let i = 0; i < groupedSchema.length; i++) {
         const groupErrors = validateGroup(i);
         if (Object.keys(groupErrors).length > 0) {
-          setCurrentGroupIndex(i);
+          targetGroupIndex = i;
+          targetElementId = `field-${Object.keys(groupErrors)[0]}`;
           break;
         }
+      }
+
+      if (targetGroupIndex === null && errors.otp && emailFieldName) {
+        const emailGroup = groupedSchema.findIndex((g) =>
+          g.fields.some((f) => f.field_name === emailFieldName)
+        );
+        if (emailGroup !== -1) {
+          targetGroupIndex = emailGroup;
+          targetElementId = `field-${emailFieldName}`;
+        }
+      }
+
+      if (targetGroupIndex === null && errors.consent) {
+        targetGroupIndex = groupedSchema.length - 1;
+        targetElementId = "field-consent";
+      }
+
+      if (targetGroupIndex !== null) {
+        setCurrentGroupIndex(targetGroupIndex);
+        setTimeout(() => {
+          const el = targetElementId
+            ? document.getElementById(targetElementId)
+            : null;
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 300);
       }
       return;
     }
@@ -1008,6 +1055,18 @@ function RegisterForm() {
                                 />
                               )}
 
+                            {/* OTP verification error — sits next to the OTP widget so it's visible where the action happens. */}
+                            {field.type?.toLowerCase() === "email" && formErrors.otp && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl"
+                              >
+                                <FiAlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                                <p className="text-sm text-amber-700 font-medium">{formErrors.otp}</p>
+                              </motion.div>
+                            )}
+
                             {/* Confirm Password (frontend-only, rendered right after the password field) */}
                             {passwordFieldName && field.field_name === passwordFieldName && (
                               <div id="field-confirm_password" className="space-y-1.5 pt-4">
@@ -1060,23 +1119,11 @@ function RegisterForm() {
                           </div>
                         ))}
 
-                      {/* Consent + OTP errors on last step */}
+                      {/* Consent block on last step */}
                       {isLastGroup && (
                         <>
-                          {/* OTP verification error */}
-                          {formErrors.otp && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -5 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl"
-                            >
-                              <FiAlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                              <p className="text-sm text-amber-700 font-medium">{formErrors.otp}</p>
-                            </motion.div>
-                          )}
-
                           {/* Consent block */}
-                          <div className="space-y-3 pt-4 border-t border-gray-200">
+                          <div id="field-consent" className="space-y-3 pt-4 border-t border-gray-200">
                             <p className="text-sm text-gray-700 leading-relaxed">
                               I have read the {" "}
                               <Link

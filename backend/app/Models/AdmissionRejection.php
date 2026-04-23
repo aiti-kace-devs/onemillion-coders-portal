@@ -16,7 +16,13 @@ class AdmissionRejection extends Model
     protected $fillable = [
         'user_id',
         'course_id',
+        'reason',
+        'source',
         'rejected_at',
+    ];
+
+    protected $casts = [
+        'rejected_at' => 'datetime',
     ];
 
 

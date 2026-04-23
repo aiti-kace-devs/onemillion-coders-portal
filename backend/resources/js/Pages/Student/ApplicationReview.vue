@@ -104,10 +104,10 @@ function submitContinue() {
                     v-if="showGenericFallbackChrome && !application_review_completed"
                     class="text-gray-600 text-sm sm:text-base leading-relaxed"
                 >
-                    Take a few minutes to understand how the student portal is organised—from this review
-                    through assessment, identity checks, and course selection. When you are ready, confirm below
-                    to move on; a compact next-step reminder under the header will point to your current task
-                    until you are admitted or have finished selecting a course.
+                    Take a few minutes to review how the student portal works,
+                    including assessment, identity verification, and course selection.
+                     When you're ready, confirm below to continue. A reminder under the
+                     header will show your current step until admission is complete
                 </p>
 
                 <div
@@ -174,7 +174,7 @@ function submitContinue() {
                             <div>
                                 <p class="font-semibold text-gray-900">Level assessment</p>
                                 <p class="text-gray-600 mt-0.5">
-                                    A short, proctored-style check helps us place you at the right starting level for
+                                    A short assessment helps us to recommend the right courses for you based on your level
                                     instruction.
                                 </p>
                             </div>
@@ -187,8 +187,8 @@ function submitContinue() {
                             <div>
                                 <p class="font-semibold text-gray-900">Identity verification</p>
                                 <p class="text-gray-600 mt-0.5">
-                                    Ghana Card verification confirms your identity and unlocks booking tools in the
-                                    portal.
+                                    Ghana Card verification helps to confirm your identity
+
                                 </p>
                             </div>
                         </li>
@@ -200,8 +200,8 @@ function submitContinue() {
                             <div>
                                 <p class="font-semibold text-gray-900">Course selection</p>
                                 <p class="text-gray-600 mt-0.5">
-                                    You choose a programme path, centre, and session (or join a waitlist) using the
-                                    guided course picker—see the section below for how each path works.
+                                    Select your programme path, centre, and session or join a waitlist using the
+                                    course picker. See the section below for how each path works.
                                 </p>
                             </div>
                         </li>
@@ -262,10 +262,10 @@ function submitContinue() {
                             </p>
                         </div>
                         <div
-                            class="rounded-lg border border-violet-100 bg-violet-50/50 p-4 motion-safe:animate-[fadeSlide_0.55s_ease-out]"
+                            class="rounded-lg border border-amber-100 bg-amber-50/50 p-4 motion-safe:animate-[fadeSlide_0.55s_ease-out]"
                         >
                             <div class="flex items-center gap-2 mb-2">
-                                <span class="material-symbols-outlined text-violet-800">hourglass_top</span>
+                                <span class="material-symbols-outlined text-amber-800">hourglass_top</span>
                                 <h4 class="font-semibold text-gray-900 text-sm">Waitlist</h4>
                             </div>
                             <p class="text-sm text-gray-600 leading-relaxed">
@@ -300,11 +300,11 @@ function submitContinue() {
                     </p>
                     <button
                         type="button"
-                        class="inline-flex justify-center items-center px-5 py-2.5 rounded-lg font-semibold text-gray-900  bg-[#f9a825]  hover:bg-amber-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                        class="inline-flex justify-center items-center px-5 py-2.5 rounded-lg font-semibold text-gray-900 bg-[#f9a825] hover:bg-[#e09621] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#f9a825] disabled:opacity-50"
                         :disabled="form.processing"
                         @click="submitContinue"
                     >
-                        I've reviewed — continue
+                        Reviewed, continue
                     </button>
                 </div>
             </div>

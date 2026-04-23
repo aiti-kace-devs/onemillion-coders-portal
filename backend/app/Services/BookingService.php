@@ -33,10 +33,7 @@ class BookingService
 
     /**
      * Book a user into a programme batch for a specific session.
-     *
-     * Protocol users consume the reserved pool first. If the UI explicitly offers
-     * a standard fallback, the booking must carry that pool intent so cancellation
-     * restores the same pool.
+
      *
      * @throws Exception when capacity is exhausted or the session is incompatible.
      */
@@ -50,165 +47,58 @@ class BookingService
     ): ?Booking {
         $isProtocolBooking = $isProtocolBooking || (! empty($user->is_protocol));
 
-        $centreId = (int) $course->centre_id;
+        $centreId = (int) ($course->centre_id ?? $session->centre_id ?? 0);
         $sessionLockId = $session instanceof CourseSession && $session->master_session_id
             ? 'master:'.$session->master_session_id
             : ($session instanceof CourseSession ? 'course_session:'.$session->id : 'master:'.$session->id);
-        $sessionType = $session instanceof CourseSession ? 'course_session' : 'master_session';
+        $sessionType = $session || $session instanceof CourseSession ? 'course_session' : 'master_session';
         $lockKey = "booking_lock:{$centreId}:{$sessionLockId}";
 
         return Cache::lock($lockKey, 10)->block(5, function () use ($user, $course, $batch, $session, $centreId, $sessionType, $isProtocolBooking, $capacityPool) {
-            return DB::transaction(function () use ($user, $course, $batch, $session, $centreId, $sessionType, $isProtocolBooking, $capacityPool) {
-                $courseType = Booking::resolveCourseType($course->id);
+            $existing = Booking::where('user_id', $user->userId)
+                ->where('programme_batch_id', $batch->id)
+                ->where('status', true)
+                ->first();
 
-                $existing = Booking::where('user_id', $user->userId)
-                    ->where('programme_batch_id', $batch->id)
-                    ->where('status', true)
-                    ->first();
-
-                if ($existing) {
-                    Log::info('Booking already exists', [
-                        'user_id' => $user->userId,
-                        'batch_id' => $batch->id,
-                        'booking_id' => $existing->id,
-                    ]);
-
-                    return $existing;
-                }
-
-                if ($batch->available_slots !== null && (int) $batch->available_slots <= 0) {
-                    Log::warning('Booking failed: programme batch full', [
-                        'user_id' => $user->userId,
-                        'batch_id' => $batch->id,
-                    ]);
-
-                    throw new Exception('No available slots for this programme batch.');
-                }
-
-                $poolSelection = $this->resolveBookingPool($course, $batch, $session, $isProtocolBooking, $capacityPool);
-                $selectedPool = $poolSelection['pool'];
-                $remaining = $poolSelection['remaining'];
-
-                if ($remaining <= 0) {
-                    Log::warning('Booking failed: session full', [
-                        'centre_id' => $centreId,
-                        'batch_id' => $batch->id,
-                        'session_id' => $session->id,
-                        'session_type' => $sessionType,
-                        'for_protocol' => $isProtocolBooking,
-                        'capacity_pool' => $selectedPool,
-                    ]);
-
-                    throw new Exception($selectedPool === Booking::CAPACITY_POOL_RESERVED
-                        ? 'Protocol reserved slots are full for this session.'
-                        : 'Standard slots are full for this session.');
-                }
-
-                $previous = Booking::where('user_id', $user->userId)
-                    ->where('programme_batch_id', '!=', $batch->id)
-                    ->where('status', true)
-                    ->first();
-
-                if ($previous) {
-                    $this->cancel($previous);
-                }
-
-                AvailabilityService::clearCache(
-                    $centreId,
-                    $course->id,
-                    $batch->start_date,
-                    $batch->end_date
-                );
-
-                $user->registered_course = $course->id;
-                $user->shortlist = true;
-                $user->save();
-
-                $admissionData = [
-                    'course_id' => $course->id,
-                    'programme_batch_id' => $batch->id,
-                    'email_sent' => now(),
-                    'confirmed' => now(),
-                    'session' => null,
-                ];
-
-                if ($session instanceof CourseSession) {
-                    $admissionData['session'] = $session->id;
-                }
-
-                $admission = UserAdmission::updateOrCreate(
-                    ['user_id' => $user->userId],
-                    $admissionData
-                );
-
-                AdmissionWaitlist::where('user_id', $user->userId)->delete();
-
-                if ($session instanceof CourseSession) {
-                    $this->clearCourseSessionRemainingSeatsCache($centreId, $batch->id, $session->id);
-                    if ($session->master_session_id) {
-                        $this->clearRemainingSeatsCache($centreId, $batch->id, $session->master_session_id);
-                    }
-                } else {
-                    $this->clearRemainingSeatsCache($centreId, $batch->id, $session->id);
-                }
-
-                $bookingData = [
+            if ($existing) {
+                Log::info('Booking already exists for batch', [
                     'user_id' => $user->userId,
-                    'programme_batch_id' => $batch->id,
+                    'batch_id' => $batch->id,
+                    'booking_id' => $existing->id,
+                ]);
+
+                return $existing;
+            }
+
+            if ($batch->available_slots !== null && (int) $batch->available_slots <= 0) {
+                Log::warning('Booking validation failed: programme batch full', [
+                    'user_id' => $user->userId,
+                    'batch_id' => $batch->id,
+                ]);
+
+                throw new Exception('No available slots for this programme batch.');
+            }
+
+            $poolSelection = $this->resolveBookingPool($course, $batch, $session, $isProtocolBooking, $capacityPool);
+            $selectedPool = $poolSelection['pool'];
+            $remaining = (int) $poolSelection['remaining'];
+
+            if ($remaining <= 0) {
+                Log::warning('Booking validation failed: session full', [
                     'centre_id' => $centreId,
-                    'course_id' => $course->id,
-                    'course_type' => $courseType,
-                    'is_protocol' => $isProtocolBooking,
-                    'capacity_pool' => $selectedPool,
-                    'status' => true,
-                    'booked_at' => now(),
-                    'user_admission_id' => $admission->id,
-                ];
-
-                if ($session instanceof CourseSession) {
-                    $bookingData['course_session_id'] = $session->id;
-                    if ($session->master_session_id) {
-                        $bookingData['master_session_id'] = $session->master_session_id;
-                    }
-                } else {
-                    $bookingData['master_session_id'] = $session->id;
-                }
-
-                $booking = Booking::create($bookingData);
-
-                if ($batch->available_slots !== null) {
-                    try {
-                        $batch->decrement('available_slots');
-                    } catch (Exception $e) {
-                        Log::warning('Failed to decrement programme batch slots after booking', [
-                            'batch_id' => $batch->id,
-                            'booking_id' => $booking->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
-
-                NotificationController::notify(
-                    $user->id,
-                    'COURSE_SELECTION',
-                    'Enrollment Confirmed',
-                    'You have successfully enrolled in <strong>'.e($course->course_name).'</strong>. You will be notified of next steps.'
-                );
-
-                Log::info('Booking created successfully', [
-                    'user_id' => $user->userId,
-                    'course_id' => $course->id,
                     'batch_id' => $batch->id,
                     'session_id' => $session->id,
                     'session_type' => $sessionType,
-                    'centre_id' => $centreId,
                     'for_protocol' => $isProtocolBooking,
                     'capacity_pool' => $selectedPool,
-                    'booking_id' => $booking->id,
                 ]);
 
-                return $booking;
-            });
+                throw new Exception($selectedPool === Booking::CAPACITY_POOL_RESERVED
+                    ? 'Protocol reserved slots are full for this session.'
+                    : 'Standard slots are full for this session.');
+            }
+
+            return null;
         });
     }
 
@@ -254,6 +144,80 @@ class BookingService
             'remaining' => $remaining,
         ];
     }
+
+
+
+
+
+        public function validateBookingAvailability(
+        User $user,
+        Course $course,
+        ProgrammeBatch $batch,
+        CourseSession|MasterSession $session,
+        bool $isInPerson = false,
+        bool $isProtocolBooking = false,
+        ?string $capacityPool = null
+    ): ?Booking {
+        $isProtocolBooking = $isProtocolBooking || (! empty($user->is_protocol));
+
+        $centreId = (int) ($course->centre_id ?? $session->centre_id ?? 0);
+        $sessionLockId = $session instanceof CourseSession && $session->master_session_id
+            ? 'master:'.$session->master_session_id
+            : ($session instanceof CourseSession ? 'course_session:'.$session->id : 'master:'.$session->id);
+        $sessionType = $isInPerson || $session instanceof CourseSession ? 'course_session' : 'master_session';
+        $lockKey = "booking_lock:{$centreId}:{$sessionLockId}";
+
+        return Cache::lock($lockKey, 10)->block(5, function () use ($user, $course, $batch, $session, $centreId, $sessionType, $isProtocolBooking, $capacityPool) {
+            $existing = Booking::where('user_id', $user->userId)
+                ->where('programme_batch_id', $batch->id)
+                ->where('status', true)
+                ->first();
+
+            if ($existing) {
+                Log::info('Booking already exists for batch', [
+                    'user_id' => $user->userId,
+                    'batch_id' => $batch->id,
+                    'booking_id' => $existing->id,
+                ]);
+
+                return $existing;
+            }
+
+            if ($batch->available_slots !== null && (int) $batch->available_slots <= 0) {
+                Log::warning('Booking validation failed: programme batch full', [
+                    'user_id' => $user->userId,
+                    'batch_id' => $batch->id,
+                ]);
+
+                throw new Exception('No available slots for this programme batch.');
+            }
+
+            $poolSelection = $this->resolveBookingPool($course, $batch, $session, $isProtocolBooking, $capacityPool);
+            $selectedPool = $poolSelection['pool'];
+            $remaining = (int) $poolSelection['remaining'];
+
+            if ($remaining <= 0) {
+                Log::warning('Booking validation failed: session full', [
+                    'centre_id' => $centreId,
+                    'batch_id' => $batch->id,
+                    'session_id' => $session->id,
+                    'session_type' => $sessionType,
+                    'for_protocol' => $isProtocolBooking,
+                    'capacity_pool' => $selectedPool,
+                ]);
+
+                throw new Exception($selectedPool === Booking::CAPACITY_POOL_RESERVED
+                    ? 'Protocol reserved slots are full for this session.'
+                    : 'Standard slots are full for this session.');
+            }
+
+            return null;
+        });
+    }
+
+
+
+
 
     private function hasReservedSeatForCourseBatch(Centre $centre, Course $course, ProgrammeBatch $batch): bool
     {
