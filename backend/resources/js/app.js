@@ -4,11 +4,12 @@ import '../css/style.css';
 import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-// import { ZiggyVue } from '../../vendor/tightenco/ziggy/dist/vue.m';
-import { ZiggyVue } from '../../vendor/tightenco/ziggy';
+import { ZiggyVue, route as ziggyRoute } from '../../vendor/tightenco/ziggy';
 import { VueReCaptcha } from 'vue-recaptcha-v3';
+import { Ziggy } from './ziggy.js';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+window.route = (name, params, absolute, config = Ziggy) => ziggyRoute(name, params, absolute, config);
 
 createInertiaApp({
   title: (title) => `${title} - ${appName}`,
@@ -16,7 +17,7 @@ createInertiaApp({
   setup({ el, App, props, plugin }) {
     return createApp({ render: () => h(App, props) })
       .use(plugin)
-      .use(ZiggyVue)
+      .use(ZiggyVue, { ...Ziggy, url: import.meta.env.VITE_APP_URL || 'window.location.origin' })
       .use(VueReCaptcha, {
         siteKey: props.initialPage.props.recaptcha_site_key,
         loaderOptions: { useEnterprise: true },
@@ -24,8 +25,7 @@ createInertiaApp({
           parameters: {
             badge: 'inline',
           }
-        }
-        ,
+        },
         scriptProps: {
           async: false,
           defer: false,

@@ -36,10 +36,7 @@
     {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"
         integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script> --}}
-    <script src="{{ url('/assets/plugins/jquery/jquery.min.js') }}" referrerpolicy="no-referrer"></script>
     @include('vite-asset')
-    @routes(nonce: csp_nonce())
-    @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
     @inertiaHead
 </head>
 
@@ -48,6 +45,7 @@
 
     <script nonce="{{ csp_nonce() }}" src="{{ asset('assets') }}/js/core/popper.min.js"></script>
     <script nonce="{{ csp_nonce() }}" src="{{ asset('assets') }}/js/core/jquery.min.js"></script>
+    {{-- <script src="{{ url('/assets/plugins/jquery/jquery.min.js') }}" referrerpolicy="no-referrer"></script> --}}
     <script nonce="{{ csp_nonce() }}" src="{{ asset('assets') }}/js/core/bootstrap.min.js"></script>
     <script nonce="{{ csp_nonce() }}" src="{{ asset('assets') }}/plugins/toastr/toastr.min.js"></script>
     <script nonce="{{ csp_nonce() }}" type="text/javascript" src="/DataTables-1.13.8/js/jquery.dataTables.js"></script>
