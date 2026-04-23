@@ -9,6 +9,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Backpack\CRUD\app\Library\CrudPanel\Hooks\Facades\LifecycleHook;
 use App\Helpers\UserFieldHelpers;
 use App\Helpers\WidgetHelper;
+use App\Helpers\CrudListHelper;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -64,6 +65,7 @@ class AdminCrudController extends CrudController
     protected function setupListOperation()
     {
         WidgetHelper::adminStatisticsWidget();
+        CrudListHelper::editInDropdown();
 
         // Check permissions
         if (!backpack_user()->can('admin.read.all')) {
