@@ -17,7 +17,7 @@ createInertiaApp({
   setup({ el, App, props, plugin }) {
     return createApp({ render: () => h(App, props) })
       .use(plugin)
-      .use(ZiggyVue, { ...Ziggy, url: import.meta.env.VITE_APP_URL || 'window.location.origin' })
+      .use(ZiggyVue, { ...Ziggy, url: import.meta.env.VITE_APP_URL || window.location.origin })
       .use(VueReCaptcha, {
         siteKey: props.initialPage.props.recaptcha_site_key,
         loaderOptions: { useEnterprise: true },

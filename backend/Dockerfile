@@ -98,7 +98,7 @@ RUN npm install
 COPY . .
 
 # Build assets
-RUN npm run build
+# RUN npm run build
 
 RUN chown -R www-data:www-data /var/www/html \
     && mkdir -p  bootstrap/cache storage/framework/sessions storage/app/public/basset storage/logs storage/statamic storage/statamic/stache-locks \
