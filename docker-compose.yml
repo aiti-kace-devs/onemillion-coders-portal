@@ -36,7 +36,6 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.transport.respondingTimeouts.readTimeout=60s"
-      - "--entrypoints.web.transport.maxBufferedControlFrameSize=2097152"
       - "--entrypoints.web.http.maxHeaderBytes=2097152"
     ports:
       - "${TRAEFIK_PORT:-80}:80"
@@ -169,8 +168,8 @@ services:
       - "traefik.http.middlewares.cors.headers.accesscontrolallowheaders=*"
       - "traefik.http.middlewares.cors.headers.accesscontrolmaxage=100"
       - "traefik.http.middlewares.cors.headers.addvaryheader=true"
-      - "traefik.http.middlewares.limit-header.buffering.maxRequestBodyBytes=0"
-      - "traefik.http.middlewares.limit-header.buffering.maxResponseBodyBytes=0"
+      - "traefik.http.middlewares.limit-header.buffering.maxRequestBodyBytes=209715200"
+      - "traefik.http.middlewares.limit-header.buffering.maxResponseBodyBytes=209715200"
       - "traefik.http.middlewares.limit-header.buffering.memRequestBodyBytes=2097152"
       - "traefik.http.middlewares.limit-header.buffering.memResponseBodyBytes=2097152"
       # Security headers middleware
