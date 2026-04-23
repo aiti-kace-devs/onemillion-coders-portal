@@ -51,15 +51,30 @@ class AdmissionRejectionCrudController extends CrudController
         CRUD::column('rejected_at');
         $this->courseFilter('course_id');
         $this->addCourseField();
+        CRUD::column('source');
+        FilterHelper::addSelectFilter('source', 'Source', [
+            'SELF' => 'Self',
+            'SYSTEM' => 'System',
+            'ADMIN' => 'Admin',
+        ],'select2');
         FilterHelper::addDateRangeFilter('rejected_at', 'Rejected At');
         CRUD::enableExportButtons();
-        CRUD::denyAccess(['create', 'update']);
+        CRUD::denyAccess(['create', 'update', 'delete']);
     }
 
 
     public function setupShowOperation()
     {
-        $this->setupListOperation();
+        // $this->setupListOperation();
+        CRUD::column('user_id')->label('Student')->linkTo('user.show');
+
+        CRUD::column('rejected_at');
+        $this->courseFilter('course_id');
+        $this->addCourseField();
+        CRUD::column('reason');
+        CRUD::column('source');
+        CRUD::enableExportButtons();
+        CRUD::denyAccess(['create', 'update', 'delete']);
     }
 
 

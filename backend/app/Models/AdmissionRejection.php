@@ -21,6 +21,10 @@ class AdmissionRejection extends Model
         'rejected_at',
     ];
 
+    protected $casts = [
+        'rejected_at' => 'datetime',
+    ];
+
 
     public function user()
     {

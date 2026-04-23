@@ -864,7 +864,7 @@ export default function QuizPage({ params }) {
                     />
                   )}
                   <div
-                    className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg text-xs font-bold transition-all flex-1 justify-center"
+                    className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex-1 justify-center"
                     style={{
                       background: isActive
                         ? `${level.color}25`
@@ -899,8 +899,7 @@ export default function QuizPage({ params }) {
                         }}
                       />
                     )}
-                    <span className="hidden sm:inline">{level.label}</span>
-                    <span className="sm:hidden">{level.label.slice(0, 3)}</span>
+                    <span>{level.label}</span>
                   </div>
                 </React.Fragment>
               );
