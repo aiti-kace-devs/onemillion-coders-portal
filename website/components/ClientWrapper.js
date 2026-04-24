@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import SplashScreen from "./SplashScreen";
 import ConsoleBranding from "./ConsoleBranding";
-import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
+import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 
 export default function ClientWrapper({ children }) {
   const pathname = usePathname();
@@ -21,11 +21,7 @@ export default function ClientWrapper({ children }) {
 
     // Check if user has opted out of seeing the splash screen
     const hasOptedOut = localStorage.getItem("splashScreenOptOut");
-    if (
-      !isVerificationRoute &&
-      !isPortalEmbedRoute &&
-      hasOptedOut !== "true"
-    ) {
+    if (!isVerificationRoute && !isPortalEmbedRoute && hasOptedOut !== "true") {
       setShowSplash(true);
     }
   }, [isVerificationRoute, isPortalEmbedRoute]);
@@ -36,39 +32,48 @@ export default function ClientWrapper({ children }) {
 
   // Don't render splash screen during SSR
   if (!isClient) {
-    return(  <GoogleReCaptchaProvider reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-      
-     useEnterprise={true}
-     container={{
-        parameters: {
-          badge: 'bottomright', // Ensures the script knows where to render
-        }
-      }}
-      scriptProps={{
-        async: true,
-        defer: true,
-        appendTo: 'head',
-        nonce: undefined,
-      }}>{children}</GoogleReCaptchaProvider>);
+    return (
+      <GoogleReCaptchaProvider
+        reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+        useEnterprise={true}
+        container={{
+          parameters: {
+            badge: "bottomright", // Ensures the script knows where to render
+          },
+        }}
+        scriptProps={{
+          async: true,
+          defer: true,
+          appendTo: "head",
+          nonce: undefined,
+        }}
+      >
+        {children}
+      </GoogleReCaptchaProvider>
+    );
   }
 
   return (
-    <GoogleReCaptchaProvider reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-    useEnterprise={true}
-    container={{
+    <GoogleReCaptchaProvider
+      reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+      useEnterprise={true}
+      container={{
         parameters: {
-          badge: 'bottomright', // Ensures the script knows where to render
-        }
+          badge: "bottomright", // Ensures the script knows where to render
+        },
       }}
-    scriptProps={{
-      async: false,
-      defer: false,
-      appendTo: 'head',
-      nonce: undefined,
-    }}>
+      scriptProps={{
+        async: false,
+        defer: false,
+        appendTo: "head",
+        nonce: undefined,
+      }}
+    >
       {!isVerificationRoute && <ConsoleBranding />}
-      {!isVerificationRoute && showSplash && <SplashScreen onDismiss={handleSplashDismiss} />}
+      {!isVerificationRoute && showSplash && (
+        <SplashScreen onDismiss={handleSplashDismiss} />
+      )}
       {children}
     </GoogleReCaptchaProvider>
   );
-}  
+}
