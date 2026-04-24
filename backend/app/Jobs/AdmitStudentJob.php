@@ -104,10 +104,6 @@ class AdmitStudentJob implements ShouldQueue
 
 private function buildConfirmationEmailData(): array
 {
-    // 🔥 BRUTE-FORCE DEBUG: Write directly to a file (bypasses Laravel logging)
-    $debugFile = storage_path('logs/admit-debug.txt');
-    $debugLine = "\n[" . now() . "] Admission #{$this->admission->id} | session_field: {$this->admission->session} | session_obj: " . ($this->session ? get_class($this->session) : 'NULL');
-    file_put_contents($debugFile, $debugLine, FILE_APPEND);
 
     // Default fallbacks
     $sessionName = 'Your assigned training session';
@@ -117,15 +113,12 @@ private function buildConfirmationEmailData(): array
         if ($this->session instanceof CourseSession) {
             $sessionName = $this->session->name ?? $this->session->session ?? $sessionName;
             $sessionTime = $this->session->course_time ?? $sessionTime;
-            file_put_contents($debugFile, " → CourseSession resolved: name='{$sessionName}', time='{$sessionTime}'\n", FILE_APPEND);
         } elseif ($this->session instanceof MasterSession) {
             $sessionName = $this->session->session_type ?? $this->session->master_name ?? $sessionName;
             $sessionTime = $this->session->time ?? $sessionTime;
-            file_put_contents($debugFile, " → MasterSession resolved: name='{$sessionName}', time='{$sessionTime}'\n", FILE_APPEND);
         }
     }
 
-    // ... rest of your existing code unchanged ...
     $startDate = $this->programmeBatch?->start_date ?? $this->course->start_date ?? $this->course->programme?->start_date;
     $endDate = $this->programmeBatch?->end_date ?? $this->course->end_date ?? $this->course->programme?->end_date;
     $programmeTitle = $this->course->programme->title ?? $this->course->course_name;
