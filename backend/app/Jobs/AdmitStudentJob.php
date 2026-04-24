@@ -8,6 +8,7 @@ use App\Http\Controllers\NotificationController;
 use App\Models\Course;
 use App\Models\CourseSession;
 use App\Models\EmailTemplate;
+use App\Models\MasterSession;
 use App\Models\ProgrammeBatch;
 use App\Models\User;
 use App\Models\UserAdmission;
@@ -32,7 +33,9 @@ class AdmitStudentJob implements ShouldQueue
         $this->admission = $admission;
         $this->student = User::where('userId', $this->admission->user_id)->first();
         $this->course = Course::with(['programme', 'centre'])->find($this->admission->course_id);
-        $this->session = CourseSession::find($this->admission->session);
+        $this->session = $this->session 
+        ?? CourseSession::find($this->admission->session) 
+        ?? MasterSession::find($this->admission->session);
         $this->programmeBatch = ProgrammeBatch::find($this->admission->programme_batch_id);
     }
 
@@ -99,40 +102,53 @@ class AdmitStudentJob implements ShouldQueue
         return MailerHelper::replaceVariables($template, $confirmationData);
     }
 
-    private function buildConfirmationEmailData(): array
-    {
-        $startDate = $this->programmeBatch?->start_date
-            ?? $this->course->start_date
-            ?? $this->course->programme?->start_date;
+private function buildConfirmationEmailData(): array
+{
+    // 🔥 BRUTE-FORCE DEBUG: Write directly to a file (bypasses Laravel logging)
+    $debugFile = storage_path('logs/admit-debug.txt');
+    $debugLine = "\n[" . now() . "] Admission #{$this->admission->id} | session_field: {$this->admission->session} | session_obj: " . ($this->session ? get_class($this->session) : 'NULL');
+    file_put_contents($debugFile, $debugLine, FILE_APPEND);
 
-        $endDate = $this->programmeBatch?->end_date
-            ?? $this->course->end_date
-            ?? $this->course->programme?->end_date;
+    // Default fallbacks
+    $sessionName = 'Your assigned training session';
+    $sessionTime = 'Time will be communicated';
 
-        $sessionName = $this->session?->name ?? 'Your assigned training session';
-        $sessionTime = $this->session?->course_time ?? 'Time will be communicated';
-        $programmeTitle = $this->course->programme->title ?? $this->course->course_name;
-        $venue = $this->course->centre->title ?? 'Venue will be communicated';
-        $duration = $this->course->programme->duration ?? 'To be communicated';
-        $link = $this->session?->link ?? '';
-        $supportMode = $this->resolveSupportMode();
-
-        return [
-            'name' => $this->student->name,
-            'student_id' => $this->student->student_id ?? 'Pending',
-            'course_name' => $this->course->course_name,
-            'programme_name' => $programmeTitle,
-            'courseSessionName' => $sessionName,
-            'courseSessioName' => $sessionName,
-            'courseSessionTime' => $sessionTime,
-            'start_date' => $this->formatDate($startDate),
-            'end_date' => $this->formatDate($endDate),
-            'duration' => $duration,
-            'venue' => $venue,
-            'link' => $link,
-            'support_mode' => $supportMode,
-        ];
+    if (!empty($this->admission->session) && $this->session) {
+        if ($this->session instanceof CourseSession) {
+            $sessionName = $this->session->name ?? $this->session->session ?? $sessionName;
+            $sessionTime = $this->session->course_time ?? $sessionTime;
+            file_put_contents($debugFile, " → CourseSession resolved: name='{$sessionName}', time='{$sessionTime}'\n", FILE_APPEND);
+        } elseif ($this->session instanceof MasterSession) {
+            $sessionName = $this->session->session_type ?? $this->session->master_name ?? $sessionName;
+            $sessionTime = $this->session->time ?? $sessionTime;
+            file_put_contents($debugFile, " → MasterSession resolved: name='{$sessionName}', time='{$sessionTime}'\n", FILE_APPEND);
+        }
     }
+
+    // ... rest of your existing code unchanged ...
+    $startDate = $this->programmeBatch?->start_date ?? $this->course->start_date ?? $this->course->programme?->start_date;
+    $endDate = $this->programmeBatch?->end_date ?? $this->course->end_date ?? $this->course->programme?->end_date;
+    $programmeTitle = $this->course->programme->title ?? $this->course->course_name;
+    $venue = $this->course->centre->title ?? 'Venue will be communicated';
+    $duration = $this->course->programme->duration ?? 'To be communicated';
+    $link = $this->session?->link ?? '';
+    $supportMode = $this->resolveSupportMode();
+
+    return [
+        'name' => $this->student->name,
+        'student_id' => $this->student->student_id ?? 'Pending',
+        'course_name' => $this->course->course_name,
+        'programme_name' => $programmeTitle,
+        'courseSessionName' => $sessionName,
+        'courseSessionTime' => $sessionTime,
+        'start_date' => $this->formatDate($startDate),
+        'end_date' => $this->formatDate($endDate),
+        'duration' => $duration,
+        'venue' => $venue,
+        'link' => $link,
+        'support_mode' => $supportMode,
+    ];
+}
 
     private function resolveSupportMode(): string
     {
