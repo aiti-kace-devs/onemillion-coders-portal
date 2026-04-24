@@ -1,18 +1,20 @@
 @php
     $batch = $entry;
-    $regenerateUrl = url('admin/batch/' . $batch->id . '/regenerate-batches');
+    $regenerateUrl = backpack_url('batch/' . $batch->id . '/regenerate-batches');
 @endphp
 
 <div class="mb-3">
     <button type="button"
-            id="btn-regenerate-programme-batches"
             class="btn btn-warning"
+            onclick="regenerateProgrammeBatches(this)"
             data-url="{{ $regenerateUrl }}"
             data-token="{{ csrf_token() }}">
         <i class="la la-refresh"></i> Regenerate Programme Batches
     </button>
 </div>
 
+{{-- Button Styles --}}
+@push('after_styles') @if (request()->ajax()) @endpush @endif
 @bassetBlock('onemillion-regenerate-batches-css')
 <style>
     .swal-button--confirm {
@@ -32,17 +34,16 @@
     }
 </style>
 @endBassetBlock
+@if (!request()->ajax()) @endpush @endif
 
+{{-- Button Javascript --}}
+@push('after_scripts') @if (request()->ajax()) @endpush @endif
 @bassetBlock('onemillion-regenerate-batches-js')
 <script>
-    (function() {
-        const btn = document.getElementById("btn-regenerate-programme-batches");
-        if (!btn || btn.dataset.handled) return;
-        btn.dataset.handled = "true";
-
-        btn.addEventListener("click", function() {
-            const url = this.dataset.url;
-            const token = this.dataset.token;
+    if (typeof regenerateProgrammeBatches !== 'function') {
+        function regenerateProgrammeBatches(button) {
+            const url = button.dataset.url;
+            const token = button.dataset.token;
             const title = "Regenerate Programme Batches?";
             const message = "This will update dates for existing batches, create new ones where needed, and remove orphaned batches that have no assigned students.";
 
@@ -84,7 +85,9 @@
             } else if (confirm(message)) {
                 triggerAction();
             }
-        });
-    })();
+        }
+    }
 </script>
 @endBassetBlock
+@if (!request()->ajax()) @endpush @endif
+
