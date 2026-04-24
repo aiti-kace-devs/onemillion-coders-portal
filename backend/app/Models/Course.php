@@ -88,57 +88,25 @@ class Course extends Model
      */
     public function hasActiveCentreSessionsForEnrollment(): bool
     {
-        if ($this->sessions()
-            ->where('session_type', CourseSession::TYPE_CENTRE)
-            ->where('status', true)
-            ->where('session', '!=', 'Online')
-            ->exists()) {
-            return true;
-        }
-
-        return CourseSession::query()
-            ->whereNull('course_id')
-            ->where('centre_id', $this->centre_id)
-            ->where('session_type', CourseSession::TYPE_CENTRE)
-            ->where('status', true)
-            ->where('session', '!=', 'Online')
-            ->exists();
+        return $this->activeInPersonEnrollmentSessionsQuery()->exists();
     }
 
     public function activeInPersonEnrollmentSessions()
     {
-        $courseSessions = $this->sessions()
-            ->where('session_type', CourseSession::TYPE_CENTRE)
-            ->where('status', true)
-            ->where('session', '!=', 'Online')
-            ->get();
-
-        if ($courseSessions->isNotEmpty()) {
-            return $courseSessions;
-        }
-
-        $centreSessions = CourseSession::query()
-            ->whereNull('course_id')
-            ->where('centre_id', $this->centre_id)
-            ->where('session_type', CourseSession::TYPE_CENTRE)
-            ->where('status', true)
-            ->where('session', '!=', 'Online')
-            ->get();
-
-        if ($centreSessions->isNotEmpty()) {
-            return $centreSessions;
-        }
-
-        if (! $this->programme?->isInPerson()) {
-            return collect();
-        }
-
-        return MasterSession::query()
-            ->where('course_type', $this->programme->courseType())
-            ->where('status', true)
-            ->where('session_type', '!=', 'Online')
-            ->get();
+        return $this->activeInPersonEnrollmentSessionsQuery()->get();
     }
+
+    protected function activeInPersonEnrollmentSessionsQuery()
+    {
+        return $this->sessions()
+            ->whereNotNull('course_id')
+            ->where('status', true)
+            ->where(function ($query) {
+                $query->whereNull('session')
+                    ->orWhere('session', '!=', 'Online');
+            });
+    }
+
 
     public function siblingCourseIdsForProgrammeBatch(): array
     {

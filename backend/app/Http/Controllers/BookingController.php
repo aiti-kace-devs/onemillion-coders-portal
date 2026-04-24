@@ -19,6 +19,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use ReflectionMethod;
 use ReflectionException;
+use Illuminate\Validation\ValidationException;
+
+
 
 class BookingController extends Controller
 {
