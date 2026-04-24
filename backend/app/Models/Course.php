@@ -88,22 +88,23 @@ class Course extends Model
      */
     public function hasActiveCentreSessionsForEnrollment(): bool
     {
-        return $this->sessions()
-            ->where('session_type', CourseSession::TYPE_CENTRE)
-            ->whereNotNull('course_id')
-            ->where('status', true)
-            ->where('session', '!=', 'Online')
-            ->exists();
+        return $this->activeInPersonEnrollmentSessionsQuery()->exists();
     }
 
     public function activeInPersonEnrollmentSessions()
     {
+        return $this->activeInPersonEnrollmentSessionsQuery()->get();
+    }
+
+    protected function activeInPersonEnrollmentSessionsQuery()
+    {
         return $this->sessions()
-            ->where('session_type', CourseSession::TYPE_CENTRE)
             ->whereNotNull('course_id')
             ->where('status', true)
-            ->where('session', '!=', 'Online')
-            ->get();
+            ->where(function ($query) {
+                $query->whereNull('session')
+                    ->orWhere('session', '!=', 'Online');
+            });
     }
 
     public function siblingCourseIdsForProgrammeBatch(): array

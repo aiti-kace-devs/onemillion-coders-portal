@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Batch;
+use App\Models\Booking;
 use App\Models\Centre;
 use App\Models\Course;
 use App\Models\CourseSession;
@@ -64,7 +65,7 @@ class AvailabilityController extends Controller
         $centre = $course->centre;
         $programme = $course->programme;
         $courseType = $programme->courseType();
-        $isInPerson = $programme->isInPerson();
+        $isInPerson = $course->isInPersonProgramme();
 
         $regionName = $centre->branch?->title;
         $districtName = $centre->districts->first()?->title;
@@ -96,6 +97,8 @@ class AvailabilityController extends Controller
             ->where('programme_id', $programme->id)
             ->where('status', true)
             ->orderBy('start_date')
+            ->orderByDesc('end_date')
+            ->orderBy('id')
             ->get();
 
         if ($batches->isEmpty()) {
@@ -111,59 +114,120 @@ class AvailabilityController extends Controller
             ]);
         }
 
-        // Get active sessions for this course type or centre-specific for in-person
-        if ($isInPerson) {
-            $sessions = CourseSession::where('course_id', $courseId)
-                ->where('status', true)
-                ->get();
-        } else {
-            $sessions = MasterSession::where('course_type', $courseType)
-                ->where('status', true)
-                ->where('session_type', '!=', 'Online')
-                ->get();
-        }
-        $sessions = $this->sortMasterSessions($sessions);
-
-        // Calculate capacity
-        $capacity = $isInPerson ? $sessions->sum('limit') : $centre->slotCapacityFor($courseType);
-
         // Determine whether the requesting user is a protocol user; allow
         // an explicit query override via `forProtocolBooking` for API callers.
         $forProtocol = $request->query('forProtocolBooking') !== null
             ? filter_var($request->query('forProtocolBooking'), FILTER_VALIDATE_BOOLEAN)
             : (bool) ($request->user()?->is_protocol ?? false);
 
-        // Batch fetch all remaining seats at once (only for master sessions)
-        $remainingSeats = [];
-        if (! $isInPerson) {
-            $remainingSeats = $bookingService->getRemainingSeatsBatch(
+        if ($isInPerson) {
+            $sessions = $this->sortMasterSessions($course->activeInPersonEnrollmentSessions());
+            $capacity = $sessions
+                ->filter(fn ($session) => $session instanceof CourseSession)
+                ->sum(fn ($session) => max(0, (int) ($session->limit ?? 0)));
+
+            $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $centre, $bookingService, $forProtocol, $courseType) {
+                $sessionData = $sessions->map(function (CourseSession $session) use ($centre, $batch, $bookingService, $forProtocol, $courseType) {
+                    $breakdown = $bookingService->getRemainingSeatBreakdown(
+                        (int) $centre->id,
+                        (int) $batch->id,
+                        (int) $session->id,
+                        true,
+                        $courseType
+                    );
+                    $reservedRemaining = (int) ($breakdown['reserved_remaining'] ?? 0);
+                    $standardRemaining = (int) ($breakdown['standard_remaining'] ?? 0);
+                    $limit = $session->limit !== null && (int) $session->limit > 0 ? (int) $session->limit : null;
+
+                    return [
+                        'session_id' => $session->id,
+                        'course_session_id' => $session->id,
+                        'master_session_id' => null,
+                        'session_name' => $this->formatInPersonSessionName($session),
+                        'time' => $session->course_time ?: (optional($session->masterSession)->time ?? ''),
+                        'remaining' => $forProtocol ? $reservedRemaining : $standardRemaining,
+                        'reserved_remaining' => $reservedRemaining,
+                        'standard_remaining' => $standardRemaining,
+                        'capacity_pool' => $forProtocol ? Booking::CAPACITY_POOL_RESERVED : Booking::CAPACITY_POOL_STANDARD,
+                        'show_seat_count' => $limit !== null,
+                        'limit' => $limit,
+                    ];
+                })->values();
+
+                return [
+                    'id' => $batch->id,
+                    'batch' => 'Cohort '.($index + 1),
+                    'start_date' => $batch->start_date->format('Y-m-d'),
+                    'end_date' => $batch->end_date->format('Y-m-d'),
+                    'sessions' => $sessionData->toArray(),
+                    'standard_sessions' => [],
+                ];
+            })->values()->toArray();
+        } else {
+            $sessions = MasterSession::where('course_type', $courseType)
+                ->where('status', true)
+                ->where('session_type', '!=', 'Online')
+                ->get();
+            $sessions = $this->sortMasterSessions($sessions);
+            $capacity = $centre->slotCapacityFor($courseType);
+
+            $reservedRemainingSeats = $bookingService->getRemainingSeatsBatch(
                 $centre->id,
                 $batches->pluck('id')->toArray(),
                 $sessions->pluck('id')->toArray(),
-                $forProtocol
+                true
             );
-        }
+            $standardRemainingSeats = $bookingService->getRemainingSeatsBatch(
+                $centre->id,
+                $batches->pluck('id')->toArray(),
+                $sessions->pluck('id')->toArray(),
+                false
+            );
 
-        $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $remainingSeats, $isInPerson) {
-            $sessionData = $sessions->map(function ($session) use ($batch, $remainingSeats, $isInPerson) {
-                $key = "{$batch->id}:{$session->id}";
+            $batchData = $batches->values()->map(function ($batch, $index) use ($sessions, $reservedRemainingSeats, $standardRemainingSeats, $forProtocol) {
+                $sessionData = $sessions->map(function ($session) use ($batch, $reservedRemainingSeats, $standardRemainingSeats, $forProtocol) {
+                    $key = "{$batch->id}:{$session->id}";
+                    $reservedRemaining = (int) ($reservedRemainingSeats[$key] ?? 0);
+                    $standardRemaining = (int) ($standardRemainingSeats[$key] ?? 0);
+
+                    return [
+                        'session_id' => $session->id,
+                        'course_session_id' => null,
+                        'master_session_id' => $session->id,
+                        'session_name' => $session->session_type ?? $session->name ?? optional($session->masterSession)->session_type ?? 'Unknown Session',
+                        'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? 'Unknown',
+                        'remaining' => $forProtocol ? $reservedRemaining : $standardRemaining,
+                        'reserved_remaining' => $reservedRemaining,
+                        'standard_remaining' => $standardRemaining,
+                        'capacity_pool' => $forProtocol ? Booking::CAPACITY_POOL_RESERVED : Booking::CAPACITY_POOL_STANDARD,
+                    ];
+                })->values();
+
+                $reservedPoolHasRoom = $forProtocol
+                    ? $sessionData->contains(fn ($session) => (int) ($session['remaining'] ?? 0) > 0)
+                    : false;
+                $standardSessionData = $forProtocol && ! $reservedPoolHasRoom
+                    ? $sessionData
+                        ->map(function ($session) {
+                            $session['remaining'] = (int) ($session['standard_remaining'] ?? 0);
+                            $session['capacity_pool'] = Booking::CAPACITY_POOL_STANDARD;
+
+                            return $session;
+                        })
+                        ->filter(fn ($session) => (int) ($session['remaining'] ?? 0) > 0)
+                        ->values()
+                    : collect();
 
                 return [
-                    'session_id' => $session->id,
-                    'session_name' => $isInPerson ? ($session->session ?? 'Unknown') : ($session->session_type ?? $session->name ?? optional($session->masterSession)->session_type ?? 'Unknown Session'),
-                    'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? 'Unknown',
-                    'remaining' => $isInPerson ? ($session->limit ?? 0) : ($remainingSeats[$key] ?? 0),
+                    'id' => $batch->id,
+                    'batch' => 'Cohort '.($index + 1),
+                    'start_date' => $batch->start_date->format('Y-m-d'),
+                    'end_date' => $batch->end_date->format('Y-m-d'),
+                    'sessions' => $sessionData->toArray(),
+                    'standard_sessions' => $standardSessionData->toArray(),
                 ];
             })->values()->toArray();
-
-            return [
-                'id' => $batch->id,
-                'batch' => 'Cohort '.($index + 1),
-                'start_date' => $batch->start_date->format('Y-m-d'),
-                'end_date' => $batch->end_date->format('Y-m-d'),
-                'sessions' => $sessionData,
-            ];
-        })->values()->toArray();
+        }
 
         return response()->json([
             'success' => true,
@@ -493,5 +557,25 @@ class AvailabilityController extends Controller
         }
 
         return ((int) date('G', $timestamp) * 60) + (int) date('i', $timestamp);
+    }
+
+    protected function formatInPersonSessionName(CourseSession $session): string
+    {
+        $sessionLabel = trim((string) ($session->session ?? ''));
+
+        if ($sessionLabel !== '') {
+            return preg_match('/session$/i', $sessionLabel)
+                ? $sessionLabel
+                : "{$sessionLabel} Session";
+        }
+
+        $masterSessionLabel = trim((string) optional($session->masterSession)->session_type);
+        if ($masterSessionLabel !== '') {
+            return preg_match('/session$/i', $masterSessionLabel)
+                ? $masterSessionLabel
+                : "{$masterSessionLabel} Session";
+        }
+
+        return trim((string) ($session->name ?: 'Session'));
     }
 }

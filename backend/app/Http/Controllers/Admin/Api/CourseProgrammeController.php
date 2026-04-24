@@ -142,7 +142,20 @@ class CourseProgrammeController extends Controller
         $query = Course::whereIn('batch_id', $batchIds)
             ->whereNotNull('programme_id')
             ->where('status', true)
-            ->with(['programme.category', 'programme.coverImage', 'programme.courseCertification', 'programme.courseModules']);
+            ->with(['programme.category', 'programme.coverImage', 'programme.courseCertification', 'programme.courseModules'])
+            ->where(function ($availabilityQuery) {
+                $availabilityQuery
+                    ->whereHas('programme', function ($programmeQuery) {
+                        $programmeQuery->whereRaw('LOWER(TRIM(mode_of_delivery)) != ?', ['in person']);
+                    })
+                    ->orWhereHas('sessions', function ($sessionQuery) {
+                        $sessionQuery->where('status', true)
+                            ->where(function ($sessionTypeQuery) {
+                                $sessionTypeQuery->whereNull('session')
+                                    ->orWhereRaw('LOWER(TRIM(session)) != ?', ['online']);
+                            });
+                    });
+            });
 
         if ($centreId !== null) {
             $query->where('centre_id', $centreId);
@@ -1061,7 +1074,7 @@ public function districtsByBranch(Request $request)
                         'course_session_id' => $isInPerson && $isCourseSession ? $session->id : null,
                         'master_session_id' => $isInPerson ? null : ($session->master_session_id ?? null),
                         'session_name' => $isInPerson
-                            ? ($isCourseSession ? ($session->session ?? 'Unknown') : ($session->session_type ?? $session->master_name ?? 'Unknown'))
+                            ? ($isCourseSession ? $this->formatInPersonSessionName($session) : ($session->session_type ?? $session->master_name ?? 'Unknown'))
                             : "{$session->session_type} Session",
                         'time' => $session->time ?? $session->course_time ?? optional($session->masterSession)->time,
                         'remaining' => $remaining,
@@ -1205,5 +1218,25 @@ public function districtsByBranch(Request $request)
         }
 
         return ((int) date('G', $timestamp) * 60) + (int) date('i', $timestamp);
+    }
+
+    protected function formatInPersonSessionName(CourseSession $session): string
+    {
+        $sessionLabel = trim((string) ($session->session ?? ''));
+
+        if ($sessionLabel !== '') {
+            return preg_match('/session$/i', $sessionLabel)
+                ? $sessionLabel
+                : "{$sessionLabel} Session";
+        }
+
+        $masterSessionLabel = trim((string) optional($session->masterSession)->session_type);
+        if ($masterSessionLabel !== '') {
+            return preg_match('/session$/i', $masterSessionLabel)
+                ? $masterSessionLabel
+                : "{$masterSessionLabel} Session";
+        }
+
+        return trim((string) ($session->name ?: 'Session'));
     }
 }

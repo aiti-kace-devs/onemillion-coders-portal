@@ -124,6 +124,24 @@ class InPersonEnrollmentTest extends TestCase
     }
 
     /** @test */
+    public function in_person_availability_accepts_course_linked_sessions_even_when_session_type_is_course(): void
+    {
+        $f = $this->makeInPersonFixture();
+        $f['session']->update(['session_type' => CourseSession::TYPE_COURSE]);
+
+        $res = $this->withHeader('Authorization', 'Bearer '.$f['token'])
+            ->getJson('/api/availability/batches?course_id='.$f['course']->id);
+
+        $res->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonFragment([
+                'session_id' => $f['session']->id,
+                'course_session_id' => $f['session']->id,
+                'master_session_id' => null,
+            ]);
+    }
+
+    /** @test */
     public function in_person_availability_does_not_fall_back_to_master_sessions_when_course_sessions_are_missing(): void
     {
         $f = $this->makeInPersonFixture();
@@ -209,6 +227,56 @@ class InPersonEnrollmentTest extends TestCase
         $booking = Booking::where('user_id', $f['user']->userId)->first();
         $this->assertNotNull($booking);
         $this->assertNull($booking->master_session_id);
+    }
+
+    /** @test */
+    public function post_in_person_booking_via_generic_bookings_endpoint_accepts_course_session_id(): void
+    {
+        $f = $this->makeInPersonFixture(5);
+
+        $res = $this->withHeader('Authorization', 'Bearer '.$f['token'])
+            ->postJson('/api/bookings', [
+                'programme_batch_id' => $f['pb']->id,
+                'course_id' => $f['course']->id,
+                'course_session_id' => $f['session']->id,
+            ]);
+
+        $res->assertStatus(201)
+            ->assertJsonPath('status', 'success');
+
+        $this->assertDatabaseHas('bookings', [
+            'user_id' => $f['user']->userId,
+            'programme_batch_id' => $f['pb']->id,
+            'course_session_id' => $f['session']->id,
+            'master_session_id' => null,
+            'course_id' => $f['course']->id,
+            'capacity_pool' => Booking::CAPACITY_POOL_STANDARD,
+        ]);
+    }
+
+    /** @test */
+    public function post_in_person_booking_via_generic_bookings_endpoint_still_accepts_session_id_for_backward_compatibility(): void
+    {
+        $f = $this->makeInPersonFixture(5);
+
+        $res = $this->withHeader('Authorization', 'Bearer '.$f['token'])
+            ->postJson('/api/bookings', [
+                'programme_batch_id' => $f['pb']->id,
+                'course_id' => $f['course']->id,
+                'session_id' => $f['session']->id,
+            ]);
+
+        $res->assertStatus(201)
+            ->assertJsonPath('status', 'success');
+
+        $this->assertDatabaseHas('bookings', [
+            'user_id' => $f['user']->userId,
+            'programme_batch_id' => $f['pb']->id,
+            'course_session_id' => $f['session']->id,
+            'master_session_id' => null,
+            'course_id' => $f['course']->id,
+            'capacity_pool' => Booking::CAPACITY_POOL_STANDARD,
+        ]);
     }
 
     /** @test */

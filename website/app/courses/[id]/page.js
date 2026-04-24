@@ -951,11 +951,13 @@ export default function CoursesPage({ params }) {
         {
           programme_batch_id: selectedBatch.id,
           course_id: enrollingCourseId,
-          session_id: selectedSession.session_id,
+          ...(inPersonEnrollmentFlow
+            ? { course_session_id: selectedSession.course_session_id || selectedSession.session_id }
+            : { session_id: selectedSession.session_id }),
           ...(selectedSession.capacity_pool && { capacity_pool: selectedSession.capacity_pool }),
         },
         token,
-        { selfPace: !inPersonEnrollmentFlow && studyModeChoice === "home" },
+        { selfPace: studyModeChoice === "home" },
       );
       if (result.conflict) {
         // 409 — batch filled up, re-fetch batches

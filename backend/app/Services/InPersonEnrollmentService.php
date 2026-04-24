@@ -23,7 +23,13 @@ class InPersonEnrollmentService
             ->where('status', true);
 
         if ($forProtocolBooking) {
-            $q->where('is_protocol', true);
+            $q->where(function ($query) {
+                $query->where('capacity_pool', Booking::CAPACITY_POOL_RESERVED)
+                    ->orWhere(function ($legacy) {
+                        $legacy->whereNull('capacity_pool')
+                            ->where('is_protocol', true);
+                    });
+            });
         }
 
         return $q->count();
@@ -31,9 +37,8 @@ class InPersonEnrollmentService
 
     /**
      * Return remaining seats for a given programme batch + course session.
-     * This is a thin wrapper over BookingService::getRemainingSeats that
-     * accepts CourseSession ids (centre sessions) and resolves the master
-     * session id used by the occupancy system.
+     * In-person availability is scoped to the selected course session and its
+     * own configured limit.
      */
     public function remainingSeats(int $programmeBatchId, int $courseSessionId, bool $forProtocolBooking = false): int
     {
@@ -44,26 +49,30 @@ class InPersonEnrollmentService
             return 0;
         }
 
-        $centreId = $cs->centre_id;
+        $centreId = $cs->centre_id ?: $cs->course?->centre_id;
 
-        // Resolve master session id for occupancy calculations. If none, use the session id.
-        $masterSessionId = $cs->masterSession?->id ?? $cs->id;
-
-        return $this->bookingService->getRemainingSeats((int) $centreId, $batch->id, $masterSessionId, $forProtocolBooking);
+        return $centreId
+            ? $this->bookingService->getRemainingSeatsForCourseSession((int) $centreId, $batch->id, $cs->id, $forProtocolBooking)
+            : 0;
     }
 
     /**
      * @throws Exception when validation fails or capacity is exhausted
      */
-    public function enroll(User $user, Course $course, ProgrammeBatch $batch, CourseSession $centreSession): Booking
+    public function enroll(User $user, Course $course, ProgrammeBatch $batch, CourseSession $centreSession, ?string $capacityPool = null): Booking
     {
         if (! $course->isInPersonProgramme()) {
             throw new Exception('Course is not an in-person programme.');
         }
 
-        if ($centreSession->session_type !== CourseSession::TYPE_CENTRE
+        if ((bool) ($user->is_protocol ?? false) && $capacityPool === Booking::CAPACITY_POOL_STANDARD) {
+            throw new Exception('Protocol in-person enrollment does not fall back to standard slots. Please choose another available recommendation.');
+        }
+
+        if (! $centreSession->status
+            || strtolower(trim((string) ($centreSession->session ?? ''))) === 'online'
             || (int) $centreSession->course_id !== (int) $course->id
-            || (int) $centreSession->centre_id !== (int) $course->centre_id) {
+            || ($centreSession->centre_id !== null && (int) $centreSession->centre_id !== (int) $course->centre_id)) {
             throw new Exception('Invalid session for this course.');
         }
 
@@ -71,7 +80,14 @@ class InPersonEnrollmentService
             throw new Exception('Course does not belong to this programme batch.');
         }
 
-        $booking = $this->bookingService->book($user, $course, $batch, $centreSession, false);
+        $booking = $this->bookingService->book(
+            $user,
+            $course,
+            $batch,
+            $centreSession,
+            false,
+            $capacityPool
+        );
 
         if (! $booking instanceof Booking) {
             throw new Exception('Enrollment failed.');

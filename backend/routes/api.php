@@ -55,7 +55,7 @@ Route::prefix('bookings')->name('api.bookings.')->middleware(['user.token', 'stu
     Route::delete('/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('destroy');
 });
 
-// In-person enrollment (separate from online POST /api/bookings)
+// Legacy in-person enrollment endpoint; kept as a compatibility alias to the shared booking flow.
 Route::post('/in-person-enrollment', [\App\Http\Controllers\InPersonEnrollmentController::class, 'store'])
     ->middleware(['user.token', 'student.onboarding', 'student.verification.flow'])
     ->name('api.in-person-enrollment.store');

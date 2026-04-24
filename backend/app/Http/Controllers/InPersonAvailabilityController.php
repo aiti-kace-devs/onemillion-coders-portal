@@ -2,158 +2,34 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Batch;
 use App\Models\Course;
-use App\Models\CourseSession;
-use App\Models\ProgrammeBatch;
-use App\Services\InPersonEnrollmentService;
-use Carbon\Carbon;
+use App\Services\BookingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class InPersonAvailabilityController extends Controller
 {
-    private const REMAINING_UNLIMITED = 999999;
-
     /**
      * GET /api/availability/in-person/batches?course_id=
      *
-     * In-person programmes only: cohorts + centre course_sessions and optional seat limits.
-     *
-     * Programme batches (cohorts) and admission windows come from admin data; each course at a
-     * centre must have active {@see CourseSession} rows with session_type "centre" — configure
-     * those in the admin panel. This endpoint does not create sessions.
-     *
-     * Cohort order: start_date asc, then end_date desc when start matches (longer window first), then id.
-     * Session order: course_time string (empty last), then id — client also re-sorts via normalizeInPersonBatches().
+     * This endpoint intentionally delegates to the shared batches endpoint so
+     * in-person availability follows the same rules everywhere.
      */
-    public function batches(Request $request, InPersonEnrollmentService $enrollmentService, \App\Services\BookingService $bookingService): JsonResponse
+    public function batches(Request $request, BookingService $bookingService): JsonResponse
     {
         $request->validate([
             'course_id' => 'required|integer|exists:courses,id',
         ]);
 
-        $course = Course::with([
-            'programme.courseCertification',
-            'centre.branch',
-            'centre.districts',
-        ])->find((int) $request->input('course_id'));
+        $course = Course::with('programme')->find((int) $request->input('course_id'));
 
-        if (! $course || ! $course->programme || ! $course->centre) {
-            return response()->json(['success' => false, 'message' => 'Course or centre not found.'], 404);
-        }
-
-        if (! $course->isInPersonProgramme()) {
+        if (! $course || ! $course->programme || ! $course->isInPersonProgramme()) {
             return response()->json([
                 'success' => false,
                 'message' => 'This endpoint is only for in-person courses. Use /api/availability/batches for online programmes.',
             ], 422);
         }
 
-        $centre = $course->centre;
-        $programme = $course->programme;
-        $courseType = $programme->courseType();
-
-        $today = Carbon::today();
-        $admissionBatch = Batch::where('start_date', '<=', $today)
-            ->where('end_date', '>=', $today)
-            ->where('status', true)
-            ->where('completed', false)
-            ->first();
-
-        $regionName = $centre->branch?->title;
-        $districtName = $centre->districts->first()?->title;
-        $certificateTitle = $programme->courseCertification->first()?->title;
-
-        if (! $admissionBatch) {
-            return response()->json([
-                'success' => true,
-                'centre' => ['id' => $centre->id, 'title' => $centre->title],
-                'course_type' => $courseType,
-                'capacity' => null,
-                'region_name' => $regionName,
-                'district_name' => $districtName,
-                'certificate_title' => $certificateTitle,
-                'batches' => [],
-            ]);
-        }
-
-        $batches = ProgrammeBatch::query()
-            ->where('admission_batch_id', $admissionBatch->id)
-            ->where('programme_id', $programme->id)
-            ->where('status', true)
-            // Must match website/lib/inPersonEnrollmentUi.js normalizeInPersonBatches() cohort ordering.
-            ->orderBy('start_date')
-            ->orderByDesc('end_date')
-            ->orderBy('id')
-            ->get();
-
-        $centreSessions = CourseSession::query()
-            ->where('course_id', $course->id)
-            ->where('centre_id', $course->centre_id)
-            ->where('session_type', CourseSession::TYPE_CENTRE)
-            ->where('status', true)
-            // Lexicographic time string is imperfect but stable; JS re-sorts by parsed clock time.
-            ->orderByRaw("COALESCE(NULLIF(TRIM(course_time), ''), 'ZZZ')")
-            ->orderBy('id')
-            ->get();
-
-        $forProtocolBooking = (bool) ($request->user()?->is_protocol ?? false);
-
-        $batchData = $batches->values()->map(function ($batch, $index) use ($centreSessions, $enrollmentService, $bookingService, $centre, $forProtocolBooking) {
-            $sessionData = $centreSessions->map(function (CourseSession $cs) use ($batch, $enrollmentService, $bookingService, $centre, $forProtocolBooking) {
-                $limit = $cs->limit;
-                $hasLimit = $limit !== null && (int) $limit > 0;
-                $showSeatCount = $hasLimit;
-
-                if (! $hasLimit) {
-                    $remaining = self::REMAINING_UNLIMITED;
-                } else {
-                    // Determine master session id (some centre sessions link to a masterSession)
-                    $masterSessionId = $cs->master_session_id ?? $cs->id;
-
-                    // If user is protocol, prefer reserved seats; fallback to standard pool when reserved empty
-                    if ($forProtocolBooking) {
-                        $reservedRemaining = $bookingService->getRemainingSeats($centre->id, $batch->id, $masterSessionId, true);
-                        if ($reservedRemaining > 0) {
-                            $remaining = $reservedRemaining;
-                        } else {
-                            $remaining = $bookingService->getRemainingSeats($centre->id, $batch->id, $masterSessionId, false);
-                        }
-                    } else {
-                        $remaining = $bookingService->getRemainingSeats($centre->id, $batch->id, $masterSessionId, false);
-                    }
-                }
-
-                return [
-                    'session_id' => $cs->id,
-                    'course_session_id' => $cs->id,
-                    'session_name' => $cs->name ?: ($cs->session ? "{$cs->session} Session" : 'Session'),
-                    'time' => $cs->course_time ?: '',
-                    'remaining' => $remaining,
-                    'show_seat_count' => $showSeatCount,
-                    'limit' => $hasLimit ? (int) $limit : null,
-                ];
-            })->values()->toArray();
-
-            return [
-                'id' => $batch->id,
-                'batch' => 'Cohort '.($index + 1),
-                'start_date' => $batch->start_date->format('Y-m-d'),
-                'end_date' => $batch->end_date->format('Y-m-d'),
-                'sessions' => $sessionData,
-            ];
-        })->values()->all();
-
-        return response()->json([
-            'success' => true,
-            'centre' => ['id' => $centre->id, 'title' => $centre->title],
-            'course_type' => $courseType,
-            'capacity' => null,
-            'region_name' => $regionName,
-            'district_name' => $districtName,
-            'certificate_title' => $certificateTitle,
-            'batches' => $batchData,
-        ]);
+        return app(AvailabilityController::class)->batches($request, $bookingService);
     }
 }

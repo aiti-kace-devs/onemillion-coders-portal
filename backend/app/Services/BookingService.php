@@ -43,13 +43,17 @@ class BookingService
      *
      * @throws Exception when capacity is exhausted or the session is incompatible.
      */
-    public function book(User $user, Course $course, ProgrammeBatch $batch, $session, bool $isProtocolBooking = false): ?Booking
+    public function book(User $user, Course $course, ProgrammeBatch $batch, $session, bool $isProtocolBooking = false, ?string $capacityPool = null): ?Booking
     {
         // Respect user's protocol flag regardless of caller-provided flag
         $isProtocolBooking = $isProtocolBooking || (! empty($user->is_protocol));
+        $selectedPool = $this->resolveCapacityPool($isProtocolBooking, $capacityPool);
 
-        $programme = $course->programme;
-        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
+        $isInPerson = $course->isInPersonProgramme();
+
+        if ($isInPerson && $isProtocolBooking && $selectedPool === Booking::CAPACITY_POOL_STANDARD) {
+            throw new Exception('Protocol in-person enrollment does not fall back to standard slots. Please choose another available recommendation.');
+        }
 
         // Handle regular (Master Session) courses
         $centreId = $course->centre_id;
@@ -57,8 +61,8 @@ class BookingService
 
         // Atomic lock ensures only one booking proceeds per centre+session at a time.
         // This prevents two requests from both reading "1 slot left" and both succeeding.
-        return Cache::lock($lockKey, 10)->block(5, function () use ($user, $course, $batch, $session, $centreId, $isProtocolBooking) {
-            return DB::transaction(function () use ($user, $course, $batch, $session, $centreId, $isProtocolBooking) {
+        return Cache::lock($lockKey, 10)->block(5, function () use ($user, $course, $batch, $session, $centreId, $isProtocolBooking, $selectedPool) {
+            return DB::transaction(function () use ($user, $course, $batch, $session, $centreId, $isProtocolBooking, $selectedPool) {
                 $courseType = Booking::resolveCourseType($course->id);
 
                 // Check for existing booking in the same batch first (idempotency).
@@ -72,7 +76,7 @@ class BookingService
                 }
 
                 // Bypass the cache and compute remaining seats fresh inside the lock
-                $remaining = $this->computeRemainingSeats($centreId, $batch, $session, $isProtocolBooking);
+                $remaining = $this->computeRemainingSeats($centreId, $batch, $session, $selectedPool, $isProtocolBooking);
 
                 if ($remaining <= 0) {
                     throw new Exception('Course session is full.');
@@ -121,6 +125,7 @@ class BookingService
                     'course_id' => $course->id,
                     'course_type' => $courseType,
                     'is_protocol' => $isProtocolBooking,
+                    'capacity_pool' => $selectedPool,
                     'status' => true,
                     'booked_at' => now(),
                     'user_admission_id' => $admission->id,
@@ -180,6 +185,12 @@ class BookingService
 
             $slotRestored = true;
             event(new AdmissionSlotFreed($batch, $booking->userAdmission));
+
+            try {
+                $batch->increment('available_slots');
+            } catch (\Exception $e) {
+                // Non-fatal: availability is derived from bookings, so keep cancel working even if this mirror column fails.
+            }
         }
 
         $booking->delete();
@@ -212,7 +223,13 @@ class BookingService
                 return 0;
             }
 
-            return $this->computeSeatsFromOccupancy($centre, $batch, $session, $forProtocolBooking);
+            return $this->computeSeatsFromOccupancy(
+                $centre,
+                $batch,
+                $session,
+                $forProtocolBooking ? Booking::CAPACITY_POOL_RESERVED : Booking::CAPACITY_POOL_STANDARD,
+                $forProtocolBooking
+            );
         });
     }
 
@@ -235,26 +252,51 @@ class BookingService
      * Used inside the atomic lock in book() to guarantee a fresh read that
      * cannot race with another concurrent booking.
      */
-    protected function computeRemainingSeats(int $centreId, ProgrammeBatch $batch, $session, bool $forProtocolBooking = false): int
+    protected function computeRemainingSeats(
+        int $centreId,
+        ProgrammeBatch $batch,
+        $session,
+        string $selectedPool = Booking::CAPACITY_POOL_STANDARD,
+        bool $isProtocolBooking = false
+    ): int
     {
         $centre = Centre::find($centreId);
         if (! $centre) {
             return 0;
         }
 
-        return $this->computeSeatsFromOccupancy($centre, $batch, $session, $forProtocolBooking);
+        return $this->computeSeatsFromOccupancy($centre, $batch, $session, $selectedPool, $isProtocolBooking);
     }
 
     /**
      * Shared core: capacity minus peak occupancy.
      */
-    private function computeSeatsFromOccupancy(Centre $centre, ProgrammeBatch $batch, $session, bool $forProtocolBooking = false): int
+    private function computeSeatsFromOccupancy(
+        Centre $centre,
+        ProgrammeBatch $batch,
+        $session,
+        string $selectedPool = Booking::CAPACITY_POOL_STANDARD,
+        bool $isProtocolBooking = false
+    ): int
     {
-        // Support both CourseSession and MasterSession inputs. For CourseSession
-        // resolve the linked MasterSession so capacity and occupancy are
-        // computed against the master session's course_type and id.
         if ($session instanceof CourseSession) {
+            $course = $session->relationLoaded('course')
+                ? $session->course
+                : $session->course()->with('programme')->first();
+
+            if ($course?->isInPersonProgramme()) {
+                $breakdown = $this->courseSessionSeatBreakdown($centre, $batch, $session, $course->programme?->courseType());
+
+                return $selectedPool === Booking::CAPACITY_POOL_RESERVED
+                    ? (int) $breakdown['reserved_remaining']
+                    : (int) $breakdown['standard_remaining'];
+            }
+
             $masterSession = $session->masterSession;
+            if (! $masterSession) {
+                return 0;
+            }
+
             $courseType = $masterSession->course_type ?? Programme::COURSE_TYPE_SHORT;
             $masterSessionId = $masterSession->id;
         } else {
@@ -263,34 +305,164 @@ class BookingService
             $masterSessionId = $masterSession->id;
         }
 
-        $capacity = $this->resolveEffectiveCapacity($centre, $courseType, $batch, $forProtocolBooking);
+        $breakdown = $this->getRemainingSeatBreakdown($centre->id, $batch->id, $masterSessionId, false, $courseType);
+
+        if ($selectedPool === Booking::CAPACITY_POOL_RESERVED && $isProtocolBooking) {
+            return (int) $breakdown['reserved_remaining'];
+        }
+
+        return (int) $breakdown['standard_remaining'];
+    }
+
+    public function getRemainingSeatsForCourseSession(int $centreId, int $batchId, int $courseSessionId, bool $forProtocolBooking = false): int
+    {
+        $breakdown = $this->getRemainingSeatBreakdown($centreId, $batchId, $courseSessionId, true);
+
+        return $forProtocolBooking
+            ? (int) ($breakdown['reserved_remaining'] ?? 0)
+            : (int) ($breakdown['standard_remaining'] ?? 0);
+    }
+
+    /**
+     * @return array{capacity:int,reserved_capacity:int,standard_capacity:int,reserved_remaining:int,standard_remaining:int}
+     */
+    public function getRemainingSeatBreakdown(int $centreId, int $batchId, int $sessionId, bool $courseSession = false, ?string $courseTypeOverride = null): array
+    {
+        $centre = Centre::find($centreId);
+        $batch = ProgrammeBatch::find($batchId);
+
+        if (! $centre || ! $batch) {
+            return $this->emptySeatBreakdown();
+        }
+
+        if ($courseSession) {
+            $session = CourseSession::with('course.programme')->find($sessionId);
+
+            if (! $session) {
+                return $this->emptySeatBreakdown();
+            }
+
+            return $this->courseSessionSeatBreakdown($centre, $batch, $session, $courseTypeOverride);
+        }
+
+        $session = MasterSession::find($sessionId);
+
+        if (! $session) {
+            return $this->emptySeatBreakdown();
+        }
+
+        $courseType = $courseTypeOverride ?? ($session->course_type ?? Programme::COURSE_TYPE_SHORT);
+        $capacity = $this->resolveEffectiveCapacity($centre, $courseType, $batch, false);
+        $reservedCapacity = $centre->protocolReservedSlotsFor($courseType) ?? 0;
 
         if ($capacity === null) {
             $capacity = self::UNCONFIGURED_ONLINE_CAPACITY_FALLBACK;
         } elseif ($capacity <= 0) {
-            return 0;
+            return $this->emptySeatBreakdown();
         }
 
-        if ($forProtocolBooking) {
-            // Count existing protocol bookings for this batch+master session
-            $occupiedProtocol = Booking::where('programme_batch_id', $batch->id)
-                ->where('master_session_id', $masterSessionId)
-                ->where('is_protocol', true)
-                ->count();
+        $totalCapacity = (int) $capacity + max(0, (int) $reservedCapacity);
+        $reservedCapacity = min(max(0, (int) $reservedCapacity), $totalCapacity);
+        $standardCapacity = max(0, $totalCapacity - $reservedCapacity);
 
-            return max(0, ((int) $capacity) - $occupiedProtocol);
-        }
-
-        $maxOccupied = DB::table('daily_session_occupancy')
+        $rows = DB::table('daily_session_occupancy')
             ->where('centre_id', $centre->id)
-            ->where('master_session_id', $masterSessionId)
+            ->where('master_session_id', $session->id)
             ->whereBetween('date', [
                 $batch->start_date->toDateString(),
                 $batch->end_date->toDateString(),
             ])
-            ->max('occupied_count') ?? 0;
+            ->get(['occupied_count', 'protocol_occupied_count']);
 
-        return max(0, $capacity - $maxOccupied);
+        $reservedOccupied = 0;
+        $standardOccupied = 0;
+
+        foreach ($rows as $row) {
+            $total = max(0, (int) ($row->occupied_count ?? 0));
+            $protocol = min(max(0, (int) ($row->protocol_occupied_count ?? 0)), $total);
+            $standard = max(0, $total - min($protocol, $reservedCapacity));
+
+            $reservedOccupied = max($reservedOccupied, $protocol);
+            $standardOccupied = max($standardOccupied, $standard);
+        }
+
+        return [
+            'capacity' => $totalCapacity,
+            'reserved_capacity' => $reservedCapacity,
+            'standard_capacity' => $standardCapacity,
+            'reserved_remaining' => max(0, $reservedCapacity - $reservedOccupied),
+            'standard_remaining' => max(0, $standardCapacity - $standardOccupied),
+        ];
+    }
+
+    /**
+     * @return array{capacity:int,reserved_capacity:int,standard_capacity:int,reserved_remaining:int,standard_remaining:int}
+     */
+    private function courseSessionSeatBreakdown(Centre $centre, ProgrammeBatch $batch, CourseSession $session, ?string $courseTypeOverride = null): array
+    {
+        $course = $session->relationLoaded('course')
+            ? $session->course
+            : $session->course()->with('programme')->first();
+
+        $courseType = $courseTypeOverride
+            ?? $course?->programme?->courseType()
+            ?? Booking::resolveCourseType((int) $session->course_id);
+
+        $capacity = max(0, (int) ($session->limit ?? 0));
+
+        if ($capacity <= 0) {
+            return $this->emptySeatBreakdown();
+        }
+
+        $reservedCapacity = min(
+            max(0, (int) ($centre->protocolReservedSlotsFor($courseType) ?? 0)),
+            $capacity
+        );
+
+        $totalOccupied = Booking::query()
+            ->where('programme_batch_id', $batch->id)
+            ->where('course_session_id', $session->id)
+            ->where('status', true)
+            ->count();
+
+        $reservedOccupied = Booking::query()
+            ->where('programme_batch_id', $batch->id)
+            ->where('course_session_id', $session->id)
+            ->where('status', true)
+            ->where(function ($query) {
+                $query->where('capacity_pool', Booking::CAPACITY_POOL_RESERVED)
+                    ->orWhere(function ($legacy) {
+                        $legacy->whereNull('capacity_pool')
+                            ->where('is_protocol', true);
+                    });
+            })
+            ->count();
+
+        $reservedOccupied = min($reservedCapacity, $reservedOccupied, $totalOccupied);
+        $standardCapacity = max(0, $capacity - $reservedCapacity);
+        $standardOccupied = max(0, $totalOccupied - $reservedOccupied);
+
+        return [
+            'capacity' => $capacity,
+            'reserved_capacity' => $reservedCapacity,
+            'standard_capacity' => $standardCapacity,
+            'reserved_remaining' => max(0, $reservedCapacity - $reservedOccupied),
+            'standard_remaining' => max(0, $standardCapacity - $standardOccupied),
+        ];
+    }
+
+    /**
+     * @return array{capacity:int,reserved_capacity:int,standard_capacity:int,reserved_remaining:int,standard_remaining:int}
+     */
+    private function emptySeatBreakdown(): array
+    {
+        return [
+            'capacity' => 0,
+            'reserved_capacity' => 0,
+            'standard_capacity' => 0,
+            'reserved_remaining' => 0,
+            'standard_remaining' => 0,
+        ];
     }
 
     /**
@@ -437,35 +609,58 @@ class BookingService
                     continue;
                 }
 
-                // Compute and cache (align with computeSeatsFromOccupancy capacity rules)
                 $courseType = $session->course_type ?? Programme::COURSE_TYPE_SHORT;
-                $capacity = $this->resolveEffectiveCapacity($centre, $courseType, $batch, $forProtocolBooking);
+                $standardCapacity = $this->resolveEffectiveCapacity($centre, $courseType, $batch, false);
+                $reservedCapacity = max(0, (int) ($centre->protocolReservedSlotsFor($courseType) ?? 0));
 
-                if ($capacity === null) {
-                    $capacity = self::UNCONFIGURED_ONLINE_CAPACITY_FALLBACK;
-                } elseif ($capacity <= 0) {
-                    $results[$key] = 0;
-                    Cache::put($cacheKey, 0, now()->addHour());
-
-                    continue;
+                if ($standardCapacity === null) {
+                    $standardCapacity = self::UNCONFIGURED_ONLINE_CAPACITY_FALLBACK;
+                } elseif ($standardCapacity < 0) {
+                    $standardCapacity = 0;
                 }
 
-                // Get max occupancy for this session within the batch date range
                 $sessionOccupancy = $occupancyData->get($sessionId, collect());
-                $maxOccupied = $sessionOccupancy
+                $rows = $sessionOccupancy
                     ->filter(function ($row) use ($batch) {
                         $date = Carbon::parse($row->date);
 
                         return $date->between($batch->start_date, $batch->end_date);
-                    })
-                    ->max('occupied_count') ?? 0;
+                    });
 
-                $remaining = max(0, $capacity - $maxOccupied);
+                if ($forProtocolBooking) {
+                    $protocolOccupied = $rows->max(function ($row) {
+                        return max(0, (int) ($row->protocol_occupied_count ?? 0));
+                    }) ?? 0;
+                    $remaining = max(0, $reservedCapacity - $protocolOccupied);
+                } else {
+                    $standardOccupied = $rows->max(function ($row) use ($reservedCapacity) {
+                        $total = max(0, (int) ($row->occupied_count ?? 0));
+                        $protocol = min(max(0, (int) ($row->protocol_occupied_count ?? 0)), $reservedCapacity);
+
+                        return max(0, $total - $protocol);
+                    }) ?? 0;
+                    $remaining = max(0, $standardCapacity - $standardOccupied);
+                }
+
                 $results[$key] = $remaining;
                 Cache::put($cacheKey, $remaining, now()->addHour());
             }
         }
 
         return $results;
+    }
+
+    private function resolveCapacityPool(bool $isProtocolBooking, ?string $capacityPool = null): string
+    {
+        $requestedPool = in_array($capacityPool, [
+            Booking::CAPACITY_POOL_RESERVED,
+            Booking::CAPACITY_POOL_STANDARD,
+        ], true) ? $capacityPool : null;
+
+        if (! $isProtocolBooking) {
+            return Booking::CAPACITY_POOL_STANDARD;
+        }
+
+        return $requestedPool ?: Booking::CAPACITY_POOL_RESERVED;
     }
 }

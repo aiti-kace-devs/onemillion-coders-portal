@@ -6,6 +6,8 @@ use App\Http\Controllers\NotificationController;
 use App\Models\AdmissionWaitlist;
 use App\Models\Booking;
 use App\Models\Course;
+use App\Models\CourseSession;
+use App\Models\MasterSession;
 use App\Models\ProgrammeBatch;
 use App\Models\User;
 use App\Models\UserAdmission;
@@ -46,7 +48,7 @@ class HandleEnrollmentJob
     {
         $studentId = StudentIdGenerator::generate($this->user, $this->course);
         $centreId = $this->course->centre_id;
-        $courseType = Booking::resolveCourseType($this->course->id);
+        $bookingService = app(BookingService::class);
 
         $this->cancelPreviousBookingIfNeeded();
 
@@ -62,18 +64,36 @@ class HandleEnrollmentJob
 
         $this->user->save();
 
-        $this->admission = UserAdmission::updateOrCreate(
-            ['user_id' => $this->user->userId],
-            [
-                'course_id' => $this->course->id,
-                'programme_batch_id' => $this->batch->id,
-                'email_sent' => now(),
-                'confirmed' => now(),
-                'session' => $this->isSelfPaced ? null : $this->sessionId,
-            ]
-        );
-
         if ($this->shouldCreateBooking()) {
+            $session = $this->resolveSessionModel();
+
+            if (! $session) {
+                throw new \Exception('The selected session id is invalid.');
+            }
+
+            $this->booking = $bookingService->book(
+                $this->user,
+                $this->course,
+                $this->batch,
+                $session,
+                $this->isProtocolBooking,
+                $this->capacityPool
+            );
+
+            $this->admission = $this->booking?->userAdmission?->fresh()
+                ?? UserAdmission::where('user_id', $this->user->userId)->first();
+        } else {
+            $this->admission = UserAdmission::updateOrCreate(
+                ['user_id' => $this->user->userId],
+                [
+                    'course_id' => $this->course->id,
+                    'programme_batch_id' => $this->batch->id,
+                    'email_sent' => now(),
+                    'confirmed' => now(),
+                    'session' => null,
+                ]
+            );
+
             AvailabilityService::clearCache(
                 $centreId,
                 $this->course->id,
@@ -81,50 +101,7 @@ class HandleEnrollmentJob
                 $this->batch->end_date
             );
 
-            $selectedPool = $this->resolveCapacityPool();
-
-            $this->booking = Booking::firstOrCreate(
-                [
-                    'user_id' => $this->user->userId,
-                    'programme_batch_id' => $this->batch->id,
-                    'status' => true,
-                ],
-                [
-                    'master_session_id' => $this->isInPerson ? null : $this->sessionId,
-                    'course_session_id' => $this->isInPerson ? $this->sessionId : null,
-                    'centre_id' => $centreId,
-                    'course_id' => $this->course->id,
-                    'course_type' => $courseType,
-                    'is_protocol' => $this->isProtocolBooking,
-                    'capacity_pool' => $selectedPool,
-                    'booked_at' => now(),
-                ]
-            );
-
-            $bookingChanged = false;
-            if ((bool) $this->booking->is_protocol !== $this->isProtocolBooking) {
-                $this->booking->is_protocol = $this->isProtocolBooking;
-                $bookingChanged = true;
-            }
-
-            if ($this->booking->capacity_pool !== $selectedPool) {
-                $this->booking->capacity_pool = $selectedPool;
-                $bookingChanged = true;
-            }
-
-            if ($this->admission && (int) $this->booking->user_admission_id !== (int) $this->admission->id) {
-                $this->booking->user_admission_id = $this->admission->id;
-                $bookingChanged = true;
-            }
-
-            if ($bookingChanged) {
-                $this->booking->saveQuietly();
-                $this->booking->refresh();
-            }
-
-            if ($this->sessionId) {
-                $this->clearRemainingSeatCaches((int) $centreId, (int) $this->batch->id, (int) $this->sessionId);
-            }
+            AdmissionWaitlist::where('user_id', $this->user->userId)->delete();
         }
 
         NotificationController::notify(
@@ -161,7 +138,7 @@ class HandleEnrollmentJob
 
     protected function shouldCreateBooking(): bool
     {
-        return $this->sessionId !== null || $this->isSelfPaced || $this->withSupport;
+        return $this->sessionId !== null;
     }
 
     protected function cancelPreviousBookingIfNeeded(): void
@@ -192,6 +169,36 @@ class HandleEnrollmentJob
         }
 
         return $requestedPool ?: Booking::CAPACITY_POOL_RESERVED;
+    }
+
+    protected function resolveSessionModel(): CourseSession|MasterSession|null
+    {
+        if ($this->sessionId === null) {
+            return null;
+        }
+
+        if (! $this->isInPerson) {
+            return MasterSession::find($this->sessionId);
+        }
+
+        $session = CourseSession::find($this->sessionId);
+        if (! $session || ! $session->status) {
+            return null;
+        }
+
+        if (strtolower(trim((string) ($session->session ?? ''))) === 'online') {
+            return null;
+        }
+
+        if ((int) $session->course_id !== (int) $this->course->id) {
+            return null;
+        }
+
+        if ($session->centre_id !== null && (int) $session->centre_id !== (int) $this->course->centre_id) {
+            return null;
+        }
+
+        return $session;
     }
 
     protected function clearRemainingSeatCaches(int $centreId, int $batchId, int $sessionId): void

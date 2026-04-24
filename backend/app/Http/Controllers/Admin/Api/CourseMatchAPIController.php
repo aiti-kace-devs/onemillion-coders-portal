@@ -615,6 +615,7 @@ class CourseMatchAPIController extends Controller
         $today = Carbon::today()->toDateString();
 
         $query = Course::join('centres', 'courses.centre_id', '=', 'centres.id')
+            ->join('programmes', 'courses.programme_id', '=', 'programmes.id')
             ->join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
             ->whereNotNull('courses.programme_id')
             ->where('courses.status', 1)
@@ -622,6 +623,8 @@ class CourseMatchAPIController extends Controller
             ->where('admission_batches.end_date', '>=', $today)
             ->where('admission_batches.completed', false)
             ->where('admission_batches.status', true);
+
+        $this->applyActiveCourseAvailabilityFilter($query);
 
         if ($branchId !== null) {
             $query->where('centres.branch_id', $branchId);
@@ -638,6 +641,7 @@ class CourseMatchAPIController extends Controller
         $today = Carbon::today()->toDateString();
 
         $query = Course::join('centres', 'courses.centre_id', '=', 'centres.id')
+            ->join('programmes', 'courses.programme_id', '=', 'programmes.id')
             ->join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
             ->whereNotNull('courses.programme_id')
             ->where('courses.status', 1)
@@ -646,11 +650,31 @@ class CourseMatchAPIController extends Controller
             ->where('admission_batches.completed', false)
             ->where('admission_batches.status', true);
 
+        $this->applyActiveCourseAvailabilityFilter($query);
+
         if ($centreId !== null) {
             $query->where('courses.centre_id', $centreId);
         }
 
         return $query->get(['courses.id', 'courses.programme_id', 'courses.centre_id']);
+    }
+
+    protected function applyActiveCourseAvailabilityFilter($query): void
+    {
+        $query->where(function ($availabilityQuery) {
+            $availabilityQuery
+                ->whereRaw('LOWER(TRIM(programmes.mode_of_delivery)) != ?', ['in person'])
+                ->orWhereExists(function ($sessionQuery) {
+                    $sessionQuery->select(DB::raw(1))
+                        ->from('course_sessions')
+                        ->whereColumn('course_sessions.course_id', 'courses.id')
+                        ->where('course_sessions.status', true)
+                        ->where(function ($sessionTypeQuery) {
+                            $sessionTypeQuery->whereNull('course_sessions.session')
+                                ->orWhereRaw('LOWER(TRIM(course_sessions.session)) != ?', ['online']);
+                        });
+                });
+        });
     }
 
     /**

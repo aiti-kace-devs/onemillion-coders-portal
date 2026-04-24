@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\HandleEnrollmentJob;
 use App\Models\Booking;
 use App\Models\Course;
 use App\Models\CourseSession;
 use App\Models\MasterSession;
 use App\Models\ProgrammeBatch;
-use App\Models\User;
-use App\Models\UserAdmission;
-use App\Models\AdmissionWaitlist;
 use App\Services\AvailabilityService;
 use App\Services\BookingService;
 use App\Services\GhanaCardService;
@@ -17,6 +15,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -28,14 +27,17 @@ class BookingController extends Controller
     ): JsonResponse
     {
         // Check if this is a self-paced enrollment (nullable query parameter)
-        $isSelfPaced = $request->query('self-paced') === 'true';
+        $isSelfPaced = filter_var($request->query('self-paced', 'false'), FILTER_VALIDATE_BOOLEAN);
+        $withSupport = filter_var($request->query('with-support', 'false'), FILTER_VALIDATE_BOOLEAN);
 
         // Adjust validation based on self-paced flag
         $validationRules = [
             'programme_batch_id' => 'required|integer|exists:programme_batches,id',
             'course_id' => 'required|integer|exists:courses,id',
-            'session_id' => $isSelfPaced ? 'nullable|integer' : 'required|integer',
+            'session_id' => 'nullable|integer',
+            'course_session_id' => 'nullable|integer',
             'is_protocol' => 'sometimes|boolean',
+            'capacity_pool' => 'nullable|string|in:reserved,standard',
         ];
 
         $validated = $request->validate($validationRules);
@@ -67,8 +69,7 @@ class BookingController extends Controller
         }
 
         $course = Course::find($validated['course_id']);
-        $programme = $course->programme;
-        $isInPerson = strtolower(trim((string) $programme->mode_of_delivery)) === 'in person';
+        $isInPerson = $course->isInPersonProgramme();
 
         if ($course->programme_id !== $batch->programme_id) {
             return response()->json([
@@ -77,96 +78,73 @@ class BookingController extends Controller
             ], 422);
         }
 
+        if ($withSupport && ! (bool) ($course->centre?->is_ready)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Resource (internet & laptop) support is not available for the selected centre at this time. You can try again later',
+            ], 422);
+        }
+
         // Handle self-paced enrollment (no session required)
         if ($isSelfPaced) {
-            $user->registered_course = $course->id;
-            $user->shortlist = true;
-            $user->save();
-
-            UserAdmission::updateOrCreate(
-                ['user_id' => $user->userId],
-                [
-                    'programme_batch_id' => $batch->id,
-                    'email_sent' => now(),
-                    'confirmed' => now(),
-                    'course_id' => $course->id,
-                ]
+            $job = new HandleEnrollmentJob(
+                $user,
+                $course,
+                $batch,
+                null,
+                true,
+                false,
+                false,
+                (bool) ($validated['is_protocol'] ?? false) || (bool) ($user->is_protocol ?? false),
+                $validated['capacity_pool'] ?? null
             );
 
-            // Remove from waitlist if exists
-            AdmissionWaitlist::where('user_id', $user->userId)->delete();
-
-            NotificationController::notify(
-                $user->id,
-                'COURSE_SELECTION',
-                'Enrollment Confirmed',
-                'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong> (self-paced). You will be notified of next steps.'
-            );
+            $job->handle();
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Self-paced enrollment successful.',
+                'redirect_url' => url('/student/dashboard'),
             ], 201);
         }
 
         // Fetch session for non-self-paced enrollments
-        if ($isInPerson) {
-            $session = CourseSession::find($validated['session_id']);
-            if (!$session || $session->course_id !== $course->id) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'The selected session id is invalid.',
-                    'errors' => ['session_id' => ['The selected session id is invalid.']],
-                ], 422);
-            }
-            else {
-                        $user->registered_course = $course->id;
-                        $user->shortlist = true;
-                        $user->save();
-                        UserAdmission::updateOrCreate(
-                            ['user_id' => $user->userId],
-                            [
-                                'course_id' => $course->id,
-                                'programme_batch_id' => $batch->id,
-                                'email_sent' => now(),
-                                'confirmed' => now(),
-                                'session' => $session->id,
-                            ]
-                        );
-
-                        // Remove from waitlist if exists
-                        AdmissionWaitlist::where('user_id', $user->userId)->delete();
-
-                        NotificationController::notify(
-                            $user->id,
-                            'COURSE_SELECTION',
-                            'Enrollment Confirmed',
-                            'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
-                        );
-
-                        return response()->json([
-                            'status' => 'success',
-                            'message' => 'Booking successful.',
-                        ], 201);
-
-            }
-        } else {
-            $session = MasterSession::find($validated['session_id']);
-            if (!$session) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'The selected session id is invalid.',
-                    'errors' => ['session_id' => ['The selected session id is invalid.']],
-                ], 422);
-            }
+        try {
+            $requestedSessionId = $this->resolveRequestedSessionId($validated, $isInPerson, $isSelfPaced);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Please submit one valid session for this enrollment.',
+                'errors' => $e->errors(),
+            ], 422);
         }
 
-        $isProtocolBooking = (bool) ($validated['is_protocol'] ?? false);
+        $session = $this->resolveSession($course, $isInPerson, $requestedSessionId);
+        if (! $session) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'The selected session id is invalid.',
+                'errors' => ['session_id' => ['The selected session id is invalid.']],
+            ], 422);
+        }
+
+        $isProtocolBooking = (bool) ($validated['is_protocol'] ?? false) || (bool) ($user->is_protocol ?? false);
+        $job = new HandleEnrollmentJob(
+            $user,
+            $course,
+            $batch,
+            $session->id,
+            false,
+            $withSupport,
+            $isInPerson,
+            $isProtocolBooking,
+            $validated['capacity_pool'] ?? null
+        );
 
         try {
-            $bookingService->book($user, $course, $batch, $session, $isProtocolBooking);
+            $job->handle();
         } catch (Exception $e) {
-            $forProtocol = (bool) ($user->is_protocol ?? false) || (bool) ($validated['is_protocol'] ?? false);
+            $forProtocol = $isProtocolBooking;
             $recommendations = $availabilityService->getAvailableSlots(
                 $course->centre_id,
                 $course->id,
@@ -182,17 +160,64 @@ class BookingController extends Controller
             ], 409);
         }
 
-        NotificationController::notify(
-            $user->id,
-            'COURSE_SELECTION',
-            'Enrollment Confirmed',
-            'You have successfully enrolled in <strong>' . e($course->course_name) . '</strong>. You will be notified of next steps.'
-        );
-
         return response()->json([
             'status' => 'success',
             'message' => 'Booking successful.',
+            'redirect_url' => url('/student/dashboard'),
         ], 201);
+    }
+
+    protected function resolveRequestedSessionId(array $validated, bool $isInPerson, bool $isSelfPaced): int
+    {
+        $sessionId = isset($validated['session_id']) ? (int) $validated['session_id'] : null;
+        $courseSessionId = isset($validated['course_session_id']) ? (int) $validated['course_session_id'] : null;
+
+        if ($sessionId !== null && $courseSessionId !== null && $sessionId !== $courseSessionId) {
+            throw ValidationException::withMessages([
+                'session_id' => ['Please submit only one matching session for this enrollment.'],
+                'course_session_id' => ['Please submit only one matching session for this enrollment.'],
+            ]);
+        }
+
+        if ($isSelfPaced) {
+            return 0;
+        }
+
+        if ($isInPerson) {
+            return (int) ($courseSessionId ?? $sessionId ?? 0);
+        }
+
+        return (int) ($sessionId ?? 0);
+    }
+
+    protected function resolveSession(Course $course, bool $isInPerson, int $sessionId): CourseSession|MasterSession|null
+    {
+        if ($sessionId < 1) {
+            return null;
+        }
+
+        if (! $isInPerson) {
+            return MasterSession::find($sessionId);
+        }
+
+        $session = CourseSession::find($sessionId);
+        if (! $session || ! $session->status) {
+            return null;
+        }
+
+        if (strtolower(trim((string) ($session->session ?? ''))) === 'online') {
+            return null;
+        }
+
+        if ((int) $session->course_id !== (int) $course->id) {
+            return null;
+        }
+
+        if ($session->centre_id !== null && (int) $session->centre_id !== (int) $course->centre_id) {
+            return null;
+        }
+
+        return $session;
     }
 
     public function destroy(Request $request, Booking $booking, BookingService $bookingService): JsonResponse
