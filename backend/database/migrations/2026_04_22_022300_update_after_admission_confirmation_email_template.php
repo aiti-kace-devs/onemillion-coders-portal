@@ -33,14 +33,6 @@ This is to confirm your training details for **{courseSessioName}**. <br>
 Please keep this information for your records and ensure you are available to participate as scheduled.
 [endcomponent]: #
 
-@if($data['link'])
-You can join the official WhatsApp group for this session by clicking the button below.
-
-[component]: # ('mail::button', ['url' => '{link}'])
-Join WhatsApp Group
-[endcomponent]: #
-@endif
-
 [component]: # ('mail::panel')
 If any of the details above change, you will be notified through your registered email address and phone number.
 [endcomponent]: #
