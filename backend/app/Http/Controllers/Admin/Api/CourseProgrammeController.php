@@ -515,9 +515,7 @@ protected function courseHasAvailableSlots($course, $programmeId = null): bool
     
     // Find active admission batch
     $today = \Carbon\Carbon::today();
-    $admissionBatch = Batch::where('start_date', '<=', $today)
-        ->where('end_date', '>=', $today)
-        ->where('status', true)
+    $admissionBatch = Batch::where('status', true)
         ->where('completed', false)
         ->first();
 
