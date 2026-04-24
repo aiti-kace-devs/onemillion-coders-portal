@@ -39,8 +39,6 @@ class IntegrationTestScenarioSeeder extends Seeder
 
         $today = Carbon::today();
         $activeAdmission = Batch::query()
-            ->whereDate('start_date', '<=', $today)
-            ->whereDate('end_date', '>=', $today)
             ->where('status', true)
             ->where('completed', false)
             ->orderBy('id')

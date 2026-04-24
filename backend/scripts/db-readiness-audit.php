@@ -75,8 +75,6 @@ $today = now()->toDateString();
 // Current admission window (matches InPersonAvailabilityController logic)
 $activeAdmission = tableExists('admission_batches')
     ? DB::table('admission_batches')
-        ->where('start_date', '<=', $today)
-        ->where('end_date', '>=', $today)
         ->where('status', true)
         ->where('completed', false)
         ->count()

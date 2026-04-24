@@ -941,9 +941,7 @@ public function availabilityPerCentre($programmeId, Request $request, BookingSer
 
         // Find the current active admission batch
         $today = Carbon::today();
-        $admissionBatch = Batch::where('start_date', '<=', $today)
-            ->where('end_date', '>=', $today)
-            ->where('status', true)
+        $admissionBatch = Batch::where('status', true)
             ->where('completed', false)
             ->first();
 

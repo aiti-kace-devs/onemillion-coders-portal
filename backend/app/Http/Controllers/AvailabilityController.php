@@ -70,9 +70,7 @@ public function batches(Request $request, BookingService $bookingService): JsonR
 
     // Find the current active admission batch
     $today = Carbon::today();
-    $admissionBatch = Batch::where('start_date', '<=', $today)
-        ->where('end_date', '>=', $today)
-        ->where('status', true)
+    $admissionBatch = Batch::where('status', true)
         ->where('completed', false)
         ->first();
 
@@ -125,11 +123,11 @@ public function batches(Request $request, BookingService $bookingService): JsonR
     // Calculate capacity
     $capacity = $isInPerson ? $sessions->sum('limit') : $centre->slotCapacityFor($courseType);
 
-    // ✅ Initialize remainingSeats array
+    // Initialize remainingSeats array
     $remainingSeats = [];
 
     if (! $isInPerson) {
-        // ✅ ONLINE: Per-cohort, per-session capacity (NOT shared across cohorts)
+        // ONLINE: Per-cohort, per-session capacity (NOT shared across cohorts)
         // Determine capacity based on programme's time_allocation
         $timeAllocation = $programme->time_allocation;
         
@@ -142,11 +140,11 @@ public function batches(Request $request, BookingService $bookingService): JsonR
             $programmeCapacity = (int) ($centre->slotCapacityFor($courseType) ?? 0);
         }
 
-        // ✅ Count UserAdmission grouped by programme_batch_id AND session
+        //  Count UserAdmission grouped by programme_batch_id AND session
         $sessionIds = $sessions->pluck('id')->toArray();
         $batchIds = $batches->pluck('id')->toArray();
         
-        $bookedPerBatchSession = \App\Models\UserAdmission::select(
+        $bookedPerBatchSession = UserAdmission::select(
                 'programme_batch_id',
                 'session', 
                 DB::raw('COUNT(*) as count')
@@ -161,7 +159,7 @@ public function batches(Request $request, BookingService $bookingService): JsonR
             })
             ->toArray();
 
-        // ✅ Calculate remaining for EACH cohort+session combination
+        //  Calculate remaining for EACH cohort+session combination
         foreach ($batches as $batch) {
             foreach ($sessions as $session) {
                 $key = (string) "{$batch->id}:{$session->id}";
@@ -171,13 +169,13 @@ public function batches(Request $request, BookingService $bookingService): JsonR
         }
     }
 
-    // ✅ Pre-fetch booked counts for in-person sessions (per-cohort)
+    //  Pre-fetch booked counts for in-person sessions (per-cohort)
     $inPersonBookedCounts = [];
     if ($isInPerson && $sessions->isNotEmpty()) {
         $sessionIds = $sessions->pluck('id')->toArray();
         $batchIds = $batches->pluck('id')->toArray();
         
-        $booked = \App\Models\UserAdmission::select(
+        $booked = UserAdmission::select(
                 'programme_batch_id',
                 'session', 
                 DB::raw('COUNT(*) as count')
@@ -209,16 +207,16 @@ public function batches(Request $request, BookingService $bookingService): JsonR
             $inPersonBookedCounts,
             $courseId
         ) {
-            // ✅ Ensure key is string for consistent lookup
+            //  Ensure key is string for consistent lookup
             $key = (string) "{$batch->id}:{$session->id}";
             
             if ($isInPerson) {
-                // ✅ IN-PERSON: Per-cohort capacity (limit - booked for this cohort+session)
+                //  IN-PERSON: Per-cohort capacity (limit - booked for this cohort+session)
                 $limit = $session->limit ?? 0;
                 $bookedCount = $inPersonBookedCounts[$key] ?? 0;
                 $remaining = max(0, $limit - $bookedCount);
             } else {
-                // ✅ ONLINE: Per-cohort capacity (same logic as in-person)
+                //  ONLINE: Per-cohort capacity (same logic as in-person)
                 $remaining = $remainingSeats[$key] ?? 0;
             }
 
@@ -311,9 +309,7 @@ public function batches(Request $request, BookingService $bookingService): JsonR
 
         // Find the current active admission batch
         $today = Carbon::today();
-        $admissionBatch = Batch::where('start_date', '<=', $today)
-            ->where('end_date', '>=', $today)
-            ->where('status', true)
+        $admissionBatch = Batch::where('status', true)
             ->where('completed', false)
             ->first();
 
