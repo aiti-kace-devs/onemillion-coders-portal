@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,6 +11,8 @@ import {
   FiAlertCircle,
   FiList,
   FiArrowUp,
+  FiX,
+  FiMaximize2,
 } from "react-icons/fi";
 import Button from "../../components/Button";
 import { getPageData } from "../../services/pages";
@@ -362,6 +365,7 @@ function GuideBody({ sections, activeStep, onActiveStepChange }) {
 function GuideStepCard({ item, stepNumber }) {
   const images = Array.isArray(item.images) ? item.images.filter(Boolean) : [];
   const parsed = parseDescription(item.description || "");
+  const [lightboxIndex, setLightboxIndex] = useState(null);
 
   return (
     <motion.article
@@ -402,23 +406,119 @@ function GuideStepCard({ item, stepNumber }) {
           {images.length > 0 && (
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {images.map((src, i) => (
-                <div
+                <button
                   key={i}
-                  className="relative aspect-video rounded-xl overflow-hidden bg-gray-100 border border-gray-200"
+                  type="button"
+                  onClick={() => setLightboxIndex(i)}
+                  aria-label={`Open ${item.title} illustration ${i + 1} in fullscreen`}
+                  className="group/img relative aspect-video rounded-xl overflow-hidden bg-gray-100 border border-gray-200 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2"
                 >
                   <Image
-                    src={src}
-                    alt={`${item.title} — illustration ${i + 1}`}
+                    src={encodeURI(src.url)}
+                    alt={`${item.title} illustration ${i + 1}`}
                     fill
-                    className="object-cover"
+                    sizes="(min-width: 640px) 50vw, 100vw"
+                    unoptimized
+                    className="object-cover transition-transform duration-300 group-hover/img:scale-[1.02]"
                   />
-                </div>
+                  <span className="pointer-events-none absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors" />
+                  <span className="pointer-events-none absolute top-2 right-2 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/90 backdrop-blur-sm shadow-sm opacity-0 group-hover/img:opacity-100 transition-opacity">
+                    <FiMaximize2 className="w-4 h-4 text-gray-800" />
+                  </span>
+                </button>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {lightboxIndex !== null && (
+        <ImageLightbox
+          images={images}
+          index={lightboxIndex}
+          title={item.title}
+          onClose={() => setLightboxIndex(null)}
+          onIndexChange={setLightboxIndex}
+        />
+      )}
     </motion.article>
+  );
+}
+
+function ImageLightbox({ images, index, title, onClose, onIndexChange }) {
+  const current = images[index];
+  const hasMultiple = images.length > 1;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      else if (hasMultiple && e.key === "ArrowRight")
+        onIndexChange((index + 1) % images.length);
+      else if (hasMultiple && e.key === "ArrowLeft")
+        onIndexChange((index - 1 + images.length) % images.length);
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [index, images.length, hasMultiple, onClose, onIndexChange]);
+
+  if (!current || !mounted) return null;
+
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${title} illustration ${index + 1}`}
+        onClick={onClose}
+        className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close fullscreen"
+          className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
+        >
+          <FiX className="w-5 h-5" />
+        </button>
+
+        {hasMultiple && (
+          <span className="absolute top-4 left-4 sm:top-6 sm:left-6 text-xs tracking-[0.18em] uppercase text-white/70 font-semibold">
+            {index + 1} / {images.length}
+          </span>
+        )}
+
+        <motion.div
+          key={current.url}
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.96 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          onClick={(e) => e.stopPropagation()}
+          className="relative max-w-[95vw] max-h-[90vh]"
+        >
+          <img
+            src={encodeURI(current.url)}
+            alt={`${title} illustration ${index + 1}`}
+            className="max-w-[95vw] max-h-[90vh] object-contain rounded-lg"
+          />
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>,
+    document.body
   );
 }
 
