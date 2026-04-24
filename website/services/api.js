@@ -326,7 +326,8 @@ export const getSiblingCourses = async (userId, courseId, token, limit = 3) => {
  */
 export const createBooking = async (data, token, options = {}) => {
   try {
-    const qs = options.selfPace ? '?self-paced=true' : '';
+    const selfPace = options.selfPace === true;
+    const qs = `?self-paced=${selfPace}&with-support=${!selfPace}`;
     const response = await apiRequest(`bookings${qs}`, {
       method: 'POST',
       data,
