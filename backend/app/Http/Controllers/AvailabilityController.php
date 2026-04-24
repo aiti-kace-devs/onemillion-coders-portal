@@ -524,6 +524,7 @@ class AvailabilityController extends Controller
             ->sortBy(function ($session) {
                 $time = $session->time ?? $session->course_time ?? optional($session->masterSession)->time ?? '';
 
+                // Chronological by wall-clock start of the time range (not Morning/Afternoon label).
                 return [
                     $this->sessionStartMinutes($time),
                     strtolower(trim((string) $time)),
@@ -536,7 +537,7 @@ class AvailabilityController extends Controller
     protected function sessionStartMinutes(?string $time): int
     {
         $raw = (string) $time;
-        $startTime = trim(preg_split('/\s*[-]\s*/', $raw, 2)[0] ?? '');
+        $startTime = trim(preg_split('/\s*[–—\-]\s*/u', $raw, 2)[0] ?? '');
 
         if ($startTime === '') {
             return PHP_INT_MAX;
@@ -550,7 +551,6 @@ class AvailabilityController extends Controller
 
         return ((int) date('G', $timestamp) * 60) + (int) date('i', $timestamp);
     }
-
 
 
 
