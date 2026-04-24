@@ -131,6 +131,7 @@ class CourseMatchAPIController extends Controller
                 'title' => 'These are Your Recommended Courses',
                 'description' => $description,
                 'location' => [
+                    'centre_id' => $centreID,
                     'centre' => $centreTitle,
                     'region' => $region,
                     'districts' => $districts,
