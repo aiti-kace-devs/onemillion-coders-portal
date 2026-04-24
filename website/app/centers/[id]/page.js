@@ -15,6 +15,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiMaximize2,
+  FiPlay,
 } from "react-icons/fi";
 import {
   MdAccessible,
@@ -39,7 +40,18 @@ export default function CenterDetailPage() {
   const [imageErrors, setImageErrors] = useState({});
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [videoLightboxOpen, setVideoLightboxOpen] = useState(false);
   const [error, setError] = useState(null);
+
+  const openVideoLightbox = () => {
+    setVideoLightboxOpen(true);
+    document.body.style.overflow = "hidden";
+  };
+
+  const closeVideoLightbox = () => {
+    setVideoLightboxOpen(false);
+    document.body.style.overflow = "unset";
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -217,6 +229,7 @@ export default function CenterDetailPage() {
           </button>
         )}
 
+
         {/* Hero content */}
         <div className="absolute bottom-0 left-0 right-0 z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
@@ -282,10 +295,27 @@ export default function CenterDetailPage() {
       </section>
 
       {/* Thumbnail strip */}
-      {images.length > 1 && (
+      {(images.length > 1 || center.video) && (
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+              {center.video && (
+                <button
+                  onClick={openVideoLightbox}
+                  className="relative flex-shrink-0 w-24 h-14 sm:w-28 sm:h-16 rounded-lg overflow-hidden border-2 border-gray-200 hover:border-yellow-400 transition-all group"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black" />
+                  <div className="absolute inset-0 flex items-center justify-center gap-1.5">
+                    <span className="w-6 h-6 rounded-full bg-white/95 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <FiPlay className="w-3 h-3 text-gray-900 ml-0.5" fill="currentColor" />
+                    </span>
+                    <span className="text-[10px] sm:text-xs font-semibold text-white uppercase tracking-wider">
+                      Tour
+                    </span>
+                  </div>
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-500 via-yellow-400 to-green-500" />
+                </button>
+              )}
               {images.map((img, i) => (
                 <button
                   key={i}
@@ -599,6 +629,43 @@ export default function CenterDetailPage() {
                   </span>
                 </div>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Video Lightbox */}
+      <AnimatePresence>
+        {videoLightboxOpen && center.video && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={closeVideoLightbox}
+          >
+            <button
+              onClick={closeVideoLightbox}
+              className="absolute top-4 right-4 md:top-6 md:right-6 w-10 h-10 md:w-12 md:h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-all duration-200 z-10 border border-white/10"
+            >
+              <FiX className="w-5 h-5 md:w-6 md:h-6" />
+            </button>
+
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="relative w-full max-w-6xl aspect-video"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <video
+                src={center.video}
+                controls
+                autoPlay
+                playsInline
+                className="w-full h-full rounded-lg shadow-2xl bg-black"
+              />
             </motion.div>
           </motion.div>
         )}

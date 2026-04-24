@@ -1688,11 +1688,11 @@ export default function CoursesPage({ params }) {
                                 "";
                               return (
                                 <>
-                                  <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-3 text-[11px] sm:text-xs text-sky-950 leading-relaxed">
+                                  {/* <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-3 text-[11px] sm:text-xs text-sky-950 leading-relaxed">
                                     You chose <strong>self-paced study from home</strong>. Your official completion award can
                                     still be verified and collected at the centre listed below — the same region and centre
                                     where classmates may attend in person if they need equipment or connectivity support.
-                                  </div>
+                                  </div> */}
                                   <div className="mb-5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 border border-gray-200 overflow-hidden">
                                     <div className="px-3 sm:px-4 py-3 border-b border-gray-200/60">
                                       <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Course</p>

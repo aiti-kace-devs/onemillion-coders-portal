@@ -31,7 +31,7 @@ const MAX_VIOLATIONS = 3;
 const LEVELS = [
   { key: "beginner", label: "Step 1", color: "#2e7d32" },
   { key: "intermediate", label: "Step 2", color: "#f9a825" },
-  { key: "advanced", label: "Step 3", color: "#c62828" },
+  { key: "advanced", label: "Step 3", color: "#4338ca" },
 ];
 
 // Backend returns level strings as "Beginner" / "Intermediate" / "Advanced".
@@ -584,6 +584,10 @@ export default function QuizPage({ params }) {
             // Entire assessment is done
             const finalScore = correct ? score + 1 : score;
             setLevelScores((p) => ({ ...p, [currentLevel]: finalScore }));
+            setPassedLevels((p) => ({
+              ...p,
+              [currentLevel]: result?.passed_level || false,
+            }));
             setOverallLevel(normaliseLevel(result?.user_overall_level) || null);
             setAssessmentComplete(true);
             setShowLevelEnd(true);
