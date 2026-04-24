@@ -7,7 +7,7 @@ import Footer from "./Footer";
 import { getFooterData } from "@/services";
 
 // Pages that should not show the site header and footer
-const STANDALONE_ROUTES = ["/courses", "/quiz", "/verify-user"];
+const STANDALONE_ROUTES = ["/courses", "/quiz", "/verify-user", "/activate"];
 
 export default function LayoutShell({ children }) {
   const pathname = usePathname();

@@ -24,6 +24,9 @@
             <x-backpack::menu-dropdown-item title="Manage Students" icon="la la-user-graduate" :link="backpack_url('manage-student')" />
             {{-- <x-backpack::menu-dropdown-item title="Students" icon="la la-user-alt" :link="backpack_url('user')" /> --}}
         @endcan
+        @can('student.update.all')
+            <x-backpack::menu-dropdown-item title="Protocol List" icon="la la-file-import" :link="backpack_url('protocol-list')" />
+        @endcan
         @can('student-verification.read.all')
             <x-backpack::menu-dropdown-item title="Student Verifications" icon="la la-check-circle" :link="backpack_url('student-verification')" />
         @endcan

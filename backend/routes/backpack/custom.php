@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\ConstituencyCrudController;
 use App\Http\Controllers\Admin\ManageStudentCrudController;
 use App\Http\Controllers\Admin\CentreCrudController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ProtocolListController;
 use App\Http\Controllers\Admin\UtilitiesController;
 // --------------------------
 // Custom Backpack Routes
@@ -81,6 +82,11 @@ Route::group([
     Route::crud('sms-template', 'SmsTemplateCrudController');
     Route::crud('user', 'UserCrudController');
     Route::crud('manage-student', 'ManageStudentCrudController');
+    Route::get('protocol-list', [ProtocolListController::class, 'index'])->name('protocol-list.index');
+    Route::get('protocol-list/snapshot', [ProtocolListController::class, 'snapshot'])->name('protocol-list.snapshot');
+    Route::post('protocol-list/upload', [ProtocolListController::class, 'upload'])->name('protocol-list.upload');
+    Route::post('protocol-list/save', [ProtocolListController::class, 'save'])->name('protocol-list.save');
+    Route::delete('protocol-list/{protocolList}', [ProtocolListController::class, 'destroy'])->name('protocol-list.destroy');
 
     // Manage Student actions (Per Student)
     Route::post('manage-student/{user}/change-admission', 'ManageStudentCrudController@changeAdmission')->name('manage-student.change-admission');

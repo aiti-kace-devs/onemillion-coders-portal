@@ -423,3 +423,36 @@ export const submitGhanaCardVerification = async (formData, token) => {
     throw error;
   }
 };
+
+/**
+ * Start a one-time protocol activation session.
+ * @param {string} token - Opaque signed invitation token from the activation link.
+ * @returns {Promise<Object>}
+ */
+export const initializeProtocolActivation = async (token) => {
+  try {
+    const response = await apiRequest(`protocol-activation/${encodeURIComponent(token)}`);
+    return response;
+  } catch (error) {
+    console.error('Failed to initialize protocol activation:', error);
+    throw error;
+  }
+};
+
+/**
+ * Activate a protocol participant account.
+ * @param {{ token: string, session_token: string, national_id: string, password: string, password_confirmation: string }} payload
+ * @returns {Promise<Object>}
+ */
+export const activateProtocolAccount = async (payload) => {
+  try {
+    const response = await apiRequest('protocol-activation/activate', {
+      method: 'POST',
+      data: payload,
+    });
+    return response;
+  } catch (error) {
+    console.error('Failed to activate protocol account:', error);
+    throw error;
+  }
+};

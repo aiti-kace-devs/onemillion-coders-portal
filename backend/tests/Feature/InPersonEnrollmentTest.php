@@ -99,6 +99,7 @@ class InPersonEnrollmentTest extends TestCase
             'name' => 'Student',
             'email' => 'ip-'.uniqid().'@test.local',
             'password' => Hash::make('password'),
+            'application_review_completed_at' => now(),
         ]);
 
         $token = app(JwtService::class)->generate($user->id);

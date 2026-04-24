@@ -10,7 +10,7 @@ export default function ClientWrapper({ children }) {
   const pathname = usePathname();
   const [showSplash, setShowSplash] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const isVerificationRoute = pathname?.startsWith("/verify-user");
+  const isVerificationRoute = pathname?.startsWith("/verify-user") || pathname?.startsWith("/activate");
   /** Same routes as LayoutShell STANDALONE — almost always loaded in the Laravel portal iframe. */
   const isPortalEmbedRoute =
     pathname?.startsWith("/courses") || pathname?.startsWith("/quiz");

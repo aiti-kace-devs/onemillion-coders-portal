@@ -72,6 +72,13 @@ Route::prefix('waitlist')->name('api.waitlist.')->middleware(['user.token', 'stu
 
 Route::get('/courses/slot-left', [CourseMatchAPIController::class, 'courseSlotLeft']);
 Route::get('/courses/{courseId}/slot-left', [CourseMatchAPIController::class, 'courseSlotLeft']);
+
+Route::prefix('protocol-activation')->name('api.protocol-activation.')->middleware('throttle:20,1')->group(function () {
+    Route::get('/{token}', [\App\Http\Controllers\Api\ProtocolActivationController::class, 'show'])->name('show');
+    Route::post('/activate', [\App\Http\Controllers\Api\ProtocolActivationController::class, 'activate'])
+        ->middleware('throttle:10,1')
+        ->name('activate');
+});
 // Route::post('/course-match/recommend', [CourseMatchAPIController::class, 'recommend']);
 // Route::post('/course-match/full-recommend', [CourseMatchAPIController::class, 'fullRecommendation']);
 
