@@ -65,6 +65,7 @@ class InPersonEnrollmentTest extends TestCase
             'seat_count' => 50,
             'short_slots_per_day' => 10,
             'long_slots_per_day' => 0,
+            'protocol_reserved_short_slots' => 2,
             'status' => true,
         ]);
 
@@ -113,21 +114,22 @@ class InPersonEnrollmentTest extends TestCase
         $f = $this->makeInPersonFixture();
 
         $res = $this->withHeader('Authorization', 'Bearer '.$f['token'])
-            ->getJson('/api/availability/in-person/batches?course_id='.$f['course']->id);
+            ->getJson('/api/availability/batches?course_id='.$f['course']->id);
 
         $res->assertStatus(200)
             ->assertJsonPath('success', true)
             ->assertJsonFragment(['session_id' => $f['session']->id])
+            ->assertJsonPath('batches.0.sessions.0.master_session_id', null)
             ->assertJsonPath('batches.0.sessions.0.show_seat_count', true);
     }
 
     /** @test */
-    public function in_person_availability_falls_back_to_master_sessions_when_centre_rows_are_missing(): void
+    public function in_person_availability_does_not_fall_back_to_master_sessions_when_course_sessions_are_missing(): void
     {
         $f = $this->makeInPersonFixture();
         $f['session']->delete();
 
-        $master = MasterSession::create([
+        MasterSession::create([
             'master_name' => 'Short Morning',
             'session_type' => 'Morning',
             'time' => '8AM - 9:45AM',
@@ -140,8 +142,33 @@ class InPersonEnrollmentTest extends TestCase
 
         $res->assertStatus(200)
             ->assertJsonPath('success', true)
-            ->assertJsonFragment(['session_id' => $master->id])
-            ->assertJsonFragment(['master_session_id' => $master->id]);
+            ->assertJsonPath('batches.0.sessions', [])
+            ->assertJsonPath('batches.0.standard_sessions', []);
+    }
+
+    /** @test */
+    public function in_person_availability_ignores_centre_level_sessions_not_linked_to_the_selected_course(): void
+    {
+        $f = $this->makeInPersonFixture();
+        $f['session']->delete();
+
+        CourseSession::create([
+            'name' => 'Shared Morning Session',
+            'course_id' => null,
+            'centre_id' => $f['centre']->id,
+            'session_type' => CourseSession::TYPE_CENTRE,
+            'course_time' => '8AM - 9:45AM',
+            'session' => 'Morning',
+            'limit' => 6,
+            'status' => true,
+        ]);
+
+        $res = $this->withHeader('Authorization', 'Bearer '.$f['token'])
+            ->getJson('/api/availability/batches?course_id='.$f['course']->id);
+
+        $res->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('batches.0.sessions', []);
     }
 
     /** @test */
@@ -185,7 +212,7 @@ class InPersonEnrollmentTest extends TestCase
     }
 
     /** @test */
-    public function post_in_person_booking_accepts_master_session_fallback(): void
+    public function post_in_person_booking_rejects_master_session_ids(): void
     {
         $f = $this->makeInPersonFixture(5);
         $f['session']->delete();
@@ -205,16 +232,8 @@ class InPersonEnrollmentTest extends TestCase
                 'session_id' => $master->id,
             ]);
 
-        $res->assertStatus(201)
-            ->assertJsonPath('status', 'success');
-
-        $this->assertDatabaseHas('bookings', [
-            'user_id' => $f['user']->userId,
-            'programme_batch_id' => $f['pb']->id,
-            'course_id' => $f['course']->id,
-            'course_session_id' => null,
-            'master_session_id' => $master->id,
-        ]);
+        $res->assertStatus(422)
+            ->assertJsonPath('status', 'error');
     }
 
     /** @test */
@@ -250,5 +269,110 @@ class InPersonEnrollmentTest extends TestCase
             ]);
 
         $res->assertStatus(409);
+    }
+
+    /** @test */
+    public function protocol_in_person_availability_does_not_expose_standard_sessions_when_reserved_slots_are_full(): void
+    {
+        $f = $this->makeInPersonFixture(2);
+        $f['centre']->update(['protocol_reserved_short_slots' => 1]);
+
+        $protocolUser = User::create([
+            'userId' => 'protocol-ip-'.uniqid(),
+            'name' => 'Protocol Student',
+            'email' => 'protocol-'.uniqid().'@test.local',
+            'password' => Hash::make('password'),
+            'is_protocol' => true,
+        ]);
+        $protocolToken = app(JwtService::class)->generate($protocolUser->id);
+
+        $existingProtocol = User::create([
+            'userId' => 'protocol-existing-'.uniqid(),
+            'name' => 'Existing Protocol Student',
+            'email' => 'protocol-existing-'.uniqid().'@test.local',
+            'password' => Hash::make('password'),
+            'is_protocol' => true,
+        ]);
+
+        Booking::withoutEvents(function () use ($f, $existingProtocol) {
+            Booking::create([
+                'user_id' => $existingProtocol->userId,
+                'programme_batch_id' => $f['pb']->id,
+                'course_session_id' => $f['session']->id,
+                'master_session_id' => null,
+                'centre_id' => $f['centre']->id,
+                'course_id' => $f['course']->id,
+                'course_type' => 'short',
+                'is_protocol' => true,
+                'capacity_pool' => Booking::CAPACITY_POOL_RESERVED,
+                'status' => true,
+                'booked_at' => now(),
+            ]);
+        });
+
+        $res = $this->withHeader('Authorization', 'Bearer '.$protocolToken)
+            ->getJson('/api/availability/batches?course_id='.$f['course']->id.'&forProtocolBooking=true');
+
+        $res->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('batches.0.sessions.0.remaining', 0)
+            ->assertJsonPath('batches.0.sessions.0.standard_remaining', 1)
+            ->assertJsonPath('batches.0.standard_sessions', []);
+    }
+
+    /** @test */
+    public function protocol_in_person_booking_returns_409_when_reserved_slots_are_full_even_if_standard_capacity_remains(): void
+    {
+        $f = $this->makeInPersonFixture(2);
+        $f['centre']->update(['protocol_reserved_short_slots' => 1]);
+
+        $protocolUser = User::create([
+            'userId' => 'protocol-at-capacity-'.uniqid(),
+            'name' => 'Protocol Student',
+            'email' => 'protocol-capacity-'.uniqid().'@test.local',
+            'password' => Hash::make('password'),
+            'is_protocol' => true,
+        ]);
+        $protocolToken = app(JwtService::class)->generate($protocolUser->id);
+
+        $existingProtocol = User::create([
+            'userId' => 'protocol-existing-'.uniqid(),
+            'name' => 'Existing Protocol Student',
+            'email' => 'protocol-existing-'.uniqid().'@test.local',
+            'password' => Hash::make('password'),
+            'is_protocol' => true,
+        ]);
+
+        Booking::withoutEvents(function () use ($f, $existingProtocol) {
+            Booking::create([
+                'user_id' => $existingProtocol->userId,
+                'programme_batch_id' => $f['pb']->id,
+                'course_session_id' => $f['session']->id,
+                'master_session_id' => null,
+                'centre_id' => $f['centre']->id,
+                'course_id' => $f['course']->id,
+                'course_type' => 'short',
+                'is_protocol' => true,
+                'capacity_pool' => Booking::CAPACITY_POOL_RESERVED,
+                'status' => true,
+                'booked_at' => now(),
+            ]);
+        });
+
+        $res = $this->withHeader('Authorization', 'Bearer '.$protocolToken)
+            ->postJson('/api/bookings', [
+                'programme_batch_id' => $f['pb']->id,
+                'course_id' => $f['course']->id,
+                'session_id' => $f['session']->id,
+            ]);
+
+        $res->assertStatus(409)
+            ->assertJsonPath('status', 'error');
+
+        $this->assertDatabaseMissing('bookings', [
+            'user_id' => $protocolUser->userId,
+            'programme_batch_id' => $f['pb']->id,
+            'course_id' => $f['course']->id,
+        ]);
     }
 }

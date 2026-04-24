@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\CourseSession;
-use App\Models\MasterSession;
 use App\Models\ProgrammeBatch;
 use App\Services\AvailabilityService;
 use App\Services\GhanaCardService;
@@ -94,17 +93,10 @@ class InPersonEnrollmentController extends Controller
         }
 
         if (! $centreSession
+            || ! $centreSession->status
             || (int) $centreSession->centre_id !== (int) $course->centre_id
             || $centreSession->session_type !== CourseSession::TYPE_CENTRE
-            || ($centreSession->course_id !== null && (int) $centreSession->course_id !== (int) $course->id)) {
-            $centreSession = MasterSession::where('id', $sessionId)
-                ->where('status', true)
-                ->where('course_type', $course->programme?->courseType())
-                ->where('session_type', '!=', 'Online')
-                ->first();
-        }
-
-        if (! $centreSession) {
+            || (int) $centreSession->course_id !== (int) $course->id) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Course or session not found.',

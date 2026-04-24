@@ -1030,8 +1030,8 @@ public function districtsByBranch(Request $request)
 
             $totalAvailable = 0;
 
-            $batchData = $batches->values()->map(function ($batch, $index) use ($centre, $centreSessions, $remainingSeats, $standardRemainingSeats, $isInPerson, $bookingService, $forProtocol, $centreCapacity, &$totalAvailable) {
-                $sessionData = $centreSessions->map(function ($session) use ($centre, $batch, $remainingSeats, $standardRemainingSeats, $isInPerson, $bookingService, $forProtocol, $centreCapacity, &$totalAvailable) {
+            $batchData = $batches->values()->map(function ($batch, $index) use ($centre, $centreSessions, $remainingSeats, $standardRemainingSeats, $isInPerson, $bookingService, $forProtocol, $centreCapacity, $courseType, &$totalAvailable) {
+                $sessionData = $centreSessions->map(function ($session) use ($centre, $batch, $remainingSeats, $standardRemainingSeats, $isInPerson, $bookingService, $forProtocol, $centreCapacity, $courseType, &$totalAvailable) {
                     $key = "{$batch->id}:{$session->id}";
                     $isCourseSession = $session instanceof CourseSession;
                     if ($isInPerson) {
@@ -1059,7 +1059,7 @@ public function districtsByBranch(Request $request)
                     return [
                         'session_id' => $session->id,
                         'course_session_id' => $isInPerson && $isCourseSession ? $session->id : null,
-                        'master_session_id' => $isInPerson && ! $isCourseSession ? $session->id : ($session->master_session_id ?? null),
+                        'master_session_id' => $isInPerson ? null : ($session->master_session_id ?? null),
                         'session_name' => $isInPerson
                             ? ($isCourseSession ? ($session->session ?? 'Unknown') : ($session->session_type ?? $session->master_name ?? 'Unknown'))
                             : "{$session->session_type} Session",
@@ -1078,7 +1078,7 @@ public function districtsByBranch(Request $request)
                 $reservedPoolHasRoom = $forProtocol
                     ? $sessionData->contains(fn ($session) => (int) ($session['remaining'] ?? 0) > 0)
                     : false;
-                $standardSessionData = $forProtocol && ! $reservedPoolHasRoom
+                $standardSessionData = ! $isInPerson && $forProtocol && ! $reservedPoolHasRoom
                     ? $sessionData
                         ->map(function ($session) {
                             $session['remaining'] = (int) ($session['standard_remaining'] ?? 0);
@@ -1090,7 +1090,7 @@ public function districtsByBranch(Request $request)
                         ->values()
                     : collect();
 
-                if ($forProtocol && ! $reservedPoolHasRoom) {
+                if (! $isInPerson && $forProtocol && ! $reservedPoolHasRoom) {
                     $totalAvailable += $standardSessionData->sum(fn ($session) => (int) ($session['remaining'] ?? 0));
                 }
 
