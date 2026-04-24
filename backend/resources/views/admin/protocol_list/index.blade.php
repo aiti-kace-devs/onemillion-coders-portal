@@ -47,7 +47,7 @@
                             <button id="protocol-upload-btn" type="button" class="btn btn-outline-primary">
                                 <i class="la la-upload me-1"></i> Upload List
                             </button>
-                            <button id="protocol-add-btn" type="button" class="btn btn-outline-dark">
+                            <button id="protocol-add-btn" type="button" class="btn btn-success shadow-sm">
                                 <i class="la la-user-plus me-1"></i> Add Participant
                             </button>
                             <button id="protocol-preview-btn" type="button" class="btn btn-outline-secondary">
@@ -124,8 +124,13 @@
                             Loading rows...
                         </div>
                     </div>
-                    <div id="protocol-mode-badge" class="protocol-mode-badge badge rounded-pill bg-warning-subtle text-dark">
-                        Editing enabled
+                    <div class="d-flex flex-wrap align-items-center justify-content-md-end gap-2">
+                        <button id="protocol-table-add-btn" type="button" class="btn btn-success btn-sm shadow-sm">
+                            <i class="la la-user-plus me-1"></i> Add Participant
+                        </button>
+                        <div id="protocol-mode-badge" class="protocol-mode-badge badge rounded-pill bg-warning-subtle text-dark">
+                            Editing enabled
+                        </div>
                     </div>
                 </div>
 
@@ -164,18 +169,25 @@
             </div>
         </div>
 
-        <div class="modal fade" id="protocol-edit-modal" tabindex="-1" aria-labelledby="protocolEditModalLabel"
+        <div class="modal fade protocol-participant-modal" id="protocol-edit-modal" tabindex="-1"
+            aria-labelledby="protocolEditModalLabel"
             aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header border-0 pb-0">
                         <div>
+                            <span id="protocol-modal-context"
+                                class="badge rounded-pill bg-success-subtle text-success-emphasis mb-2">
+                                Add participant
+                            </span>
                             <h5 class="modal-title" id="protocolEditModalLabel">Participant Details</h5>
-                            <small class="text-muted">Edit the selected row before saving the full table.</small>
+                            <small id="protocol-modal-subtitle" class="text-muted d-block">
+                                Review the participant details below, then save the row you want to keep.
+                            </small>
                         </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body pt-3">
                         <form id="protocol-edit-form" class="row g-3">
                             <input type="hidden" id="protocol-edit-local-key" />
                             <div class="col-md-6">
@@ -233,9 +245,12 @@
                             </div>
                         </form>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer border-0 pt-0">
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" id="protocol-edit-save-btn">Apply Changes</button>
+                        <button type="submit" class="btn btn-primary" id="protocol-edit-save-btn"
+                            form="protocol-edit-form">
+                            Save Participant
+                        </button>
                     </div>
                 </div>
             </div>
@@ -315,6 +330,22 @@
             font-size: 0.75rem;
             color: #b54708;
         }
+
+        .protocol-table-actions {
+            display: flex;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .protocol-participant-modal .modal-content {
+            border-radius: 1.25rem;
+            overflow: hidden;
+        }
+
+        .protocol-participant-modal .modal-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #eef4ff 100%);
+        }
     </style>
 @endpush
 
@@ -341,6 +372,8 @@
                 previewMode: false,
                 editingKey: null,
                 deletingKey: null,
+                modalMode: 'edit',
+                savingRowKey: null,
                 isSaving: false,
                 isUploading: false,
             };
@@ -350,6 +383,7 @@
                 uploadInput: document.getElementById('protocol-upload-input'),
                 uploadBtn: document.getElementById('protocol-upload-btn'),
                 addBtn: document.getElementById('protocol-add-btn'),
+                tableAddBtn: document.getElementById('protocol-table-add-btn'),
                 previewBtn: document.getElementById('protocol-preview-btn'),
                 saveBtn: document.getElementById('protocol-save-btn'),
                 searchInput: document.getElementById('protocol-search-input'),
@@ -363,14 +397,48 @@
                 activationHistoryBody: document.getElementById('protocol-activation-history-body'),
                 editForm: document.getElementById('protocol-edit-form'),
                 editSaveBtn: document.getElementById('protocol-edit-save-btn'),
+                modalContext: document.getElementById('protocol-modal-context'),
+                modalSubtitle: document.getElementById('protocol-modal-subtitle'),
                 deleteConfirmBtn: document.getElementById('protocol-confirm-delete-btn'),
             };
 
+            const editableRowFields = [
+                'first_name',
+                'middle_name',
+                'last_name',
+                'previous_name',
+                'gender',
+                'age',
+                'email',
+                'mobile_no',
+                'ghcard',
+            ];
             const editModalEl = document.getElementById('protocol-edit-modal');
             const deleteModalEl = document.getElementById('protocol-delete-modal');
+
+            moveModalToBody(editModalEl);
+            moveModalToBody(deleteModalEl);
+
             const editModal = bootstrap.Modal.getOrCreateInstance(editModalEl);
             const deleteModal = bootstrap.Modal.getOrCreateInstance(deleteModalEl);
             let snapshotTimer = null;
+
+            function moveModalToBody(modalElement) {
+                if (modalElement && modalElement.parentElement !== document.body) {
+                    document.body.appendChild(modalElement);
+                }
+            }
+
+            function cleanupModalArtifacts() {
+                if (document.querySelector('.modal.show')) {
+                    return;
+                }
+
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('padding-right');
+                document.body.style.removeProperty('overflow');
+                document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
+            }
 
             function decorateRow(row) {
                 return {
@@ -399,6 +467,7 @@
                     created_at: row.created_at ?? null,
                     updated_at: row.updated_at ?? null,
                     __errors: row.__errors ?? null,
+                    __dirty: Boolean(row.__dirty ?? (!row.id || !row.import_batch_committed)),
                 };
             }
 
@@ -678,6 +747,11 @@
                     const errorMarkup = hasErrors ?
                         `<span class="protocol-inline-note">${row.__errors[0]}</span>` :
                         '';
+                    const hasLocalChanges = Boolean(row.__dirty);
+                    const showSaveButton = Boolean(row.id || row.__dirty);
+                    const saveButtonLabel = state.savingRowKey === row.local_key && state.isSaving ? 'Saving...' : 'Save';
+                    const saveButtonClass = hasLocalChanges ? 'btn btn-success' : 'btn btn-outline-success';
+                    const actionDisabled = state.previewMode || state.isSaving ? 'disabled' : '';
                     const statusLabel = invitationStatusLabel(row.invitation_email_status);
                     const statusBadgeClass = invitationStatusBadgeClass(row.invitation_email_status);
                     const statusTime = row.invitation_email_status === 'sent' ?
@@ -690,6 +764,9 @@
                         'No send attempts yet';
                     const failureSummary = row.invitation_email_failure_message ?
                         `<span class="protocol-inline-note">${escapeHtml(row.invitation_email_failure_message)}</span>` :
+                        '';
+                    const dirtySummary = hasLocalChanges ?
+                        '<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis mt-2">Unsaved changes</span>' :
                         '';
 
                     return `
@@ -710,15 +787,22 @@
                                 <div class="small text-muted mt-1">${statusTime}</div>
                                 <div class="small text-muted">${escapeHtml(attemptSummary)}</div>
                                 ${failureSummary}
+                                ${dirtySummary}
                             </td>
                             <td class="text-end">
-                                <div class="btn-group btn-group-sm" role="group">
+                                <div class="protocol-table-actions">
+                                    ${showSaveButton ? `
+                                        <button type="button" class="${saveButtonClass} btn-sm protocol-save-row"
+                                            data-row-key="${row.local_key}" ${actionDisabled}>
+                                            ${saveButtonLabel}
+                                        </button>
+                                    ` : ''}
                                     <button type="button" class="btn btn-outline-primary protocol-edit-row"
-                                        data-row-key="${row.local_key}" ${state.previewMode ? 'disabled' : ''}>
+                                        data-row-key="${row.local_key}" ${actionDisabled}>
                                         Edit
                                     </button>
                                     <button type="button" class="btn btn-outline-danger protocol-delete-row"
-                                        data-row-key="${row.local_key}" ${state.previewMode ? 'disabled' : ''}>
+                                        data-row-key="${row.local_key}" ${actionDisabled}>
                                         Delete
                                     </button>
                                 </div>
@@ -749,9 +833,12 @@
                 dom.previewBtn.innerHTML = state.previewMode ?
                     '<i class="la la-edit me-1"></i> Edit Mode' :
                     '<i class="la la-eye me-1"></i> Preview';
-                dom.saveBtn.disabled = state.isSaving || !state.rows.length;
-                dom.uploadBtn.disabled = state.isUploading || state.previewMode;
-                dom.addBtn.disabled = state.previewMode;
+                dom.saveBtn.disabled = state.isSaving || !state.rows.length || state.previewMode;
+                dom.uploadBtn.disabled = state.isUploading || state.previewMode || state.isSaving;
+                dom.addBtn.disabled = state.previewMode || state.isSaving;
+                if (dom.tableAddBtn) {
+                    dom.tableAddBtn.disabled = state.previewMode || state.isSaving;
+                }
             }
 
             function render() {
@@ -806,9 +893,81 @@
                 return state.rows.find((row) => row.local_key === localKey) || null;
             }
 
-            function openEditModal(row) {
+            function comparableRowValue(field, value) {
+                if (field === 'ghcard') {
+                    return normalizeGhcard(value || '');
+                }
+
+                if (field === 'gender') {
+                    return String(value || '').trim().toLowerCase();
+                }
+
+                if (field === 'age') {
+                    return value === null || value === undefined ? '' : String(value).trim();
+                }
+
+                return String(value || '').trim();
+            }
+
+            function rowHasLocalChanges(row, data) {
+                return editableRowFields.some((field) => comparableRowValue(field, row[field]) !== comparableRowValue(field, data[field]));
+            }
+
+            function moveRowToTop(localKey) {
+                const index = state.rows.findIndex((row) => row.local_key === localKey);
+                if (index <= 0) {
+                    return;
+                }
+
+                const [row] = state.rows.splice(index, 1);
+                state.rows.unshift(row);
+            }
+
+            function clearRowErrors(localKey) {
+                const row = getRowByKey(localKey);
+                if (row) {
+                    row.__errors = null;
+                }
+            }
+
+            function toPayloadRow(row) {
+                return {
+                    local_key: row.local_key,
+                    id: row.id,
+                    first_name: row.first_name,
+                    middle_name: row.middle_name,
+                    last_name: row.last_name,
+                    previous_name: row.previous_name,
+                    gender: row.gender,
+                    age: row.age === '' ? null : row.age,
+                    email: row.email,
+                    mobile_no: row.mobile_no,
+                    ghcard: row.ghcard,
+                    import_batch_id: row.import_batch_id,
+                    import_batch_committed: row.import_batch_committed,
+                };
+            }
+
+            function mergeSavedRow(localKey, savedRow) {
+                const decorated = decorateRow(savedRow);
+                decorated.__dirty = false;
+                decorated.__errors = null;
+
+                const index = state.rows.findIndex((row) => row.local_key === localKey);
+                if (index === -1) {
+                    state.rows.unshift(decorated);
+                    return;
+                }
+
+                state.rows.splice(index, 1, decorated);
+            }
+
+            function openEditModal(row, {
+                mode = 'edit'
+            } = {}) {
                 clearFieldErrors();
                 state.editingKey = row.local_key;
+                state.modalMode = mode;
 
                 document.getElementById('protocol-edit-local-key').value = row.local_key;
                 document.getElementById('protocol-first-name').value = row.first_name || '';
@@ -829,9 +988,16 @@
                 const ghcardChangesUsed = Number(row.ghcard_change_attempts || 0);
                 const emailChangesRemaining = Math.max(0, 2 - emailChangesUsed);
                 const ghcardChangesRemaining = Math.max(0, 2 - ghcardChangesUsed);
+                const isAddMode = mode === 'add';
 
                 emailInput.disabled = Boolean(row.id) && emailChangesRemaining === 0;
                 ghcardInput.disabled = Boolean(row.id) && ghcardChangesRemaining === 0;
+                dom.modalContext.textContent = isAddMode ? 'Add participant' : 'Edit participant';
+                document.getElementById('protocolEditModalLabel').textContent = isAddMode ? 'Add Participant' : 'Edit Participant';
+                dom.modalSubtitle.textContent = isAddMode ?
+                    'Enter the participant details below. Email status and table actions are added automatically after save.' :
+                    'Update the participant details below, then save only this row or save the whole table.';
+                dom.editSaveBtn.textContent = isAddMode ? 'Add Participant' : 'Apply Changes';
 
                 emailMeta.textContent = row.id ?
                     `Email changes used: ${emailChangesUsed}/2. Remaining: ${emailChangesRemaining}. A fresh activation email is sent whenever the email changes.` :
@@ -840,6 +1006,7 @@
                     `Ghana Card changes used: ${ghcardChangesUsed}/2. Remaining: ${ghcardChangesRemaining}. Updating it also triggers a fresh activation email.` :
                     'Use the final Ghana Card number to generate the activation link.';
 
+                cleanupModalArtifacts();
                 editModal.show();
             }
 
@@ -915,14 +1082,21 @@
                     return;
                 }
 
+                const changed = rowHasLocalChanges(row, data);
                 Object.assign(row, data, {
                     age: data.age || '',
                     gender: String(data.gender || '').toLowerCase(),
                     __errors: null,
+                    __dirty: !row.id || row.__dirty || changed,
                 });
 
-                editModal.hide();
+                if (state.modalMode === 'add') {
+                    moveRowToTop(row.local_key);
+                    state.page = 1;
+                }
+
                 render();
+                editModal.hide();
             }
 
             function mergeImportedRows(importedRows) {
@@ -995,6 +1169,8 @@
                         invitation_email_failure_message: incoming.invitation_email_failure_message,
                         created_at: incoming.created_at,
                         updated_at: incoming.updated_at,
+                        __dirty: false,
+                        __errors: null,
                     });
                     nextRows.push(row);
                 });
@@ -1084,61 +1260,116 @@
             }
 
             function payloadRows() {
-                return state.rows.map((row) => ({
-                    local_key: row.local_key,
-                    id: row.id,
-                    first_name: row.first_name,
-                    middle_name: row.middle_name,
-                    last_name: row.last_name,
-                    previous_name: row.previous_name,
-                    gender: row.gender,
-                    age: row.age === '' ? null : row.age,
-                    email: row.email,
-                    mobile_no: row.mobile_no,
-                    ghcard: row.ghcard,
-                    import_batch_id: row.import_batch_id,
-                    import_batch_committed: row.import_batch_committed,
-                }));
+                return state.rows.map((row) => toPayloadRow(row));
             }
 
-            function applyServerErrors(errorRows) {
-                state.rows.forEach((row) => {
-                    row.__errors = null;
-                });
+            function applyServerErrors(errorRows, { clearExisting = true } = {}) {
+                if (clearExisting) {
+                    state.rows.forEach((row) => {
+                        row.__errors = null;
+                    });
+                }
 
                 errorRows.forEach((errorRow) => {
                     const target = getRowByKey(errorRow.local_key);
                     if (target) {
                         target.__errors = errorRow.messages || ['This row needs attention.'];
+                        target.__dirty = true;
                     }
                 });
             }
 
-            async function saveAllRows() {
-                if (!state.rows.length || state.isSaving) {
+            async function submitRows(rows) {
+                const response = await fetch(saveUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        rows,
+                    }),
+                });
+
+                const payload = await response.json();
+
+                return {
+                    response,
+                    payload,
+                };
+            }
+
+            async function saveSingleRow(localKey) {
+                const row = getRowByKey(localKey);
+                if (!row || state.isSaving || state.previewMode) {
                     return;
                 }
 
                 state.isSaving = true;
-                renderButtons();
+                state.savingRowKey = localKey;
+                clearRowErrors(localKey);
+                render();
 
                 try {
-                    const response = await fetch(saveUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken,
-                            'Accept': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            rows: payloadRows(),
-                        }),
-                    });
+                    const {
+                        response,
+                        payload
+                    } = await submitRows([toPayloadRow(row)]);
 
-                    const payload = await response.json();
+                    state.importBatches = Array.isArray(payload.import_batches) ?
+                        payload.import_batches.map(decorateImportBatch) :
+                        state.importBatches;
+
+                    if (response.status === 422) {
+                        applyServerErrors(payload.errors || [], {
+                            clearExisting: false
+                        });
+                        render();
+                        const rowMessage = (payload.errors || [])[0]?.messages?.[0];
+                        showAlert('warning', rowMessage || payload.message || 'This row needs attention before it can be saved.', 7000);
+                        return;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(payload.message || 'Unable to save the selected participant.');
+                    }
+
+                    const savedRow = Array.isArray(payload.rows) ? payload.rows[0] : null;
+                    if (savedRow) {
+                        mergeSavedRow(localKey, savedRow);
+                    }
+
+                    showAlert('success', 'Participant saved successfully.');
+                    render();
+                } catch (error) {
+                    showAlert('danger', error.message || 'Unable to save the selected participant.');
+                } finally {
+                    state.isSaving = false;
+                    state.savingRowKey = null;
+                    render();
+                }
+            }
+
+            async function saveAllRows() {
+                if (!state.rows.length || state.isSaving || state.previewMode) {
+                    return;
+                }
+
+                state.isSaving = true;
+                state.savingRowKey = null;
+                render();
+
+                try {
+                    const {
+                        response,
+                        payload
+                    } = await submitRows(payloadRows());
                     if (response.status === 422) {
                         state.importBatches = Array.isArray(payload.import_batches) ? payload.import_batches.map(decorateImportBatch) : state.importBatches;
-                        applyServerErrors(payload.errors || []);
+                        applyServerErrors(payload.errors || [], {
+                            clearExisting: true
+                        });
                         render();
                         const message = (payload.errors || [])
                             .slice(0, 3)
@@ -1161,7 +1392,8 @@
                     showAlert('danger', error.message || 'Unable to save the protocol list.');
                 } finally {
                     state.isSaving = false;
-                    renderButtons();
+                    state.savingRowKey = null;
+                    render();
                 }
             }
 
@@ -1197,6 +1429,20 @@
             }
 
             function bindEvents() {
+                const handleAddParticipantClick = () => {
+                    const localKey = cryptoRandomKey();
+                    const newRow = decorateRow({
+                        local_key: localKey,
+                        __dirty: true,
+                    });
+                    state.rows.unshift(newRow);
+                    state.page = 1;
+                    render();
+                    openEditModal(newRow, {
+                        mode: 'add'
+                    });
+                };
+
                 dom.searchInput.addEventListener('input', (event) => {
                     state.query = event.target.value || '';
                     state.page = 1;
@@ -1209,15 +1455,10 @@
                 });
 
                 dom.uploadBtn.addEventListener('click', uploadSheet);
-                dom.addBtn.addEventListener('click', () => {
-                    const localKey = cryptoRandomKey();
-                    const newRow = decorateRow({
-                        local_key: localKey,
-                    });
-                    state.rows.unshift(newRow);
-                    openEditModal(newRow);
-                    render();
-                });
+                dom.addBtn.addEventListener('click', handleAddParticipantClick);
+                if (dom.tableAddBtn) {
+                    dom.tableAddBtn.addEventListener('click', handleAddParticipantClick);
+                }
                 dom.saveBtn.addEventListener('click', saveAllRows);
                 window.addEventListener('focus', () => {
                     refreshProtocolSnapshot();
@@ -1236,15 +1477,26 @@
                     event.target.value = normalizeGhcard(event.target.value);
                 });
 
-                dom.editSaveBtn.addEventListener('click', applyEditChanges);
+                dom.editForm.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    applyEditChanges();
+                });
                 dom.deleteConfirmBtn.addEventListener('click', deleteRow);
 
                 dom.tableBody.addEventListener('click', (event) => {
+                    const saveButton = event.target.closest('.protocol-save-row');
+                    if (saveButton) {
+                        saveSingleRow(saveButton.dataset.rowKey);
+                        return;
+                    }
+
                     const editButton = event.target.closest('.protocol-edit-row');
                     if (editButton) {
                         const row = getRowByKey(editButton.dataset.rowKey);
                         if (row) {
-                            openEditModal(row);
+                            openEditModal(row, {
+                                mode: 'edit'
+                            });
                         }
                         return;
                     }
@@ -1252,11 +1504,16 @@
                     const deleteButton = event.target.closest('.protocol-delete-row');
                     if (deleteButton) {
                         state.deletingKey = deleteButton.dataset.rowKey;
+                        cleanupModalArtifacts();
                         deleteModal.show();
                     }
                 });
 
+                editModalEl.addEventListener('shown.bs.modal', () => {
+                    document.getElementById('protocol-first-name')?.focus();
+                });
                 editModalEl.addEventListener('hidden.bs.modal', () => {
+                    cleanupModalArtifacts();
                     clearFieldErrors();
                     const localKey = document.getElementById('protocol-edit-local-key').value;
                     const row = getRowByKey(localKey);
@@ -1275,6 +1532,7 @@
                         render();
                     }
                 });
+                deleteModalEl.addEventListener('hidden.bs.modal', cleanupModalArtifacts);
 
                 snapshotTimer = window.setInterval(() => {
                     refreshProtocolSnapshot();
