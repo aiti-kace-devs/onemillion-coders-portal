@@ -23,10 +23,15 @@ import {
   submitAssessmentAnswer,
   recordViolation,
 } from "../../../services/api";
-import { redirectToStudentDashboard } from "../../../lib/inPersonEnrollmentUi";
+import {
+  getPortalBaseUrl,
+  redirectToStudentDashboard,
+} from "../../../lib/inPersonEnrollmentUi";
 
 // ─── Constants ─────────────────────────────────────────────
 const MAX_VIOLATIONS = 3;
+
+const getStudentVerificationUrl = () => `${getPortalBaseUrl()}/student/verification`;
 
 const LEVELS = [
   { key: "beginner", label: "Step 1", color: "#2e7d32" },
@@ -1076,10 +1081,12 @@ export default function QuizPage({ params }) {
 
                     <div className="space-y-2.5">
                       <button
-                        onClick={() => redirectToStudentDashboard()}
+                        onClick={() =>
+                          redirectToStudentDashboard(getStudentVerificationUrl())
+                        }
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
-                        Proceed to Dashboard <FiArrowRight size={16} />
+                        Proceed to Verification <FiArrowRight size={16} />
                       </button>
                     </div>
                   </div>
@@ -1142,10 +1149,12 @@ export default function QuizPage({ params }) {
                     </div>
                     <div className="space-y-2.5">
                       <button
-                        onClick={() => redirectToStudentDashboard()}
+                        onClick={() =>
+                          redirectToStudentDashboard(getStudentVerificationUrl())
+                        }
                         className="w-full py-3.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-colors bg-[#f9a825] hover:bg-[#f57f17] text-[#121212]"
                       >
-                        Proceed to Dashboard <FiArrowRight size={16} />
+                        Proceed to Verification <FiArrowRight size={16} />
                       </button>
                     </div>
                   </div>

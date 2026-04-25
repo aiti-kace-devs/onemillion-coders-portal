@@ -20,6 +20,19 @@ export default function PartnersSection({ data }) {
     return null;
   }
 
+  // Full row(s) first, partial last (centered) at lg+. Below lg uses a
+  // simple responsive grid. e.g. 8 partners → 5 + 3 centered.
+  const splitRows = (n, max) => {
+    const cols = Math.min(n, max);
+    if (n <= cols) return [n];
+    const partial = n % cols;
+    const fullRows = Math.floor(n / cols);
+    return partial === 0
+      ? Array(fullRows).fill(cols)
+      : [...Array(fullRows).fill(cols), partial];
+  };
+  const lgRows = splitRows(partners.length, 5);
+
   return (
     <section className="py-16 sm:py-24 lg:py-32 bg-gray-900 relative overflow-hidden">
       {/* Dynamic Background */}
@@ -80,12 +93,17 @@ export default function PartnersSection({ data }) {
           </motion.div>
         </div>
 
-        {/* Partners Grid */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={{
+        {/* Partner card factory — same JSX used by both layouts below. */}
+        {(() => {
+          const cardVariants = {
+            hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 30 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              transition: { duration: prefersReducedMotion ? 0.3 : 0.4, ease: "easeOut" },
+            },
+          };
+          const containerVariants = {
             hidden: { opacity: 0 },
             visible: {
               opacity: 1,
@@ -95,22 +113,13 @@ export default function PartnersSection({ data }) {
                 staggerChildren: prefersReducedMotion ? 0 : 0.03,
               },
             },
-          }}
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8"
-        >
-          {partners.map((partner) => (
+          };
+          const renderCard = (partner, extraClass = "") => (
             <motion.div
               key={partner.name}
-              variants={{
-                hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 30 },
-                visible: {
-                  opacity: 1,
-                  y: 0,
-                  transition: { duration: prefersReducedMotion ? 0.3 : 0.4, ease: "easeOut" },
-                },
-              }}
+              variants={cardVariants}
               whileHover={prefersReducedMotion ? {} : { y: -8 }}
-              className="group"
+              className={`group w-full max-w-[260px] ${extraClass}`}
             >
               <div
                 className="cursor-pointer relative h-32 sm:h-40 lg:h-48 border rounded-xl lg:rounded-2xl p-4 sm:p-6 lg:p-8 transition-all duration-300 ease-out group-hover:scale-[1.02] bg-gradient-to-br from-gray-50 via-white to-gray-100 border-gray-200/50 shadow-lg hover:shadow-xl hover:from-yellow-50 hover:via-white hover:to-yellow-50 hover:border-yellow-300/60"
@@ -120,33 +129,67 @@ export default function PartnersSection({ data }) {
                   }
                 }}
               >
-                {/* Enhanced Glow Effect with multiple layers */}
                 <div className="absolute inset-0 rounded-xl lg:rounded-2xl transition-all duration-300 ease-out bg-gradient-to-br from-yellow-400/8 via-transparent to-blue-400/8 opacity-100 group-hover:from-yellow-400/12 group-hover:to-blue-400/12"></div>
-
-                {/* Decorative corner elements */}
                 <div className="absolute top-2 right-2 w-3 h-3 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 opacity-20"></div>
                 <div className="absolute bottom-2 left-2 w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-green-400 opacity-20"></div>
-
-                {/* Logo Container */}
-                <div className="relative h-full flex items-center justify-center">
-                  <div className="relative transform transition-transform duration-300 ease-out group-hover:scale-105 z-10">
+                <div className="relative h-full w-full flex items-center justify-center overflow-hidden">
+                  <div className="relative w-full h-full transform transition-transform duration-300 ease-out group-hover:scale-105 z-10">
                     <Image
                       src={partner.logo}
                       alt={partner.name}
-                      width={partner.width}
-                      height={partner.height}
-                      className="object-contain max-w-full max-h-full transition-all duration-300 ease-out drop-shadow-sm brightness-105 contrast-110 saturate-105 group-hover:drop-shadow-lg"
+                      fill
+                      className="object-contain transition-all duration-300 ease-out drop-shadow-sm brightness-105 contrast-110 saturate-105 group-hover:drop-shadow-lg"
                       sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                     />
                   </div>
                 </div>
-
-                {/* Subtle border accent */}
                 <div className="absolute inset-0 rounded-xl lg:rounded-2xl transition-all duration-300 pointer-events-none ring-1 ring-gray-200/50 group-hover:ring-yellow-300/60"></div>
               </div>
             </motion.div>
-          ))}
-        </motion.div>
+          );
+
+          return (
+            <>
+              {/* Below lg: simple responsive grid */}
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={containerVariants}
+                className="lg:hidden grid justify-items-center gap-4 sm:gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
+              >
+                {partners.map((p) => renderCard(p))}
+              </motion.div>
+
+              {/* lg+: full rows first, partial last row centered */}
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={containerVariants}
+                className="hidden lg:flex flex-col gap-8"
+              >
+                {(() => {
+                  let cursor = 0;
+                  return lgRows.map((rowSize, rowIdx) => {
+                    const slice = partners.slice(cursor, cursor + rowSize);
+                    cursor += rowSize;
+                    return (
+                      <div
+                        key={rowIdx}
+                        className="flex justify-center gap-8"
+                      >
+                        {slice.map((p) =>
+                          renderCard(p, "basis-[calc(20%_-_1.6rem)] shrink-0")
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </motion.div>
+            </>
+          );
+        })()}
 
         {/* Bottom Section */}
         <motion.div
