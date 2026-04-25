@@ -64,7 +64,7 @@ class CourseProgrammeController extends Controller
         $limit = $request->query('limit');
         $centreId = isset($validated['centre_id']) ? (int) $validated['centre_id'] : null;
         $deliveryMode = $this->normalizeProgrammeDeliveryMode($validated['mode'] ?? null);
-        $resolvedFilter = $filter ?: ($centreId !== null ? 'ongoing' : null);
+        $resolvedFilter = $filter ?: null;
 
         if (($validated['mode'] ?? null) !== null && $deliveryMode === null) {
             throw ValidationException::withMessages([

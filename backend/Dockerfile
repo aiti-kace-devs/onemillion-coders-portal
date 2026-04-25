@@ -83,14 +83,12 @@ COPY auth.json ./auth.json
 # ENV SESSION_DRIVER=memcached
 
 # Run composer install. This layer will only be rebuilt if composer.json/lock changes.
+COPY patches/ /patches/
 
 RUN composer install --no-dev --optimize-autoloader --no-scripts \
     && rm -rf /composer/cache \
-    # Fix elFinder PHP 8.3.30 set_time_limit() TypeError
-    && sed -i 's/\$defLimit = ini_get(.max_execution_time.);/\$defLimit = (int)ini_get("max_execution_time");/' \
-       vendor/studio-42/elfinder/php/elFinder.class.php \
-    && sed -i 's/set_time_limit(\$time);/set_time_limit((int)\$time);/' \
-       vendor/studio-42/elfinder/php/elFinder.class.php
+    && patch -p1 -d vendor/studio-42/elfinder \
+       < /patches/elfinder-php83.patch
 
 # Install npm dependencies
 RUN npm install
@@ -104,7 +102,7 @@ RUN chown -R www-data:www-data /var/www/html \
     && mkdir -p  bootstrap/cache storage/framework/sessions storage/app/public/basset storage/logs storage/statamic storage/statamic/stache-locks  resources/views/mail/temp \
     && mkdir -p  bootstrap/cache storage/framework/views \
     && mkdir -p  bootstrap/cache storage/framework/cache storage/framework/cache/data\
-    && chmod -R 775 storage bootstrap/cache
+    && chmod -R 775 storage bootstrap/cache 
 
 EXPOSE 8080
 
