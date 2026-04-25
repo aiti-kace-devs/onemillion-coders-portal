@@ -1,13 +1,13 @@
 FROM php:8.3-fpm-bookworm
 
 # Environment variables
-ENV PHP_PM_MAX_CHILDREN=12 \
+ENV PHP_PM_MAX_CHILDREN=25 \
     NODE_VERSION=20.18.0 \
-    PHP_PM_START_SERVERS=3 \
-    PHP_MIN_SPARE_SERVERS=2 \
-    PHP_MAX_SPARE_SERVERS=4 \
+    PHP_PM_START_SERVERS=6 \
+    PHP_MIN_SPARE_SERVERS=4 \
+    PHP_MAX_SPARE_SERVERS=10 \
     PHP_DATE_TIMEZONE=UTC \
-    PHP_MEMORY_LIMIT=1G \
+    PHP_MEMORY_LIMIT=256M \
     NGINX_VERSION=1.25.3 \
     PHP_VERSION=8.3 \
     PHP_OPEN_BASEDIR=/var/www/html:/dev/stdout:/tmp:/var/www:/var/www/.config/gcloud \
@@ -87,7 +87,10 @@ COPY patches/ /patches/
 
 RUN composer install --no-dev --optimize-autoloader --no-scripts \
     && rm -rf /composer/cache \
-    && patch -p0 --forward --batch < /patches/elfinder-php83.patch || true
+    && patch -p1 --forward --batch \
+       -i /patches/elfinder-php83.patch \
+       vendor/studio-42/elfinder/php/elFinder.class.php \
+    && echo "Patch applied successfully"
 # Install npm dependencies
 RUN npm install
 
