@@ -33,13 +33,18 @@ const backgroundStyle = computed(() => ({
         :style="backgroundStyle"
         class="relative min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-600"
     >
-        <div class="relative z-10 flex items-end mb-4">
+        <div class="relative z-10 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 mb-6 px-4 max-w-3xl w-full">
             <img
                 src="/assets/home/images/c.png"
-                class="h-24 lg:h-28 fill-current"
+                alt="Ministry of Communication, Digital Technology and Innovations"
+                class="h-16 sm:h-20 lg:h-24 w-auto object-contain"
             />
-            <Link href="/">
-                <ApplicationLogo class="w-20 h-20 fill-current text-gray-500" />
+            <span class="h-px w-24 sm:h-12 sm:w-px lg:h-16 bg-white/30" aria-hidden="true"></span>
+            <Link href="/" aria-label="One Million Coders home" class="shrink-0">
+                <ApplicationLogo
+                    src="/assets/images/logo-bt.png"
+                    class="h-16 sm:h-20 lg:h-24 w-auto object-contain"
+                />
             </Link>
         </div>
 
