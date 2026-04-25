@@ -5,6 +5,7 @@ return [
         'student*',
         'password*',
         'login*',
-        'auth*'
+        'auth*',
+        'statamic.api.globals.show',
     ],
 ];

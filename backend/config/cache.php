@@ -92,6 +92,16 @@ return [
             'driver' => 'octane',
         ],
 
+        'failover' => [
+            'driver' => 'failover',
+            'stores' => [
+                'redis',
+                'database',
+                'file',
+                'array'
+            ],
+        ]
+
     ],
 
     /*

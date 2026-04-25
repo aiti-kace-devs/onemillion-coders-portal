@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Log;
 |
 */
 
-Route::redirect('/', 'login');
+Route::redirect('/', config('app.app_route_prefix') . '/login');
 
 
 Route::get('/api/form', [RegistrationFormAPIController::class, 'index']);
@@ -218,30 +218,6 @@ Route::get('admin/roles/permissions', function (Request $request) {
     }
 })->middleware(['web']);
 
-// Test route for debugging
-Route::get('admin/test-roles', function () {
-    $roles = \Spatie\Permission\Models\Role::with('permissions')->get();
-    $permissions = \Spatie\Permission\Models\Permission::all();
-
-    return response()->json([
-        'roles' => $roles->map(function ($role) {
-            return [
-                'id' => $role->id,
-                'name' => $role->name,
-                'permissions' => $role->permissions->pluck('id')->toArray()
-            ];
-        }),
-        'permissions' => $permissions->map(function ($permission) {
-            return [
-                'id' => $permission->id,
-                'name' => $permission->name
-            ];
-        })
-    ]);
-})->middleware(['web']);
-
-
-require __DIR__ . '/auth.php';
 
 // Custom Backpack auth routes with role-based redirect
 Route::group([
@@ -261,4 +237,4 @@ Route::group([
     Route::post('password/reset', '\Backpack\CRUD\app\Http\Controllers\Auth\ResetPasswordController@reset');
 });
 
-require __DIR__ . '/admin.php';
+require __DIR__ . '/auth.php';

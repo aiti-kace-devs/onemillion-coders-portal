@@ -26,7 +26,7 @@ class CheckIfStudentIsAdmitted
         }
 
         if (!$admin && !$admitted) {
-            return redirect('/student/dashboard')->with([
+            return redirect()->route('student.dashboard')->with([
                 'flash' => 'You are not admitted.',
                 'key' => 'error'
             ]);

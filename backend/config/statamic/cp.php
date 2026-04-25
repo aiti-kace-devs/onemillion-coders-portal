@@ -11,9 +11,10 @@ return [
     |
     */
 
+
     'enabled' => env('CP_ENABLED', true),
 
-    'route' => env('CP_ROUTE', 'cp'),
+    'route' => !empty(env('APP_ROUTE_PREFIX')) ? env('APP_ROUTE_PREFIX') . '/cp' : 'cp',
 
     'guard' => 'admin',
 
@@ -29,7 +30,7 @@ return [
 
     'auth' => [
         'enabled' => false,
-        'redirect_to' => '/admin/login',
+        'redirect_to' => !empty(env('APP_ROUTE_PREFIX')) ? env('APP_ROUTE_PREFIX') . '/admin/login' : '/admin/login',
     ],
 
     /*

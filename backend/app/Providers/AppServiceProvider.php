@@ -62,8 +62,10 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
+        // Set the root URL and force HTTPS for production
+        URL::forceRootUrl(config('app.url'));
+
         if ($this->app->isProduction()) {
-            URL::forceRootUrl(config('app.url'));
             URL::forceScheme('https');
             // This fixes the crash during 'php artisan basset:cache'
             $maxTime = ini_get('max_execution_time');
