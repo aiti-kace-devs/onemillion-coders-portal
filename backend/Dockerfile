@@ -87,8 +87,7 @@ COPY patches/ /patches/
 
 RUN composer install --no-dev --optimize-autoloader --no-scripts \
     && rm -rf /composer/cache \
-    && patch -p1 -d vendor/studio-42/elfinder \
-       < /patches/elfinder-php83.patch
+    && patch -p0 < /patches/elfinder-php83.patch
 
 # Install npm dependencies
 RUN npm install
