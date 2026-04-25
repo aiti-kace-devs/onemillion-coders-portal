@@ -2339,14 +2339,35 @@ export default function CoursesPage({ params }) {
             ))}
           </div>
 
-          {/* Retake Quiz button */}
-          <div className="mt-8 sm:mt-10 flex justify-center">
+          {/* Actions */}
+          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-3 justify-center items-center">
             <button
               onClick={handleStartQuizFlow}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white font-semibold text-sm rounded-xl transition-colors"
             >
               <FiTarget className="w-4 h-4" />
               Get New Recommendations
+            </button>
+            <button
+              onClick={() => {
+                const params = new URLSearchParams({ user_id: id });
+                const centreId = previousRecommendations?.location?.centre_id;
+                if (centreId) {
+                  params.set("centre_id", String(centreId));
+                }
+                const preferredMode = getPreferredProgrammeMode();
+                if (preferredMode) {
+                  params.set("mode", preferredMode);
+                }
+                if (token) {
+                  params.set("token", token);
+                }
+                router.push(`/programmes?${params.toString()}`);
+              }}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-sm rounded-xl border border-gray-200 transition-colors"
+            >
+              View All Courses
+              <FiChevronRight className="w-4 h-4" />
             </button>
           </div>
         </motion.div>

@@ -1449,13 +1449,13 @@ const ProgrammeCard = ({
                                   <span className="text-[10px] text-red-500 font-medium">
                                     Full
                                   </span>
-                                ) : session.show_seat_count ? (
+                                ) : (
                                   <span
                                     className={`text-[10px] tabular-nums ${isSelected ? "text-yellow-400" : session.remaining <= 5 ? "text-orange-600 font-medium" : "text-gray-400"}`}
                                   >
                                     {session.remaining} left
                                   </span>
-                                ) : null}
+                                )}
                                 {!isFull && !isSelected && (
                                   <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-yellow-500 transition-all group-hover:translate-x-0.5" />
                                 )}
