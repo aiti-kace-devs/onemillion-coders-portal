@@ -1201,7 +1201,9 @@ public function availabilityPerCentre($programmeId, Request $request, BookingSer
         return ['success' => true, 'available_centres' => $availableCentres];
     });
 
-    return response()->json($response);
+    return response()
+        ->json($response)
+        ->header('Cache-Control', 'public, max-age=60, s-maxage=600, stale-while-revalidate=120');
 }
 
 
