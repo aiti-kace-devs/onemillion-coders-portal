@@ -65,9 +65,7 @@ class RouteServiceProvider extends ServiceProvider
                 return Limit::perMinute(200)->by($user->id);
             }
 
-            $key = $request->ip() . $request->session()->getId();
-
-            return Limit::perMinute(100)->by($key);
+            return Limit::perMinute(100)->by($request->ip() . $request->header('User-Agent'));
         });
     }
 }

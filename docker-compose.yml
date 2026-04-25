@@ -187,12 +187,13 @@ services:
   queue:
     profiles: ["backend"]
     image: omcp-backend:latest
-    container_name: omcp_queue
     restart: unless-stopped
     env_file: .env
     environment:
       - RUN_QUEUE_WORKER=true
       - PHP_MEMORY_LIMIT=512M
+    deploy:
+      replicas: 5  
     depends_on:
       db:
         condition: service_healthy
