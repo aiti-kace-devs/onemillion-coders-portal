@@ -45,7 +45,10 @@ Route::prefix('availability')->name('api.availability.')->middleware(['user.toke
 // Programme availability per centre — authenticated
 Route::get('/programmes/{programmeId}/availability-per-centre', [
     App\Http\Controllers\Admin\Api\CourseProgrammeController::class, 'availabilityPerCentre'
-])->name('api.programmes.availability-per-centre');
+])
+    ->withoutMiddleware('throttle:api')
+    ->middleware('throttle:availability-per-centre')
+    ->name('api.programmes.availability-per-centre');
 
 
 // Booking endpoints — student reserves/cancels a programme_batch slot

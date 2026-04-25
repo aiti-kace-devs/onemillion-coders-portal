@@ -39,8 +39,8 @@ Route::post('/api/switch-to-self-paced-or-with-support', [RegistrationFormAPICon
 Route::get('/api/check-user-recommended-courses/{userID}', [CourseMatchAPIController::class, 'checkUserRecommendedCourses'])->middleware('user.token');
 
 // OTP verification routes for registration
-Route::get('/api/otp/check-email', [OtpController::class, 'checkEmail'])->middleware('throttle:30,1');
-Route::post('/api/otp/send', [OtpController::class, 'send'])->middleware('throttle:10,1');
+Route::get('/api/otp/check-email', [OtpController::class, 'checkEmail'])->middleware('throttle:otp-check-email');
+Route::post('/api/otp/send', [OtpController::class, 'send'])->middleware('throttle:otp-send');
 Route::post('/api/otp/verify', [OtpController::class, 'verify'])->middleware('throttle:20,1');
 Route::get('/api/otp/status', [OtpController::class, 'status'])->middleware('throttle:30,1');
 
