@@ -57,6 +57,21 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting()
     {
+        // 1. Specific Limiter for OTP (Throttles by Email)
+        RateLimiter::for('otp-secure', function (Request $request) {
+            $email = strtolower(trim($request->input('email', '')));
+
+            // If no email is provided, fall back to IP + UserAgent
+            $key = $email ?: ($request->ip() . $request->userAgent());
+
+            return [
+                Limit::perMinute(5)->by($key)->response(function () {
+                    return response()->json(['message' => 'Too many OTP attempts. Try again in a minute.'], 429);
+                }),
+                Limit::perMinute(10)->by($request->ip()), // Safety net for the IP
+            ];
+        });
+
         RateLimiter::for('api', function (Request $request) {
             $user = $request->user();
 
