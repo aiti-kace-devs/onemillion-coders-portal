@@ -102,15 +102,45 @@ class StudentOperation extends Controller
                     'is_online' => strtolower($fullCourse->programme->mode_of_delivery) === 'online',
                 ];
 
-                if ($showPlacementDetails && $fullCourse->batch) {
-                    $cohort = [
-                        'id' => $fullCourse->batch->id,
-                        'title' => $fullCourse->batch->title,
-                        'batch_number' => $fullCourse->batch->batch_number,
-                        'year' => $fullCourse->batch->year,
-                        'start_date' => $fullCourse->batch->start_date,
-                        'end_date' => $fullCourse->batch->end_date,
-                    ];
+                if ($showPlacementDetails) {
+                    $userAdmission = \App\Models\UserAdmission::where('user_id', $user->userId)->first();
+                    $programmeBatch = null;
+
+                    if ($userAdmission && $userAdmission->programme_batch_id) {
+                        $programmeBatch = \App\Models\ProgrammeBatch::with('admissionBatch')->find($userAdmission->programme_batch_id);
+                    }
+
+                    if ($programmeBatch) {
+                        $siblings = \App\Models\ProgrammeBatch::where('admission_batch_id', $programmeBatch->admission_batch_id)
+                            ->where('programme_id', $programmeBatch->programme_id)
+                            ->orderBy('start_date')
+                            ->get();
+
+                        $cohortIndex = $siblings->search(function ($item) use ($programmeBatch) {
+                            return (int)$item->id === (int)$programmeBatch->id;
+                        });
+
+                        $batchNumber = $cohortIndex !== false ? $cohortIndex + 1 : 1;
+                        $admissionBatch = $programmeBatch->admissionBatch;
+
+                        $cohort = [
+                            'id' => $programmeBatch->id,
+                            'title' => $admissionBatch ? $admissionBatch->title : null,
+                            'batch_number' => $batchNumber,
+                            'year' => $admissionBatch ? $admissionBatch->year : now()->year,
+                            'start_date' => $programmeBatch->start_date,
+                            'end_date' => $programmeBatch->end_date,
+                        ];
+                    } else if ($fullCourse->batch) {
+                        $cohort = [
+                            'id' => $fullCourse->batch->id,
+                            'title' => $fullCourse->batch->title,
+                            'batch_number' => $fullCourse->batch->batch_number,
+                            'year' => $fullCourse->batch->year,
+                            'start_date' => $fullCourse->batch->start_date,
+                            'end_date' => $fullCourse->batch->end_date,
+                        ];
+                    }
                 }
 
                 if ($showPlacementDetails && $fullCourse->centre) {

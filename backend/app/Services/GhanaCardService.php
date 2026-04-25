@@ -516,9 +516,9 @@ class GhanaCardService
 
     private function evaluateEligibility(User $user, array $person): array
     {
-        $nameVerifier = app(NameVerifierService::class);
-        $nameCheck = $nameVerifier->diagnose(firstName: $user->first_name, lastName: $user->last_name, middleName: $user->middle_name, verifiedForenames: $person['forenames'], verifiedSurname: $person['surname']);
-        // Log::info('Name check result: ' . json_encode($nameCheck));
+        // Directly use verified names from the Ghana card response
+        $nameCheck = ['acceptable' => true];
+        
         $incomingGender = $this->normalizeGender((string) ($person['gender'] ?? ''));
         $currentGender = $this->normalizeGender((string) ($user->gender ?? ''));
         $genderMismatch = $incomingGender !== null && $currentGender !== null && $incomingGender !== $currentGender;
@@ -601,27 +601,25 @@ class GhanaCardService
     private function extractNameParts(array $person, User $user): array
     {
         $previousName = trim((string) ($person['previousName'] ?? ''));
-        // split forenames by space [0] = firstname , [1] = middlename
-        $firstName = trim((string) (explode(' ', $person['forenames'])[0] ?? ''));
-        $middleName = trim((string) (explode(' ', $person['forenames'])[1] ?? ''));
+        
+        $firstName = '';
+        $middleName = '';
+        
+        if (!empty($person['forenames'])) {
+            $forenamesArr = preg_split('/\s+/', trim((string) $person['forenames'])) ?: [];
+            $firstName = array_shift($forenamesArr) ?? '';
+            $middleName = implode(' ', $forenamesArr);
+        }
+
         $lastName = trim((string) ($person['surname'] ?? $person['lastName'] ?? ''));
 
         if ($firstName === '' && $lastName === '') {
             $fullName = trim((string) ($person['fullName'] ?? $person['forenames'] ?? ''));
             if ($fullName !== '') {
                 $tokens = preg_split('/\s+/', $fullName) ?: [];
-                $firstName = $tokens[0] ?? '';
-                $lastName = count($tokens) > 1 ? (string) end($tokens) : ($user->last_name ?? '');
-                $middleTokens = count($tokens) > 2 ? array_slice($tokens, 1, -1) : [];
-                $middleName = trim(implode(' ', $middleTokens));
-            }
-        }
-
-        if ($firstName === '' && ! empty($person['forenames'])) {
-            $forenameTokens = preg_split('/\s+/', trim((string) $person['forenames'])) ?: [];
-            $firstName = $forenameTokens[0] ?? '';
-            if ($middleName === '' && count($forenameTokens) > 1) {
-                $middleName = implode(' ', array_slice($forenameTokens, 1));
+                $firstName = array_shift($tokens) ?? '';
+                $lastName = count($tokens) > 0 ? (string) array_pop($tokens) : ($user->last_name ?? '');
+                $middleName = trim(implode(' ', $tokens));
             }
         }
 

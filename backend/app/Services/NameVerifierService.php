@@ -36,7 +36,10 @@ class NameVerifierService
         }
 
         if (! $this->surnamesMatch($submittedSurname, $vSurname)) {
-            return false;
+            if (! $this->isCrossMatchAcceptable($submittedForenames, $submittedSurname, $vForenames, $vSurname)) {
+                return false;
+            }
+            return true;
         }
 
         $submittedForenames = $this->stripSurnameComponents($submittedForenames, $vSurname);
@@ -92,11 +95,28 @@ class NameVerifierService
         $surnameSimilarity = $this->bestSurnameSimilarity($submittedSurname, $vSurname);
 
         if (! $this->surnamesMatch($submittedSurname, $vSurname)) {
+            if (! $this->isCrossMatchAcceptable($submittedForenames, $submittedSurname, $vForenames, $vSurname)) {
+                return $this->result(
+                    false,
+                    'surname_mismatch',
+                    $surnameSimilarity,
+                    null,
+                    $submittedForenames,
+                    $submittedSurname,
+                    $vForenames,
+                    $vSurname
+                );
+            }
+
+            $submittedTokens = array_values(array_filter(array_merge($submittedForenames, explode('-', $submittedSurname))));
+            $verifiedTokens = array_values(array_filter(array_merge($vForenames, explode('-', $vSurname))));
+            $overallCoverage = $this->forenameCoverage($submittedTokens, $verifiedTokens);
+
             return $this->result(
-                false,
-                'surname_mismatch',
-                $surnameSimilarity,
+                true,
                 null,
+                $surnameSimilarity,
+                $overallCoverage,
                 $submittedForenames,
                 $submittedSurname,
                 $vForenames,
@@ -222,6 +242,58 @@ class NameVerifierService
         }
 
         return false;
+    }
+
+    /**
+     * Check if the user swapped their names by computing overall token coverage,
+     * ensuring at minimum that the given surnames exist in each other's full token sets.
+     *
+     * @param  string[]  $submittedForenames
+     * @param  string    $submittedSurname
+     * @param  string[]  $vForenames
+     * @param  string    $vSurname
+     * @return bool
+     */
+    private function isCrossMatchAcceptable(
+        array $submittedForenames,
+        string $submittedSurname,
+        array $vForenames,
+        string $vSurname
+    ): bool {
+        $submittedTokens = array_values(array_filter(array_merge($submittedForenames, explode('-', $submittedSurname))));
+        $verifiedTokens = array_values(array_filter(array_merge($vForenames, explode('-', $vSurname))));
+
+        // We require the verified surname to be present among the submitted tokens
+        $vSurnameMatched = false;
+        foreach (explode('-', $vSurname) as $vSurPart) {
+            foreach ($submittedTokens as $sTok) {
+                if ($this->tokensSimilar($sTok, $vSurPart)) {
+                    $vSurnameMatched = true;
+                    break 2;
+                }
+            }
+        }
+
+        if (! $vSurnameMatched) {
+            return false;
+        }
+
+        // We require the submitted surname to be present among the verified tokens
+        $submittedSurnameMatched = false;
+        foreach (explode('-', $submittedSurname) as $sSurPart) {
+            foreach ($verifiedTokens as $vTok) {
+                if ($this->tokensSimilar($sSurPart, $vTok)) {
+                    $submittedSurnameMatched = true;
+                    break 2;
+                }
+            }
+        }
+
+        if (! $submittedSurnameMatched) {
+            return false;
+        }
+
+        return $this->forenameCoverage($submittedTokens, $verifiedTokens) >= self::FORENAME_COVERAGE_THRESHOLD;
     }
 
     /**
