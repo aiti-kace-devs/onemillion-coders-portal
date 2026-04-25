@@ -619,8 +619,6 @@ class CourseMatchAPIController extends Controller
             ->join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
             ->whereNotNull('courses.programme_id')
             ->where('courses.status', 1)
-            ->where('admission_batches.start_date', '<=', $today)
-            ->where('admission_batches.end_date', '>=', $today)
             ->where('admission_batches.completed', false)
             ->where('admission_batches.status', true);
 
@@ -642,8 +640,6 @@ class CourseMatchAPIController extends Controller
             ->join('admission_batches', 'courses.batch_id', '=', 'admission_batches.id')
             ->whereNotNull('courses.programme_id')
             ->where('courses.status', 1)
-            ->where('admission_batches.start_date', '<=', $today)
-            ->where('admission_batches.end_date', '>=', $today)
             ->where('admission_batches.completed', false)
             ->where('admission_batches.status', true);
 
