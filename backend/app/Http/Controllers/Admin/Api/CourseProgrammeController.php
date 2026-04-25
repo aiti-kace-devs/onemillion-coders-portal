@@ -608,8 +608,6 @@ protected function courseHasAvailableSlots($course, $programmeId = null): bool
                     ->where('centres.branch_id', $branch->id)
                     ->whereNotNull('courses.programme_id')
                     ->where('courses.status', 1)
-                    ->where('admission_batches.start_date', '<=', $today)
-                    ->where('admission_batches.end_date', '>=', $today)
                     ->where('admission_batches.completed', false)
                     ->where('admission_batches.status', true)
                     ->get(['courses.id', 'courses.programme_id', 'courses.centre_id']);
