@@ -1,14 +1,11 @@
---- vendor/studio-42/elfinder/php/elFinder.class.php
+--- vendor/studio-42/elfinder/php/elFinder.class.php.orig
 +++ vendor/studio-42/elfinder/php/elFinder.class.php
-@@ -4853,8 +4853,8 @@
-         static $defLimit = null;
-         if (!self::aborted()) {
-             if (is_null($defLimit)) {
--                $defLimit = ini_get('max_execution_time');
-+                $defLimit = (int)ini_get('max_execution_time');
+@@ -4856,7 +4856,7 @@
+                 $defLimit = (int)ini_get('max_execution_time');
              }
              if ($defLimit != 0) {
 -                $time = is_null($time) ? $defLimit : max($defLimit, $time);
 +                $time = is_null($time) ? (int)$defLimit : max((int)$defLimit, (int)$time);
-                 set_time_limit((int)$time);
+                 set_time_limit($time);
              }
+         } else {
