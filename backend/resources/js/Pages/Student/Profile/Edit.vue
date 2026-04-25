@@ -168,20 +168,10 @@ const generateIDCard = () => {
   function drawProfileAndText() {
     // Draw profile image (circular)
     const img = new Image();
-    img.onload = () => {
-      const centerX = 50;
-      const centerY = h / 2;
-      const radius = 35;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-      ctx.clip();
-      const imgSize = radius * 2;
-      const imgX = centerX - imgSize / 2;
-      const imgY = centerY - imgSize / 2;
-      ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
-      ctx.restore();
-
+    img.crossOrigin = "Anonymous";
+    
+    // Create text & details drawing function
+    const drawTextDetailsAndQR = () => {
       // Add text content with wrapping
       ctx.fillStyle = "#fff";
       ctx.font = "bold 14px Figtree";
@@ -265,6 +255,29 @@ const generateIDCard = () => {
         ctx.drawImage(qrCanvas, 250, 120, 56, 56);
       }, 100); // Wait for QR to render
     };
+
+    img.onload = () => {
+      const centerX = 50;
+      const centerY = h / 2;
+      const radius = 35;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.clip();
+      const imgSize = radius * 2;
+      const imgX = centerX - imgSize / 2;
+      const imgY = centerY - imgSize / 2;
+      ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
+      ctx.restore();
+      
+      drawTextDetailsAndQR();
+    };
+
+    img.onerror = () => {
+        // Skip drawing the circular image if it fails (CORS block or 404)
+        drawTextDetailsAndQR();
+    };
+
     img.src = props.user.ghcard_image_url || "/assets/images/Oval.png";
   }
 };
