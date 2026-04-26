@@ -20,6 +20,7 @@ use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Backpack\CRUD\app\Library\Widget;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -87,6 +88,51 @@ class CentreCrudController extends CrudController
             abort(403, 'Unauthorized action.');
         }
 
+        $centreAdmittedMetrics = DB::table('courses as c')
+            ->join('admission_batches as ab', 'ab.id', '=', 'c.batch_id')
+            ->leftJoin('user_admission as ua', function ($join) {
+                $join->on('ua.course_id', '=', 'c.id')
+                    ->whereNotNull('ua.confirmed');
+            })
+            ->leftJoin('users as u', 'u.userId', '=', 'ua.user_id')
+            ->where('ab.completed', 0)
+            ->where('ab.status', 1)
+            ->selectRaw(
+                '
+                c.centre_id as centre_id,
+                COUNT(DISTINCT ua.user_id) as total_admitted_users,
+                COUNT(DISTINCT CASE WHEN u.support = 1 THEN ua.user_id END) as support_yes
+            '
+            )
+            ->groupBy('c.centre_id')
+            ->get()
+            ->keyBy('centre_id');
+
+        $supportMetricsQuery = DB::table('courses as c')
+            ->join('admission_batches as ab', 'ab.id', '=', 'c.batch_id')
+            ->leftJoin('user_admission as ua', function ($join) {
+                $join->on('ua.course_id', '=', 'c.id')
+                    ->whereNotNull('ua.confirmed');
+            })
+            ->leftJoin('users as u', 'u.userId', '=', 'ua.user_id')
+            ->where('ab.completed', 0)
+            ->where('ab.status', 1)
+            ->selectRaw(
+                '
+                c.centre_id as centre_id,
+                COUNT(DISTINCT CASE WHEN u.support = 1 THEN ua.user_id END) as support_yes
+            '
+            )
+            ->groupBy('c.centre_id');
+
+        $this->crud->query
+            ->leftJoinSub($supportMetricsQuery, 'centre_support_metrics', function ($join) {
+                $join->on('centres.id', '=', 'centre_support_metrics.centre_id');
+            })
+            ->select('centres.*')
+            ->orderByRaw('COALESCE(centre_support_metrics.support_yes, 0) DESC')
+            ->orderBy('centres.title');
+
         CRUD::column('title')->type('textarea')->label('Centre Name');
 
         if ($this->isCentreManager()) {
@@ -121,6 +167,28 @@ class CentreCrudController extends CrudController
                     return $districts->pluck('title')->implode(', ');
                 },
             ]);
+
+            CRUD::addColumn([
+                'name' => 'total_admitted_users',
+                'label' => 'Total Admitted Users',
+                'type' => 'closure',
+                'function' => function ($entry) use ($centreAdmittedMetrics) {
+                    $metrics = $centreAdmittedMetrics->get((int) $entry->id);
+
+                    return number_format((int) ($metrics->total_admitted_users ?? 0));
+                },
+            ]);
+
+            CRUD::addColumn([
+                'name' => 'support_yes',
+                'label' => 'Users Who Needs Support',
+                'type' => 'closure',
+                'function' => function ($entry) use ($centreAdmittedMetrics) {
+                    $metrics = $centreAdmittedMetrics->get((int) $entry->id);
+
+                    return number_format((int) ($metrics->support_yes ?? 0));
+                },
+            ]);
         } else {
             CRUD::column('branch_id')->label('Region')->linkTo('branch.show');
             FilterHelper::addGenericRelationshipColumn('constituency', 'Constituency', 'constituency', 'title');
@@ -144,13 +212,18 @@ class CentreCrudController extends CrudController
                 },
                 'escaped' => false,
             ]);
+
             CRUD::addColumn([
-                'name' => 'is_pwd_friendly',
-                'label' => 'Is PWD Friendly',
-                'type' => 'view',
-                'view' => 'admin.status_toggle.status_column',
-                'toggle_url' => 'centre/{id}/toggle-is-pwd-friendly',
+                'name' => 'total_admitted_users',
+                'label' => 'Total Admitted Users',
+                'type' => 'closure',
+                'function' => function ($entry) use ($centreAdmittedMetrics) {
+                    $metrics = $centreAdmittedMetrics->get((int) $entry->id);
+
+                    return number_format((int) ($metrics->total_admitted_users ?? 0));
+                },
             ]);
+
             CRUD::addColumn([
                 'name' => 'is_ready',
                 'label' => 'Is Ready',
@@ -159,6 +232,18 @@ class CentreCrudController extends CrudController
                 'toggleable' => true,
                 'toggle_url' => 'centre/{id}/toggle-is-ready',
             ]);
+
+            CRUD::addColumn([
+                'name' => 'support_yes',
+                'label' => 'Users Who Needs Support',
+                'type' => 'closure',
+                'function' => function ($entry) use ($centreAdmittedMetrics) {
+                    $metrics = $centreAdmittedMetrics->get((int) $entry->id);
+
+                    return number_format((int) ($metrics->support_yes ?? 0));
+                },
+            ]);
+
             CRUD::addColumn([
                 'name' => 'status',
                 'label' => 'Status',
@@ -166,7 +251,7 @@ class CentreCrudController extends CrudController
                 'view' => 'admin.status_toggle.status_column',
             ]);
         }
-        CRUD::column('created_at');
+        // CRUD::column('created_at');
         if (! $this->isCentreManager()) {
             FilterHelper::addSelectFilter(
                 'branch_id',

@@ -309,16 +309,14 @@
             ->whereNotNull('ua.confirmed')
             ->selectRaw(
                 '
-                COUNT(DISTINCT CASE WHEN u.support = 1 THEN ua.user_id END) as support_yes,
-                COUNT(DISTINCT CASE WHEN u.support = 0 THEN ua.user_id END) as support_no,
-                COUNT(DISTINCT CASE WHEN u.support IS NULL THEN ua.user_id END) as support_unknown
+                COUNT(DISTINCT CASE WHEN u.support = 1 THEN ua.user_id END) as support_yes
             ',
             )
             ->first();
 
         $supportYes = (int) ($supportCounts->support_yes ?? 0);
-        $supportNo = (int) ($supportCounts->support_no ?? 0);
-        $supportUnknown = (int) ($supportCounts->support_unknown ?? 0);
+        $supportUnknown = max($totalAdmittedUsers - $supportYes, 0);
+        $supportNo = $supportUnknown;
 
         $deliveryLabels = collect(['Online', 'In Person']);
         $deliveryValues = collect([$onlineCourses, $inPersonCourses]);
@@ -329,10 +327,6 @@
 
         $supportLabels = collect(['Needs Support', 'No Support']);
         $supportValues = collect([$supportYes, $supportNo]);
-        if ($supportUnknown > 0) {
-            $supportLabels->push('Not Indicated');
-            $supportValues->push($supportUnknown);
-        }
 
         $admittedByCourse = \Illuminate\Support\Facades\DB::table('user_admission')
             ->whereIn('course_id', $activeCourseIdsArray)
@@ -511,13 +505,7 @@
                         <i class="la la-user text-secondary"></i>
                     </div>
                     <div class="metric-value">{{ number_format($supportUnknown) }}</div>
-                    <div class="text-muted small">
-                        @if ($supportUnknown > 0)
-                            Not indicated: {{ number_format($supportUnknown) }}
-                        @else
-                            Registered users marked as not needing support.
-                        @endif
-                    </div>
+                    <div class="text-muted small">Derived as admitted users not needing support.</div>
                 </div>
             </div>
         </div>
