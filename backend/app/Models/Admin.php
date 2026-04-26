@@ -103,6 +103,10 @@ class Admin extends Authenticatable
             return null;
         }
 
+        if ($this->hasPermissionTo('dashboard.read.all')) {
+            return null;
+        }
+
         if ($this->hasRole('centre-manager')) {
             $centreIds = $this->assignedCentreIds();
             if (empty($centreIds)) {
@@ -156,6 +160,10 @@ class Admin extends Authenticatable
     public function visibleCentreIds(): ?array
     {
         if ($this->isSuper()) {
+            return null;
+        }
+
+        if ($this->hasPermissionTo('dashboard.read.all')) {
             return null;
         }
 
