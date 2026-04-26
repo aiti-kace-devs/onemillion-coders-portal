@@ -196,7 +196,7 @@ function isStepReached(idx) {
                                                         stepVisualStatus(stepKey) === 'current' ? 'text-amber-600' : 'text-gray-400'
                                                     ]"
                                                 >
-                                                    Step {{ index + 1 }} • {{ stepVisualStatus(stepKey).toUpperCase() }}
+                                                    Step {{ index + 1 }} • {{ stepVisualStatus(stepKey) === 'complete' ? 'COMPLETED' : stepVisualStatus(stepKey).toUpperCase() }}
                                                 </span>
                                                 <h4
                                                     class="text-base font-bold transition-colors"
@@ -312,10 +312,7 @@ function isStepReached(idx) {
                                                     <template v-if="courseChosen">
                                                         <div class="p-3 bg-white border border-gray-100 rounded-lg flex items-center justify-between">
                                                             <p class="font-medium text-gray-900">You've selected your course preference.</p>
-                                                            <Link :href="route('student.change-course')" class="inline-flex items-center gap-1.5 text-amber-600 font-bold hover:text-amber-700 transition-colors">
-                                                                <span class="material-symbols-outlined text-[16px]">edit</span>
-                                                                Change Selection
-                                                            </Link>
+
                                                         </div>
                                                     </template>
                                                     <template v-else>

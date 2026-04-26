@@ -39,45 +39,15 @@ const form = useForm({
 const confirmationModal = ref(false);
 
 const cardVerified = computed(() => !!props.user.ghcard_verified);
-const latestAttempt = computed(() => props.user.ghcard_latest_attempt ?? null);
-const cardStatus = computed(() => {
-  if (cardVerified.value || latestAttempt.value?.verified) {
-    return "verified";
-  }
 
-  if (!latestAttempt.value) {
-    return "pending";
-  }
-
-  if (latestAttempt.value.success) {
-    return "processed";
-  }
-
-  return "failed";
-});
 const cardStatusLabel = computed(() => {
-  switch (cardStatus.value) {
-    case "verified":
-      return "Card verified successfully";
-    case "processed":
-      return "Card processed";
-    case "failed":
-      return "Card verification failed";
-    default:
-      return "Card pending";
-  }
+  return cardVerified.value ? "Verified" : "Not Verified";
 });
+
 const cardStatusClass = computed(() => {
-  switch (cardStatus.value) {
-    case "verified":
-      return "text-green-700 bg-green-50 px-2 py-0.5 rounded-md border border-green-200";
-    case "failed":
-      return "text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200";
-    case "processed":
-      return "text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200";
-    default:
-      return "text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 shadow-sm";
-  }
+  return cardVerified.value
+    ? "text-green-700 bg-green-50 px-2 py-0.5 rounded-md border border-green-200"
+    : "text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200";
 });
 
 const showConfirmationModal = () => {
