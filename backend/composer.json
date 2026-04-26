@@ -44,11 +44,12 @@
         "yajra/laravel-datatables-oracle": "^12.1"
     },
     "require-dev": {
-        "barryvdh/laravel-debugbar": "^3.7",
-        "laravel/horizon": "^5.31",
         "backpack/generators": "^4.0",
+        "barryvdh/laravel-debugbar": "^3.7",
+        "deployer/deployer": "^7.5",
         "fakerphp/faker": "^1.9.1",
         "laravel/breeze": "^2.0",
+        "laravel/horizon": "^5.31",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.18",
         "mockery/mockery": "^1.4.4",

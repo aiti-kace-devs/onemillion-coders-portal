@@ -115,5 +115,382 @@
     "vendor/backpack/pro/resources/assets/js/icon-picker.js": "/vendor/backpack/pro/resources/assets/js/icon-picker.js",
     "vendor/backpack/theme-tabler/resources/assets/css/style.css": "/vendor/backpack/theme-tabler/resources/assets/css/style.css",
     "vendor/backpack/theme-tabler/resources/assets/js/tabler.js": "/vendor/backpack/theme-tabler/resources/assets/js/tabler.js",
-    "vendor/studio-42/elfinder/sounds/rm.wav": "/vendor/studio-42/elfinder/sounds/rm.wav"
+    "vendor/studio-42/elfinder/sounds/rm.wav": "/vendor/studio-42/elfinder/sounds/rm.wav",
+    "https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css": {
+        "asset_name": "https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css",
+        "asset_path": "https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css",
+        "asset_disk_path": "basset/cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/responsive/3.0.3/css/responsive.dataTables.min.css": {
+        "asset_name": "https://cdn.datatables.net/responsive/3.0.3/css/responsive.dataTables.min.css",
+        "asset_path": "https://cdn.datatables.net/responsive/3.0.3/css/responsive.dataTables.min.css",
+        "asset_disk_path": "basset/cdn.datatables.net/responsive/3.0.3/css/responsive.dataTables.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/fixedheader/4.0.1/css/fixedHeader.dataTables.min.css": {
+        "asset_name": "https://cdn.datatables.net/fixedheader/4.0.1/css/fixedHeader.dataTables.min.css",
+        "asset_path": "https://cdn.datatables.net/fixedheader/4.0.1/css/fixedHeader.dataTables.min.css",
+        "asset_disk_path": "basset/cdn.datatables.net/fixedheader/4.0.1/css/fixedHeader.dataTables.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/2.1.8/js/dataTables.min.js": {
+        "asset_name": "https://cdn.datatables.net/2.1.8/js/dataTables.min.js",
+        "asset_path": "https://cdn.datatables.net/2.1.8/js/dataTables.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/2.1.8/js/dataTables.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js": {
+        "asset_name": "https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js",
+        "asset_path": "https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js": {
+        "asset_name": "https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js",
+        "asset_path": "https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/fixedheader/4.0.1/js/dataTables.fixedHeader.min.js": {
+        "asset_name": "https://cdn.datatables.net/fixedheader/4.0.1/js/dataTables.fixedHeader.min.js",
+        "asset_path": "https://cdn.datatables.net/fixedheader/4.0.1/js/dataTables.fixedHeader.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/fixedheader/4.0.1/js/dataTables.fixedHeader.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css",
+        "asset_path": "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://unpkg.com/animate.css@4.1.1/animate.compat.css": {
+        "asset_name": "https://unpkg.com/animate.css@4.1.1/animate.compat.css",
+        "asset_path": "https://unpkg.com/animate.css@4.1.1/animate.compat.css",
+        "asset_disk_path": "basset/unpkg.com/animate.css@4.1.1/animate.compat.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.css": {
+        "asset_name": "https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.css",
+        "asset_path": "https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.css",
+        "asset_disk_path": "basset/unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/css/common.css": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/css/common.css",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/css/common.css",
+        "asset_disk_path": "basset/vendor/backpack/crud/src/resources/assets/css/common.css",
+        "asset_attributes": [],
+        "asset_content_hash": "fc4a4401"
+    },
+    "https://unpkg.com/@popperjs/core@2.11.6/dist/umd/popper.min.js": {
+        "asset_name": "https://unpkg.com/@popperjs/core@2.11.6/dist/umd/popper.min.js",
+        "asset_path": "https://unpkg.com/@popperjs/core@2.11.6/dist/umd/popper.min.js",
+        "asset_disk_path": "basset/unpkg.com/@popperjs/core@2.11.6/dist/umd/popper.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.min.js": {
+        "asset_name": "https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.min.js",
+        "asset_path": "https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.min.js",
+        "asset_disk_path": "basset/unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js": {
+        "asset_name": "https://unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js",
+        "asset_path": "https://unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js",
+        "asset_disk_path": "basset/unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/js/common.js": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/js/common.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/js/common.js",
+        "asset_disk_path": "basset/vendor/backpack/crud/src/resources/assets/js/common.js",
+        "asset_attributes": [],
+        "asset_content_hash": "af4fd86e"
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme.min.css": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme.min.css",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme.min.css",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/loading.svg": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/loading.svg",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/loading.svg",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/loading.svg",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.eot": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.eot",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.eot",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.eot",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.svg": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.svg",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.svg",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.svg",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-big.svg": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-big.svg",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-big.svg",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-big.svg",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-small.svg": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-small.svg",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-small.svg",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-small.svg",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.ttf": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.ttf",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.ttf",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.ttf",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff2": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff2",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff2",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff2",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme-gray.min.css": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme-gray.min.css",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme-gray.min.css",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme-gray.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/studio-42/elfinder/sounds/rm.wav": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/studio-42/elfinder/sounds/rm.wav",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/studio-42/elfinder/sounds/rm.wav",
+        "asset_disk_path": "basset/vendor/studio-42/elfinder/sounds/rm.wav",
+        "asset_attributes": [],
+        "asset_content_hash": "19276d90"
+    },
+    "https://unpkg.com/jquery-ui@1.13.2/dist/jquery-ui.min.js": {
+        "asset_name": "https://unpkg.com/jquery-ui@1.13.2/dist/jquery-ui.min.js",
+        "asset_path": "https://unpkg.com/jquery-ui@1.13.2/dist/jquery-ui.min.js",
+        "asset_disk_path": "basset/unpkg.com/jquery-ui@1.13.2/dist/jquery-ui.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/libs/jquery.mjs.nestedSortable2.js": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/libs/jquery.mjs.nestedSortable2.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/libs/jquery.mjs.nestedSortable2.js",
+        "asset_disk_path": "basset/vendor/backpack/crud/src/resources/assets/libs/jquery.mjs.nestedSortable2.js",
+        "asset_attributes": [],
+        "asset_content_hash": "c4616f9b"
+    },
+    "https://unpkg.com/urijs@1.19.11/src/URI.min.js": {
+        "asset_name": "https://unpkg.com/urijs@1.19.11/src/URI.min.js",
+        "asset_path": "https://unpkg.com/urijs@1.19.11/src/URI.min.js",
+        "asset_disk_path": "basset/unpkg.com/urijs@1.19.11/src/URI.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/buttons/3.2.0/js/dataTables.buttons.min.js": {
+        "asset_name": "https://cdn.datatables.net/buttons/3.2.0/js/dataTables.buttons.min.js",
+        "asset_path": "https://cdn.datatables.net/buttons/3.2.0/js/dataTables.buttons.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/buttons/3.2.0/js/dataTables.buttons.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/buttons/3.2.0/js/buttons.bootstrap5.min.js": {
+        "asset_name": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.bootstrap5.min.js",
+        "asset_path": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.bootstrap5.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/buttons/3.2.0/js/buttons.bootstrap5.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/buttons/3.2.0/js/buttons.html5.min.js": {
+        "asset_name": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.html5.min.js",
+        "asset_path": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.html5.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/buttons/3.2.0/js/buttons.html5.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/buttons/3.2.0/js/buttons.print.min.js": {
+        "asset_name": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.print.min.js",
+        "asset_path": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.print.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/buttons/3.2.0/js/buttons.print.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/buttons/3.2.0/js/buttons.colVis.min.js": {
+        "asset_name": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.colVis.min.js",
+        "asset_path": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.colVis.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/buttons/3.2.0/js/buttons.colVis.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/buttons/3.2.0/css/buttons.bootstrap5.min.css": {
+        "asset_name": "https://cdn.datatables.net/buttons/3.2.0/css/buttons.bootstrap5.min.css",
+        "asset_path": "https://cdn.datatables.net/buttons/3.2.0/css/buttons.bootstrap5.min.css",
+        "asset_disk_path": "basset/cdn.datatables.net/buttons/3.2.0/css/buttons.bootstrap5.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/img/spinner.svg": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/img/spinner.svg",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/img/spinner.svg",
+        "asset_disk_path": "basset/vendor/backpack/crud/src/resources/assets/img/spinner.svg",
+        "asset_attributes": [],
+        "asset_content_hash": "0a6bee92"
+    },
+    "https://unpkg.com/summernote@0.9.1/dist/summernote-lite.min.css": {
+        "asset_name": "https://unpkg.com/summernote@0.9.1/dist/summernote-lite.min.css",
+        "asset_path": "https://unpkg.com/summernote@0.9.1/dist/summernote-lite.min.css",
+        "asset_disk_path": "basset/unpkg.com/summernote@0.9.1/dist/summernote-lite.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://unpkg.com/summernote@0.9.1/dist/font/summernote.woff2": {
+        "asset_name": "https://unpkg.com/summernote@0.9.1/dist/font/summernote.woff2",
+        "asset_path": "https://unpkg.com/summernote@0.9.1/dist/font/summernote.woff2",
+        "asset_disk_path": "basset/unpkg.com/summernote@0.9.1/dist/font/summernote.woff2",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://unpkg.com/summernote@0.9.1/dist/summernote-lite.min.js": {
+        "asset_name": "https://unpkg.com/summernote@0.9.1/dist/summernote-lite.min.js",
+        "asset_path": "https://unpkg.com/summernote@0.9.1/dist/summernote-lite.min.js",
+        "asset_disk_path": "basset/unpkg.com/summernote@0.9.1/dist/summernote-lite.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/i18n/en.js": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/i18n/en.js",
+        "asset_path": "https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/i18n/en.js",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/i18n/en.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/edit/closebrackets.min.js": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/edit/closebrackets.min.js",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/edit/closebrackets.min.js",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/edit/closebrackets.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/edit/matchbrackets.min.js": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/edit/matchbrackets.min.js",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/edit/matchbrackets.min.js",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/edit/matchbrackets.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/pro/resources/assets/js/icon-picker.js": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/pro/resources/assets/js/icon-picker.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/pro/resources/assets/js/icon-picker.js",
+        "asset_disk_path": "basset/vendor/backpack/pro/resources/assets/js/icon-picker.js",
+        "asset_attributes": [],
+        "asset_content_hash": "6111cb67"
+    },
+    "https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js",
+        "asset_path": "https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js",
+        "asset_attributes": {
+            "integrity": "sha256-tgx2Fg6XYkV027jPEKvmrummSTtgCW/fwV3R3SvZnrk=",
+            "crossorigin": "anonymous"
+        },
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/js/tabler.js": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/js/tabler.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/js/tabler.js",
+        "asset_disk_path": "basset/vendor/backpack/theme-tabler/resources/assets/js/tabler.js",
+        "asset_attributes": [],
+        "asset_content_hash": "01bd6c04"
+    },
+    "https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css",
+        "asset_path": "https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css",
+        "asset_attributes": {
+            "integrity": "sha256-fvdQvRBUamldCxJ2etgEi9jz7F3n2u+xBn+dDao9HJo=",
+            "crossorigin": "anonymous"
+        },
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/style.css": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/style.css",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/style.css",
+        "asset_disk_path": "basset/vendor/backpack/theme-tabler/resources/assets/css/style.css",
+        "asset_attributes": [],
+        "asset_content_hash": "d9da2da5"
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/color-adjustments.css": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/color-adjustments.css",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/color-adjustments.css",
+        "asset_disk_path": "basset/vendor/backpack/theme-tabler/resources/assets/css/color-adjustments.css",
+        "asset_attributes": [],
+        "asset_content_hash": "0b2dc998"
+    },
+    "bp-elfinder-i18n-fr": {
+        "asset_name": "bp-elfinder-i18n-fr",
+        "asset_path": "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/js/i18n/elfinder.fr.js",
+        "asset_disk_path": "basset/raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/js/i18n/elfinder.fr.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "bp-elfinder-i18n-it": {
+        "asset_name": "bp-elfinder-i18n-it",
+        "asset_path": "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/js/i18n/elfinder.it.js",
+        "asset_disk_path": "basset/raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/js/i18n/elfinder.it.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "bp-elfinder-i18n-ro": {
+        "asset_name": "bp-elfinder-i18n-ro",
+        "asset_path": "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/js/i18n/elfinder.ro.js",
+        "asset_disk_path": "basset/raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/js/i18n/elfinder.ro.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    }
 }

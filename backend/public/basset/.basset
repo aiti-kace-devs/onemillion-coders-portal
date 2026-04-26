@@ -1,0 +1,586 @@
+{
+    "https://cdn.jsdelivr.net/npm/bootstrap-daterangepicker@3.1.0/daterangepicker.css": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/bootstrap-daterangepicker@3.1.0/daterangepicker.css",
+        "asset_path": "https://cdn.jsdelivr.net/npm/bootstrap-daterangepicker@3.1.0/daterangepicker.css",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/bootstrap-daterangepicker@3.1.0/daterangepicker.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/npm/moment@2.29.4/min/moment-with-locales.min.js": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/moment@2.29.4/min/moment-with-locales.min.js",
+        "asset_path": "https://cdn.jsdelivr.net/npm/moment@2.29.4/min/moment-with-locales.min.js",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/moment@2.29.4/min/moment-with-locales.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/npm/bootstrap-daterangepicker@3.1.0/daterangepicker.js": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/bootstrap-daterangepicker@3.1.0/daterangepicker.js",
+        "asset_path": "https://cdn.jsdelivr.net/npm/bootstrap-daterangepicker@3.1.0/daterangepicker.js",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/bootstrap-daterangepicker@3.1.0/daterangepicker.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "daterangepicker-filter.js": {
+        "asset_name": "daterangepicker-filter.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/daterangepicker-filter.js",
+        "asset_disk_path": "basset/daterangepicker-filter.js",
+        "asset_attributes": [],
+        "asset_content_hash": "<script>\n\tasync function applyDateRangeFilter(start, end, filter, filterNavbar) {\n\t\tlet filterName = filter.getAttribute('filter-name');\n\t\tconst componentId = filterNavbar.getAttribute('data-component-id');\n\n\t\tif (start && end) {\n\t\t\tvar dates = {\n\t\t\t\t'from': start.format('YYYY-MM-DD HH:mm:ss'),\n\t\t\t\t'to': end.format('YYYY-MM-DD HH:mm:ss')\n\t\t\t};\n\n\t\t\tvar value = JSON.stringify(dates);\n\t\t} else {\n\t\t\tvar value = '';\n\t\t}\n\n\t\tif (value !== '') {\n\t\t\tfilter.classList.add('active');\n\t\t} else {\n\t\t\tfilter.dispatchEvent(new CustomEvent('backpack:filter:clear'));\n\t\t}\n\n\t\tdocument.dispatchEvent(new CustomEvent('backpack:filter:changed', {\n\t\t\tdetail: {\n\t\t\t\tfilterName: filterName,\n\t\t\t\tfilterValue: value,\n\t\t\t\tshouldUpdateUrl: true,\n\t\t\t\tdebounce: filter.getAttribute('filter-debounce'),\n\t\t\t\tcomponentId: componentId,\n\t\t\t}\n\t\t}));\n\t}\n\n\tfunction initDateRangeFilter(filter, filterNavbar) {\n\t\tlet filterName = filter.getAttribute('filter-name');\n\t\tlet filterKey = filter.getAttribute('filter-key');\n\t\tlet filterDebounce = filter.getAttribute('filter-debounce');\n\t\tlet filterLocale = filter.getAttribute('filter-locale');\n\t\tlet dateRangeInput = filter.querySelector('input');\n\t\tlet filterClearButton = filter.querySelector(`.daterangepicker-${filterKey}-clear-button`);\n\t\tlet filterOptions = JSON.parse(dateRangeInput.getAttribute('data-bs-daterangepicker'));\n\n\t\t// check if the filter was already initialized\n\t\tif (filter.getAttribute('data-filter-initialized') === 'true') {\n\t\t\treturn;\n\t\t}\n\t\tfilter.setAttribute('data-filter-initialized', 'true');\n\n\t\tmoment.locale(filterLocale);\n\n\t\tlet filterRanges = filterOptions.ranges;\n\t\tfilterOptions.ranges = {};\n\n\t\t//if developer configured ranges we convert it to moment() dates.\n\t\tfor (var key in filterRanges) {\n\t\t\tif (filterRanges.hasOwnProperty(key)) {\n\t\t\t\tfilterOptions.ranges[key] = [moment(filterRanges[key][0]), moment(filterRanges[key][1])];\n\t\t\t}\n\t\t}\n\n\t\tfilterOptions.startDate = moment(filterOptions.startDate);\n\t\tfilterOptions.endDate = moment(filterOptions.endDate);\n\n\t\t$(dateRangeInput).daterangepicker(filterOptions);\n\n\t\t$(dateRangeInput).on('apply.daterangepicker', function(ev, picker) {\n\t\t\tapplyDateRangeFilter(picker.startDate, picker.endDate, filter, filterNavbar);\n\t\t});\n\n\t\t//focus on input when filter open\n\t\tfilter.querySelector('a[data-bs-toggle]').addEventListener('click', function(e) {\n\t\t\tsetTimeout(() => {\n\t\t\t\tdateRangeInput.focus();\n\t\t\t}, 50);\n\t\t});\n\t\tfilter.addEventListener('backpack:filter:clear', function() {\n\t\t\tfilter.classList.remove('active');\n\t\t});\n\t\t// datepicker clear button\n\t\tfilterClearButton.addEventListener('click', function(e) {\n\t\t\te.preventDefault();\n\t\t\tapplyDateRangeFilter(null, null, filter, filterNavbar);\n\t\t});\n\t};\n</script>\n"
+    },
+    "simple-filter.js": {
+        "asset_name": "simple-filter.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/simple-filter.js",
+        "asset_disk_path": "basset/simple-filter.js",
+        "asset_attributes": [],
+        "asset_content_hash": "    <script>\n\t\t// init function for simple filter\n\t\tfunction initSimpleFilter(filter, filterNavbar) {\n\t\t\tlet filterName = filter.getAttribute('filter-name');\n\t\t\tlet filterKey = filter.getAttribute('filter-key');\n\t\t\tlet filterAnchor = filter.querySelector('a');\n\t\t\tlet filterDebounce = filter.getAttribute('filter-debounce');\n\t\t\tlet navBarId = filterNavbar.getAttribute('id');\n\t\t\tlet shouldUpdateUrl = true;\n\n\t\t\t// check if the filter was already initialized\n\t\t\tif (filter.getAttribute('data-filter-initialized') === 'true') {\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tfilter.setAttribute('data-filter-initialized', 'true');\n\n\t\t\tfilterAnchor.addEventListener('click', async function(e) {\n\t\t\t\te.preventDefault();\n\n\t\t\t\t// get the filter value\n\t\t\t\tlet filterValue = filter.classList.contains('active') ? true : false;\n\n\t\t\t\tswitch (filterValue) {\n\t\t\t\t\tcase true:\n\t\t\t\t\t\tfilterValue = null;\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tdefault:\n\t\t\t\t\t\tfilterValue = true;\n\t\t\t\t}\n\n\t\t\t\tif (filterValue) {\n\t\t\t\t\tfilter.classList.add('active');\n\t\t\t\t}else{\n\t\t\t\t\tfilter.dispatchEvent(new CustomEvent('backpack:filter:clear'));\n\t\t\t\t} \n\n\t\t\t\tdocument.dispatchEvent(new CustomEvent('backpack:filter:changed', {\n\t\t\t\t\tdetail: {\n\t\t\t\t\t\tfilterName: filterName, \n\t\t\t\t\t\tfilterValue: filterValue, \n\t\t\t\t\t\tshouldUpdateUrl: shouldUpdateUrl,\n\t\t\t\t\t\tdebounce: filterDebounce,\n\t\t\t\t\t\tcomponentId: filterNavbar.getAttribute('data-component-id'),\n\t\t\t\t\t}\n\t\t\t\t}));\n\t\t\t});\t\n\n\t\t\t// clear filter event (used here and by the Remove all filters button)\n\t\t\tfilter.addEventListener('backpack:filter:clear', function(e) {\n\t\t\t\tfilter.classList.remove('active');\n\t\t\t});\n\t\t};\t\t\t\n\t</script>\n"
+    },
+    "https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css",
+        "asset_path": "https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/npm/select2-bootstrap-theme@0.1.0-beta.10/dist/select2-bootstrap.min.css": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/select2-bootstrap-theme@0.1.0-beta.10/dist/select2-bootstrap.min.css",
+        "asset_path": "https://cdn.jsdelivr.net/npm/select2-bootstrap-theme@0.1.0-beta.10/dist/select2-bootstrap.min.css",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/select2-bootstrap-theme@0.1.0-beta.10/dist/select2-bootstrap.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.full.min.js": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.full.min.js",
+        "asset_path": "https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.full.min.js",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.full.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://unpkg.com/urijs@1.19.11/src/URI.min.js": {
+        "asset_name": "https://unpkg.com/urijs@1.19.11/src/URI.min.js",
+        "asset_path": "https://unpkg.com/urijs@1.19.11/src/URI.min.js",
+        "asset_disk_path": "basset/unpkg.com/urijs@1.19.11/src/URI.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/2.1.8/js/dataTables.min.js": {
+        "asset_name": "https://cdn.datatables.net/2.1.8/js/dataTables.min.js",
+        "asset_path": "https://cdn.datatables.net/2.1.8/js/dataTables.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/2.1.8/js/dataTables.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js": {
+        "asset_name": "https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js",
+        "asset_path": "https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js": {
+        "asset_name": "https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js",
+        "asset_path": "https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/fixedheader/4.0.1/js/dataTables.fixedHeader.min.js": {
+        "asset_name": "https://cdn.datatables.net/fixedheader/4.0.1/js/dataTables.fixedHeader.min.js",
+        "asset_path": "https://cdn.datatables.net/fixedheader/4.0.1/js/dataTables.fixedHeader.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/fixedheader/4.0.1/js/dataTables.fixedHeader.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/img/spinner.svg": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/img/spinner.svg",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/img/spinner.svg",
+        "asset_disk_path": "basset/vendor/backpack/crud/src/resources/assets/img/spinner.svg",
+        "asset_attributes": [],
+        "asset_content_hash": "0a6bee92"
+    },
+    "https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css": {
+        "asset_name": "https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css",
+        "asset_path": "https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css",
+        "asset_disk_path": "basset/cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/responsive/3.0.3/css/responsive.dataTables.min.css": {
+        "asset_name": "https://cdn.datatables.net/responsive/3.0.3/css/responsive.dataTables.min.css",
+        "asset_path": "https://cdn.datatables.net/responsive/3.0.3/css/responsive.dataTables.min.css",
+        "asset_disk_path": "basset/cdn.datatables.net/responsive/3.0.3/css/responsive.dataTables.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/fixedheader/4.0.1/css/fixedHeader.dataTables.min.css": {
+        "asset_name": "https://cdn.datatables.net/fixedheader/4.0.1/css/fixedHeader.dataTables.min.css",
+        "asset_path": "https://cdn.datatables.net/fixedheader/4.0.1/css/fixedHeader.dataTables.min.css",
+        "asset_disk_path": "basset/cdn.datatables.net/fixedheader/4.0.1/css/fixedHeader.dataTables.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/buttons/3.2.0/js/dataTables.buttons.min.js": {
+        "asset_name": "https://cdn.datatables.net/buttons/3.2.0/js/dataTables.buttons.min.js",
+        "asset_path": "https://cdn.datatables.net/buttons/3.2.0/js/dataTables.buttons.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/buttons/3.2.0/js/dataTables.buttons.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/buttons/3.2.0/js/buttons.bootstrap5.min.js": {
+        "asset_name": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.bootstrap5.min.js",
+        "asset_path": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.bootstrap5.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/buttons/3.2.0/js/buttons.bootstrap5.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.18/pdfmake.min.js": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.18/pdfmake.min.js",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.18/pdfmake.min.js",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.18/pdfmake.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.18/vfs_fonts.js": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.18/vfs_fonts.js",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.18/vfs_fonts.js",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.18/vfs_fonts.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/buttons/3.2.0/js/buttons.html5.min.js": {
+        "asset_name": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.html5.min.js",
+        "asset_path": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.html5.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/buttons/3.2.0/js/buttons.html5.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/buttons/3.2.0/js/buttons.print.min.js": {
+        "asset_name": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.print.min.js",
+        "asset_path": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.print.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/buttons/3.2.0/js/buttons.print.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/buttons/3.2.0/js/buttons.colVis.min.js": {
+        "asset_name": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.colVis.min.js",
+        "asset_path": "https://cdn.datatables.net/buttons/3.2.0/js/buttons.colVis.min.js",
+        "asset_disk_path": "basset/cdn.datatables.net/buttons/3.2.0/js/buttons.colVis.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.datatables.net/buttons/3.2.0/css/buttons.bootstrap5.min.css": {
+        "asset_name": "https://cdn.datatables.net/buttons/3.2.0/css/buttons.bootstrap5.min.css",
+        "asset_path": "https://cdn.datatables.net/buttons/3.2.0/css/buttons.bootstrap5.min.css",
+        "asset_disk_path": "basset/cdn.datatables.net/buttons/3.2.0/css/buttons.bootstrap5.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css",
+        "asset_path": "https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css",
+        "asset_attributes": {
+            "integrity": "sha256-fvdQvRBUamldCxJ2etgEi9jz7F3n2u+xBn+dDao9HJo=",
+            "crossorigin": "anonymous"
+        },
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/style.css": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/style.css",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/style.css",
+        "asset_disk_path": "basset/vendor/backpack/theme-tabler/resources/assets/css/style.css",
+        "asset_attributes": [],
+        "asset_content_hash": "d9da2da5"
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/color-adjustments.css": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/color-adjustments.css",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/color-adjustments.css",
+        "asset_disk_path": "basset/vendor/backpack/theme-tabler/resources/assets/css/color-adjustments.css",
+        "asset_attributes": [],
+        "asset_content_hash": "0b2dc998"
+    },
+    "https://unpkg.com/animate.css@4.1.1/animate.compat.css": {
+        "asset_name": "https://unpkg.com/animate.css@4.1.1/animate.compat.css",
+        "asset_path": "https://unpkg.com/animate.css@4.1.1/animate.compat.css",
+        "asset_disk_path": "basset/unpkg.com/animate.css@4.1.1/animate.compat.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.css": {
+        "asset_name": "https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.css",
+        "asset_path": "https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.css",
+        "asset_disk_path": "basset/unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-regular-400.woff2": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-regular-400.woff2",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-regular-400.woff2",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-regular-400.woff2",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-solid-900.woff2": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-solid-900.woff2",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-solid-900.woff2",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-solid-900.woff2",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-brands-400.woff2": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-brands-400.woff2",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-brands-400.woff2",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-brands-400.woff2",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-regular-400.woff": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-regular-400.woff",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-regular-400.woff",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-regular-400.woff",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-solid-900.woff": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-solid-900.woff",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-solid-900.woff",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-solid-900.woff",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-brands-400.woff": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-brands-400.woff",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-brands-400.woff",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-brands-400.woff",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-regular-400.ttf": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-regular-400.ttf",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-regular-400.ttf",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-regular-400.ttf",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-solid-900.ttf": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-solid-900.ttf",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-solid-900.ttf",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-solid-900.ttf",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-brands-400.ttf": {
+        "asset_name": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-brands-400.ttf",
+        "asset_path": "https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-brands-400.ttf",
+        "asset_disk_path": "basset/cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/fonts/la-brands-400.ttf",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/css/common.css": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/css/common.css",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/css/common.css",
+        "asset_disk_path": "basset/vendor/backpack/crud/src/resources/assets/css/common.css",
+        "asset_attributes": [],
+        "asset_content_hash": "fc4a4401"
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/skins/fuzzy-background.css": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/skins/fuzzy-background.css",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/skins/fuzzy-background.css",
+        "asset_disk_path": "basset/vendor/backpack/theme-tabler/resources/assets/css/skins/fuzzy-background.css",
+        "asset_attributes": [],
+        "asset_content_hash": "4a46ff44"
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/skins/backpack-color-palette.css": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/skins/backpack-color-palette.css",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/skins/backpack-color-palette.css",
+        "asset_disk_path": "basset/vendor/backpack/theme-tabler/resources/assets/css/skins/backpack-color-palette.css",
+        "asset_attributes": [],
+        "asset_content_hash": "f8d79f24"
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/skins/glass.css": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/skins/glass.css",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/css/skins/glass.css",
+        "asset_disk_path": "basset/vendor/backpack/theme-tabler/resources/assets/css/skins/glass.css",
+        "asset_attributes": [],
+        "asset_content_hash": "7fb0d838"
+    },
+    "https://www.gravatar.com/avatar/9c210e34380398cf1c0b1e67112301ec1f1e100443eafa32102f502f6cbbd2cd.jpg?s=80&d=blank&r=g": {
+        "asset_name": "https://www.gravatar.com/avatar/9c210e34380398cf1c0b1e67112301ec1f1e100443eafa32102f502f6cbbd2cd.jpg?s=80&d=blank&r=g",
+        "asset_path": "https://www.gravatar.com/avatar/9c210e34380398cf1c0b1e67112301ec1f1e100443eafa32102f502f6cbbd2cd.jpg?s=80&d=blank&r=g",
+        "asset_disk_path": "basset/www.gravatar.com/avatar/9c210e34380398cf1c0b1e67112301ec1f1e100443eafa32102f502f6cbbd2cd.jpg",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "tabler-menu-javascript.js": {
+        "asset_name": "tabler-menu-javascript.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/tabler-menu-javascript.js",
+        "asset_disk_path": "basset/tabler-menu-javascript.js",
+        "asset_attributes": [],
+        "asset_content_hash": "<script type=\"text/javascript\">\n    document.addEventListener(\"DOMContentLoaded\", function() {\n        [...document.querySelectorAll('aside .dropdown-toggle.active')].forEach(el => { \n            let bsDropdown = tabler.bootstrap.Dropdown.getInstance(el);\n            if(typeof bsDropdown !== 'undefined' && bsDropdown !== null) {\n                bsDropdown.show();\n                el.blur();                 \n            }\n        });\n\n        // this is used to close only \"main menus\" when navigating in the sidebar. \n        // in topbar we can use `click outside` to close the menu, but here we don't want\n        // the menu closing while we interact with the page, only when another main menu is clicked\n        [...document.querySelectorAll('aside .nav-item.dropdown')].forEach(el => {\n        let bsDropdown = tabler.bootstrap.Dropdown.getInstance(el.firstElementChild);\n        if(typeof bsDropdown !== 'undefined' && bsDropdown !== null) {\n            bsDropdown._config.autoClose = false;\n            bsDropdown.update();\n            \n            bsDropdown._element.addEventListener('show.bs.dropdown', function(e) {\n                let openDropdownInstance = document.querySelector('aside .nav-link.dropdown-toggle.show');\n                if(openDropdownInstance !== null) {\n                    let openDropdown = tabler.bootstrap.Dropdown.getInstance(openDropdownInstance);\n                    openDropdown.hide();\n                }\n            });\n            \n        }\n        });\n\n        [...document.querySelectorAll('header.top .dropdown-toggle, aside .dropdown-toggle')].forEach(el => {\n            let bsDropdown = tabler.bootstrap.Dropdown.getInstance(el);\n            if(typeof bsDropdown !== 'undefined' && bsDropdown !== null) {\n                if(!bsDropdown._element.classList.contains('nav-link')) {\n                    bsDropdown._element.addEventListener('show.bs.dropdown', function(e) {\n                        // whenever a dropdown is shown, we close all other nested dropdowns\n                        let targetParent = e.target.parentElement.classList.contains('dropend') ? e.target.parentElement.parentElement : e.target.parentElement.parentElement.parentElement;\n                        let openDropdownInstances = targetParent.querySelectorAll('.dropdown-toggle.show');\n                        if(openDropdownInstances !== null) {\n                           openDropdownInstances.forEach(function(openDropdownInstance) {\n                                let openDropdown = tabler.bootstrap.Dropdown.getInstance(openDropdownInstance);\n                                openDropdown.hide();\n                            });\n                        }\n                    });\n                }else{\n                    // when nav-link is active we re-open the complete active menu\n                    bsDropdown._element.addEventListener('show.bs.dropdown', function(e) {\n                        if(e.target.parentElement.classList.contains('active') || e.target.classList.contains('active')) {\n                            e.target.parentElement.querySelectorAll('.dropdown-toggle.active').forEach(function(openDropdownInstance) {\n                                if(openDropdownInstance !== e.target) {\n                                    let openDropdown = tabler.bootstrap.Dropdown.getInstance(openDropdownInstance);\n                                    openDropdown.show();\n                                }\n                            });\n                        }\n                    });\n                }\n                \n            }\n                         \n        });\n\n        // closes the main dropdown when clicking outside\n        [...document.querySelectorAll('header.top .nav-item.dropdown')].forEach(el => {\n            let bsDropdown = tabler.bootstrap.Dropdown.getInstance(el.firstElementChild);\n            if(typeof bsDropdown !== 'undefined' && bsDropdown !== null) {\n                bsDropdown._config.autoClose = 'outside';\n                bsDropdown.update();\n            }\n                \n        });\n    });\n</script>\n"
+    },
+    "https://unpkg.com/jquery@3.6.1/dist/jquery.min.js": {
+        "asset_name": "https://unpkg.com/jquery@3.6.1/dist/jquery.min.js",
+        "asset_path": "https://unpkg.com/jquery@3.6.1/dist/jquery.min.js",
+        "asset_disk_path": "basset/unpkg.com/jquery@3.6.1/dist/jquery.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://unpkg.com/@popperjs/core@2.11.6/dist/umd/popper.min.js": {
+        "asset_name": "https://unpkg.com/@popperjs/core@2.11.6/dist/umd/popper.min.js",
+        "asset_path": "https://unpkg.com/@popperjs/core@2.11.6/dist/umd/popper.min.js",
+        "asset_disk_path": "basset/unpkg.com/@popperjs/core@2.11.6/dist/umd/popper.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.min.js": {
+        "asset_name": "https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.min.js",
+        "asset_path": "https://unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.min.js",
+        "asset_disk_path": "basset/unpkg.com/noty@3.2.0-beta-deprecated/lib/noty.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js": {
+        "asset_name": "https://unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js",
+        "asset_path": "https://unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js",
+        "asset_disk_path": "basset/unpkg.com/sweetalert@2.1.2/dist/sweetalert.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/js/common.js": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/js/common.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/crud/src/resources/assets/js/common.js",
+        "asset_disk_path": "basset/vendor/backpack/crud/src/resources/assets/js/common.js",
+        "asset_attributes": [],
+        "asset_content_hash": "af4fd86e"
+    },
+    "https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js",
+        "asset_path": "https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js",
+        "asset_attributes": {
+            "integrity": "sha256-tgx2Fg6XYkV027jPEKvmrummSTtgCW/fwV3R3SvZnrk=",
+            "crossorigin": "anonymous"
+        },
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/js/tabler.js": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/js/tabler.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/backpack/theme-tabler/resources/assets/js/tabler.js",
+        "asset_disk_path": "basset/vendor/backpack/theme-tabler/resources/assets/js/tabler.js",
+        "asset_attributes": [],
+        "asset_content_hash": "01bd6c04"
+    },
+    "backpack/crud/buttons/delete-button-en.js": {
+        "asset_name": "backpack/crud/buttons/delete-button-en.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/backpack/crud/buttons/delete-button-en.js",
+        "asset_disk_path": "basset/backpack/crud/buttons/delete-button-en.js",
+        "asset_attributes": [],
+        "asset_content_hash": "<script>\n\n\tif (typeof deleteEntry != 'function') {\n\t  $(\"[data-button-type=delete]\").unbind('click');\n\n\t  function deleteEntry(button) {\n\t\t// block deletion when the entry has constraints (ex: batches with assigned courses)\n\t\tvar isBlocked = $(button).data('delete-blocked');\n\t\tif (isBlocked) {\n\t\t\tvar blockedMessage = $(button).data('delete-blocked-message') || 'This item cannot be deleted.';\n\t\t\tswal({\n\t\t\t\ttitle: \"Cannot delete\",\n\t\t\t\ttext: blockedMessage,\n\t\t\t\ticon: \"warning\",\n\t\t\t\tbuttons: {\n\t\t\t\t\tcancel: {\n\t\t\t\t\t\ttext: \"OK\",\n\t\t\t\t\t\tvalue: null,\n\t\t\t\t\t\tvisible: true,\n\t\t\t\t\t\tclassName: \"bg-secondary\",\n\t\t\t\t\t\tcloseModal: true,\n\t\t\t\t\t},\n\t\t\t\t},\n\t\t\t\tdangerMode: false,\n\t\t\t});\n\t\t\treturn;\n\t\t}\n\n\t\t// ask for confirmation before deleting an item\n\t\t// e.preventDefault();\n\t\tvar route = $(button).attr('data-route');\n\n\t\tswal({\n\t\t  title: \"Warning\",\n\t\t  text: \"Are you sure you want to delete this item?\",\n\t\t  icon: \"warning\",\n\t\t  buttons: {\n\t\t  \tcancel: {\n\t\t\t\ttext: \"Cancel\",\n\t\t\t\tvalue: null,\n\t\t\t\tvisible: true,\n\t\t\t\tclassName: \"bg-secondary\",\n\t\t\t\tcloseModal: true,\n\t\t\t},\n\t\t\tdelete: {\n\t\t\t\ttext: \"Delete\",\n\t\t\t\tvalue: true,\n\t\t\t\tvisible: true,\n\t\t\t\tclassName: \"bg-danger\",\n\t\t\t\t},\n\t\t\t},\n\t\t  dangerMode: true,\n\t\t}).then((value) => {\n\t\t\tif (value) {\n\t\t\t\t$.ajax({\n\t\t\t      url: route,\n\t\t\t      type: 'DELETE',\n\t\t\t      success: function(result) {\n\t\t\t          if (result == 1) {\n\t\t\t\t\t\t  // Redraw the table\n\t\t\t\t\t\t  if (typeof crud != 'undefined' && typeof crud.table != 'undefined') {\n\t\t\t\t\t\t\t  // Move to previous page in case of deleting the only item in table\n\t\t\t\t\t\t\t  if(crud.table.rows().count() === 1) {\n\t\t\t\t\t\t\t    crud.table.page(\"previous\");\n\t\t\t\t\t\t\t  }\n\n\t\t\t\t\t\t\t  crud.table.draw(false);\n\t\t\t\t\t\t  }\n\n\t\t\t          \t  // Show a success notification bubble\n\t\t\t              new Noty({\n\t\t                    type: \"success\",\n\t\t                    text: \"<strong>Item Deleted</strong><br>The item has been deleted successfully.\"\n\t\t                  }).show();\n\n\t\t\t              // Hide the modal, if any\n\t\t\t              $('.modal').modal('hide');\n\t\t\t          } else {\n\t\t\t              // if the result is an array, it means \n\t\t\t              // we have notification bubbles to show\n\t\t\t          \t  if (result instanceof Object) {\n\t\t\t          \t  \t// trigger one or more bubble notifications \n\t\t\t          \t  \tObject.entries(result).forEach(function(entry, index) {\n\t\t\t          \t  \t  var type = entry[0];\n\t\t\t          \t  \t  entry[1].forEach(function(message, i) {\n\t\t\t\t\t          \t  new Noty({\n\t\t\t\t                    type: type,\n\t\t\t\t                    text: message\n\t\t\t\t                  }).show();\n\t\t\t          \t  \t  });\n\t\t\t          \t  \t});\n\t\t\t          \t  } else {// Show an error alert\n\t\t\t\t              swal({\n\t\t\t\t              \ttitle: \"NOT deleted\",\n\t                            text: \"There's been an error. Your item might not have been deleted.\",\n\t\t\t\t              \ticon: \"error\",\n\t\t\t\t              \ttimer: 4000,\n\t\t\t\t              \tbuttons: false,\n\t\t\t\t              });\n\t\t\t          \t  }\t\t\t          \t  \n\t\t\t          }\n\t\t\t      },\n\t\t\t      error: function(result) {\n\t\t\t          // Show an alert with the result\n\t\t\t          swal({\n\t\t              \ttitle: \"NOT deleted\",\n                        text: \"There's been an error. Your item might not have been deleted.\",\n\t\t              \ticon: \"error\",\n\t\t              \ttimer: 4000,\n\t\t              \tbuttons: false,\n\t\t              });\n\t\t\t      }\n\t\t\t  });\n\t\t\t}\n\t\t});\n\n      }\n\t}\n\n\t// make it so that the function above is run after each DataTable draw event\n\t// crud.addFunctionToDataTablesDrawEventQueue('deleteEntry');\n</script>\n"
+    },
+    "backpack/crud/fields/checkbox-field.js": {
+        "asset_name": "backpack/crud/fields/checkbox-field.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/backpack/crud/fields/checkbox-field.js",
+        "asset_disk_path": "basset/backpack/crud/fields/checkbox-field.js",
+        "asset_attributes": [],
+        "asset_content_hash": "        <script>\n            function bpFieldInitCheckbox(element) {\n                var hidden_element = element.siblings('input[type=hidden]');\n                var id = 'checkbox_'+Math.floor(Math.random() * 1000000);\n\n                // make sure the value is a boolean (so it will pass validation)\n                if (hidden_element.val() === '') hidden_element.val(0).trigger('change');\n\n                // set unique IDs so that labels are correlated with inputs\n                element.attr('id', id);\n                element.siblings('label').attr('for', id);\n\n                // set the default checked/unchecked state\n                // if the field has been loaded with javascript\n                if (hidden_element.val() != 0) {\n                  element.prop('checked', 'checked');\n                } else {\n                  element.prop('checked', false);\n                }\n\n                hidden_element.on('CrudField:disable', function(e) {\n                  element.prop('disabled', true);\n                });\n                hidden_element.on('CrudField:enable', function(e) {\n                  element.removeAttr('disabled');\n                });\n\n                // when the checkbox is clicked\n                // set the correct value on the hidden input\n                element.change(function() {\n                  if (element.is(\":checked\")) {\n                    hidden_element.val(1).trigger('change');\n                  } else {\n                    hidden_element.val(0).trigger('change');\n                  }\n                })\n            }\n        </script>\n        "
+    },
+    "https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js",
+        "asset_path": "https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "backpack/pro/fields/select2-field.js": {
+        "asset_name": "backpack/pro/fields/select2-field.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/backpack/pro/fields/select2-field.js",
+        "asset_disk_path": "basset/backpack/pro/fields/select2-field.js",
+        "asset_attributes": [],
+        "asset_content_hash": "        <script>\n            function bpFieldInitSelect2Element(element) {\n                // element will be a jQuery wrapped DOM node\n                if (!element.hasClass(\"select2-hidden-accessible\"))\n                {\n                    let isFieldInline = element.data('field-is-inline');\n                    let placeholder = element.data('field-placeholder');\n                    let allowClear = element.data('field-allow-clear');\n                    \n                    // Check if element is inside inline-create-dialog modal\n                    let isInInlineCreateModal = element.closest('#inline-create-dialog').length > 0;\n                    \n                    let select2Options = {\n                        theme: \"bootstrap\",\n                        placeholder: placeholder,\n                        allowClear: allowClear,\n                        dropdownParent: isInInlineCreateModal ? $('#inline-create-dialog .modal-content') : $(document.body)\n                    };\n                    \n                    element.select2(select2Options);\n                }\n            }\n        </script>\n        "
+    },
+    "backpack/pro/fields/select2-from-ajax-field-en.js": {
+        "asset_name": "backpack/pro/fields/select2-from-ajax-field-en.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/backpack/pro/fields/select2-from-ajax-field-en.js",
+        "asset_disk_path": "basset/backpack/pro/fields/select2-from-ajax-field-en.js",
+        "asset_attributes": [],
+        "asset_content_hash": "<script>\n    function bpFieldInitSelect2FromAjaxElement(element) {\n        var form = element.closest('form');\n        var $placeholder = element.attr('data-placeholder');\n        var $minimumInputLength = element.attr('data-minimum-input-length');\n        var $dataSource = element.attr('data-data-source');\n        var $method = element.attr('data-method');\n        var $fieldAttribute = element.attr('data-field-attribute');\n        var $connectedEntityKeyName = element.attr('data-connected-entity-key-name');\n        var $includeAllFormFields = element.attr('data-include-all-form-fields')=='false' ? false : true;\n        var $allowClear = element.attr('data-column-nullable') == 'true' ? true : false;\n        var $dependencies = JSON.parse(element.attr('data-dependencies'));\n        var $ajaxDelay = element.attr('data-ajax-delay');\n        var $isFieldInline = element.data('field-is-inline');\n        var $fieldCleanName = element.attr('data-repeatable-input-name') ?? element.attr('name');\n\n        // do not initialise select2s that have already been initialised\n        if ($(element).hasClass(\"select2-hidden-accessible\"))\n        {\n            return;\n        }\n\n        // Check if element is inside inline-create-dialog modal\n        var isInInlineCreateModal = element.closest('#inline-create-dialog').length > 0;\n\n        //init the element\n        $(element).select2({\n            theme: 'bootstrap',\n            multiple: false,\n            placeholder: $placeholder,\n            minimumInputLength: $minimumInputLength,\n            allowClear: $allowClear,\n            dropdownParent: isInInlineCreateModal ? $('#inline-create-dialog .modal-content') : $(document.body),\n            ajax: {\n                url: $dataSource,\n                type: $method,\n                dataType: 'json',\n                delay: $ajaxDelay,\n                data: function (params) {\n                    if ($includeAllFormFields) {\n                        return {\n                            q: params.term, // search term\n                            page: params.page, // pagination\n                            form: form.serializeArray(), // all other form inputs\n                            triggeredBy: \n                            {\n                                'rowNumber': element.attr('data-row-number') !== 'undefined' ? element.attr('data-row-number')-1 : false, \n                                'fieldName': $fieldCleanName\n                            }\n                        };\n                    } else {\n                        return {\n                            q: params.term, // search term\n                            page: params.page, // pagination\n                        };\n                    }\n                },\n                processResults: function (data, params) {\n                    params.page = params.page || 1;\n                    \n                    //if we have data.data here it means we returned a paginated instance from controller.\n                    //otherwise we returned one or more entries unpaginated.\n                    let paginate = false;\n\n                    if (data.data) {\n                        paginate = data.next_page_url !== null;\n                        data = data.data;\n                    }\n\n                    return {\n                        results: $.map(data, function (item) {\n                            var $itemText = processItemText(item, $fieldAttribute);\n                            return {\n                                text: $itemText,\n                                id: item[$connectedEntityKeyName],\n                            }\n                        }),\n                        pagination: {\n                            more: paginate,\n                        }\n                    };\n                },\n                cache: true\n            },\n        });\n\n        // if any dependencies have been declared\n        // when one of those dependencies changes value\n        // reset the select2 value\n        for (var i=0; i < $dependencies.length; i++) {\n            var $dependency = $dependencies[i];\n            //if element does not have a custom-selector attribute we use the name attribute\n            if(typeof element.attr('data-custom-selector') == 'undefined') {\n                form.find('[name=\"'+$dependency+'\"], [name=\"'+$dependency+'[]\"]').change(function(el) {\n                        $(element.find('option:not([value=\"\"])')).remove();\n                        element.val(null).trigger(\"change\");\n                });\n            }else{\n                // we get the row number and custom selector from where element is called\n                let rowNumber = element.attr('data-row-number');\n                let selector = element.attr('data-custom-selector');\n\n                // replace in the custom selector string the corresponding row and dependency name to match\n                selector = selector\n                    .replaceAll('%DEPENDENCY%', $dependency)\n                    .replaceAll('%ROW%', rowNumber);\n\n                $(selector).change(function (el) {\n                    $(element.find('option:not([value=\"\"])')).remove();\n                    element.val(null).trigger(\"change\");\n                });\n            }\n        }\n    }\n\n    if (typeof processItemText !== 'function') {\n        function processItemText(item, $fieldAttribute) {\n            var $appLang = 'en';\n            var $appLangFallback = 'en';\n            var $emptyTranslation = '(empty)';\n            var $itemField = item[$fieldAttribute];\n\n            // try to retreive the item in app language; then fallback language; then first entry; if nothing found empty translation string\n            return typeof $itemField === 'object' && $itemField !== null\n                ? $itemField[$appLang] ? $itemField[$appLang] : $itemField[$appLangFallback] ? $itemField[$appLangFallback] : Object.values($itemField)[0] ? Object.values($itemField)[0] : $emptyTranslation\n                : $itemField;\n        }\n    }\n    </script>\n    "
+    },
+    "backpack/pro/fields/select2-multiple-field.js": {
+        "asset_name": "backpack/pro/fields/select2-multiple-field.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/backpack/pro/fields/select2-multiple-field.js",
+        "asset_disk_path": "basset/backpack/pro/fields/select2-multiple-field.js",
+        "asset_attributes": [],
+        "asset_content_hash": "        <script>\n            function bpFieldInitSelect2MultipleElement(element) {\n\n                var $select_all = element.attr('data-select-all');\n                if (!element.hasClass(\"select2-hidden-accessible\"))\n                {\n                    let $isFieldInline = element.data('field-is-inline');\n                    let $allowClear = element.data('allows-null');\n                    let $multiple = element.attr('multiple') ?? false;\n                    let $placeholder = element.attr('placeholder');\n                    let $closeOnSelect = element.data('close-on-select');\n\n                    // Check if element is inside inline-create-dialog modal\n                    let isInInlineCreateModal = element.closest('#inline-create-dialog').length > 0;\n\n                    var $obj = element.select2({\n                        theme: \"bootstrap\",\n                        allowClear: $allowClear,\n                        multiple: $multiple,\n                        placeholder: $placeholder,\n                        closeOnSelect: $closeOnSelect,\n                        dropdownParent: isInInlineCreateModal ? $('#inline-create-dialog .modal-content') : $(document.body)\n\n                    });\n\n                    //get options ids stored in the field.\n                    var options = JSON.parse(element.attr('data-options-for-js'));\n\n                    if($select_all) {\n                        element.parent().find('.clear').on(\"click\", function () {\n                            $obj.val([]).trigger(\"change\");\n                        });\n                        element.parent().find('.select_all').on(\"click\", function () {\n                            $obj.val(options).trigger(\"change\");\n                        });\n                    }\n                }\n\n                $(element).on('CrudField:disable', function(e) {\n                    let hiddenInput = element.siblings('input[type=\"hidden\"]');\n                    if(hiddenInput.length) {\n                        hiddenInput.prop('disabled',true);\n                    }\n                    return true;\n                });\n\n                $(element).on('CrudField:enable', function(e) { \n                    let hiddenInput = element.siblings('input[type=\"hidden\"]');\n                    if(hiddenInput.length) {\n                        hiddenInput.prop('disabled',false);\n                    }\n                    return true;\n                });\n            }\n        </script>\n        "
+    },
+    "backpack/crud/fields/switch-field.js": {
+        "asset_name": "backpack/crud/fields/switch-field.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/backpack/crud/fields/switch-field.js",
+        "asset_disk_path": "basset/backpack/crud/fields/switch-field.js",
+        "asset_attributes": [],
+        "asset_content_hash": "    <script>\n        function bpFieldInitSwitch($element) {\n            let element = $element[0];\n            let hiddenElement = element.previousElementSibling;\n            let id = `switch_${hiddenElement.name}_${Math.random() * 1e18}`;\n\n            // set unique IDs so that labels are correlated with inputs\n            element.setAttribute('id', id);\n            element.parentElement.nextElementSibling.setAttribute('for', id);\n\n            // set the default checked/unchecked state\n            // if the field has been loaded with javascript\n            hiddenElement.value !== '0'\n                ? element.setAttribute('checked', true)\n                : element.removeAttribute('checked');\n\n            // JS Field API\n            $(hiddenElement).on('CrudField:disable', () => element.setAttribute('disabled', true));\n            $(hiddenElement).on('CrudField:enable', () => element.removeAttribute('disabled'));\n\n            // when the checkbox is clicked\n            // set the correct value on the hidden input\n            $element.on('change', () => {\n                hiddenElement.value = element.checked ? 1 : 0;\n                hiddenElement.dispatchEvent(new Event('change'));\n            });\n        }\n    </script>\n    "
+    },
+    "backpack/crud/fields/switch-field.css": {
+        "asset_name": "backpack/crud/fields/switch-field.css",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/backpack/crud/fields/switch-field.css",
+        "asset_disk_path": "basset/backpack/crud/fields/switch-field.css",
+        "asset_attributes": [],
+        "asset_content_hash": "    <style>\n        .switch-input:checked+.switch-slider {\n            background-color: var(--bg-switch-checked-color, black);\n        }\n        .form-switch .form-check-input:checked {\n            background-color: var(--bg-switch-checked-color, black);\n        }\n    </style>\n    "
+    },
+    "https://cdn.jsdelivr.net/npm/jquery@3.6.1/dist/jquery.min.js": {
+        "asset_name": "https://cdn.jsdelivr.net/npm/jquery@3.6.1/dist/jquery.min.js",
+        "asset_path": "https://cdn.jsdelivr.net/npm/jquery@3.6.1/dist/jquery.min.js",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/npm/jquery@3.6.1/dist/jquery.min.js",
+        "asset_attributes": {
+            "integrity": "sha384-i61gTtaoovXtAbKjo903+O55Jkn2+RtzHtvNez+yI49HAASvznhe9sZyjaSHTau9",
+            "crossorigin": "anonymous"
+        },
+        "asset_content_hash": ""
+    },
+    "https://raw.githubusercontent.com/jquery/jquery-ui/refs/tags/1.13.2/dist/jquery-ui.min.js": {
+        "asset_name": "https://raw.githubusercontent.com/jquery/jquery-ui/refs/tags/1.13.2/dist/jquery-ui.min.js",
+        "asset_path": "https://raw.githubusercontent.com/jquery/jquery-ui/refs/tags/1.13.2/dist/jquery-ui.min.js",
+        "asset_disk_path": "basset/raw.githubusercontent.com/jquery/jquery-ui/refs/tags/1.13.2/dist/jquery-ui.min.js",
+        "asset_attributes": {
+            "integrity": "sha384-4D3G3GikQs6hLlLZGdz5wLFzuqE9v4yVGAcOH86y23JqBDPzj9viv0EqyfIa6YUL",
+            "crossorigin": "anonymous"
+        },
+        "asset_content_hash": ""
+    },
+    "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/js/elfinder.min.js": {
+        "asset_name": "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/js/elfinder.min.js",
+        "asset_path": "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/js/elfinder.min.js",
+        "asset_disk_path": "basset/raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/js/elfinder.min.js",
+        "asset_attributes": {
+            "integrity": "sha384-Ow1wKIUQLS9bOa23gn7yT91nyowDhk2zK1lO7G5Hnxlh3bvTPNH7c5uODf7/jIec",
+            "crossorigin": "anonymous"
+        },
+        "asset_content_hash": ""
+    },
+    "/Users/owuraku/Repositories/LQA/backend/vendor/studio-42/elfinder/sounds/rm.wav": {
+        "asset_name": "/Users/owuraku/Repositories/LQA/backend/vendor/studio-42/elfinder/sounds/rm.wav",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/vendor/studio-42/elfinder/sounds/rm.wav",
+        "asset_disk_path": "basset/vendor/studio-42/elfinder/sounds/rm.wav",
+        "asset_attributes": [],
+        "asset_content_hash": "19276d90"
+    },
+    "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/img/icons-big.svg": {
+        "asset_name": "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/img/icons-big.svg",
+        "asset_path": "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/img/icons-big.svg",
+        "asset_disk_path": "basset/raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/img/icons-big.svg",
+        "asset_attributes": {
+            "integrity": "sha384-BWeb84E4ly6GgjPMWRpJNB+I8XpW+xqF9kezQR6PNqXP0pmjHi8iqlGZs0JRgHlu",
+            "crossorigin": "anonymous"
+        },
+        "asset_content_hash": ""
+    },
+    "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/img/logo.png": {
+        "asset_name": "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/img/logo.png",
+        "asset_path": "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/img/logo.png",
+        "asset_disk_path": "basset/raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/img/logo.png",
+        "asset_attributes": {
+            "integrity": "sha384-mAtths5Wl6rU0MrgaCz2bJRTIG8LhA1pLZ4ZX+Qo9fQRjlKFxb5eLWUO3pZ7Aioq",
+            "crossorigin": "anonymous"
+        },
+        "asset_content_hash": ""
+    },
+    "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/css/elfinder.min.css": {
+        "asset_name": "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/css/elfinder.min.css",
+        "asset_path": "https://raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/css/elfinder.min.css",
+        "asset_disk_path": "basset/raw.githubusercontent.com/Studio-42/elFinder/refs/tags/2.1.64/css/elfinder.min.css",
+        "asset_attributes": {
+            "integrity": "sha384-O+x3Lv203m3W8SILSSf8xt2ryvN+CEx3s9tpGloi3D6UQ+1BkbXPuSxEj7uhKKCs",
+            "crossorigin": "anonymous"
+        },
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme.min.css": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme.min.css",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme.min.css",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/loading.svg": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/loading.svg",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/loading.svg",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/loading.svg",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.eot": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.eot",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.eot",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.eot",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.svg": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.svg",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.svg",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.svg",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-big.svg": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-big.svg",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-big.svg",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-big.svg",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-small.svg": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-small.svg",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-small.svg",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/images/icons-small.svg",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.ttf": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.ttf",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.ttf",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.ttf",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff2": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff2",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff2",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/font/material.woff2",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme-gray.min.css": {
+        "asset_name": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme-gray.min.css",
+        "asset_path": "https://cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme-gray.min.css",
+        "asset_disk_path": "basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme-gray.min.css",
+        "asset_attributes": [],
+        "asset_content_hash": ""
+    },
+    "elfinderThemeSwitcherScript.js": {
+        "asset_name": "elfinderThemeSwitcherScript.js",
+        "asset_path": "/Users/owuraku/Repositories/LQA/backend/elfinderThemeSwitcherScript.js",
+        "asset_disk_path": "basset/elfinderThemeSwitcherScript.js",
+        "asset_attributes": [],
+        "asset_content_hash": "<script type=\"text/javascript\">\ndocument.addEventListener('DOMContentLoaded', function() {\n    function getElfinderStyleSheet(main = true) {\n    const regex = new RegExp(main ? `RobiNN1\\/elFinder-Material-Theme@3.0.0\\/Material\\/css\\/theme\\.min\\.css` : `RobiNN1\\/elFinder-Material-Theme@3.0.0\\/Material\\/css\\/theme-gray\\.min\\.css`);        const linkElements = document.querySelectorAll('link[rel=\"stylesheet\"]');\n        // Find the main elfinder stylesheet\n        let selectedLinkElement;\n        for (const linkElement of linkElements) {\n            if (regex.test(linkElement.href)) {\n                selectedLinkElement = linkElement;\n                break;\n            }\n        }\n        return selectedLinkElement;\n    }\n\n    function addElfinderLightStylesheet() {\n        let themeLightAsset = `<link href=\"https://cdn.onemillioncoders.gov.gh/omcp-asset/basset/cdn.jsdelivr.net/gh/RobiNN1/elFinder-Material-Theme@3.0.0/Material/css/theme-gray.min.css?d6d0e326b094\" rel=\"stylesheet\" type=\"text/css\" />\nAlready in cache`;\n        const match = themeLightAsset.match(/<link\\s+href=\"([^\"]+)\"/i);\n        if (match && match.length > 1) {\n            let mainStyleSheet = getElfinderStyleSheet();\n            let lightStyleSheet = getElfinderStyleSheet(false);\n            // if found append the light mode css to the main theme stylesheet\n            if (mainStyleSheet && ! lightStyleSheet) {\n                let themeLight = document.createElement('link');\n                themeLight.href = match[1];\n                themeLight.rel = 'stylesheet';\n                themeLight.type = 'text/css';\n                mainStyleSheet.insertAdjacentElement('afterend', themeLight);\n            }\n        }\n    }\n\n    let colorMode = window.parent.colorMode?.result ?? window.colorMode?.result ?? false;\n   \n    if(colorMode !== 'dark') {\n        addElfinderLightStylesheet();\n    }\n\n    // register a color mode change event so that we remove\n    // the light stylesheet when the color mode change\n    if(colorMode) {\n        let colorModeClass = window.parent.colorMode ?? window.colorMode;\n        colorModeClass.onChange(function(scheme) {\n            let getMainStylesheet = scheme === 'dark' ? false : true;\n            let selectedLinkElement = getElfinderStyleSheet(getMainStylesheet);\n\n            if (! selectedLinkElement) {\n                return true;\n            }\n            // in case we switched to dark mode, remove the ligth theme css\n            if(scheme === 'dark') {\n                selectedLinkElement.parentNode.removeChild(selectedLinkElement);\n                return true; \n            }\n            addElfinderLightStylesheet()\n        });\n    }\n\n    // we dont want to style the body when elfinder is loaded as a component in a backpack view\n    // we pass true when loading elfinder inside an iframe to style the iframe body.\n    });\n</script>\n"
+    }
+}
