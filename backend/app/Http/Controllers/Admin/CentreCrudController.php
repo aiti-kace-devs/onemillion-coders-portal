@@ -235,7 +235,7 @@ class CentreCrudController extends CrudController
 
             CRUD::addColumn([
                 'name' => 'support_yes',
-                'label' => 'Users Who Needs Support',
+                'label' => 'Users Who Need Support',
                 'type' => 'closure',
                 'function' => function ($entry) use ($centreAdmittedMetrics) {
                     $metrics = $centreAdmittedMetrics->get((int) $entry->id);
