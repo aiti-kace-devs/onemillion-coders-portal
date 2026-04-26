@@ -70,7 +70,6 @@ set('writable_mode', 'chmod');
 set('writable_chmod_mode', '775');
 
 // Options
-option('update-env', null, InputOption::VALUE_NONE, 'Update .env file on servers');
 
 
 // ─── Hosts ───────────────────────────────────────────────────────────────────
@@ -80,7 +79,7 @@ host('web')
     ->setPort((int) getenv('DEPLOY_SSH_PORT'))
     ->setIdentityFile('~/.ssh/deployer_key')
     ->set('deploy_path', getenv('DEPLOY_PATH'))
-    ->set('bin/php', 'sudo -u laravelapp php')
+    ->set('bin/php', 'php')
     ->set('labels', ['role' => 'web']);
 
 host('queue')
@@ -95,35 +94,14 @@ host('queue')
 // ─── Deployment pipeline ─────────────────────────────────────────────────────
 
 task('deploy:update-env-if-needed', function () {
-    if (input()->hasOption('update-env') && input()->getOption('update-env')) {
-        $localEnvFile = '.env.prod';
+    $localEnvFile = '.env.prod';
 
-        if (!file_exists($localEnvFile)) {
-            throw new \Exception('.env.prod file not found locally');
-        }
-
-        writeln("<info>Updating .env file on servers...</info>");
-
-        // Upload to all hosts
+    if (file_exists($localEnvFile)) {
+        writeln("<info>Uploading .env file to servers...</info>");
         upload($localEnvFile, '{{deploy_path}}/shared/.env');
-
-        // Recache config
-        run('cd {{release_path}} && {{bin/php}} artisan config:cache');
-
-        writeln("<info>✓ .env file updated and config recached</info>");
-
-        // Restart services based on role
-        $role = get('labels')['role'] ?? '';
-        if ($role === 'web') {
-            run('sudo systemctl reload php-fpm');
-            run('sudo systemctl reload nginx');
-            writeln("<info>✓ Web server restarted</info>");
-        } elseif ($role === 'queue') {
-            run('sudo systemctl restart omcp-queue-worker');
-            writeln("<info>✓ Queue workers restarted</info>");
-        }
+        writeln("<info>✓ .env file updated</info>");
     } else {
-        writeln("<comment>Skipping .env update (use --update-env to update)</comment>");
+        writeln("<comment>No .env.prod found locally, skipping .env update.</comment>");
     }
 });
 
@@ -153,6 +131,16 @@ task('deploy:update-env', function () {
     run('cd {{current_path}} && {{bin/php}} artisan config:cache');
 
     writeln("<info>✓ .env updated and config cached on all servers</info>");
+
+    // Restart services based on role
+    $role = get('labels')['role'] ?? '';
+    if ($role === 'web') {
+        run('sudo systemctl reload php-fpm');
+        writeln("<info>✓ Web server restarted</info>");
+    } elseif ($role === 'queue') {
+        run('sudo supervisorctl restart all');
+        writeln("<info>✓ Queue workers restarted</info>");
+    }
 });
 
 task('deploy:take-ownership', function () {
