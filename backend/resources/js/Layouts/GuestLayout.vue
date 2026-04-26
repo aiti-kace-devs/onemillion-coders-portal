@@ -42,7 +42,7 @@ const backgroundStyle = computed(() => ({
             <span class="h-px w-24 sm:h-12 sm:w-px lg:h-16 bg-white/30" aria-hidden="true"></span>
             <Link href="/" aria-label="One Million Coders home" class="shrink-0">
                 <ApplicationLogo
-                    src="/assets/images/logo-bt.png"
+                    src="/uploads/images/one-mil-coders-white-text.png"
                     class="h-16 sm:h-20 lg:h-24 w-auto object-contain"
                 />
             </Link>
