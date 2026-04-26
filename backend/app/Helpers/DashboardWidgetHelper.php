@@ -11,11 +11,18 @@ use Illuminate\Support\Facades\DB;
 class DashboardWidgetHelper
 {
     
-    private static function isCentreManager(): bool
+    private static function isCentreOfficer(): bool
     {
         $admin = backpack_user();
 
-        return $admin && method_exists($admin, 'hasRole') && $admin->hasRole('centre-manager');
+        if (! $admin || ! method_exists($admin, 'hasRole')) {
+            return false;
+        }
+
+        return $admin->hasRole('Centre Ofiicer')
+            || $admin->hasRole('Centre Officer')
+            || $admin->hasRole('centre-officer')
+            || $admin->hasRole('centre-manager');
     }
 
     /**
@@ -63,11 +70,11 @@ class DashboardWidgetHelper
     }
 
     /**
-     * Centre managers should only see dashboard counts for active course batches.
+     * Centre officers should only see dashboard counts for active course batches.
      */
     public static function dashboardCountVisibleCourseIds(?array $visibleCourseIds): ?array
     {
-        if (! self::isCentreManager()) {
+        if (! self::isCentreOfficer()) {
             return $visibleCourseIds;
         }
 
@@ -160,9 +167,9 @@ class DashboardWidgetHelper
         });
 
         $coursesHint = 'Courses in active or ongoing batches.';
-        $usersHint = self::isCentreManager() ? 'Users registered for active course batches.' : 'All registered users.';
-        $shortlistedHint = self::isCentreManager() ? 'Shortlisted users for active course batches.' : 'All shortlisted students.';
-        $admittedHint = self::isCentreManager() ? 'Admitted students for active course batches.' : 'All admitted students.';
+        $usersHint = self::isCentreOfficer() ? 'Users registered for active course batches.' : 'All registered users.';
+        $shortlistedHint = self::isCentreOfficer() ? 'Shortlisted users for active course batches.' : 'All shortlisted students.';
+        $admittedHint = self::isCentreOfficer() ? 'Admitted students for active course batches.' : 'All admitted students.';
 
         Widget::add([
             'type' => 'div',
@@ -256,7 +263,7 @@ class DashboardWidgetHelper
 
     public static function dashboardBatchStatisticsWidget()
     {
-        if (self::isCentreManager()) {
+        if (self::isCentreOfficer()) {
             return;
         }
 
@@ -352,7 +359,7 @@ class DashboardWidgetHelper
 
     public static function dashboardStudentStatisticsWidget()
     {
-        if (self::isCentreManager()) {
+        if (self::isCentreOfficer()) {
             Widget::add([
                 'type' => 'div',
                 'class' => 'row mb-4',

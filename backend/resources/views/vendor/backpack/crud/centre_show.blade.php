@@ -10,6 +10,15 @@
     $constituency = $centre->constituency;
     $districtTitles = $centre->districts?->pluck('title')->filter()->sort()->values() ?? collect();
     $totalDistricts = $districtTitles->count();
+    $currentAdmin = backpack_user();
+    $isCentreOfficer = $currentAdmin
+        && method_exists($currentAdmin, 'hasRole')
+        && (
+            $currentAdmin->hasRole('Centre Ofiicer')
+            || $currentAdmin->hasRole('Centre Officer')
+            || $currentAdmin->hasRole('centre-officer')
+            || $currentAdmin->hasRole('centre-manager')
+        );
 
     $today = now()->toDateString();
 
@@ -18,25 +27,49 @@
         ->pluck('id')
         ->map(fn($id) => (int) $id)
         ->all();
+    $admissionBatchDateRange = \Illuminate\Support\Facades\DB::table('courses as c')
+        ->join('admission_batches as ab', 'ab.id', '=', 'c.batch_id')
+        ->where('c.centre_id', $centreId)
+        ->selectRaw('MIN(DATE(ab.start_date)) as min_start_date, MAX(DATE(ab.end_date)) as max_end_date')
+        ->first();
+    $admissionFilterMinDate = $admissionBatchDateRange->min_start_date ?? null;
+    $admissionFilterMaxDate = $admissionBatchDateRange->max_end_date ?? null;
 
-    $centreSessions = \App\Models\CourseSession::centreType()
-        ->where('centre_id', $centreId)
+    $centreSessions = \App\Models\MasterSession::active()
+        ->orderByRaw(
+            "
+            CASE LOWER(TRIM(COALESCE(session_type, '')))
+                WHEN 'morning' THEN 1
+                WHEN 'afternoon' THEN 2
+                WHEN 'evening' THEN 3
+                WHEN 'fullday' THEN 4
+                WHEN 'online' THEN 5
+                ELSE 6
+            END
+        ",
+        )
         ->orderBy('id')
         ->get();
     $centreSessionIds = $centreSessions->pluck('id')->map(fn($id) => (int) $id)->values()->all();
+    $centreShortSessionLimit = $centre->short_slots_per_day !== null ? (int) $centre->short_slots_per_day : null;
+    $centreLongSessionLimit = $centre->long_slots_per_day !== null ? (int) $centre->long_slots_per_day : null;
+    $centreSeatCountLimit = $centre->seat_count !== null ? (int) $centre->seat_count : null;
     $centreSessionConfirmed = collect();
     if (!empty($centreSessionIds)) {
-        $centreSessionConfirmed = \Illuminate\Support\Facades\DB::table('user_admission')
-            ->whereIn('session', $centreSessionIds)
-            ->whereNotNull('confirmed')
-            ->selectRaw('session, COUNT(*) as count')
-            ->groupBy('session')
-            ->pluck('count', 'session');
+        $centreSessionConfirmed = \Illuminate\Support\Facades\DB::table('user_admission as ua')
+            ->join('users as u', 'u.userId', '=', 'ua.user_id')
+            ->join('courses as assigned_course', 'assigned_course.id', '=', 'u.registered_course')
+            ->where('assigned_course.centre_id', $centreId)
+            ->whereIn('ua.session', $centreSessionIds)
+            ->whereNotNull('ua.confirmed')
+            ->selectRaw('ua.session, COUNT(*) as count')
+            ->groupBy('ua.session')
+            ->pluck('count', 'ua.session');
     }
     $centreSessionChartLabels = $centreSessions
         ->map(function ($session) {
-            $sessionLabel = trim((string) ($session->session ?? $session->name ?? 'Session #' . $session->id));
-            $courseTime = trim((string) ($session->course_time ?? ''));
+            $sessionLabel = trim((string) ($session->session_type ?? $session->master_name ?? 'Session #' . $session->id));
+            $courseTime = trim((string) ($session->time ?? ''));
 
             return $courseTime !== '' ? $sessionLabel . ' (' . $courseTime . ')' : $sessionLabel;
         })
@@ -47,24 +80,28 @@
 
     $centreAdmittedStudents = collect();
     $centreSessionFilterOptions = collect();
-    if (!empty($courseIdsArray)) {
+    $centreCourseFilterOptions = collect();
+    if (!empty($centreSessionIds)) {
         $centreAdmittedStudents = \Illuminate\Support\Facades\DB::table('user_admission as ua')
             ->join('users as u', 'u.userId', '=', 'ua.user_id')
-            ->join('courses as c', 'c.id', '=', 'ua.course_id')
-            ->leftJoin('course_sessions as cs', 'cs.id', '=', 'ua.session')
-            ->whereIn('ua.course_id', $courseIdsArray)
-            ->where('cs.session_type', \App\Models\CourseSession::TYPE_CENTRE)
+            ->join('courses as assigned_course', 'assigned_course.id', '=', 'u.registered_course')
+            ->leftJoin('courses as admission_course', 'admission_course.id', '=', 'ua.course_id')
+            ->leftJoin('programme_batches as pb', 'pb.id', '=', 'ua.programme_batch_id')
+            ->join('master_sessions as ms', 'ms.id', '=', 'ua.session')
+            ->where('assigned_course.centre_id', $centreId)
+            ->whereIn('ua.session', $centreSessionIds)
             ->whereNotNull('ua.confirmed')
             ->whereNotNull('ua.session')
             ->select([
                 'u.userId as user_id',
                 'u.name as user_name',
                 'u.email as user_email',
-                'c.course_name as course_name',
-                'cs.session as session_label',
-                'cs.course_time as session_time',
-                'cs.name as session_name',
-                'ua.confirmed as admitted_at',
+                \Illuminate\Support\Facades\DB::raw('COALESCE(admission_course.course_name, assigned_course.course_name) as course_name'),
+                'ms.session_type as session_label',
+                'ms.time as session_time',
+                'ms.master_name as session_name',
+                \Illuminate\Support\Facades\DB::raw('DATE(pb.start_date) as programme_batch_start_date'),
+                \Illuminate\Support\Facades\DB::raw('DATE(pb.end_date) as programme_batch_end_date'),
             ])
             ->orderByDesc('ua.confirmed')
             ->get()
@@ -81,6 +118,14 @@
 
         $centreSessionFilterOptions = $centreAdmittedStudents
             ->pluck('session_filter_label')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        $centreCourseFilterOptions = $centreAdmittedStudents
+            ->pluck('course_name')
+            ->map(fn ($courseName) => trim((string) $courseName))
             ->filter()
             ->unique()
             ->sort()
@@ -531,19 +576,40 @@
     <div class="row g-3 mb-4">
         <div class="col-lg-8">
             <div class="card h-100">
-                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="card-header">
                     <strong><i class="la la-users"></i> Admitted Students by Session</strong>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted small">Filter Session</span>
-                        <select id="centreSessionFilter" class="form-select form-select-sm" style="min-width: 140px;">
-                            <option value="">All</option>
-                            @foreach ($centreSessionFilterOptions as $option)
-                                <option value="{{ $option }}">{{ $option }}</option>
-                            @endforeach
-                        </select>
-                    </div>
                 </div>
                 <div class="card-body">
+                    <div class="row g-2 align-items-end mb-3">
+                        <div class="col-lg-3 col-md-6">
+                            <label for="centreCourseFilter" class="form-label text-muted small mb-1">Filter Course</label>
+                            <select id="centreCourseFilter" class="form-select form-select-sm">
+                                <option value="">All</option>
+                                @foreach ($centreCourseFilterOptions as $option)
+                                    <option value="{{ $option }}">{{ $option }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label for="centreSessionFilter" class="form-label text-muted small mb-1">Filter Session</label>
+                            <select id="centreSessionFilter" class="form-select form-select-sm">
+                                <option value="">All</option>
+                                @foreach ($centreSessionFilterOptions as $option)
+                                    <option value="{{ $option }}">{{ $option }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label for="centreProgrammeBatchDate" class="form-label text-muted small mb-1">Date Filter</label>
+                            <input id="centreProgrammeBatchDate" type="date" class="form-control form-control-sm"
+                                @if ($admissionFilterMinDate) min="{{ $admissionFilterMinDate }}" @endif
+                                @if ($admissionFilterMaxDate) max="{{ $admissionFilterMaxDate }}" @endif>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <button id="clearCentreAdmittedFilters" type="button"
+                                class="btn btn-sm btn-outline-secondary w-100">Clear Filters</button>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table id="dtCentreAdmittedStudents" class="table table-striped table-hover table-sm w-100">
                             <thead>
@@ -552,12 +618,15 @@
                                     <th>Email</th>
                                     <th>Course</th>
                                     <th>Session</th>
-                                    <th>Admitted On</th>
+                                    <th>Batch Start Date</th>
+                                    <th>Batch End Date</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse ($centreAdmittedStudents as $student)
-                                    <tr>
+                                    <tr
+                                        data-programme-batch-start="{{ $student->programme_batch_start_date ?? '' }}"
+                                        data-programme-batch-end="{{ $student->programme_batch_end_date ?? '' }}">
                                         <td>{{ $student->user_name ?? 'N/A' }}</td>
                                         <td>{{ $student->user_email ?? 'N/A' }}</td>
                                         <td>{{ $student->course_name ?? 'N/A' }}</td>
@@ -573,21 +642,34 @@
                                         </td>
                                         <td>
                                             @php
-                                                $admittedAt = null;
+                                                $batchStartDate = null;
                                                 try {
-                                                    $admittedAt = $student->admitted_at
-                                                        ? \Carbon\Carbon::parse($student->admitted_at)
+                                                    $batchStartDate = !empty($student->programme_batch_start_date)
+                                                        ? \Carbon\Carbon::parse($student->programme_batch_start_date)
                                                         : null;
                                                 } catch (\Throwable $e) {
-                                                    $admittedAt = null;
+                                                    $batchStartDate = null;
                                                 }
                                             @endphp
-                                            {{ $admittedAt ? $admittedAt->format('M d, Y') : 'N/A' }}
+                                            {{ $batchStartDate ? $batchStartDate->format('M d, Y') : 'N/A' }}
+                                        </td>
+                                        <td>
+                                            @php
+                                                $batchEndDate = null;
+                                                try {
+                                                    $batchEndDate = !empty($student->programme_batch_end_date)
+                                                        ? \Carbon\Carbon::parse($student->programme_batch_end_date)
+                                                        : null;
+                                                } catch (\Throwable $e) {
+                                                    $batchEndDate = null;
+                                                }
+                                            @endphp
+                                            {{ $batchEndDate ? $batchEndDate->format('M d, Y') : 'N/A' }}
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted">
+                                        <td colspan="6" class="text-center text-muted">
                                             No admitted students with sessions found for this centre.
                                         </td>
                                     </tr>
@@ -598,7 +680,7 @@
 
                     @if ($centreAdmittedStudents->isEmpty())
                         <div class="text-center text-muted py-2">
-                            Filter by session once admissions are assigned.
+                            Filter by course, session, or programme-batch date once admissions are assigned.
                         </div>
                     @endif
                 </div>
@@ -625,13 +707,34 @@
                                 @foreach ($centreSessions as $session)
                                     @php
                                         $confirmedCount = (int) ($centreSessionConfirmed[$session->id] ?? 0);
-                                        $limit = (int) ($session->limit ?? 0);
-                                        $slotsLeft = $limit > 0 ? max(0, $limit - $confirmedCount) : null;
+                                        $sessionCourseType = strtolower(trim((string) ($session->course_type ?? '')));
+                                        if ($sessionCourseType === 'short') {
+                                            $limit = $centreShortSessionLimit;
+                                        } elseif ($sessionCourseType === 'long') {
+                                            $limit = $centreLongSessionLimit;
+                                        } else {
+                                            $limit = $centreSeatCountLimit;
+                                        }
+                                        $slotsLeft = $limit !== null ? max(0, $limit - $confirmedCount) : null;
                                     @endphp
                                     <tr>
-                                        <td>{{ $session->session ?? $session->name ?? 'Session #' . $session->id }}</td>
-                                        <td>{{ $limit ?: '-' }}</td>
-                                        <td>{{ $session->course_time ?? '-' }}</td>
+                                        <td>
+                                            {{ $session->session_type ?? $session->master_name ?? 'Session #' . $session->id }}
+                                            @if (!empty($session->master_name) && $session->master_name !== ($session->session_type ?? ''))
+                                                <div class="text-muted small">{{ $session->master_name }}</div>
+                                            @endif
+                                            @if (!empty($session->course_type))
+                                                <!-- <div class="text-muted small text-uppercase">{{ $session->course_type }}</div> -->
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($limit === null)
+                                                -
+                                            @else
+                                                {{ number_format($limit) }}
+                                            @endif
+                                        </td>
+                                        <td>{{ $session->time ?? '-' }}</td>
                                         <td>
                                             @if ($slotsLeft === null)
                                                 -
@@ -646,7 +749,7 @@
                     </div>
 
                     @if ($centreSessions->isEmpty())
-                        <div class="text-center text-muted py-3">No sessions configured for this centre.</div>
+                        <div class="text-center text-muted py-3">No active master sessions configured.</div>
                     @endif
                 </div>
             </div>
@@ -688,7 +791,7 @@
                                 @forelse($topCourses as $course)
                                     <tr>
                                         <td>
-                                            @if (!empty($course->id))
+                                            @if (!empty($course->id) && !$isCentreOfficer)
                                                 <a
                                                     href="{{ backpack_url('course-batch/' . $course->id . '/show') }}">{{ $course->course_name ?? 'Course #' . $course->id }}</a>
                                             @else
@@ -722,6 +825,7 @@
 @push('after_styles')
     <link rel="stylesheet" href="{{ asset('assets/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/plugins/datatables-buttons/css/buttons.bootstrap4.min.css') }}">
     <style>
         .metric-card .metric-value {
             font-size: 1.75rem;
@@ -758,6 +862,17 @@
         .dataTables_wrapper .dataTables_length select {
             margin: 0 .25rem;
         }
+
+        .dataTables_wrapper .dt-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .35rem;
+            margin-bottom: .75rem;
+        }
+
+        .dataTables_wrapper .dt-buttons .btn {
+            margin-right: 0;
+        }
     </style>
 @endpush
 
@@ -766,6 +881,12 @@
     <script src="{{ asset('assets/plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
     <script src="{{ asset('assets/plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
     <script src="{{ asset('assets/plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
+    <script src="{{ asset('assets/plugins/datatables-buttons/js/dataTables.buttons.min.js') }}"></script>
+    <script src="{{ asset('assets/plugins/datatables-buttons/js/buttons.bootstrap4.min.js') }}"></script>
+    <script src="{{ asset('assets/plugins/jszip/jszip.min.js') }}"></script>
+    <script src="{{ asset('assets/plugins/pdfmake/pdfmake.min.js') }}"></script>
+    <script src="{{ asset('assets/plugins/pdfmake/vfs_fonts.js') }}"></script>
+    <script src="{{ asset('assets/plugins/datatables-buttons/js/buttons.html5.min.js') }}"></script>
     <script src="{{ asset('assets/plugins/chart.js/Chart.min.js') }}"></script>
     <script>
         (function() {
@@ -797,8 +918,14 @@
                 }, options || {}));
             }
 
+            function normalizeIsoDate(value) {
+                const date = (value || '').trim();
+                return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '';
+            }
+
             document.addEventListener('DOMContentLoaded', function() {
                 const topCoursesTable = safeInitDataTable('#dtTopCourses');
+                const centreExportTitle = @json($centre->title ?? 'Centre');
                 const deliveryFilter = document.getElementById('deliveryFilter');
                 if (deliveryFilter && topCoursesTable) {
                     deliveryFilter.addEventListener('change', function() {
@@ -820,8 +947,59 @@
 
                 const centreAdmittedTable = safeInitDataTable('#dtCentreAdmittedStudents', {
                     ordering: false,
-                    pageLength: 10
+                    pageLength: 10,
+                    dom: "<'d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2'Bf>rt<'d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2'lip>",
+                    buttons: [{
+                            extend: 'csvHtml5',
+                            text: 'Export CSV',
+                            className: 'btn btn-sm btn-outline-secondary',
+                            exportOptions: {
+                                columns: [0, 1, 2, 3, 4, 5],
+                                modifier: {
+                                    search: 'applied'
+                                }
+                            }
+                        },
+                        {
+                            extend: 'excelHtml5',
+                            text: 'Export Excel',
+                            className: 'btn btn-sm btn-outline-success',
+                            exportOptions: {
+                                columns: [0, 1, 2, 3, 4, 5],
+                                modifier: {
+                                    search: 'applied'
+                                }
+                            }
+                        },
+                        {
+                            extend: 'pdfHtml5',
+                            text: 'Export PDF',
+                            className: 'btn btn-sm btn-outline-danger',
+                            title: centreExportTitle,
+                            orientation: 'landscape',
+                            pageSize: 'A4',
+                            exportOptions: {
+                                columns: [0, 1, 2, 3, 4, 5],
+                                modifier: {
+                                    search: 'applied'
+                                }
+                            }
+                        }
+                    ]
                 });
+
+                const centreCourseFilter = document.getElementById('centreCourseFilter');
+                if (centreCourseFilter && centreAdmittedTable) {
+                    centreCourseFilter.addEventListener('change', function() {
+                        const value = (this.value || '').trim();
+                        if (!value) {
+                            centreAdmittedTable.column(2).search('').draw();
+                            return;
+                        }
+                        const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        centreAdmittedTable.column(2).search('^' + escaped + '$', true, false).draw();
+                    });
+                }
 
                 const centreSessionFilter = document.getElementById('centreSessionFilter');
                 if (centreSessionFilter && centreAdmittedTable) {
@@ -833,6 +1011,63 @@
                         }
                         const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                         centreAdmittedTable.column(3).search('^' + escaped + '$', true, false).draw();
+                    });
+                }
+
+                const centreProgrammeBatchDate = document.getElementById('centreProgrammeBatchDate');
+                const clearCentreAdmittedFilters = document.getElementById('clearCentreAdmittedFilters');
+
+                const $ = window.jQuery;
+                if ($ && $.fn && $.fn.dataTable && centreAdmittedTable) {
+                    const admittedTableNode = centreAdmittedTable.table().node();
+                    const rangeFilterFn = function(settings, data, dataIndex) {
+                        if (settings.nTable !== admittedTableNode) {
+                            return true;
+                        }
+
+                        const selectedDate = normalizeIsoDate(centreProgrammeBatchDate?.value || '');
+                        if (!selectedDate) {
+                            return true;
+                        }
+
+                        const rowNode = settings.aoData[dataIndex] ? settings.aoData[dataIndex].nTr : null;
+                        if (!rowNode) {
+                            return true;
+                        }
+
+                        const batchStart = normalizeIsoDate(rowNode.getAttribute('data-programme-batch-start') || '');
+                        const batchEnd = normalizeIsoDate(rowNode.getAttribute('data-programme-batch-end') || '');
+                        if (!batchStart || !batchEnd) {
+                            return false;
+                        }
+
+                        return batchStart <= selectedDate && batchEnd >= selectedDate;
+                    };
+
+                    $.fn.dataTable.ext.search.push(rangeFilterFn);
+                }
+
+                if (centreProgrammeBatchDate && centreAdmittedTable) {
+                    centreProgrammeBatchDate.addEventListener('change', function() {
+                        centreAdmittedTable.draw();
+                    });
+                }
+
+                if (clearCentreAdmittedFilters && centreAdmittedTable) {
+                    clearCentreAdmittedFilters.addEventListener('click', function() {
+                        if (centreCourseFilter) {
+                            centreCourseFilter.value = '';
+                        }
+                        if (centreSessionFilter) {
+                            centreSessionFilter.value = '';
+                        }
+                        if (centreProgrammeBatchDate) {
+                            centreProgrammeBatchDate.value = '';
+                        }
+
+                        centreAdmittedTable.column(2).search('');
+                        centreAdmittedTable.column(3).search('');
+                        centreAdmittedTable.draw();
                     });
                 }
                 if (typeof Chart !== 'function') return;
