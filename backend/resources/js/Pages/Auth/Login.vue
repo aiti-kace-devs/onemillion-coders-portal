@@ -59,7 +59,7 @@ const submit = async () => {
 <template>
     <GuestLayout>
 
-        <Head title="Log in" />
+        <Head title="Student Login" />
 
         <div v-if="status" class="mb-4 font-medium text-sm text-green-600">
             {{ status }}
