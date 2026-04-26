@@ -250,5 +250,5 @@ return [
     'quiz_frontend_url' => env('QUIZ_FRONTEND_URL', ''),
     // Fallback when AppConfig APPLICATION_REVIEW_IFRAME_URL is empty (prefer Admin → App Config).
     'application_review_embed_url' => env('APPLICATION_REVIEW_EMBED_URL', ''),
-
+    'app_route_prefix' => env('APP_ROUTE_PREFIX', ''),
 ];

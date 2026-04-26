@@ -26,12 +26,12 @@ class RedirectIfAuthenticated
 
                 // If the guard is 'admin' OR if it's the default guard and the default is 'admin'
                 if ($guard === 'admin' || (is_null($guard) && config('auth.defaults.guard') === 'admin')) {
-                    return redirect(RouteServiceProvider::ADMIN_HOME);
+                    return redirect(RouteServiceProvider::$ADMIN_HOME);
                 }
 
                 $user = Auth::guard($guard ?? 'web')->user();
                 $home = $user && $user->registered_course
-                    ? RouteServiceProvider::HOME
+                    ? RouteServiceProvider::$HOME
                     : route('student.application-status');
 
                 return redirect($home);

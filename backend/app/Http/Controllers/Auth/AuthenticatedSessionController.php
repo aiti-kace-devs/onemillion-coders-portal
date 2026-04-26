@@ -48,7 +48,7 @@ class AuthenticatedSessionController extends Controller
         activity('student')->event('login')->by($student)->log("$student->name logged in at $student->last_login");
 
         // Always land students on the dashboard; step gating happens when they click into actions.
-        return redirect(RouteServiceProvider::HOME);
+        return redirect(RouteServiceProvider::$HOME);
     }
 
     /**
@@ -68,6 +68,6 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/login');
+        return redirect(route('login'));
     }
 }

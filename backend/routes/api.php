@@ -44,7 +44,8 @@ Route::prefix('availability')->name('api.availability.')->middleware(['user.toke
 
 // Programme availability per centre — authenticated
 Route::get('/programmes/{programmeId}/availability-per-centre', [
-    App\Http\Controllers\Admin\Api\CourseProgrammeController::class, 'availabilityPerCentre'
+    App\Http\Controllers\Admin\Api\CourseProgrammeController::class,
+    'availabilityPerCentre'
 ])->name('api.programmes.availability-per-centre');
 
 

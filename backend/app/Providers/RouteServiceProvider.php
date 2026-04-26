@@ -17,8 +17,8 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    public const HOME = 'student/dashboard';
-    public const ADMIN_HOME = '/admin/dashboard';
+    public static $HOME = '/student/dashboard';
+    public static $ADMIN_HOME = '/admin/dashboard';
 
     /**
      * The controller namespace for the application.
@@ -36,17 +36,32 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        $prefix = rtrim(config('app.app_route_prefix', ''), '/');
+        self::$HOME = $prefix . '/student/dashboard';
+        self::$ADMIN_HOME = $prefix . '/admin/dashboard';
+
         $this->configureRateLimiting();
 
         $this->routes(function () {
-            Route::prefix('api')
+            $prefix = config('app.app_route_prefix');
+
+            if (!empty($prefix) && $prefix !== '/') {
+                if (request()->is($prefix) && !request()->expectsJson()) {
+                    Route::redirect($prefix, $prefix . '/login');
+                }
+            }
+
+            Route::prefix($prefix . '/api')
                 ->middleware('api')
                 ->namespace($this->namespace)
                 ->group(base_path('routes/api.php'));
 
-            Route::middleware('web')
+            Route::prefix($prefix)
+                ->middleware('web')
                 ->namespace($this->namespace)
                 ->group(base_path('routes/web.php'));
+
+            require base_path('routes/backpack/custom.php');
         });
     }
 
