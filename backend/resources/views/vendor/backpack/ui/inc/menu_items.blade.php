@@ -121,11 +121,12 @@
     <x-backpack::menu-item title="Scan QR Code" icon="la la-qrcode" :link="backpack_url('qr-scanner')" />
 @endcan
 
-
+@can('tag.read.all')
 <x-backpack::menu-dropdown title="Tags" icon="la la-tags">
     <x-backpack::menu-dropdown-item title="Tags" icon="la la-tag" :link="backpack_url('tag')" />
     <x-backpack::menu-dropdown-item title="Tag Types" icon="la la-bookmark" :link="backpack_url('tag-type')" />
 </x-backpack::menu-dropdown>
+@endcan
 
 @can('batch.read.all')
     <x-backpack::menu-item title="Admission Batches" icon="la la-users" :link="backpack_url('batch')" />

@@ -103,10 +103,6 @@ class Admin extends Authenticatable
             return null;
         }
 
-        if ($this->hasPermissionTo('dashboard.read.all')) {
-            return null;
-        }
-
         if ($this->hasRole('centre-manager')) {
             $centreIds = $this->assignedCentreIds();
             if (empty($centreIds)) {
@@ -118,6 +114,10 @@ class Admin extends Authenticatable
                 ->pluck('id')
                 ->map(fn($courseId) => (int) $courseId)
                 ->all();
+        }
+
+        if ($this->hasPermissionTo('manage.monitor')) {
+            return null;
         }
 
         return $this->assignedCourseIds();
@@ -163,12 +163,12 @@ class Admin extends Authenticatable
             return null;
         }
 
-        if ($this->hasPermissionTo('dashboard.read.all')) {
-            return null;
-        }
-
         if ($this->hasRole('centre-manager')) {
             return $this->assignedCentreIds();
+        }
+
+        if ($this->hasPermissionTo('manage.monitor')) {
+            return null;
         }
 
         return null;
