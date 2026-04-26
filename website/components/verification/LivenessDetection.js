@@ -105,6 +105,7 @@ export default function LivenessDetection({ onComplete, onCancel }) {
   const brightnessFilterRef = useRef("brightness(1)");
   const [videoFilter, setVideoFilter] = useState("brightness(1)");
   const holdStillRef = useRef(null);
+  const isCapturingRef = useRef(false);
 
 
   const [isLoading, setIsLoading] = useState(false);
@@ -117,6 +118,8 @@ export default function LivenessDetection({ onComplete, onCancel }) {
   const [completedChallenges, setCompletedChallenges] = useState([]);
   const [faceDetected, setFaceDetected] = useState(false);
   const [captureCountdown, setCaptureCountdown] = useState(null);
+  const [streamSize, setStreamSize] = useState(null);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [landmarkQuality, setLandmarkQuality] = useState({
     eyesVisible: false,
     noseVisible: false,
@@ -147,7 +150,7 @@ export default function LivenessDetection({ onComplete, onCancel }) {
         if (blob) onComplete(blob);
       },
       "image/jpeg",
-      0.9
+      0.85
     );
   }, [onComplete]);
 
@@ -187,7 +190,12 @@ export default function LivenessDetection({ onComplete, onCancel }) {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: 640, height: 480 },
+        video: {
+          facingMode: "user",
+          width: { ideal: 640, max: 1280 },
+          height: { ideal: 480, max: 720 },
+          aspectRatio: { ideal: 4 / 3 },
+        },
       });
 
       setCameraPermission("granted");
@@ -349,7 +357,11 @@ export default function LivenessDetection({ onComplete, onCancel }) {
             setChallengeProgress(progress);
             if (progress >= 100) {
               if (isFaceDistanceOk && fullFaceVisible && centered && straight) {
-                capturePhoto();
+                if (!isCapturingRef.current) {
+                  isCapturingRef.current = true;
+                  setIsCapturing(true);
+                  capturePhoto();
+                }
               } else {
                 // Conditions changed on the capture frame — reset and wait
                 captureStartRef.current = null;
@@ -628,7 +640,10 @@ export default function LivenessDetection({ onComplete, onCancel }) {
       </motion.div>
 
       {/* Camera view */}
-      <div className="relative rounded-2xl overflow-hidden bg-black aspect-[4/3] max-w-lg mx-auto shadow-lg">
+      <div
+        className="relative rounded-2xl overflow-hidden bg-black max-w-lg mx-auto shadow-lg"
+        style={{ aspectRatio: streamSize ? `${streamSize.width} / ${streamSize.height}` : "4 / 3" }}
+      >
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
             <div className="text-center text-white">
@@ -649,22 +664,64 @@ export default function LivenessDetection({ onComplete, onCancel }) {
           </div>
         )}
 
-        <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted style={{ transform: "scaleX(-1)", filter: videoFilter }} />
+        <video
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-cover"
+          playsInline
+          muted
+          onLoadedMetadata={() => {
+            const v = videoRef.current;
+            if (v?.videoWidth && v?.videoHeight) {
+              setStreamSize({ width: v.videoWidth, height: v.videoHeight });
+            }
+          }}
+          style={{ transform: "scaleX(-1)", filter: videoFilter }}
+        />
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover" />
 
         {/* Oval guide */}
         <div className="absolute inset-0 pointer-events-none">
-          <svg className="w-full h-full" viewBox="0 0 640 480">
-            <defs>
-              <mask id="oval-mask">
-                <rect width="640" height="480" fill="white" />
-                <ellipse cx="320" cy="220" rx="175" ry="180" fill="black" />
-              </mask>
-            </defs>
-            <rect width="640" height="480" fill="rgba(0,0,0,0.5)" mask="url(#oval-mask)" />
-            <ellipse cx="320" cy="220" rx="175" ry="180" fill="none" stroke={faceDetected ? "#F9A825" : "rgba(255,255,255,0.5)"} strokeWidth="3" strokeDasharray={faceDetected ? "none" : "8 4"} />
-          </svg>
+          {(() => {
+            const vw = streamSize?.width ?? 640;
+            const vh = streamSize?.height ?? 480;
+            const cx = vw * 0.5;
+            const cy = vh * 0.458;
+            const rx = vw * 0.273;
+            const ry = vh * 0.375;
+            return (
+              <svg className="w-full h-full" viewBox={`0 0 ${vw} ${vh}`}>
+                <defs>
+                  <mask id="oval-mask">
+                    <rect width={vw} height={vh} fill="white" />
+                    <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="black" />
+                  </mask>
+                </defs>
+                <rect width={vw} height={vh} fill="rgba(0,0,0,0.5)" mask="url(#oval-mask)" />
+                <ellipse
+                  cx={cx}
+                  cy={cy}
+                  rx={rx}
+                  ry={ry}
+                  fill="none"
+                  stroke={faceDetected ? "#F9A825" : "rgba(255,255,255,0.5)"}
+                  strokeWidth="3"
+                  strokeDasharray={faceDetected ? "none" : "8 4"}
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+            );
+          })()}
         </div>
+
+        {/* Capture flash */}
+        {isCapturing && (
+          <motion.div
+            className="absolute inset-0 z-20 bg-white pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.85 }}
+            transition={{ duration: 0.12, ease: "easeOut" }}
+          />
+        )}
 
         {/* Progress bar */}
         <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-black/30">
